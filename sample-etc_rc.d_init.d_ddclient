@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# $Id$
+#
+# ddclient      This shell script takes care of starting and stopping
+#               ddclient.
+#
+# chkconfig: 2345 65 35
+# description: ddclient provides support for updating dynamic DNS services.
+
+[ -f /etc/ddclient/ddclient.conf ] || exit 0
+
+PATH=/usr/sbin:${PATH}
+COLUMNS=9999
+export PATH COLUMNS
+
+program=ddclient
+# See how we were called.
+case "$1" in
+  start)
+	# Start daemon.
+	echo -n "Starting ddclient: "
+	ddclient -daemon 300
+	echo    
+	;;
+  stop)
+	# Stop daemon.
+	echo -n "Shutting down ddclient: "
+	kill `ps -aef | awk '/[ \/]perl.*ddclient/ { print $2}'`
+	echo
+	;;
+  restart)
+	$0 stop
+	$0 start
+	;;
+  status)
+	pids=`ps -aef | awk '/[ \/]perl.*ddclient/ { print $2}'`
+	if test "$pids"
+	then
+		for p in $pids
+		do
+			echo "$program (pid $p) is running"
+		done
+	else
+		echo "$program is stopped"
+	fi
+	;;
+  *)
+	echo "Usage: ddclient {start|stop|restart|status}"
+	exit 1
+esac
+
+exit 0
+
