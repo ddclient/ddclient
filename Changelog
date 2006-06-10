@@ -6,18 +6,18 @@ cvs
   https://sourceforge.net/forum/message.php?msg_id=3496041 submitted by hemo)
 - added ssl-support by perlhaq
 - updated cvs version to 3.7.0-pre
-- added support for Linksys RV042
-- added support for netgear-rp614
-- added support for watchguard-edge-x
-- added support for dlink-524
+- added support for Linksys RV042, see feature requests #1501093, #1500877
+- added support for netgear-rp614, see feature request #1237039
+- added support for watchguard-edge-x, patch #1468981
+- added support for dlink-524, see patch #1314272
 - added support for rtp300
 - added support for netgear-wpn824
-- added support for linksys-wcg200
-- added support for netgear-dg834g
-- added support for netgear-wgt624
-- added support for sveasoft
-- added support for smc-barricade-7004vbr
-- added support for sitecom-dc202
+- added support for linksys-wcg200, see patch #1280713
+- added support for netgear-dg834g, see patch #1176425
+- added support for netgear-wgt624, see patch #1165209
+- added support for sveasoft, see patch #1102432
+- added support for smc-barricade-7004vbr, see patch #1087989
+- added support for sitecom-dc202, see patch #1060119
 - fixed the error of stripping out '#' in the middle of password, bug #1465932
 
 3.6.7
