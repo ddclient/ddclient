@@ -1,5 +1,5 @@
-#!/usr/bin/perl -w
 #!/usr/local/bin/perl -w
+#!/usr/bin/perl -w
 ######################################################################
 # $Id$
 #
@@ -198,7 +198,71 @@ my %builtinfw = (
                                  'url'  => '/xslt?PAGE=B01',
                                  'skip' => 'Internet Address:',
                                },
-
+    'linksys-rv042-wan1' => {
+        'name' => 'Linksys RV042 Dual Homed Router WAN Port 2',
+        'url' => '/home.htm',
+        'skip' => 'WAN1 IP',
+    },
+    'linksys-rv042-wan2' => {
+        'name' => 'Linksys RV042 Dual Homed Router WAN Port 2',
+        'url' => '/home.htm',
+        'skip' => 'WAN2 IP',
+    },
+    'netgear-rp614' => {
+        'name' => 'Netgear RP614 FW',
+        'url' => '/sysstatus.html',
+        'skip' => 'IP Address',
+    },
+    'watchguard-edge-x' => {
+        'name' => 'Watchguard Edge X FW',
+        'url' => '/netstat.htm',
+        'skip' => 'inet addr:',
+    },
+    'dlink-524' => {
+        'name' => 'D-Link DI-524',
+        'url' => '/st_device.html',
+        'skip' => 'WAN.*?Addres',
+    },
+    'rtp300' => {
+        'name' => 'Linksys RTP300',
+        'url' => '/cgi-bin/webcm?getpage=%2Fusr%2Fwww_safe%2Fhtml%2Fstatus%2FRouter.html',
+        'skip' => 'Internet.*?IP Address',
+    },
+    'netgear-wpn824' => {
+        'name' => 'Netgear WPN824 FW',
+        'url' => '/RST_status.htm',
+        'skip' => 'IP Address',
+    },
+    'linksys-wcg200' => {
+        'name' => 'Linksys WCG200 FW',
+        'url' => '/RgStatus.asp',
+        'skip' => 'WAN.IP.*?Address',
+    },
+    'netgear-dg834g' => {
+        'name netgear-dg834g',
+        'url' => '/setup.cgi?next_file=s_status.htm&todo=cfg_init',
+        'skip' => '',
+    }
+    'netgear-wgt624' => {
+        'name' => 'Netgear WGT624',
+        'url' => '/RST_st_dhcp.htm'
+        'skip' => 'IP Address</B></td><TD NOWRAP width="50%">',
+    },
+    'sveasoft' => {
+        'name' => 'Sveasoft WRT54G/WRT54GS',
+        'url' => '/Status_Router.asp',
+        'skip' => 'var wan_ip',
+    },
+    'smc-barricade-7004vbr' => {
+        'name' => 'SMC Barricade FW (7004VBR model config)',
+        'url' => '/status_main.stm',
+        'skip' => 'var wan_ip=',
+    },
+    'sitecom-dc202' => {
+        'name' => 'Sitecom DC-202 FW',
+        'url' => '/status.htm',
+        'skip' => 'Internet IP Address',
+    },
 );
 my %ip_strategies = (
      'ip'                     => ": obtain IP from -ip {address}",
@@ -814,10 +878,12 @@ sub _read_config {
 	    last;
 	}
 	warning("whitespace follows the \\ at the end-of-line.\nIf you meant to have a line continuation, remove the trailing whitespace.")
-		if /\\\s+$/;
 
-	$content .= "$_\n" unless /^#/;
-	s/#.*//;		# remove comments
+    $content .= "$_\n" unless /^#/;
+    # lines contain passwords are a special case, we don't want to
+    # arbitrarily strip out '#'
+    if (/^(\S*password\S*)\s*=\s*(\S+)/i) { $_ = "$1=$2"; }
+    if (/^#/ || !(/password/i) || /#.*password/i) { s/#.*//; } # remove comments
 
 	## handle continuation lines
 	$_ = "$continuation$_";

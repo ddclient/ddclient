@@ -6,6 +6,19 @@ cvs
   https://sourceforge.net/forum/message.php?msg_id=3496041 submitted by hemo)
 - added ssl-support by perlhaq
 - updated cvs version to 3.7.0-pre
+- added support for Linksys RV042
+- added support for netgear-rp614
+- added support for watchguard-edge-x
+- added support for dlink-524
+- added support for rtp300
+- added support for netgear-wpn824
+- added support for linksys-wcg200
+- added support for netgear-dg834g
+- added support for netgear-wgt624
+- added support for sveasoft
+- added support for smc-barricade-7004vbr
+- added support for sitecom-dc202
+- fixed the error of stripping out '#' in the middle of password, bug #1465932
 
 3.6.7
 - modified sample-etc_rc.d_init.d_ddclient.lsb (bug #1231930)
