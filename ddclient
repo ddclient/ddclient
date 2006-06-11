@@ -239,13 +239,13 @@ my %builtinfw = (
         'skip' => 'WAN.IP.*?Address',
     },
     'netgear-dg834g' => {
-        'name netgear-dg834g',
+        'name' => 'netgear-dg834g',
         'url' => '/setup.cgi?next_file=s_status.htm&todo=cfg_init',
         'skip' => '',
-    }
+    },
     'netgear-wgt624' => {
         'name' => 'Netgear WGT624',
-        'url' => '/RST_st_dhcp.htm'
+        'url' => '/RST_st_dhcp.htm',
         'skip' => 'IP Address</B></td><TD NOWRAP width="50%">',
     },
     'sveasoft' => {
@@ -877,7 +877,9 @@ sub _read_config {
 	    warning("program version mismatch; ignoring %s", $file);
 	    last;
 	}
-	warning("whitespace follows the \\ at the end-of-line.\nIf you meant to have a line continuation, remove the trailing whitespace.")
+    if (/\\\s+$/) {
+	    warning("whitespace follows the \\ at the end-of-line.\nIf you meant to have a line continuation, remove the trailing whitespace.");
+    }
 
     $content .= "$_\n" unless /^#/;
     # lines contain passwords are a special case, we don't want to
@@ -906,12 +908,19 @@ sub _read_config {
 	s/\s*,\s*/,/g;
 	my @args = split;
 	
-	## verify that keywords are valid..
+	## verify that keywords are valid...and check the value
 	foreach my $k (keys %locals) {
 	    if (!exists $variables{'merged'}{$k}) {
-		warning("unrecognized keyword '%s' (ignored)", $k);
-		delete $locals{$k};
-	    }
+            warning("unrecognized keyword '%s' (ignored)", $k);
+            delete $locals{$k};
+	    } else {
+            my $def = $variables{'merged'}{$k};
+            my $value = check_value($locals{$k}, $def);
+            if (!defined($value)) {
+                warning("Invalid Value for keyword '%s' = '%s'", $k, $locals{$k});
+                delete $locals{$k};
+            } else { $locals{$k} = $value; }
+        }
 	}
 	if (exists($locals{'host'})) {
 	    $args[0] = @args ? "$args[0],$locals{host}" : "$locals{host}";
@@ -1679,11 +1688,23 @@ sub geturl {
 	debug("skipped network connection");
 	verbose("SENDING:", $request);
     } elsif ($use_ssl) {
-	$sd = IO::Socket::SSL->new(PeerAddr => $peer, PeerPort => $port, Proto => 'tcp', MultiHomed => 1);
-	defined $sd or warning("cannot connect to $peer:$port socket: $@ " . IO::Socket::SSL::errstr());
+	    $sd = IO::Socket::SSL->new(
+            PeerAddr => $peer,
+            PeerPort => $port,
+            Proto => 'tcp',
+            MultiHomed => 1,
+            Timeout => opt('timeout'),
+        );
+	    defined $sd or warning("cannot connect to $peer:$port socket: $@ " . IO::Socket::SSL::errstr());
     } else {
-	$sd = IO::Socket::INET->new(PeerAddr => $peer, PeerPort => $port, Proto => 'tcp', MultiHomed => 1);
-	defined $sd or warning("cannot connect to $peer:$port socket: $@");
+	    $sd = IO::Socket::INET->new(
+            PeerAddr => $peer,
+            PeerPort => $port,
+            Proto => 'tcp',
+            MultiHomed => 1,
+            Timeout => opt('timeout'),
+        );
+	    defined $sd or warning("cannot connect to $peer:$port socket: $@");
     }
 
     if (defined $sd) {
@@ -3104,3 +3125,8 @@ sub nic_sitelutions_update {
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
+
+
+__END__
+
+

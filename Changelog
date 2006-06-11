@@ -19,6 +19,10 @@ cvs
 - added support for smc-barricade-7004vbr, see patch #1087989
 - added support for sitecom-dc202, see patch #1060119
 - fixed the error of stripping out '#' in the middle of password, bug #1465932
+- fixed a couple bugs in sample-etc_rc.d_init.d_ddclient and added some extra auto distro detection
+- added the validation of values when reading the configuration value.
+- this fixes a bug when trying to use periods/intervals in the daemon check times, bug #1209743
+- added timeout option to the IO::Socket call for timing out the initial connection, bug: #1085110
 
 3.6.7
 - modified sample-etc_rc.d_init.d_ddclient.lsb (bug #1231930)
