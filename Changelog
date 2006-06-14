@@ -1,6 +1,8 @@
 Changelog
 
-cvs
+3.7.1
+
+3.7.0
 - Added vi tag
 - Added support for 2Wire 1701HG Gateway (see 
   https://sourceforge.net/forum/message.php?msg_id=3496041 submitted by hemo)
