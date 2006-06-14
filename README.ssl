@@ -5,5 +5,6 @@ To use ssl, put "ssl=yes" in your configuration and make sure
 you have IO::Socket::SSL.
 
 On debian, you need libio-socket-ssl-perl to have IO::Socket::SSL
+
 ssl support is tested on folowing dynamic dns providers:
 - dyndns.org
