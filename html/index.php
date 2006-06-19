@@ -42,6 +42,11 @@ $pages[2]['title'] = "supported protocols";
 $pages[3]['nr'] = 3;
 $pages[3]['title'] = "supported routers";
 
+if ($debug) {
+	$pages[4]['nr'] = 4;
+$pages[4]['title'] = "xml";
+}
+
 
 $curpage = isset($_GET['page'])?$_GET['page']:0;
 $titleextra = $pages[$curpage]['title'];
@@ -687,6 +692,8 @@ $main[] = $text;
 	"<p>Remember, if your router isn't here, check the result of ddclient --help</p>";
 	$main[] = $text;
 
+} else if ($page == 4) {				 // documentation
+	require("xml.php");
 }
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-AU">
