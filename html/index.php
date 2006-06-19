@@ -1,3 +1,4 @@
+<?php session_start(); ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <?php
@@ -16,6 +17,16 @@ $link['download'] = '<a href="http://sourceforge.net/project/showfiles.php?group
 $link['developers'] = "<a href=\"http://sourceforge.net/project/memberlist.php?group_id=116817\" ".
 			"title=\"link to the ddclient developers\">developers for ddclient on sourceforge</a>";
 
+// Setting debugshit
+if (isset($_REQUEST['debug'])) {
+	$debug = !($_REQUEST['debug'] == 0);
+} else if (isset($_SESSION['debug'])) {
+	$debug = $_SESSION['debug'];
+} else {
+	$debug = 0;
+}
+$_SESSION['debug'] = $debug;
+
 // pages information; should be in a database
 
 // main
@@ -30,6 +41,7 @@ $pages[2]['title'] = "supported protocols";
 
 $pages[3]['nr'] = 3;
 $pages[3]['title'] = "supported routers";
+
 
 $curpage = isset($_GET['page'])?$_GET['page']:0;
 $titleextra = $pages[$curpage]['title'];
