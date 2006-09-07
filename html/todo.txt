@@ -10,3 +10,8 @@ Adding the README's to the html-code
 Pastbin
 -------
 Handy to post your config, doesn't mess up your lines.
+
+STEP BY STEP
+------------
+Some people need some help on how to use ddclient, maybe it's good to be more 
+detailed.
