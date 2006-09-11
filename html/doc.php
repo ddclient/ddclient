@@ -40,6 +40,7 @@ $text['body']  =
 	"					More information about the possible use-arguments can be found on \n" .
 	"					the supported routers page</tr></td>" .
   	"<tr><td>-ip address           </td><td> set the IP address to 'address'.<td></tr>\n" .
+  	"<tr><td>-postscript script    </td><td> run 'script' after updating.<td></tr>\n" .
 
   	"<tr><td>-if interface         </td><td> obtain IP address from 'interface' (default: ppp0).<td></tr>\n" .
   	"<tr><td>-if-skip pattern      </td><td> skip any IP addresses before 'pattern' in the output of ifconfig {if}.<td></tr>\n" .
