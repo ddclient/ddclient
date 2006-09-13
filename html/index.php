@@ -29,28 +29,35 @@ $_SESSION['debug'] = $debug;
 
 // pages information; should be in a database
 
+
+define('HOME',    0);
+define('USAGE',   1);
+define('PROTOCOL',2);
+define('ROUTER',  3);
+define('XML',     4);
+
 // main
-$pages[0]['nr'] = 0;
-$pages[0]['title'] = "home";
-$pages[0]['php'] = "home.php";
+$pages[HOME]['nr'] = HOME;
+$pages[HOME]['title'] = "home";
+$pages[HOME]['php'] = "home.php";
 
 // documentation 
-$pages[1]['nr'] = 1;
-$pages[1]['title'] = "usage";
-$pages[1]['php'] = "doc.php";
+$pages[USAGE]['nr'] = USAGE;
+$pages[USAGE]['title'] = "usage";
+$pages[USAGE]['php'] = "doc.php";
 
-$pages[2]['nr'] = 2;
-$pages[2]['title'] = "supported protocols";
-$pages[2]['php'] = "protocol.php";
+$pages[PROTOCOL]['nr'] = PROTOCOL;
+$pages[PROTOCOL]['title'] = "supported protocols";
+$pages[PROTOCOL]['php'] = "protocol.php";
 
-$pages[3]['nr'] = 3;
-$pages[3]['title'] = "supported routers";
-$pages[3]['php'] = "router.php";
+$pages[ROUTER]['nr'] = ROUTER;
+$pages[ROUTER]['title'] = "supported routers";
+$pages[ROUTER]['php'] = "router.php";
 
 if ($debug) {
-	$pages[4]['nr'] = 4;
-	$pages[4]['title'] = "xml";
-	$pages[4]['php'] = "xml.php";
+	$pages[XML]['nr'] = XML;
+	$pages[XML]['title'] = "xml";
+	$pages[XML]['php'] = "xml.php";
 }
 
 
@@ -96,24 +103,15 @@ require($pages[$page]['php']);
 
       <div class="subHeader">
         <span class="doNotDisplay">Navigation:</span>
-<!--
-        <a href="./index.php?page=home" <?php if ($page==0) printf("class=\"highlight\"");?>>home</a> |
-        <a href="./index.php?page=doc"  <?php if ($page==1) printf("class=\"highlight\"");?>>documentation</a> |
-        <a href="./index.php">download</a> |
-        <a href="./index.php">Links</a> |
--->
-
 <?php
 $cnt=0;
 foreach ($pages as $id => $subpage) {
 	if ($cnt++) printf(" | ");
-        printf("<a href=\"./index.php?page=%s\"%s>%s</a>",
-	$subpage['nr'],
-	// $id,
-	// $subpage['title'],
-	$page==$subpage['nr']?' class="highlight"':"",
-	$subpage['title']
-);
+	printf("<a href=\"./?page=%s\"%s>%s</a>",
+			$subpage['nr'],
+			$page==$subpage['nr']?' class="highlight"':"",
+			$subpage['title']
+	      );
 }
 ?>
 
@@ -126,14 +124,14 @@ foreach ($pages as $id => $subpage) {
       <div>
         <!--p class="sideBarTitle">Navigate this page</p-->
         <ul>
-<?php
-foreach ($main as $id => $text) {
-printf("<li><a href=\"#%s\" title=\"%s\">&rsaquo; %s</a></li>",
-	$text['id'],
-	$text['title'],
-	$text['menu']
-);
-}
+	<?php
+	foreach ($main as $id => $text) {
+		printf("<li><a href=\"#%s\" title=\"%s\">&rsaquo; %s</a></li>\n",
+				$text['id'],
+				$text['title'],
+				$text['menu']
+		      );
+	}
 ?>
         </ul>
       </div>
@@ -159,12 +157,12 @@ printf("<li><a href=\"#%s\" title=\"%s\">&rsaquo; %s</a></li>",
     <!-- ##### Main Copy ##### -->
 
     <div id="main-copy">
-<?php
-foreach ($main as $text) {
-printf("<a class=\"topOfPage\" href=\"#top\" title=\"Go to the top of this page\">^ TOP</a>\n");
-printf("<h1 id=\"%s\">%s</h1>\n",$text['id'],$text['title']);
-printf("%s\n",$text['body']);
-}
+    <?php
+    foreach ($main as $text) {
+	    printf("<a class=\"topOfPage\" href=\"#top\" title=\"Go to the top of this page\">^ TOP</a>\n");
+	    printf("<h1 id=\"%s\">%s</h1>\n",$text['id'],$text['title']);
+	    printf("%s\n",$text['body']);
+    }
 ?>
     </div>
     
@@ -179,14 +177,14 @@ printf("%s\n",$text['body']);
       <br class="doNotDisplay doNotPrint" />
 
       <div class="right">
-<?php
-$fp = fopen(".", "r");
-// gather statistics
-$fstat = fstat($fp);
-// close the file
-fclose($fp);
-printf("Last update: %s\n", date("d F Y",$fstat['mtime']));
-?>
+      <?php
+      $fp = fopen(".", "r");
+      // gather statistics
+      $fstat = fstat($fp);
+      // close the file
+      fclose($fp);
+      printf("Last update: %s\n", date("d F Y",$fstat['mtime']));
+      ?>
       </div>
     </div>
   </body>
