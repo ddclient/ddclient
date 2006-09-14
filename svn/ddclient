@@ -418,7 +418,7 @@ my %services = (
 	'update'     => \&nic_zoneedit1_update,
 	'examples'   => \&nic_zoneedit1_examples,
 	'variables'  => merge(
-			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'www.zoneedit.com', undef)          },
+			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'dynamic.zoneedit.com', undef)          },
 			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
  			  $variables{'service-common-defaults'},
 		        ),
