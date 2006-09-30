@@ -2,6 +2,7 @@ Changelog
 
 3.7.1
 - URL of zoneedit has changed (see bug #1558483)
+- Added initscript for Ubuntu (posted by Paolo Martinelli)
 
 3.7.0
 - Added vi tag
