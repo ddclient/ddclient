@@ -41,7 +41,9 @@ $text['body'] =
 Ddclient doesn't have any automatic installation procedure.  Get the tar-file 
 from " . $link['download'] .  " and untar it.  Copy the perl script to your
 favorit location (ex. /usr/sbin) and create a /etc/ddclient/ddclient.conf 
-configuration file.  
+configuration file.  If you want the bleeding edge of ddclient, you can get
+the subversion-version using
+<pre> svn co https://svn.sourceforge.net/svnroot/ddclient/trunk/svn ddclient</pre>
 </p><p>
 There are a few configuration examples provided which you can copy to 
 /etc/ddclient/ddclient.conf and modify. More info about the configuration
