@@ -1,4 +1,12 @@
 <?php
+/*
+ * $Id$
+ *
+ * $LastChangedDate$
+ * $Rev$
+ * $Author$
+ *
+ * */
 // usage
 $text['id'] = "introduction";
 $text['title'] = "Introduction";

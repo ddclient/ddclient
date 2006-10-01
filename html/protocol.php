@@ -1,4 +1,12 @@
 <?php
+/*
+ * $Id$
+ *
+ * $LastChangedDate$
+ * $Rev$
+ * $Author$
+ *
+ * */
 $text['id'] = "intro";
 	$text['title'] = "Introduction about the supported protocols";
 	$text['menu']  = "Introduction";
@@ -331,3 +339,4 @@ www.zoneedit.com.</p>\n" .
       "</div>\n" .
   "<p></p>";
 $main[] = $text;
+?>

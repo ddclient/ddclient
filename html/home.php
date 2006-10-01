@@ -1,4 +1,12 @@
 <?php
+/*
+ * $Id$
+ *
+ * $LastChangedDate$
+ * $Rev$
+ * $Author$
+ *
+ * */
 // Introduction
 $text['id'] = "intro";
 $text['title'] = "Introduction";
@@ -37,8 +45,10 @@ configuration file.
 </p><p>
 There are a few configuration examples provided which you can copy to 
 /etc/ddclient/ddclient.conf and modify. More info about the configuration
-can be found on the <a href=\"?page=1\">usage page</a>
-</p><p>
+can be found on the <a href=\"?page=1\">usage page</a>.  There's also 
+a sample configuration delivered with ddclient.
+</p>
+<p>
 A typical configuration like:
 <div class=\"code\">
 <pre>
@@ -55,7 +65,8 @@ myhost.dyndns.org
 </p>
 <p>
 You can run ddclient as &quot;/usr/sbin/ddclient -daemon 300 -syslog&quot; 
-and put it in your startup scripts. 
+and put it in your startup scripts.  There are samples of startup scripts
+provided with ddclient.
 </p> \n"; 
 $main[] = $text;
 
@@ -64,13 +75,16 @@ $text['id'] = "help";
 $text['title'] = "Documentation and help";
 $text['menu'] = "Documentation";
 $text['body'] = "
-<p>The documentation about the configuration has been splitted in three
+<p>
+The documentation about the configuration has been splitted in three
 sections.  The <a href=\"?page=1\">usage page</a> describes the most parts
 of the configuration while the <a href=\"?page=2\">supported protocols</a> 
 page describes the protocol-specific options.  If you want to know how 
 to use ddclient with your router, check the 
 <a href=\"?page=3\">supported routers</a>.
-</p><p>
+</p>
+
+<p>
 Debugging ddclient looks pretty hard but it isn't.  First try to put \n".
 	"as less as necessary in your configuration. Try to run \n".
 	"`./ddclient -daemon=0 -noquiet -debug` and check the result. \n" .
@@ -88,14 +102,18 @@ Debugging ddclient looks pretty hard but it isn't.  First try to put \n".
 	"work as you expected, you can enable debug and verbose messages \n" .
 	"by running ddclient -daemon=0 -debug -verbose -noquiet.\n".
 	"</p>\n".
-	"<p>\n" .
-	"If this doesn't help for you, maybe \n" .
-	"<a href=\"http://sourceforge.net/forum/forum.php?forum_id=399428\">\n" .
-	"the help forum on sourceforge</a> can bring some help.\n" .
-	"I know the manual is not very clear, you have to read the example " .
-	"configurations included in the tar-file or you can run " .
+"<p>
+If this doesn't help for you, maybe
+<a href=\"http://sourceforge.net/forum/forum.php?forum_id=399428\">
+the help forum on sourceforge</a> can bring some help.
+If you don't want to register on sf.net, you can try
+<a href=\"http://sourceforge.net/mail/?group_id=116817\">
+the ddclient-support mailinglist on sf.net</a>.
+If you're lucky you can find some help on 
+<a href=\"irc://irc.freenode.net\">#ddclient on irc.freenode.net</a>.  " .
+	"I know the manual is not very clear, you have to read the example\n" .
+	"configurations included in the tar-file or you can run\n" .
 	"&quot;ddclient --help&quot; to get more help.  " .
-	"If you lucky you can find some help on #ddclient on irc.freenode.net" .
 	"</p>\n" .
 	"<p>
 More info about the ddclient project can be found on " .

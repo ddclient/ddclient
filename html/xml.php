@@ -1,4 +1,12 @@
 <?php
+/*
+ * $Id$
+ *
+ * $LastChangedDate$
+ * $Rev$
+ * $Author$
+ *
+ * */
 $text['id'] = "intro";
 $text['title'] = "Introduction about the xml page";
 $text['menu']  = "introduction";
