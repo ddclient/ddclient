@@ -29,7 +29,7 @@ $text['title'] = "dnspark protocol";
 $text['menu']  = "dnspark";
 $text['body']  = 
 	"<p>The 'dnspark' protocol is used by DNS service offered by www.dnspark.com.</p>\n ".
-	"<p>Configuration variables applicable to the 'easydns' protocol are:\n ".
+	"<p>Configuration variables applicable to the 'dsnpark' protocol are:</p>\n ".
 	"<table>\n" .
   "<tr><td>protocol=dnspark             </td><td> </td></tr>\n".
   "<tr><td>server=fqdn.of.service       </td><td> defaults to www.dnspark.com</td></tr>\n".
@@ -64,7 +64,7 @@ $text['body']  =
   	"login=my-dnspark.com-login,                               \\\n" .
   	"password=my-dnspark.com-password                          \\\n" .
   	"my-toplevel-domain.com,my-other-domain.com\n" .
-	"<pre>\n" . 
+	"</pre>\n" . 
 	"</div>\n" ;
 
 $main[] = $text;
@@ -76,16 +76,16 @@ $text['body']  =
 "<p>The 'dslreports1' protocol is used by a free DSL monitoring service\n" .
 "offered by www.dslreports.com.</p>\n" .
 
-"<p>Configuration variables applicable to the 'dslreports1' protocol are:</p>" .
-"<table>\n" .
-  "<tr><td>protocol=dslreports1         </td><td> </td></tr>" .
-  "<tr><td>server=fqdn.of.service       </td><td> defaults to www.dslreports.com</td></tr>" .
-  "<tr><td>login=service-login          </td><td> login name and password  registered with the service</td></tr>" .
-  "<tr><td>password=service-password    </td><td></td></tr>" .
-  "<tr><td>unique-number                </td><td> the host registered with the service.</td></tr>" .
-"<table>\n" .
+"<p>Configuration variables applicable to the 'dslreports1' protocol are:</p>
+<table>
+  <tr><td>protocol=dslreports1         </td><td> </td></tr>
+  <tr><td>server=fqdn.of.service       </td><td> defaults to www.dslreports.com</td></tr>
+  <tr><td>login=service-login          </td><td> login name and password  registered with the service</td></tr>
+  <tr><td>password=service-password    </td><td></td></tr>
+  <tr><td>unique-number                </td><td> the host registered with the service.</td></tr>
+</table>
 
-"<p>Example ddclient.conf file entries:</p>" .
+<p>Example ddclient.conf file entries:</p>" .
 	"<div class=\"code\">\n" .
 	"<pre>\n" .
   "## single host update\n" .
@@ -94,8 +94,8 @@ $text['body']  =
   "login=my-dslreports-login,                                \\\n" .
   "password=my-dslreports-password                           \\\n" .
   "123456\n" .
-"</div>\n" .
 "</pre>\n" .
+"</div>\n" .
 
 "<p>Note: DSL Reports uses a unique number as the host name.  This number\n" .
 "can be found on the Monitor Control web page.</p>\n" ;
@@ -109,7 +109,7 @@ $text['body']  =
 "update the www.dyndns.org service.  However, other services are also  \n".
 "using this protocol so support is still provided by ddclient. </p>\n".
 " \n".
-"Configuration variables applicable to the 'dyndns1' protocol are: \n".
+"<p>Configuration variables applicable to the 'dyndns1' protocol are:</p> \n".
 "<table>\n" .
   "<tr><td>protocol=dyndns1             </td><td> </td></tr>\n" .
   "<tr><td>server=fqdn.of.service       </td><td> defaults to members.dyndns.org</td></tr>\n" .
@@ -136,8 +136,8 @@ $text['body']  =
   "password=my-dyndns.org-password,                          \\\n" . 
   "mx=a.host.willing.to.mx.for.me,backupmx=yes,wildcard=yes  \\\n" . 
   "myhost.dyndns.org,my2ndhost.dyndns.org \n" . 
-  "</div> \n" .
 	"</pre>\n" .
+  "</div> \n" .
 	"<p>Note: you only need one of the examples</p>\n";
 
 $main[] = $text;
@@ -199,7 +199,7 @@ $text['body']  =
 "<p>The 'easydns' protocol is used by the for fee DNS service offered \n" .
 "by www.easydns.com.</p>\n" .
 
-"<p>Configuration variables applicable to the 'easydns' protocol are:\n".
+"<p>Configuration variables applicable to the 'easydns' protocol are:</p>\n".
 "<table>\n" .
   "<tr><td>protocol=easydns             </td><td> </td></tr>\n" .
   "<tr><td>server=fqdn.of.service       </td><td> defaults to members.easydns.com</td></tr>\n" .
@@ -209,7 +209,7 @@ $text['body']  =
   "<tr><td>login=service-login          </td><td> login name and password  registered with the service</td></tr>\n" .
   "<tr><td>password=service-password    </td><td></td></tr>\n" .
   "<tr><td>fully.qualified.host         </td><td> the host registered with the service.</td></tr>\n" .
-  "</table></p>\n" .
+  "</table>\n" .
 
 "<p>Example ddclient.conf file entries:</p> " .
 	"<div class=\"code\">\n" .
@@ -247,7 +247,7 @@ $text['body']  =
 "The 'hammernode1' protocol is the protocol used by the free dynamic \n" .
 "DNS service offered by Hammernode at www.hn.org </p>\n" .
 
-"Configuration variables applicable to the 'hammernode1' protocol are: </p>\n" .
+"<p>Configuration variables applicable to the 'hammernode1' protocol are: </p>\n" .
 "<table>\n" .
   "<tr><td>protocol=hammernode1         </td><td> </td></tr>\n" .
   "<tr><td>server=fqdn.of.service       </td><td> defaults to members.dyndns.org</td></tr>\n" .
@@ -308,16 +308,18 @@ $main[] = $text;
 $text['id'] = "zoneedit1";
 $text['title'] = "zoneedit1";
 $text['menu']  = "zoneedit1";
-$text['body']  = 
-"<p>The 'zoneedit1' protocol is used by a DNS service offered by
-www.zoneedit.com.</p>\n" .
-
-"<p>Configuration variables applicable to the 'zoneedit1' protocol are:</p>\n" .
-  "<tr><td>protocol=zoneedit1           </td><td> </td></tr>\n" .
-  "<tr><td>server=fqdn.of.service       </td><td> defaults to www.zoneedit.com</td></tr>\n" .
-  "<tr><td>login=service-login          </td><td> login name and password  registered with the service</td></tr>\n" .
-  "<tr><td>password=service-password    </td><td></td></tr>\n" .
-  "<tr><td>your.domain.name             </td><td> the host registered with the service.</td></tr>\n" .
+$text['body']  = "
+<p>The 'zoneedit1' protocol is used by a DNS service offered by
+www.zoneedit.com.</p>
+<p>Configuration variables applicable to the 'zoneedit1' 
+protocol are:</p>
+<table>
+  <tr><td>protocol=zoneedit1           </td><td> </td></tr>
+  <tr><td>server=fqdn.of.service       </td><td> defaults to www.zoneedit.com</td></tr>
+  <tr><td>login=service-login          </td><td> login name and password  registered with the service</td></tr>
+  <tr><td>password=service-password    </td><td></td></tr>
+  <tr><td>your.domain.name             </td><td> the host registered with the service.</td></tr>
+</table>\n" .
 
 "<p>Example ddclient.conf file entries:</p>\n" .
 	"<div class=\"code\">\n" .

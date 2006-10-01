@@ -1,16 +1,16 @@
 <?php session_start(); ?>
-<!-- ----------------------------------------
-
- $Id$
- 
- $LastChangedDate$
- $Rev$
- $Author$
-
------------------------------------------- -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <?php
+/* 
+ *
+ * $Id$
+ 
+ * $LastChangedDate$
+ * $Rev$
+ * $Author$
+ * 
+ * */
 /* Extra ideetjes voor de website
 - contents: readme file & stuff
 */
@@ -158,7 +158,7 @@ foreach ($pages as $id => $subpage) {
 	</span>
         <span class="sideBarText">
 	  Website is hosted on
-<A href="http://sourceforge.net"> <IMG src="http://sourceforge.net/sflogo.php?group_id=116817&amp;type=2" width="125" height="37" border="0" alt="SourceForge.net Logo" /></A>
+<a href="http://sourceforge.net"> <img src="http://sourceforge.net/sflogo.php?group_id=116817&amp;type=2" width="125" height="37" alt="SourceForge.net Logo" /></a>
 	</span>
       </div>
     </div>
