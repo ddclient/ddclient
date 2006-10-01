@@ -2,5 +2,3 @@ IRC: There are not that much people on irc.  Mostly it's just wimpunk and a few 
 README: Adding the README's to the html-code
 Pastbin: Handy to post your config, doesn't mess up your lines.
 STEP BY STEP: Some people need some help on how to use ddclient, maybe it's good to be more detailed.
-download: add svn
-
