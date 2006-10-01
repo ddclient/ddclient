@@ -184,7 +184,7 @@ foreach ($pages as $id => $subpage) {
       </div-->
       <div class="left">
         $Id$
-      </div-->
+      </div>
 
       <br class="doNotDisplay doNotPrint" />
 
