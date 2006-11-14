@@ -112,12 +112,15 @@ If you don't want to register on sf.net, you can try
 <a href=\"http://sourceforge.net/mail/?group_id=116817\">
 the ddclient-support mailinglist on sf.net</a>.
 If you're lucky you can find some help on 
-<a href=\"irc://irc.freenode.net\">#ddclient on irc.freenode.net</a>.  " .
-	"I know the manual is not very clear, you have to read the example\n" .
-	"configurations included in the tar-file or you can run\n" .
-	"&quot;ddclient --help&quot; to get more help.  " .
-	"</p>\n" .
-	"<p>
+<a href=\"irc://irc.freenode.net\">#ddclient on irc.freenode.net</a>. 
+Please be a little patient, we're regulary running idle when we're 
+out there.
+</p>\n" .
+"I know the manual is not very clear, you have to read the example\n" .
+"configurations included in the tar-file or you can run\n" .
+"&quot;ddclient --help&quot; to get more help.  " .
+"</p>\n" .
+"<p>
 More info about the ddclient project can be found on " .
 	$link['project'] .
 	"</p>";
