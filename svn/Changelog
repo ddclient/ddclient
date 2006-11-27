@@ -5,6 +5,8 @@ Changelog
 - Added initscript for Ubuntu (posted by Paolo Martinelli)
 - Added patch "Patch: Treat --daemon values as intervals"
   (submitted by James deBoer)
+- Don't send any mail when in not running daemon mode (patch submitted by 
+  Daniel Thaler)
 
 
 3.7.0

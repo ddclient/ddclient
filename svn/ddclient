@@ -1353,7 +1353,7 @@ sub logger {
 sub sendmail {
     my $recipients = opt('mail');
 
-    if (opt('mail-failure') && ($result ne 'OK')) {
+    if (opt('mail-failure') && ($result ne 'OK' && $result != 0)) {
 	$recipients = opt('mail-failure');
     }
     if ($msgs && $recipients && $msgs ne $last_msgs) {
