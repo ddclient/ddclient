@@ -2004,6 +2004,13 @@ sub nic_updateable {
     } elsif (defined($sub) && &$sub($host)) {
 	$update = 1;
 
+    } elsif (($cache{$host}{'static'} ne $config{$host}{'static'}) ||
+	     ($cache{$host}{'wildcard'} ne $config{$host}{'wildcard'}) ||
+	     ($cache{$host}{'mx'} ne $config{$host}{'mx'}) ||
+	     ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'})) {
+	info("updating %s because host settings have been changed.", $host);
+	$update = 1;
+
     } else {
 	success("%s: skipped: IP address was already set to %s.", $host, $ip)
 	    if opt('verbose');
