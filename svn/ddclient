@@ -73,6 +73,11 @@ my %builtinfw = (
 				  'url'  => '/status.htm',
 				  'skip' => 'IP Address',
 			        },
+    'smc-barricade-7401bra'  => {
+				  'name' => 'SMC Barricade 7401BRA FW',
+				  'url'  => '/admin/wan1.htm',
+				  'skip' => 'IP Address',
+			        },
     'netgear-rt3xx'          => {
 				  'name' => 'Netgear FW',
 				  'url'  => '/mtenSysStatus.html',
