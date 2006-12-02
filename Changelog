@@ -1,12 +1,13 @@
 Changelog
 
 3.7.1
-- URL of zoneedit has changed (see bug #1558483)
-- Added initscript for Ubuntu (posted by Paolo Martinelli)
-- Added patch "Patch: Treat --daemon values as intervals"
-  (submitted by James deBoer)
-- Don't send any mail when in not running daemon mode (patch submitted by 
-  Daniel Thaler)
+	* URL of zoneedit has changed (see bug #1558483)
+	* Added initscript for Ubuntu (posted by Paolo Martinelli)
+	* Added patch "Patch: Treat --daemon values as intervals"
+	(submitted by James deBoer)
+	* Don't send any mail when in not running daemon mode 
+	(patch submitted by Daniel Thaler)
+	* Changed Changelog syntax
 
 
 3.7.0
