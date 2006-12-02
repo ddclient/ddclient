@@ -22,6 +22,7 @@ $program  =~ s/d$//;
 my $now       = time;
 my $hostname  = hostname();
 my $etc       = ($program =~ /test/i) ? './'   : '/etc/ddclient/';
+my $cachedir  = ($program =~ /test/i) ? './'   : '/var/cache/ddclient/';
 my $savedir   = ($program =~ /test/i) ? 'URL/' : '/tmp/';
 my $msgs      = '';
 my $last_msgs = '';
@@ -296,7 +297,7 @@ my %variables = (
     'global-defaults'    => {
 	'daemon'              => setv(T_DELAY, 0, 0, 1, 0,                    interval('60s')),
 	'file'                => setv(T_FILE,  0, 0, 1, "$etc$program.conf",  undef),
-	'cache'               => setv(T_FILE,  0, 0, 1, "$etc$program.cache", undef),
+	'cache'               => setv(T_FILE,  0, 0, 1, "$cachedir$program.cache", undef),
 	'pid'                 => setv(T_FILE,  0, 0, 1, "",                   undef),
 	'proxy'               => setv(T_FQDNP, 0, 0, 1, '',                   undef),
 	'protocol'            => setv(T_PROTO, 0, 0, 1, 'dyndns2',            undef),
