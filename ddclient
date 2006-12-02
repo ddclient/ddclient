@@ -543,6 +543,12 @@ $result = 'OK';
 
 test_geturl(opt('geturl')) if opt('geturl');
 
+## process help option
+if (opt('help')) {
+    *STDERR = *STDOUT;
+    usage(0);
+}
+
 ## read config file because 'daemon' mode may be defined there.
 read_config(define($opt{'file'}, default('file')), \%config, \%globals);
 init_config();
@@ -1101,16 +1107,14 @@ sub init_config {
 	    $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
 	}
     }
-    if (opt('help')) {
-	*STDERR = *STDOUT;
-	usage();
-    }
 }
 
 ######################################################################
 ## usage
 ######################################################################
 sub usage {
+    my $exitcode = 1;
+    $exitcode = shift if @_ != 0; # use first arg if given
     my $msg = '';
     if (@_) {
 	my $format = shift;
@@ -1120,7 +1124,7 @@ sub usage {
     }
     printf STDERR "%s%s\n", $msg, $opt_usage;
     sendmail();
-    exit 1;
+    exit $exitcode;
 }
 
 ######################################################################
