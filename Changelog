@@ -8,7 +8,16 @@ Changelog
 	* Don't send any mail when in not running daemon mode 
 	(patch submitted by Daniel Thaler)
 	* Changed Changelog syntax
-
+	* Applied patches submitted by Torsten:
+	abuse_msg.diff: ddclient still reports the email to contact dyndns.org
+	but they prefer a web form today (IIRC). This patch adjusts the abuse
+	warning printed by ddclient.
+	cachedir.diff: Original ddclient stores a cache file in /etc which
+	would belong in /var/cache in my opinion and according to the FHS.
+	help_nonroot.diff: Allow calling the help function as non-root.
+	update-new-config.patch: Force update if config has changed
+	smc-barricade-7401bra.patch: Support for SMC Barricade 7401BRA FW
+	firewall
 
 3.7.0
 - Added vi tag
@@ -266,3 +275,4 @@ Changelog
 
 -------------------------------------------------------------------------------
 $Id$
+------------------------------------------------------------------------
