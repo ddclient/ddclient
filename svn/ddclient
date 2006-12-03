@@ -1820,7 +1820,7 @@ sub get_ip {
 	# Protect special HTML characters (like '?')
 	$queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
 
-	$url   = "http://${arg}/level/1/exec/show/ip/interface/brief/${queryif}/CR";
+	$url   = "http://".opt('fw')."/level/1/exec/show/ip/interface/brief/${queryif}/CR";
 	$reply = geturl('', $url, opt('fw-login'), opt('fw-password')) || '';
 	$arg   = $url;
 
