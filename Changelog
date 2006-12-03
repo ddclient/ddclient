@@ -18,6 +18,13 @@ Changelog
 	update-new-config.patch: Force update if config has changed
 	smc-barricade-7401bra.patch: Support for SMC Barricade 7401BRA FW
 	firewall
+	cisco_fw.diff: Use configured hostname for firewall access
+	with -use=cisco (closes: #345712). Thanks to Per Carlson for the
+	patch!  See http://bugs.debian.org/345712.
+	maxinterval.diff: Increase max interval for updates.
+	See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=129370
+	http://www.dyndns.com/support/services/dyndns/faq.html#q15
+
 
 3.7.0
 - Added vi tag
