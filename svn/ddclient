@@ -352,7 +352,7 @@ my %variables = (
 	'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
 	'status'              => setv(T_ANY,    0, 1, 0, '',                  undef),
 	'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),     0),
-	'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('15d'),     0),
+	'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('30d'),     0),
 	'min-error-interval'  => setv(T_DELAY,  0, 0, 1, interval('5m'),      0),
 
 	'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
