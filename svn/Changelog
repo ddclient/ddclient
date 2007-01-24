@@ -24,6 +24,8 @@ Changelog
 	maxinterval.diff: Increase max interval for updates.
 	See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=129370
 	http://www.dyndns.com/support/services/dyndns/faq.html#q15
+	* Changed max-interval to 25days.  See
+	https://www.dyndns.com/services/dns/dyndns/faq.html
 
 
 3.7.0
