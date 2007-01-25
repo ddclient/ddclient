@@ -115,7 +115,7 @@ If you're lucky you can find some help on
 <a href=\"irc://irc.freenode.net\">#ddclient on irc.freenode.net</a>. 
 Please be a little patient, we're regulary running idle when we're 
 out there.
-</p>\n" .
+</p>\n<p>" .
 "I know the manual is not very clear, you have to read the example\n" .
 "configurations included in the tar-file or you can run\n" .
 "&quot;ddclient --help&quot; to get more help.  " .
