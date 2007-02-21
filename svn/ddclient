@@ -1656,8 +1656,8 @@ sub geturl {
     $url    =~ s%^[^/]*/%%;
  
     debug("server = $server");
-    debug("opt(fw = ",opt('fw'));
-    debug("glo fw = $globals{'fw'}");
+    opt('fw') && debug("opt(fw = ",opt('fw'),")");
+    $globals{'fw'} && debug("glo fw = $globals{'fw'}"); 
     #if ( $globals{'ssl'} and $server ne $globals{'fw'} ) {
     ## always omit SSL for connections to local router
     if ( $globals{'ssl'} and (caller(1))[3] ne 'main::get_ip' ) {
