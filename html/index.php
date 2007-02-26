@@ -43,7 +43,8 @@ define('HOME',    0);
 define('USAGE',   1);
 define('PROTOCOL',2);
 define('ROUTER',  3);
-define('XML',     4);
+define('FAQ',     4);
+define('XML',     5);
 
 // main
 $pages[HOME]['nr'] = HOME;
@@ -62,6 +63,10 @@ $pages[PROTOCOL]['php'] = "protocol.php";
 $pages[ROUTER]['nr'] = ROUTER;
 $pages[ROUTER]['title'] = "supported routers";
 $pages[ROUTER]['php'] = "router.php";
+
+$pages[FAQ]['nr'] = FAQ;
+$pages[FAQ]['title'] = "faq";
+$pages[FAQ]['php'] = "faq.php";
 
 if ($debug) {
 	$pages[XML]['nr'] = XML;
