@@ -87,6 +87,11 @@ to use ddclient with your router, check the
 </p>
 
 <p>
+We're currently working on a wiki version of this pages.  You can find
+them <a href=\"http://ddclient.wiki.sourceforge.net/\">here</a>.
+</p>
+
+<p>
 Debugging ddclient looks pretty hard but it isn't.  First try to put \n".
 	"as less as necessary in your configuration. Try to run \n".
 	"`./ddclient -daemon=0 -noquiet -debug` and check the result. \n" .
