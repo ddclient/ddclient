@@ -54,7 +54,8 @@ sub T_POSTS	{'postscript'};
 
 ## strategies for obtaining an ip address.
 my %builtinweb = (
-   'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address', },
+   'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' =>
+   'Current IP Address:', },
    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
 );
 my %builtinfw = (
