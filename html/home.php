@@ -73,8 +73,8 @@ provided with ddclient.
 $main[] = $text;
 
 // help part
-$text['id'] = "help";
-$text['title'] = "Documentation and help";
+$text['id'] = "doc";
+$text['title'] = "Documentation";
 $text['menu'] = "Documentation";
 $text['body'] = "
 <p>
@@ -103,8 +103,20 @@ Debugging ddclient looks pretty hard but it isn't.  First try to put \n".
 	"If you think your configuration is correct, but ddclient doesn't \n" .
 	"work as you expected, you can enable debug and verbose messages \n" .
 	"by running ddclient -daemon=0 -debug -verbose -noquiet.\n".
-	"</p>\n".
-"<p>
+	"</p>\n";
+$main[] = $text;
+unset ($text);
+
+$text['id'] = "help";
+$text['title'] = "Getting help";
+$text['menu'] = "Help";
+$text['body'] = "
+
+<p>
+Please note: if you are using ubuntu, contact the ubuntu forum at 
+https://launchpad.net/ubuntu/+source/ddclient/+filebug since there are a few differences between ubuntu and the original ddclient
+</p>
+<p>
 If this doesn't help for you, maybe
 <a href=\"http://sourceforge.net/forum/forum.php?forum_id=399428\">
 the help forum on sourceforge</a> can bring some help.
