@@ -1635,6 +1635,20 @@ sub encode_base64 ($;$) {
     $res;
 }
 ######################################################################
+## load_ssl_support
+######################################################################
+sub load_ssl_support {
+    my $ssl_loaded = eval {require IO::Socket::SSL};
+    unless ($ssl_loaded) {
+        fatal(<<"EOM");
+Error loading the Perl module IO::Socket::SSL needed for SSL connect.
+On Debian, the package libio-socket-ssl-perl must be installed.
+EOM
+    }
+    import  IO::Socket::SSL;
+    { no warnings; $IO::Socket::SSL::DEBUG = 0; }
+}
+######################################################################
 ## geturl
 ######################################################################
 sub geturl {
@@ -1663,9 +1677,7 @@ sub geturl {
     if ( $globals{'ssl'} and (caller(1))[3] ne 'main::get_ip' ) {
         $use_ssl      = 1;
         $default_port = 443;
-        require IO::Socket::SSL;
-        import  IO::Socket::SSL;
-        { no warnings; $IO::Socket::SSL::DEBUG = 0; }
+		load_ssl_support;
     } else {
         $use_ssl      = 0;
         $default_port = 80;
