@@ -118,8 +118,8 @@ $text['menu'] = "Help";
 $text['body'] = "
 
 <p>
-Please note: if you are using ubuntu, contact the ubuntu forum at 
-https://launchpad.net/ubuntu/+source/ddclient/+filebug since there are a few differences between ubuntu and the original ddclient
+Please note: if you are using ubuntu, contact <a href=\"https://answers.launchpad.net/ubuntu/+source/ddclient/\">the ubuntu forum</a>
+since there are a few differences between ubuntu and the original ddclient
 </p>
 <p>
 If this doesn't help for you, maybe
