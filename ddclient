@@ -3047,8 +3047,8 @@ sub nic_namecheap_update {
 
         my $url;
         $url   = "http://$config{$h}{'server'}/update";
-        $url  .= "?host=$config{$h}{'login'}";
-        $url  .= "&domain=$h";
+        $url  .= "?host=$h";
+        $url  .= "&domain=$config{$h}{'login'}";
         $url  .= "&password=$config{$h}{'password'}";
         $url  .= "&ip=";
         $url  .= $ip if $ip;
