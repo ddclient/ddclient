@@ -162,7 +162,7 @@ my %builtinfw = (
     '3com-oc-remote812'      => {
     				  'name' => '3com OfficeConnect Remote 812',
                                   'url'  => '/callEvent',
-                                  'skip' => '.*IP address in use',     
+                                  'skip' => '.*LOCAL',
                                 },
     'e-tech'		     => {
 				  'name' => 'E-tech Router',
