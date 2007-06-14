@@ -1,0 +1,7 @@
+2252a2253,2254
+> 	#my $url = "http://$config{$h}{'server'}/nic/update?system=";
+> 
+2253a2256,2258
+> 	if ($config{$h}{'server'} =~ /.*eurodyndns.*/i) { #hack for EuroDynDNS
+> 		$url = "http://$config{$h}{'server'}/update/?system=";
+> 	}

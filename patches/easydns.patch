@@ -1,0 +1,44 @@
+#
+# patch from
+#
+--- ddclient	2004-11-24 17:23:56.000000000 +0100
++++ ddclient.orig	2005-01-25 10:03:22.640483000 +0100
+@@ -257,6 +257,11 @@
+ 	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
+ 	'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+     },
++    'easydns-common-defaults'       => {
++	'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
++	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
++	'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
++    },
+     'dnspark-common-defaults'       => {
+ 	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
+ 	'mxpri'               => setv(T_NUMBER, 0, 0, 1, 5,                   undef),
+@@ -319,6 +324,7 @@
+ 	'variables'  => merge(
+ 			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'members.easydns.com', undef)          },
+ 			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
++			  $variables{'easydns-common-defaults'},
+  			  $variables{'service-common-defaults'},
+ 		        ),
+     },
+@@ -2487,14 +2493,14 @@
+ 	info("setting IP address to %s for %s", $ip, $hosts);
+ 	verbose("UPDATE:","updating %s", $hosts);
+ 
+-	#'http://members.easydns.com:80/dyn/ez-ipupdate.php?action=edit&myip=10.20.30.40&host_id=test.burry.ca&'
++	#'http://members.easydns.com/dyn/dyndns.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
+ 
+ 	my $url;
+-	$url   = "http://$config{$h}{'server'}/dyn/ez-ipupdate.php?action=edit";
+-	$url  .= "&host_id=$hosts";
++	$url   = "http://$config{$h}{'server'}/dyn/dyndns.php?";
++	$url  .= "hostname=$hosts";
+ 	$url  .= "&myip=";
+ 	$url  .= $ip            if $ip;
+-	$url  .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'YES', 'NO', 'NO') if defined $config{$h}{'wildcard'};
++	$url  .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF') if defined $config{$h}{'wildcard'};
+ 
+ 	if ($config{$h}{'mx'}) {
+ 	    $url .= "&mx=$config{$h}{'mx'}";
