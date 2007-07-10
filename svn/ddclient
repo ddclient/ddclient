@@ -3014,7 +3014,7 @@ o 'namecheap'
 
 The 'namecheap' protocol is used by DNS service offered by www.namecheap.com.
 
-Configuration variables applicable to the 'easydns' protocol are:
+Configuration variables applicable to the 'namecheap' protocol are:
   protocol=namecheap           ## 
   server=fqdn.of.service       ## defaults to dynamicdns.park-your-domain.com
   login=service-login          ## login name and password  registered with the service
