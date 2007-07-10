@@ -7,6 +7,9 @@
 #
 # Author: Paul Burry (paul+ddclient@burry.ca)
 # ddclient-developers: see https://sourceforge.net/project/memberlist.php?group_id=116817
+#
+# website: http://ddclient.sf.net
+#
 ######################################################################
 require 5.004;
 use strict;
