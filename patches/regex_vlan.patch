@@ -2,6 +2,11 @@
 # patch created with `svn diff -r61 . > patches/regex_vlan.patch`
 # on Tue Jul 10 21:29:49 CEST 2007
 # applied on r61
+# 
+# bug originally reported on ubuntu:
+# https://bugs.edge.launchpad.net/ubuntu/+source/ddclient/+bug/77570
+# posted upstream as bug #1747337
+# patch written by marclogghe
 #
 Index: ddclient
 ===================================================================
