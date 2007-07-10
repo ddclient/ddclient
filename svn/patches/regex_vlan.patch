@@ -1,0 +1,18 @@
+#
+# patch created with `svn diff -r61 . > patches/regex_vlan.patch`
+# on Tue Jul 10 21:29:49 CEST 2007
+# applied on r61
+#
+Index: ddclient
+===================================================================
+--- ddclient	(revision 61)
++++ ddclient	(working copy)
+@@ -1601,7 +1601,7 @@
+ 	return undef if $value eq "";
+ 
+     } elsif ($type eq T_IF) {
+-	return undef if $value !~ /^[a-z0-9:_-]+$/;
++	return undef if $value !~ /^[a-z0-9:._-]+$/;
+ 
+     } elsif ($type eq T_PROG) {
+ 	return undef if $value eq "";
