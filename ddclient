@@ -1601,7 +1601,7 @@ sub check_value {
 	return undef if $value eq "";
 
     } elsif ($type eq T_IF) {
-	return undef if $value !~ /^[a-z0-9:_-]+$/;
+	return undef if $value !~ /^[a-z0-9:._-]+$/;
 
     } elsif ($type eq T_PROG) {
 	return undef if $value eq "";
