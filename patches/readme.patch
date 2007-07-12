@@ -1,0 +1,24 @@
+#
+# patch sumitted by Kmos
+# See tracker #1752931
+#
+--- README.orig	2007-07-09 23:50:01.000000000 +0100
++++ README	2007-07-12 20:50:28.000000000 +0100
+@@ -18,7 +16,7 @@
+ 
+ Dynamic DNS services currently supported include:
+ 
+-DynDNS.org  - See http://www.dyndns.org for details on obtaining a free account.
++DynDNS.com  - See http://www.dyndns.com for details on obtaining a free account.
+ Hammernode  - See http://www.hn.org for details on obtaining a free account.
+ Zoneedit    - See http://www.zoneedit.com for details.
+ EasyDNS     - See http://www.easydns.com for details.
+@@ -34,7 +32,7 @@
+ 	http://sourceforge.net/projects/ddclient/
+ 
+ The code was originally written by Paul Burry and is now hosted and maintained  
+-through sf.net.  Please check out http://ddclient.sf.net and the project page.
++through sourceforge.net. Please check out http://ddclient.sf.net
+ 
+ -------------------------------------------------------------------------------
+ REQUIREMENTS:
