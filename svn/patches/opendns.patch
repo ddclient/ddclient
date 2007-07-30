@@ -1,0 +1,18 @@
+#
+# patch created with `svn diff -r65 . > patches/opendns`
+# on Mon Jul 23 14:20:22 CEST 2007
+# applied on r65
+#
+Index: ddclient
+===================================================================
+--- ddclient	(revision 65)
++++ ddclient	(working copy)
+@@ -2272,7 +2272,7 @@
+ 	verbose("UPDATE:","updating %s", $hosts);
+ 
+ 	## Select the DynDNS system to update
+-	my $url = "http://$config{$h}{'server'}/nic/update?system=";
++	my $url = "https://updates.opendns.com/account/ddns.php?system=";
+ 	if ($config{$h}{'custom'}) {
+ 	    warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
+ 	      if $config{$h}{'static'};
