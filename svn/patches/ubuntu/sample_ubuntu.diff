@@ -1,0 +1,11 @@
+--- ddclient-3.7.1/sample-etc_rc.d_init.d_ddclient.ubuntu.orig	2007-04-28 13:01:23.000000000 +0100
++++ ddclient-3.7.1/sample-etc_rc.d_init.d_ddclient.ubuntu	2007-04-28 13:01:51.000000000 +0100
+@@ -5,7 +5,7 @@
+ # Submitted by paolo martinelli
+ 
+ DDCLIENT=/usr/sbin/ddclient
+-CONF=/etc/ddclient/ddclient.conf
++CONF=/etc/ddclient.conf
+ PIDFILE=/var/run/ddclient.pid
+ 
+ test -x $DDCLIENT || exit 0
