@@ -1,0 +1,22 @@
+Index: ddclient-3.7.0/ddclient
+===================================================================
+--- ddclient-3.7.0.orig/ddclient	2006-06-14 22:03:52.000000000 +0200
++++ ddclient-3.7.0/ddclient	2006-12-01 23:25:19.748088891 +0100
+@@ -22,6 +22,7 @@
+ my $now       = time;
+ my $hostname  = hostname();
+ my $etc       = ($program =~ /test/i) ? './'   : '/etc/ddclient/';
++my $cachedir  = ($program =~ /test/i) ? './'   : '/var/cache/ddclient/';
+ my $savedir   = ($program =~ /test/i) ? 'URL/' : '/tmp/';
+ my $msgs      = '';
+ my $last_msgs = '';
+@@ -296,7 +297,7 @@
+     'global-defaults'    => {
+ 	'daemon'              => setv(T_DELAY, 0, 0, 1, 0,                    interval('60s')),
+ 	'file'                => setv(T_FILE,  0, 0, 1, "$etc$program.conf",  undef),
+-	'cache'               => setv(T_FILE,  0, 0, 1, "$etc$program.cache", undef),
++	'cache'               => setv(T_FILE,  0, 0, 1, "$cachedir$program.cache", undef),
+ 	'pid'                 => setv(T_FILE,  0, 0, 1, "",                   undef),
+ 	'proxy'               => setv(T_FQDNP, 0, 0, 1, '',                   undef),
+ 	'protocol'            => setv(T_PROTO, 0, 0, 1, 'dyndns2',            undef),
+

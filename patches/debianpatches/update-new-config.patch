@@ -1,0 +1,22 @@
+ddclient did not update the dynamic DNS entry if the config changes. 
+This patch by Frans Pop to fixes this problem reported as  Debian bug 
+#217041. 
+Index: ddclient
+===================================================================
+--- ddclient.orig	2006-12-01 23:22:36.938926449 +0100
++++ ddclient	2006-12-01 23:25:12.987120319 +0100
+@@ -1998,6 +1998,13 @@
+     } elsif (defined($sub) && &$sub($host)) {
+ 	$update = 1;
+ 
++    } elsif (($cache{$host}{'static'} ne $config{$host}{'static'}) ||
++	     ($cache{$host}{'wildcard'} ne $config{$host}{'wildcard'}) ||
++	     ($cache{$host}{'mx'} ne $config{$host}{'mx'}) ||
++	     ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'})) {
++	info("updating %s because host settings have been changed.", $host);
++	$update = 1;
++
+     } else {
+ 	success("%s: skipped: IP address was already set to %s.", $host, $ip)
+ 	    if opt('verbose');
+

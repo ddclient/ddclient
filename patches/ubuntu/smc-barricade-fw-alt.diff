@@ -1,0 +1,14 @@
+--- ddclient-3.7.1/ddclient.orig	2007-04-30 00:43:32.000000000 +0100
++++ ddclient-3.7.1/ddclient	2007-05-03 23:07:24.000000000 +0100
+@@ -73,6 +73,11 @@
+ 				  'url'  => '/status.htm',
+ 				  'skip' => 'IP Address',
+ 			        },
++    'smc-barricade-alt'      => {
++				  'name' => 'SMC Barricade FW (alternate config)',
++				  'url'  => '/status.HTM',
++				  'skip' => 'WAN IP',
++			        },
+     'smc-barricade-7401bra'  => {
+ 				  'name' => 'SMC Barricade 7401BRA FW',
+ 				  'url'  => '/admin/wan1.htm',
