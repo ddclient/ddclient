@@ -181,7 +181,6 @@ my %builtinfw = (
 				  'name' => 'Vigor 2200 USB',
 				  'url'  => '/doc/online.sht',
 				  'skip' => 'PPPoA',
-#				  'skip' => 'PPPoA</font></td><td><font face="Verdana, Arial, Helvetica" size=2 color="#009900"> ',
 			      },
     'dlink-614'            => {
 				  'name' => 'D-Link DI-614+',
