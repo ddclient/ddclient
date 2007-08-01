@@ -2875,7 +2875,7 @@ o 'dnspark'
 
 The 'dnspark' protocol is used by DNS service offered by www.dnspark.com.
 
-Configuration variables applicable to the 'easydns' protocol are:
+Configuration variables applicable to the 'dnspark' protocol are:
   protocol=dnspark             ## 
   server=fqdn.of.service       ## defaults to www.dnspark.com
   backupmx=no|yes              ## indicates that DNSPark should be the secondary MX 
