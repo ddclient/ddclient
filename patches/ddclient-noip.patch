@@ -1,0 +1,183 @@
+--- ddclient	2007-08-28 15:41:51.000000000 -0700
++++ ddclient.noip	2007-08-28 15:37:32.000000000 -0700
+@@ -376,6 +376,25 @@
+ 	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
+ 	'mxpri'               => setv(T_NUMBER, 0, 0, 1, 5,                   undef),
+     },
++    'noip-common-defaults'       => {
++	'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
++    },
++    'noip-service-common-defaults'       => {
++	'server'	      => setv(T_FQDNP,  1, 0, 1, 'dynupdate.no-ip.com', undef),
++	'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
++	'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
++	'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
++	'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
++	'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
++	'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
++	'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
++	'status'              => setv(T_ANY,    0, 1, 0, '',                  undef),
++	'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),     0),
++	'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('25d'),     0),
++	'min-error-interval'  => setv(T_DELAY,  0, 0, 1, interval('5m'),      0),
++	'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
++	'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
++    },
+ );
+ my %services = (
+     'dyndns1' => {
+@@ -398,6 +417,16 @@
+ 			  $variables{'service-common-defaults'},
+ 		        ),
+     },
++    'noip' => {
++	'updateable' => undef,
++	'update'     => \&nic_noip_update,
++	'examples'   => \&nic_noip_examples,
++	'variables'  => merge(
++			  { 'custom'  => setv(T_BOOL,   0, 1, 1, 0, undef),	},
++			  $variables{'noip-common-defaults'},
++			  $variables{'noip-service-common-defaults'},
++		        ),
++    },
+     'concont' => {
+         'updateable' => undef,
+         'update'     => \&nic_concont_update,
+@@ -2359,6 +2388,137 @@
+ 	    if $state ne 'results2';
+     }
+ }
++
++
++######################################################################
++## nic_noip_update
++## Note: uses same features as nic_dyndns2_update, less return codes
++######################################################################
++sub nic_noip_update {
++    debug("\nnic_noip_update -------------------");
++
++    ## group hosts with identical attributes together 
++    my %groups = group_hosts_by([ @_ ], [ qw(login password server static custom wildcard mx backupmx) ]);
++
++    my %errors = (
++       'badauth'  => 'Invalid username or password',
++       'badagent' => 'Invalid user agent',
++       'nohost'   => 'The hostname specified does not exist in the database',
++       '!donator' => 'The offline setting was set, when the user is not a donator',
++       'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at http://www.no-ip.com',
++       'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at http://www.no-ip.com',
++       'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
++       'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
++    );
++
++    ## update each set of hosts that had similar configurations
++    foreach my $sig (keys %groups) {
++	my @hosts = @{$groups{$sig}};
++	my $hosts = join(',', @hosts);
++	my $h     = $hosts[0];
++
++	info("setting IP address to %s for %s", $ip, $hosts);
++	verbose("UPDATE:","updating %s", $hosts);
++
++	my $url = "http://$config{$h}{'server'}/nic/update?system=";
++    $url .= 'noip';
++	$url  .= "&hostname=$hosts";
++	$url  .= "&myip=";
++	$url  .= $ip            if $ip;
++
++
++	print "here..." . $config{$h}{'login'} . " --> " . $config{$h}{'password'} . "\n";
++	
++
++	my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
++	if (!defined($reply) || !$reply) {
++	    failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
++	    last;
++	}
++	last if !header_ok($hosts, $reply);
++
++	my @reply = split /\n/, $reply;
++	my $state = 'header';
++	foreach my $line (@reply) {
++	    if ($state eq 'header') {
++		$state = 'body';
++	    
++	    } elsif ($state eq 'body') {
++		$state = 'results' if $line eq '';
++	    
++	    } elsif ($state =~ /^results/) {
++		$state = 'results2';
++
++		my ($status, $ip) = split / /, lc $line;
++		my $h = shift @hosts;
++	    
++		$config{$h}{'status'} = $status;
++		if ($status eq 'good') {
++		    $config{$h}{'ip'}     = $ip;
++		    $config{$h}{'mtime'}  = $now;
++		    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
++		
++		} elsif (exists $errors{$status}) {
++		    if ($status eq 'nochg') {
++			warning("updating %s: %s: %s", $h, $status, $errors{$status});
++			$config{$h}{'ip'}     = $ip;
++		    	$config{$h}{'mtime'}  = $now;
++			$config{$h}{'status'} = 'good';
++		    
++		    } else {
++			failed("updating %s: %s: %s", $h, $status, $errors{$status});
++		    }
++
++		} elsif ($status =~ /w(\d+)(.)/) {
++		    my ($wait, $units) = ($1, lc $2);
++		    my ($sec,  $scale) = ($wait, 1);
++		
++		    ($scale, $units) = (1, 'seconds')   if $units eq 's';
++		    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
++		    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
++
++		    $sec = $wait * $scale;
++		    $config{$h}{'wtime'} = $now + $sec;
++		    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
++		
++		} else {
++		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
++		} 	
++	    }
++	}
++	failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
++	    if $state ne 'results2';
++    }
++}
++######################################################################
++## nic_noip_examples
++######################################################################
++sub nic_noip_examples {
++    return <<EoEXAMPLE;
++o 'noip'
++
++The 'No-IP Compatible' protocol is used to make dynamic dns updates
++over an http request.  Details of the protocol are outlined at:
++http://www.no-ip.com/integrate/
++
++Configuration variables applicable to the 'noip' protocol are:
++  protocol=noip		           ## 
++  server=fqdn.of.service       ## defaults to dynupdate.no-ip.com
++  login=service-login          ## login name and password  registered with the service
++  password=service-password    ##
++  fully.qualified.host         ## the host registered with the service.
++
++Example ${program}.conf file entries:
++  ## single host update
++  protocol=noip,                                        \\
++  login=userlogin\@domain.com,                                \\
++  password=noip-password                           \\
++  myhost.no-ip.biz 
++
++
++EoEXAMPLE
++}
++
+ ######################################################################
+ ## nic_concont_examples
+ ######################################################################
