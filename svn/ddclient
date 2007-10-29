@@ -323,7 +323,7 @@ my %variables = (
 	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
 	'cmd-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
 
-	'timeout'             => setv(T_DELAY, 0, 0, 1, 0,                    interval('120s')),
+	'timeout'             => setv(T_DELAY, 0, 0, 1, interval('120s'),     interval('120s')),
 	'retry'               => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'force'               => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'ssl'                 => setv(T_BOOL,  0, 0, 0, 0,                    undef),
