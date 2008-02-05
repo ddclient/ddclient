@@ -51,6 +51,7 @@ INSTALLATION:
 
   cp ddclient /usr/sbin/
   mkdir /etc/ddclient
+  mkdir /var/cache/ddclient
   cp sample-etc_ddclient.conf /etc/ddclient/ddclient.conf
   vi /etc/ddclient/ddclient.conf
   -- and change hostnames, logins, and passwords appropriately
@@ -58,6 +59,7 @@ INSTALLATION:
   ## For those using Redhat style rc files and using daemon-mode:
   cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
   ## enable automatic startup when booting
+  ## check your distribution
   /sbin/chkconfig --add ddclient
   ## start the first time by hand
   /etc/rc.d/init.d/ddclient start
