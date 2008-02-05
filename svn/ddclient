@@ -602,8 +602,10 @@ if (!opt('daemon') && $programd =~ /d$/) {
 }
 my $caught_hup  = 0;
 my $caught_term = 0;
+my $caught_kill = 0;
 $SIG{'HUP'}    = sub { $caught_hup  = 1; };
 $SIG{'TERM'}   = sub { $caught_term = 1; };
+$SIG{'KILL'}   = sub { $caught_kill = 1; };
 if (opt('daemon') && !opt('force')) {
     $SIG{'CHLD'}   = 'IGNORE';
     my $pid = fork;
@@ -665,7 +667,7 @@ do {
 	sendmail();
 
 	my $left = $daemon;
-	while (($left > 0) && !$caught_hup && !$caught_term) {
+	while (($left > 0) && !$caught_hup && !$caught_term && !$caught_kill) {
 		my $delay = $left > 10 ? 10 : $left;
 
 		$0 = sprintf("%s - sleeping for %s seconds", $program, $left);
@@ -681,9 +683,9 @@ do {
     } else {
 	$result = $result eq 'OK' ? 0 : 1;
     }
-} while ($daemon && !$result && !$caught_term);
+} while ($daemon && !$result && !$caught_term && !$caught_kill);
 
-warning("caught SIGTERM; exiting") if $caught_term;
+warning("caught SIGKILL; exiting") if $caught_kill;
 unlink_pid();
 sendmail();
 
