@@ -1,0 +1,44 @@
+#
+# patch created with `svn diff -r82 . > patches/mail-on-kill.patch`
+# on Fri Feb  8 11:03:01 CET 2008
+# applied on r82
+#
+# This patch prevent ddclient sending out mail when interrupted by
+# a TERM signal.  It still sends mail ended by a KILL signal.
+#
+Index: ddclient
+===================================================================
+--- ddclient	(revision 82)
++++ ddclient	(working copy)
+@@ -602,8 +602,10 @@
+ }
+ my $caught_hup  = 0;
+ my $caught_term = 0;
++my $caught_kill = 0;
+ $SIG{'HUP'}    = sub { $caught_hup  = 1; };
+ $SIG{'TERM'}   = sub { $caught_term = 1; };
++$SIG{'KILL'}   = sub { $caught_kill = 1; };
+ if (opt('daemon') && !opt('force')) {
+     $SIG{'CHLD'}   = 'IGNORE';
+     my $pid = fork;
+@@ -665,7 +667,7 @@
+ 	sendmail();
+ 
+ 	my $left = $daemon;
+-	while (($left > 0) && !$caught_hup && !$caught_term) {
++	while (($left > 0) && !$caught_hup && !$caught_term && !$caught_kill) {
+ 		my $delay = $left > 10 ? 10 : $left;
+ 
+ 		$0 = sprintf("%s - sleeping for %s seconds", $program, $left);
+@@ -681,9 +683,9 @@
+     } else {
+ 	$result = $result eq 'OK' ? 0 : 1;
+     }
+-} while ($daemon && !$result && !$caught_term);
++} while ($daemon && !$result && !$caught_term && !$caught_kill);
+ 
+-warning("caught SIGTERM; exiting") if $caught_term;
++warning("caught SIGKILL; exiting") if $caught_kill;
+ unlink_pid();
+ sendmail();
+ 
