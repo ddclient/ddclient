@@ -2767,7 +2767,7 @@ Configuration variables applicable to the 'zoneedit1' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=zoneedit1,                                     \\
-  server=www.zoneedit.com,                                \\
+  server=dynamic.zoneedit.com,                                \\
   login=my-zoneedit-login,                                \\
   password=my-zoneedit-password                           \\
   my.domain.name
