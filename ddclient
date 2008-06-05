@@ -2026,8 +2026,10 @@ sub nic_updateable {
 	);
 	$update = 1;
 
-    } elsif ($cache{$host}{'ip'} ne $ip) {
-	if (($cache{$host}{'status'} eq 'good') && !interval_expired($host, 'mtime', 'min-interval')) {
+    } elsif ((!exists($cache{$host}{'ip'})) ||
+		    ("$cache{$host}{'ip'}" ne "$ip")) {
+	    if (($cache{$host}{'status'} eq 'good') && 
+			    !interval_expired($host, 'mtime', 'min-interval')) {
 
 	    warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.", 
 		 $host, 
