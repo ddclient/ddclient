@@ -518,7 +518,7 @@ $variables{'merged'} = merge($variables{'global-defaults'},
 my @opt = (
     "usage: ${program} [options]",
     "options are:",
-    [ "daemon",      "=s", "-daemon delay         : run as a daemon" ],
+    [ "daemon",      "=s", "-daemon delay         : run as a daemon, specify delay as an interval." ],
     [ "proxy",       "=s", "-proxy host           : use 'host' as the HTTP proxy" ],
     [ "server",      "=s", "-server host          : update DNS information on 'host'" ],
     [ "protocol",    "=s", "-protocol type        : update protocol used" ],
@@ -1959,7 +1959,8 @@ For example:
 
 specifies that ${program} should operate as a daemon, checking the
 eth0 interface for an IP address change every 5 minutes and use the
-'dyndns2' protocol by default.
+'dyndns2' protocol by default. The daemon interval can be specified
+as seconds (600s), minutes (5m), hours (1h) or days (1d).
 
 Host definitions look like:
   [name=value [,name=value]*]* a.host.domain [,b.host.domain] [login] [password]
