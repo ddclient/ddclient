@@ -1,0 +1,12 @@
+* ssl: 
+	- check if the library can be used
+	- ssl on routers
+	- ssl on other providers
+
+* notice about irc: there's almost always someone there but we're sometimes idle
+or at work...
+* adding router: halted, only in patches section.
+* add doc postscript 
+* FAQ: bad hostname (checkip)
+* note about init-scripts.
+* request from dyndns: http://tinyurl.com/2l3twf

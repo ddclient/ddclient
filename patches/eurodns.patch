@@ -1,0 +1,23 @@
+#
+# patch created with `svn diff -r83 . > patches/eurodns`
+# on Tue Feb 19 15:57:27 CET 2008
+#
+# This patch is based on the original patch from patch #1668836
+# It's currently not applied to subversion version of ddclient
+#
+Index: ddclient
+===================================================================
+--- ddclient	(revision 83)
++++ ddclient	(working copy)
+@@ -2303,6 +2303,11 @@
+ 
+ 	## Select the DynDNS system to update
+ 	my $url = "http://$config{$h}{'server'}/nic/update?system=";
++	# hack for EuroDynDNS
++	if ($config{$h}{'server'} =~ /.*eurodyndns.*/i) { 
++		$url = "http://$config{$h}{'server'}/update/?system=";
++	}
++	
+ 	if ($config{$h}{'custom'}) {
+ 	    warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
+ 	      if $config{$h}{'static'};

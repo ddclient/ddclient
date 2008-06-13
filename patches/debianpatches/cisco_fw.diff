@@ -1,0 +1,14 @@
+Index: ddclient-3.7.0/ddclient
+===================================================================
+--- ddclient-3.7.0.orig/ddclient	2006-12-01 23:22:37.121898536 +0100
++++ ddclient-3.7.0/ddclient	2006-12-01 23:24:41.551915957 +0100
+@@ -1823,7 +1823,7 @@
+ 	# Protect special HTML characters (like '?')
+ 	$queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
+ 
+-	$url   = "http://${arg}/level/1/exec/show/ip/interface/brief/${queryif}/CR";
++	$url   = "http://".opt('fw')."/level/1/exec/show/ip/interface/brief/${queryif}/CR";
+ 	$reply = geturl('', $url, opt('fw-login'), opt('fw-password')) || '';
+ 	$arg   = $url;
+ 
+

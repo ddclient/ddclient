@@ -1,0 +1,11 @@
+--- ddclient-3.7.1/ddclient.orig	2007-04-28 20:43:53.000000000 +0100
++++ ddclient-3.7.1/ddclient	2007-04-28 20:42:57.000000000 +0100
+@@ -977,6 +977,8 @@
+ sub init_config {
+     %opt = %saved_opt;
+
++	$opt{'daemon'}=interval($opt{'daemon'}) if defined $opt{'daemon'};
++
+     ##
+     $opt{'quiet'}   = 0 if   opt('verbose');
+
