@@ -1,0 +1,19 @@
+# https://sourceforge.net/forum/message.php?msg_id=4789961
+# By: hankessels
+#
+--- ddclient.old	2008-02-21 00:57:17.000000000 +0900
++++ ddclient	2008-02-21 01:36:42.000000000 +0900
+@@ -3060,8 +3060,11 @@ sub nic_namecheap_update {
+
+         my $url;
+         $url   = "http://$config{$h}{'server'}/update";
+-        $url  .= "?host=$h";
+-        $url  .= "&domain=$config{$h}{'login'}";
++        my $domain = $config{$h}{'login'};
++        my $host = $h;
++        $host =~ s/(.*)\.$domain(.*)/$1$2/;
++        $url  .= "?host=$host";
++        $url  .= "&domain=$domain";
+         $url  .= "&password=$config{$h}{'password'}";
+         $url  .= "&ip=";
+         $url  .= $ip if $ip;
