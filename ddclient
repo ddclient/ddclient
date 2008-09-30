@@ -10,6 +10,9 @@
 #
 # website: http://ddclient.sf.net
 #
+# Support for multiple IP numbers added by
+# Astaro AG, Ingo Schwarze <ischwarze-OOs/4mkCeqbQT0dZR+AlfA@public.gmane.org> September 16, 2008
+#
 ######################################################################
 require 5.004;
 use strict;
@@ -349,6 +352,19 @@ my %variables = (
 	'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
 	'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
 	'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
+
+	'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
+	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
+	'if-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
+	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
+	'web-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
+	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
+	'fw-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
+	'fw-login'            => setv(T_LOGIN, 0, 0, 1, '',                   undef),
+	'fw-password'         => setv(T_PASSWD,0, 0, 1, '',                   undef),
+	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
+	'cmd-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
+
 	'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
 	'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
 	'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
@@ -625,7 +641,7 @@ if (opt('daemon') && !opt('force')) {
 }
 
 umask 077;
-my ($daemon, $ip);
+my $daemon;
 do {
     $now = time;
     $result = 'OK';
@@ -648,19 +664,7 @@ do {
     $daemon = $opt{'daemon'};
     $daemon = 0 if opt('force');
 
-    ## obtain the IP address to use.
-    $ip = get_ip(opt('use'));
-
-    ## a little sanity check and then update the NICs..
-    if (!defined $ip || !$ip) {
-	warning("unable to determine IP address") if !$daemon || opt('verbose');
-
-    } elsif ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
-	warning("malformed IP address (%s)", $ip);
-
-    } else {
-	update_nics();
-    }
+    update_nics();
 
     if ($daemon) {
 	debug("sleep %s",  $daemon);
@@ -714,20 +718,34 @@ sub update_nics {
     my %examined = ();
 
     foreach my $s (sort keys %services) {
-	my @hosts = ();
+	my (@hosts, %ips) = ();
 	my $updateable = $services{$s}{'updateable'};
 	my $update     = $services{$s}{'update'};
 
 	foreach my $h (sort keys %config) {
 	    next if $config{$h}{'protocol'} ne lc($s);
 	    $examined{$h} = 1;
+	    my $use = $config{$h}{'use'} || opt('use');
+	    local $opt{$use} = $config{$h}{$use} if $config{$h}{$use};
+	    my $ip = get_ip($use);
+	    if (!defined $ip || !$ip) {
+		warning("unable to determine IP address")
+		    if !$daemon || opt('verbose');
+		next;
+	    }
+	    if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
+		warning("malformed IP address (%s)", $ip);
+		next;
+	    }
+	    $config{$h}{'wantip'} = $ip;
 	    next if !nic_updateable($h, $updateable);
 	    push @hosts, $h;
+	    $ips{$ip} = $h;
 	}
 	if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
 	    &$update(@hosts);
-	    runpostscript($ip);
+	    runpostscript(join ' ', keys %ips);
 	}
     }
     foreach my $h (sort keys %config) {
@@ -1916,7 +1934,7 @@ sub group_hosts_by {
 
     my %groups = ();
     foreach my $h (@$hosts) {
-	my @keys = @$attributes;
+	my @keys = (@$attributes, 'wantip');
 	map { $config{$h}{$_} = '' unless exists $config{$h}{$_} } @keys;
 	my $sig  = join(',', map { "$_=$config{$h}{$_}" } @keys);
 
@@ -1996,6 +2014,7 @@ sub nic_updateable {
     my $host   = shift;
     my $sub    = shift;
     my $update = 0;
+    my $ip     = $config{$host}{'wantip'};
 
     if ($config{$host}{'login'} eq '') {
 	warning("null login name specified for host %s.", $host);
@@ -2156,6 +2175,7 @@ sub nic_dyndns1_update {
     debug("\nnic_dyndns1_update -------------------");
     ## update each configured host
     foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
 	info("setting IP address to %s for %s", $ip, $h);
 	verbose("UPDATE:","updating %s", $h);
 
@@ -2300,6 +2320,8 @@ sub nic_dyndns2_update {
 	my @hosts = @{$groups{$sig}};
 	my $hosts = join(',', @hosts);
 	my $h     = $hosts[0];
+	my $ip    = $config{$h}{'wantip'};
+	delete $config{$_}{'wantip'} foreach @hosts;
 
 	info("setting IP address to %s for %s", $ip, $hosts);
 	verbose("UPDATE:","updating %s", $hosts);
@@ -2563,6 +2585,7 @@ sub nic_concont_update {
 
     ## update each configured host
     foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 
@@ -2645,6 +2668,7 @@ sub nic_dslreports1_update {
     debug("\nnic_dslreports1_update -------------------");
     ## update each configured host
     foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
 	info("setting IP address to %s for %s", $ip, $h);
 	verbose("UPDATE:","updating %s", $h);
 
@@ -2720,6 +2744,7 @@ sub nic_hammernode1_update {
 
     ## update each configured host
     foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
 	info("setting IP address to %s for %s", $ip, $h);
 	verbose("UPDATE:","updating %s", $h);
 
@@ -2801,6 +2826,8 @@ sub nic_zoneedit1_update {
 	my @hosts = @{$groups{$sig}};
 	my $hosts = join(',', @hosts);
 	my $h     = $hosts[0];
+	my $ip    = $config{$h}{'wantip'};
+	delete $config{$_}{'wantip'} foreach @hosts;
 
 	info("setting IP address to %s for %s", $ip, $hosts);
 	verbose("UPDATE:","updating %s", $hosts);
@@ -2943,6 +2970,9 @@ sub nic_easydns_update {
     	my @hosts = @{$groups{$sig}};
     	my $hosts = join(',', @hosts);
     	my $h     = $hosts[0];
+	my $ip    = $config{$h}{'wantip'};
+	delete $config{$_}{'wantip'} foreach @hosts;
+
 	info("setting IP address to %s for %s", $ip, $hosts);
 	verbose("UPDATE:","updating %s", $hosts);
 
@@ -3100,6 +3130,9 @@ sub nic_dnspark_update {
     	my @hosts = @{$groups{$sig}};
     	my $hosts = join(',', @hosts);
     	my $h     = $hosts[0];
+	my $ip    = $config{$h}{'wantip'};
+	delete $config{$_}{'wantip'} foreach @hosts;
+
 	info("setting IP address to %s for %s", $ip, $hosts);
 	verbose("UPDATE:","updating %s", $hosts);
 
@@ -3215,6 +3248,7 @@ sub nic_namecheap_update {
 
     ## update each configured host
     foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 
@@ -3297,6 +3331,7 @@ sub nic_sitelutions_update {
 
     ## update each configured host
     foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 
