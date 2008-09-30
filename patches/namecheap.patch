@@ -1,6 +1,10 @@
 # https://sourceforge.net/forum/message.php?msg_id=4789961
 # By: hankessels
 #
+# this patch (r99) isn't complete yet.
+# Check https://sourceforge.net/forum/message.php?msg_id=5053976
+# for more details.  Patch has already been posted to the patches
+# section as id #2010819
 --- ddclient.old	2008-02-21 00:57:17.000000000 +0900
 +++ ddclient	2008-02-21 01:36:42.000000000 +0900
 @@ -3060,8 +3060,11 @@ sub nic_namecheap_update {
