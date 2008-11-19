@@ -2443,6 +2443,8 @@ sub nic_noip_update {
 	my @hosts = @{$groups{$sig}};
 	my $hosts = join(',', @hosts);
 	my $h     = $hosts[0];
+	my $ip    = $config{$h}{'wantip'};
+	delete $config{$_}{'wantip'} foreach @hosts;
 
 	info("setting IP address to %s for %s", $ip, $hosts);
 	verbose("UPDATE:","updating %s", $hosts);
