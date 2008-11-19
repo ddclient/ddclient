@@ -937,6 +937,7 @@ sub _read_config {
 
     local $lineno       = 0;
     my    $continuation = '';
+    my    %passwords    = ();
     while (<FD>) {
 	s/[\r\n]//g;
 
@@ -952,10 +953,17 @@ sub _read_config {
     }
 
     $content .= "$_\n" unless /^#/;
-    # lines contain passwords are a special case, we don't want to
-    # arbitrarily strip out '#'
-    if (/^(\S*password\S*)\s*=\s*(\S+)/i) { $_ = "$1=$2"; }
-    if (/^#/ || !(/password/i) || /#.*password/i) { s/#.*//; } # remove comments
+
+	## parsing passwords is special
+	if (/^([^#]*\s)?([^#]*?password\S*?)\s*=\s*('.*'|[^']\S*)(.*)/) {
+	    my ($head, $key, $value, $tail) = ($1 || '', $2, $3, $4);
+	    $value = $1 if $value =~ /^'(.*)'$/;
+	    $passwords{$key} = $value;
+	    $_ = "${head}${key}=dummy${tail}";
+	}
+
+        ## remove comments
+	s/#.*//;
 
 	## handle continuation lines
 	$_ = "$continuation$_";
@@ -980,6 +988,7 @@ sub _read_config {
 	
 	## verify that keywords are valid...and check the value
 	foreach my $k (keys %locals) {
+	    $locals{$k} = $passwords{$k} if defined $passwords{$k};
 	    if (!exists $variables{'merged'}{$k}) {
             warning("unrecognized keyword '%s' (ignored)", $k);
             delete $locals{$k};
@@ -1018,6 +1027,7 @@ sub _read_config {
 		$config{$h}{'host'} = $h;
 	    }
 	}
+	%passwords = ();
     }
     close(FD);
     
