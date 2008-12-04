@@ -582,6 +582,7 @@ my @opt = (
     [ "verbose",     "!",  "-{no}verbose          : print {no} verbose information" ],
     [ "quiet",       "!",  "-{no}quiet            : print {no} messages for unnecessary updates" ],
     [ "help",        "",   "-help                 : this message" ],
+    [ "postscript",  "",   "-postscript           : script to run after updating ddclient, has new IP as param" ],
 
     [ "query",       "!",  "-{no}query            : print {no} ip addresses and exit" ],
     [ "test",        "!",  "" ], ## hidden
