@@ -1,0 +1,150 @@
+# freedns patch
+# see https://sourceforge.net/tracker/?func=detail&aid=2832129&group_id=116817&atid=676131
+--- ddclient.orig	2009-01-27 14:14:02.000000000 -0500
++++ ddclient	2009-08-05 13:27:25.725870005 -0400
+@@ -524,6 +524,16 @@
+                           $variables{'service-common-defaults'},
+                         ),
+     },
++    'freedns' => {
++        'updateable' => undef,
++        'update'     => \&nic_freedns_update,
++        'examples'   => \&nic_freedns_examples,
++        'variables'  => merge(
++			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'freedns.afraid.org',    undef)    },
++			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, 0, interval('5m')),},
++			  $variables{'service-common-defaults'},
++			),
++    },
+ );
+ $variables{'merged'} = merge($variables{'global-defaults'},
+ 			     $variables{'service-common-defaults'},
+@@ -1157,6 +1167,8 @@
+ 	$proto = $config{$h}{'protocol'};
+ 	$proto = opt('protocol')          if !defined($proto);
+ 
++	load_sha1_support() if ($proto eq "freedns");
++
+  	if (!exists($services{$proto})) {
+ 	    warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
+ 	    delete $config{$h};
+@@ -1718,6 +1730,19 @@
+     { no warnings; $IO::Socket::SSL::DEBUG = 0; }
+ }
+ ######################################################################
++## load_sha1_support
++######################################################################
++sub load_sha1_support {
++    my $sha1_loaded = eval {require Digest::SHA1};
++    unless ($sha1_loaded) {
++        fatal(<<"EOM");
++Error loading the Perl module Digest::SHA1 needed for freedns update.
++On Debian, the package libdigest-sha1-perl must be installed.
++EOM
++    }
++    import  Digest::SHA1 (qw/sha1_hex/);
++}
++######################################################################
+ ## geturl
+ ######################################################################
+ sub geturl {
+@@ -3378,6 +3403,97 @@
+     }
+ }
+ 
++###################################################################### 
++
++###################################################################### 
++## nic_freedns_examples 
++###################################################################### 
++sub nic_freedns_examples {
++return <<EoEXAMPLE;
++
++o 'freedns'
++
++The 'freedns' protocol is used by DNS services offered by freedns.afraid.org.
++
++Configuration variables applicable to the 'freedns' protocol are:
++  protocol=freedns             ##
++  server=fqdn.of.service       ## defaults to freedns.afraid.org
++  login=service-login          ## login name and password registered with the service
++  password=service-password    ##
++  fully.qualified.host         ## the host registered with the service.
++
++Example ${program}.conf file entries:
++  ## single host update
++  protocol=freedns,                                             \\
++  login=my-freedns.afraid.org-login,                            \\
++  password=my-freedns.afraid.org-password                       \\
++  myhost.afraid.com
++
++EoEXAMPLE
++} 
++######################################################################
++## nic_freedns_update
++##
++## written by John Haney
++##
++## based on http://freedns.afraid.org/api/
++## needs this url to update:
++## http://freedns.afraid.org/api/?action=getdyndns&sha=<sha1sum of login|password>
++## This returns a list of host|currentIP|updateURL lines.
++## Pick the line that matches myhost, and fetch the URL.
++## word 'Updated' for success, 'fail' for failure.
++##
++######################################################################
++sub nic_freedns_update {
++
++
++    debug("\nnic_freedns_update -------------------");
++
++    ## First get the list of updatable hosts
++    my $url;
++    $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=".&sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
++    my $reply = geturl(opt('proxy'), $url);
++    if (!defined($reply) || !$reply || !header_ok($_[0], $reply)) {
++        failed("updating %s: Could not connect to %s for site list.", $_[0], $url);
++	return;
++    }
++    my @lines = split("\n", $reply);
++    my %freedns_hosts;
++    grep {
++        my @rec = split(/\|/, $_);
++	$freedns_hosts{$rec[0]} = \@rec if ($#rec > 0);
++    } @lines;
++    if (!keys %freedns_hosts) {
++	failed("Could not get freedns update URLs from %s", $config{$_[0]}{'server'});
++	return;
++    }
++    ## update each configured host
++    foreach my $h (@_) {
++        if(!$h){ next };
++        my $ip = delete $config{$h}{'wantip'};
++	info("setting IP address to %s for %s", $ip, $h);
++	verbose("UPDATE:","updating %s", $h);
++
++	if($ip ne $freedns_hosts{$h}->[1]) {
++	    my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]);
++	    if (!defined($reply) || !$reply) {
++	        failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
++		last;
++	    }
++	    last if !header_ok($h, $reply);
++
++	    if($reply =~ /Updated.*host/) {
++	        success("updating %s: good: IP address set to %s", $h, $ip);
++	    } else {
++	        $config{$h}{'status'} = 'failed';
++		warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
++		warning("REPLIED: %s", $reply);
++		failed("updating %s: Invalid reply.", $h);
++	    }
++	}
++    }
++}
++
+ ######################################################################
+ # vim: ai ts=4 sw=4 tw=78 :
+ 
+
+ 	  	 
