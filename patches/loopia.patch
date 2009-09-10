@@ -1,0 +1,82 @@
+# support for LoopiaDNS 
+# patch submitted by Erik Christiansson: #1609799
+# 
+Index: sample-etc_ddclient.conf
+===================================================================
+--- sample-etc_ddclient.conf	(revision 110)
++++ sample-etc_ddclient.conf	(working copy)
+@@ -164,3 +164,17 @@
+ # login=my-namecheap.com-login,			\
+ # password=my-namecheap.com-password		\
+ # myhost.namecheap.com 
++
++##
++##
++## Loopia (loopia.se)
++##
++# use=web
++# web=loopia
++# protocol=dyndns2
++# server=dns.loopia.se
++# script=/XDynDNSServer/XDynDNS.php
++# login=my-loopia.se-login
++# password=my-loopia.se-password
++# my.domain.tld,other.domain.tld
++
+Index: ddclient
+===================================================================
+--- ddclient	(revision 111)
++++ ddclient	(working copy)
+@@ -63,6 +63,7 @@
+    'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' =>
+    'Current IP Address:', },
+    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
++   'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current Address:', },
+ );
+ my %builtinfw = (
+     'watchguard-soho'        => {
+@@ -292,6 +293,7 @@
+ my %web_strategies = (
+ 	'dyndns'=> 1,
+ 	'dnspark'=> 1,
++	'loopia'=> 1,
+ );
+ 
+ sub setv {
+@@ -428,6 +430,7 @@
+ 	'examples'   => \&nic_dyndns2_examples,
+ 	'variables'  => merge(
+ 			  { 'custom'  => setv(T_BOOL,   0, 1, 1, 0, undef),	},
++			  { 'script'  => setv(T_STRING, 1, 1, 1, '/nic/update', undef),	},
+ #			  { 'offline' => setv(T_BOOL,   0, 1, 1, 0, undef),	},
+ 			  $variables{'dyndns-common-defaults'},
+ 			  $variables{'service-common-defaults'},
+@@ -2295,6 +2298,7 @@
+ Configuration variables applicable to the 'dyndns2' protocol are:
+   protocol=dyndns2             ## 
+   server=fqdn.of.service       ## defaults to members.dyndns.org
++  script=/path/to/script       ## defaults to /nic/update
+   backupmx=no|yes              ## indicates that this host is the primary MX for the domain.
+   static=no|yes                ## indicates that this host has a static IP address.
+   custom=no|yes                ## indicates that this host is a 'custom' top-level domain name.
+@@ -2365,7 +2369,7 @@
+ 	verbose("UPDATE:","updating %s", $hosts);
+ 
+ 	## Select the DynDNS system to update
+-	my $url = "http://$config{$h}{'server'}/nic/update?system=";
++	my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
+ 	if ($config{$h}{'custom'}) {
+ 	    warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
+ 	      if $config{$h}{'static'};
+Index: README
+===================================================================
+--- README	(revision 110)
++++ README	(working copy)
+@@ -27,6 +27,7 @@
+ DnsPark     - See http://www.dnspark.com for details
+ DslReports  - See http://www.dslreports.com for details
+ Sitelutions - see http://www.sitelutions.com for details
++Loopia      - See http://www.loopia.se for details
+ 
+ DDclient now supports many of cable/dsl broadband routers. 
+ 
