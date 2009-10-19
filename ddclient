@@ -309,6 +309,7 @@ sub setv {
 my %variables = (
     'global-defaults'    => {
 	'daemon'              => setv(T_DELAY, 0, 0, 1, 0,                    interval('60s')),
+	'foreground'          => setv(T_BOOL,  0, 0, 1, 0,                    undef),
 	'file'                => setv(T_FILE,  0, 0, 1, "$etc$program.conf",  undef),
 	'cache'               => setv(T_FILE,  0, 0, 1, "$cachedir$program.cache", undef),
 	'pid'                 => setv(T_FILE,  0, 0, 1, "",                   undef),
@@ -548,6 +549,7 @@ my @opt = (
     "usage: ${program} [options]",
     "options are:",
     [ "daemon",      "=s", "-daemon delay         : run as a daemon, specify delay as an interval." ],
++     [ "foreground",  "!",  "-foreground           : do not fork" ],
     [ "proxy",       "=s", "-proxy host           : use 'host' as the HTTP proxy" ],
     [ "server",      "=s", "-server host          : update DNS information on 'host'" ],
     [ "protocol",    "=s", "-protocol type        : update protocol used" ],
@@ -636,7 +638,10 @@ my $caught_kill = 0;
 $SIG{'HUP'}    = sub { $caught_hup  = 1; };
 $SIG{'TERM'}   = sub { $caught_term = 1; };
 $SIG{'KILL'}   = sub { $caught_kill = 1; };
-if (opt('daemon') && !opt('force')) {
+# don't fork() if foreground or force is on
+if (opt('foreground') || opt('force')) {
+    ;
+} elsif (opt('daemon')) {
     $SIG{'CHLD'}   = 'IGNORE';
     my $pid = fork;
     if ($pid < 0) {
@@ -646,12 +651,15 @@ if (opt('daemon') && !opt('force')) {
 	exit 0;
     }
     $SIG{'CHLD'}   = 'DEFAULT';
-    $opt{'syslog'} = 1;
     open(STDOUT, ">/dev/null");
     open(STDERR, ">/dev/null");
     open(STDIN,  "</dev/null");
+}
 
+# write out the pid file if we're daemon'ized
+if(opt('daemon')) { 
     write_pid();
+    $opt{'syslog'} = 1;
 }
 
 umask 077;

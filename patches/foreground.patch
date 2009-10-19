@@ -1,0 +1,51 @@
+# [ ddclient-Patches-1893144 ] Foreground patch 
+# <http://permalink.gmane.org/gmane.network.dns.ddclient.forum/399>
+# Adds a foreground options which makes it possible to run ddclient
+# as a deamon without forking.  patch submitted by John Palkovic.
+--- ddclient-3.8.0      2009-01-27 20:14:02.000000000 +0100
++++ ddclient+foreground-3.8.0   2009-08-17 22:27:32.000000000 +0200
+@@ -307,6 +307,7 @@
+ my %variables = (
+     'global-defaults'    => {
+        'daemon'              => setv(T_DELAY, 0, 0, 1, 0,                    interval('60s')),
++       'foreground'          => setv(T_BOOL,  0, 0, 1, 0,                    undef),
+        'file'                => setv(T_FILE,  0, 0, 1, "$etc$program.conf",  undef),
+        'cache'               => setv(T_FILE,  0, 0, 1, "$cachedir$program.cache", undef),
+        'pid'                 => setv(T_FILE,  0, 0, 1, "",                   undef),
+@@ -535,6 +536,7 @@
+     "usage: ${program} [options]",
+     "options are:",
+     [ "daemon",      "=s", "-daemon delay         : run as a daemon, specify delay as an interval." ],
+++     [ "foreground",  "!",  "-foreground           : do not fork" ],
+     [ "proxy",       "=s", "-proxy host           : use 'host' as the HTTP proxy" ],
+     [ "server",      "=s", "-server host          : update DNS information on 'host'" ],
+     [ "protocol",    "=s", "-protocol type        : update protocol used" ],
+@@ -623,7 +625,10 @@
+ $SIG{'HUP'}    = sub { $caught_hup  = 1; };
+ $SIG{'TERM'}   = sub { $caught_term = 1; };
+ $SIG{'KILL'}   = sub { $caught_kill = 1; };
+-if (opt('daemon') && !opt('force')) {
++# don't fork() if foreground or force is on
++if (opt('foreground') || opt('force')) {
++    ;
++} elsif (opt('daemon')) {
+     $SIG{'CHLD'}   = 'IGNORE';
+     my $pid = fork;
+     if ($pid < 0) {
+@@ -633,12 +638,15 @@
+        exit 0;
+     }
+     $SIG{'CHLD'}   = 'DEFAULT';
+-    $opt{'syslog'} = 1;
+     open(STDOUT, ">/dev/null");
+     open(STDERR, ">/dev/null");
+     open(STDIN,  "</dev/null");
++}
+ 
++# write out the pid file if we're daemon'ized
++if(opt('daemon')) { 
+     write_pid();
++    $opt{'syslog'} = 1;
+ }
+ 
+ umask 077;
