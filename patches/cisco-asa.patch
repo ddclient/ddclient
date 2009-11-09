@@ -1,0 +1,169 @@
+# Added support for cisco ASA as a firewall
+# 2891001 - Philip Gladstone
+--- ddclient	2009-01-27 14:14:02.000000000 -0500
++++ /usr/sbin/ddclient	2009-11-02 18:26:02.000000000 -0500
+@@ -283,6 +283,7 @@
+      'if'                     => ": obtain IP from the -if {interface}",
+      'cmd'                    => ": obtain IP from the -cmd {external-command}",
+      'cisco'                  => ": obtain IP from Cisco FW at the -fw {address}",
++     'cisco-asa'              => ": obtain IP from Cisco ASA at the -fw {address}",
+      map { $_ => sprintf ": obtain IP from %s at the -fw {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
+ );
+ sub ip_strategies_usage {
+@@ -728,7 +729,7 @@
+ 	    $examined{$h} = 1;
+ 	    my $use = $config{$h}{'use'} || opt('use');
+ 	    local $opt{$use} = $config{$h}{$use} if $config{$h}{$use};
+-	    my $ip = get_ip($use);
++	    my $ip = get_ip($use, $h);
+ 	    if (!defined $ip || !$ip) {
+ 		warning("unable to determine IP address")
+ 		    if !$daemon || opt('verbose');
+@@ -1481,6 +1482,8 @@
+ }
+ sub opt {
+     my $v = shift;
++    my $h = shift;
++    return $config{$h}{$v}   if defined($h && $config{$h}{$v});
+     return $opt{$v} 	if defined $opt{$v};
+     return $globals{$v}	if defined $globals{$v};
+     return default($v)  if defined default($v);
+@@ -1729,8 +1732,10 @@
+     my ($sd, $rq, $request, $reply);
+ 
+     debug("proxy  = $proxy");
+-    debug("url    = $url");
++    debug("url    = %s", $url);
+     ## canonify proxy and url
++    my $force_ssl;
++    $force_ssl = 1 if ($url =~ /^https:/);
+     $proxy  =~ s%^https?://%%i;
+     $url    =~ s%^https?://%%i;
+     $server = $url;
+@@ -1743,7 +1748,7 @@
+     $globals{'fw'} && debug("glo fw = $globals{'fw'}"); 
+     #if ( $globals{'ssl'} and $server ne $globals{'fw'} ) {
+     ## always omit SSL for connections to local router
+-    if ( $globals{'ssl'} and (caller(1))[3] ne 'main::get_ip' ) {
++    if ( $force_ssl || ($globals{'ssl'} and (caller(1))[3] ne 'main::get_ip') ) {
+         $use_ssl      = 1;
+         $default_port = 443;
+ 		load_ssl_support;
+@@ -1781,7 +1786,7 @@
+     $0 = sprintf("%s - connecting to %s port %s", $program, $peer, $port);
+     if (! opt('exec')) {
+ 	debug("skipped network connection");
+-	verbose("SENDING:", $request);
++	verbose("SENDING:", "%s", $request);
+     } elsif ($use_ssl) {
+ 	    $sd = IO::Socket::SSL->new(
+             PeerAddr => $peer,
+@@ -1805,7 +1810,7 @@
+     if (defined $sd) {
+ 	## send the request to the http server
+ 	verbose("CONNECTED: ", $use_ssl ? 'using SSL' : 'using HTTP');
+-	verbose("SENDING:", $request);
++	verbose("SENDING:", "%s", $request);
+ 
+     	$0 = sprintf("%s - sending to %s port %s", $program, $peer, $port);
+ 	my $result = syswrite $sd, $rq;
+@@ -1855,28 +1860,29 @@
+ ######################################################################
+ sub get_ip {
+     my $use = lc shift;
++    my $h = shift;
+     my ($ip, $arg, $reply, $url, $skip) = (undef, opt($use), '');
+     $arg = '' unless $arg;
+ 
+     if ($use eq 'ip') {
+-	$ip  = opt('ip');
++	$ip  = opt('ip', $h);
+ 	$arg = 'ip';
+ 
+     } elsif ($use eq 'if') {
+-	$skip  = opt('if-skip')  || '';
++	$skip  = opt('if-skip', $h)  || '';
+ 	$reply = `ifconfig $arg 2> /dev/null`;
+ 	$reply = '' if $?;
+ 
+     } elsif ($use eq 'cmd') {
+ 	if ($arg) {
+-	    $skip  = opt('cmd-skip')  || '';
++	    $skip  = opt('cmd-skip', $h)  || '';
+ 	    $reply = `$arg`;
+ 	    $reply = '' if $?;
+ 	}
+ 
+     } elsif ($use eq 'web') {
+-	$url  = opt('web')       || '';
+-	$skip = opt('web-skip')  || '';
++	$url  = opt('web', $h)       || '';
++	$skip = opt('web-skip', $h)  || '';
+ 
+ 	if (exists $builtinweb{$url}) {
+ 	    $skip = $builtinweb{$url}->{'skip'} unless $skip;
+@@ -1885,15 +1891,15 @@
+ 	$arg = $url;
+ 
+ 	if ($url) {
+-	    $reply = geturl(opt('proxy'), $url) || '';
++	    $reply = geturl(opt('proxy', $h), $url) || '';
+         }
+ 
+     } elsif (($use eq 'cisco')) {
+ 	# Stuff added to support Cisco router ip http daemon
+ 	# User fw-login should only have level 1 access to prevent
+ 	# password theft.  This is pretty harmless.
+-	my $queryif  = opt('if');
+-	$skip = opt('fw-skip')  || '';
++	my $queryif  = opt('if', $h);
++	$skip = opt('fw-skip', $h)  || '';
+ 
+ 	# Convert slashes to protected value "\/"
+ 	$queryif =~ s%\/%\\\/%g;
+@@ -1901,13 +1907,30 @@
+ 	# Protect special HTML characters (like '?')
+ 	$queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
+ 
+-	$url   = "http://".opt('fw')."/level/1/exec/show/ip/interface/brief/${queryif}/CR";
+-	$reply = geturl('', $url, opt('fw-login'), opt('fw-password')) || '';
++	$url   = "http://".opt('fw', $h)."/level/1/exec/show/ip/interface/brief/${queryif}/CR";
++	$reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
++	$arg   = $url;
++
++    } elsif (($use eq 'cisco-asa')) {
++	# Stuff added to support Cisco ASA ip https daemon
++	# User fw-login should only have level 1 access to prevent
++	# password theft.  This is pretty harmless.
++	my $queryif  = opt('if', $h);
++	$skip = opt('fw-skip', $h)  || '';
++
++	# Convert slashes to protected value "\/"
++	$queryif =~ s%\/%\\\/%g;
++
++	# Protect special HTML characters (like '?')
++	$queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
++
++	$url   = "https://".opt('fw', $h)."/exec/show%20interface%20${queryif}";
++	$reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+ 	$arg   = $url;
+ 
+     } else {
+-	$url  = opt('fw')       || '';
+-	$skip = opt('fw-skip')  || '';
++	$url  = opt('fw', $h)       || '';
++	$skip = opt('fw-skip', $h)  || '';
+ 
+ 	if (exists $builtinfw{$use}) {
+ 	    $skip = $builtinfw{$use}->{'skip'} unless $skip;
+@@ -1916,7 +1939,7 @@
+ 	$arg = $url;
+ 
+ 	if ($url) {
+-	    $reply = geturl('', $url, opt('fw-login'), opt('fw-password')) || '';
++	    $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+         }
+     }
+     if (!defined $reply) {
+
+ 	  	 
