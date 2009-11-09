@@ -1838,39 +1838,39 @@ sub geturl {
 	    defined $sd or warning("cannot connect to $peer:$port socket: $@");
     }
 
-    if (defined $sd) {
-	## send the request to the http server
-	verbose("CONNECTED: ", $use_ssl ? 'using SSL' : 'using HTTP');
-	verbose("SENDING:", $request);
+	if (defined $sd) {
+		## send the request to the http server
+		verbose("CONNECTED: ", $use_ssl ? 'using SSL' : 'using HTTP');
+		verbose("SENDING:", $request);
 
-    	$0 = sprintf("%s - sending to %s port %s", $program, $peer, $port);
-	my $result = syswrite $sd, $rq;
-	if ($result != length($rq)) {
-	    warning("cannot send to $peer:$port ($!).");
-	    
-	} else {
-	    my $timeout = 0;
-	    local $SIG{'ALRM'} = sub { $timeout = 1; };
+		$0 = sprintf("%s - sending to %s port %s", $program, $peer, $port);
+		my $result = syswrite $sd, $rq;
+		if ($result != length($rq)) {
+			warning("cannot send to $peer:$port ($!).");
+		} else {
+			$0 = sprintf("%s - reading from %s port %s", $program, $peer, $port);
+			eval {
+				local $SIG{'ALRM'} = sub { die "timeout";};
+				alarm(opt('timeout')) if opt('timeout') > 0;
+				while ($_ = <$sd>) {
+					$0 = sprintf("%s - read from %s port %s", $program, $peer, $port);
+					verbose("RECEIVE:", "%s", define($_, "<undefined>"));
+					$reply .= $_ if defined $_;
+				}
+				if (opt('timeout') > 0) {
+					alarm(0);
+				}
+			};
+			close($sd);
 
-    	    $0 = sprintf("%s - reading from %s port %s", $program, $peer, $port);
-	    alarm(opt('timeout')) if opt('timeout') > 0;
-	    while (!$timeout &&  ($_ = <$sd>)) {
-    	        $0 = sprintf("%s - read from %s port %s", $program, $peer, $port);
-		verbose("RECEIVE:", "%s", define($_, "<undefined>"));
-		$reply .= $_ if defined $_;
-	    }
-	    if (opt('timeout') > 0) {
-		alarm(0);
-	    }
-	    close($sd);
-	    if ($timeout) {
-		warning("TIMEOUT: %s after %s seconds", $to, opt('timeout'));
-		$reply = '';
-	    }
-	    $reply = '' if !defined $reply;
+			if ($@ and $@ =~ /timeout/) {
+				warning("TIMEOUT: %s after %s seconds", $to, opt('timeout'));
+				$reply = '';
+			}
+			$reply = '' if !defined $reply;
+		}
 	}
-    }
-    $0 = sprintf("%s - closed %s port %s", $program, $peer, $port);
+	$0 = sprintf("%s - closed %s port %s", $program, $peer, $port);
 
     ## during testing simulate reading the URL
     if (opt('test')) {

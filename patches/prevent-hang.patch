@@ -1,0 +1,37 @@
+# http://sourceforge.net/tracker/?func=detail&atid=676130&aid=2880462&group_id=116817
+# ddclient hangs forever under some circumstances - ID: 2880462
+# 
+Index: ddclient
+===================================================================
+--- ddclient	(revision 113)
++++ ddclient	(working copy)
+@@ -1847,14 +1847,12 @@
+ 	my $result = syswrite $sd, $rq;
+ 	if ($result != length($rq)) {
+ 	    warning("cannot send to $peer:$port ($!).");
+-	    
+ 	} else {
+-	    my $timeout = 0;
+-	    local $SIG{'ALRM'} = sub { $timeout = 1; };
+-
+     	    $0 = sprintf("%s - reading from %s port %s", $program, $peer, $port);
++			eval {
++				local $SIG{'ALRM'} = sub { die "timeout";};
+ 	    alarm(opt('timeout')) if opt('timeout') > 0;
+-	    while (!$timeout &&  ($_ = <$sd>)) {
++				while ($_ = <$sd>) {
+     	        $0 = sprintf("%s - read from %s port %s", $program, $peer, $port);
+ 		verbose("RECEIVE:", "%s", define($_, "<undefined>"));
+ 		$reply .= $_ if defined $_;
+@@ -1862,8 +1860,10 @@
+ 	    if (opt('timeout') > 0) {
+ 		alarm(0);
+ 	    }
++			};
+ 	    close($sd);
+-	    if ($timeout) {
++
++			if ($@ and $@ =~ /timeout/) {
+ 		warning("TIMEOUT: %s after %s seconds", $to, opt('timeout'));
+ 		$reply = '';
+ 	    }
