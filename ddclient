@@ -20,7 +20,9 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 
-my $version  = "3.8.0";
+my ($VERSION) = q$Revision$ =~ /(\d+)/;
+
+my $version  = "3.8.0-r". $VERSION;
 my $programd  = $0; 
 $programd =~ s%^.*/%%;
 my $program   = $programd;
