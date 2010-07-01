@@ -1740,6 +1740,7 @@ sub load_ssl_support {
         fatal(<<"EOM");
 Error loading the Perl module IO::Socket::SSL needed for SSL connect.
 On Debian, the package libio-socket-ssl-perl must be installed.
+On Red Hat, the package perl-IO-Socket-SSL must be installed.
 EOM
     }
     import  IO::Socket::SSL;
