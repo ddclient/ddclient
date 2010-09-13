@@ -865,9 +865,9 @@ sub read_cache {
 	%opt   = %saved;
 
 	foreach my $h (keys %cache) {
-	    if (exists $config{$h}) {
+	    if (exists $config->{$h}) {
 		foreach (qw(atime mtime wtime ip status)) {
-	    	    $config{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
+	    	    $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
 		}
 	    }
 	}
@@ -1117,7 +1117,7 @@ sub init_config {
 	## merge options into host definitions or globals
 	if (@hosts) {
 	    foreach my $h (@hosts) {
-		$config{$h} = %{ merge(\%options, $config{$h}) };
+		$config{$h} = merge(\%options, $config{$h});
 	    }
 	    $opt{'host'} = join(',', @hosts);
 	} else {
