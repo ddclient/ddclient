@@ -1079,7 +1079,7 @@ sub init_config {
     $opt{'use'} = 'web' if !define($opt{'use'}) && defined($opt{'web'});
 
     ## sanity check
-    $opt{'max-interval'}       = max(interval(opt('max-interval')), interval(default('max-interval')));
+    $opt{'max-interval'}       = min(interval(opt('max-interval')), interval(default('max-interval')));
     $opt{'min-interval'}       = max(interval(opt('min-interval')), interval(default('min-interval')));
     $opt{'min-error-interval'} = max(interval(opt('min-error-interval')), interval(default('min-error-interval')));
 
