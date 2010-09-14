@@ -2440,6 +2440,8 @@ sub nic_dyndns2_update {
 
 	my @reply = split /\n/, $reply;
 	my $state = 'header';
+	my $returnedip = $ip;
+
 	foreach my $line (@reply) {
 	    if ($state eq 'header') {
 		$state = 'body';
@@ -2450,7 +2452,10 @@ sub nic_dyndns2_update {
 	    } elsif ($state =~ /^results/) {
 		$state = 'results2';
 
-		my ($status, $ip) = split / /, lc $line;
+		# bug #10: some dyndns providers does not return the IP so
+		# we can't use the returned IP
+		my ($status, $returnedip) = split / /, lc $line;
+		$ip = $returnedip if (not $ip);
 		my $h = shift @hosts;
 	    
 		$config{$h}{'status'} = $status;
