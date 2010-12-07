@@ -1735,11 +1735,6 @@ sub encode_base64 ($;$) {
     # fix padding at the end
     my $padding = (3 - length($_[0]) % 3) % 3;
     $res =~ s/.{$padding}$/'=' x $padding/e if $padding;
-
-    # break encoded string into lines of no more than 76 characters each
-    if (length $eol) {
-        $res =~ s/(.{1,76})/$1$eol/g;
-    }
     $res;
 }
 ######################################################################
@@ -1824,7 +1819,7 @@ sub geturl {
     $request .= "Host: $server\n";
 
     my $auth = encode_base64("${login}:${password}");
-    $request .= "Authorization: Basic $auth" if $login || $password;
+    $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
     $request .= "Connection: close\n";
     $request .= "\n";
