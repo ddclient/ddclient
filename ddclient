@@ -417,6 +417,9 @@ my %variables = (
 	'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
 	'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
     },
+    'zoneedit-service-common-defaults'       => {
+        'zone'                => setv(T_OFQDN,  0, 0, 1, undef,               undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -487,6 +490,7 @@ my %services = (
 			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'dynamic.zoneedit.com', undef)          },
 			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
  			  $variables{'service-common-defaults'},
+ 			  $variables{'zoneedit-service-common-defaults'},
 		        ),
     },
     'easydns' => {
@@ -2877,6 +2881,11 @@ www.zoneedit.com.
 Configuration variables applicable to the 'zoneedit1' protocol are:
   protocol=zoneedit1           ## 
   server=fqdn.of.service       ## defaults to www.zoneedit.com
+  zone=zone-where-domains-are  ## only needed if 1 or more subdomains are deeper
+                               ## than 1 level in relation to  the zone where it
+                               ## is defined. For example, b.foo.com in a zone
+                               ## foo.com doesn't need this, but a.b.foo.com in
+                               ## the same zone needs zone=foo.com
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   your.domain.name             ## the host registered with the service.
@@ -2884,7 +2893,8 @@ Configuration variables applicable to the 'zoneedit1' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=zoneedit1,                                     \\
-  server=dynamic.zoneedit.com,                                \\
+  server=dynamic.zoneedit.com,                            \\
+  zone=zone-where-domains-are,                            \\
   login=my-zoneedit-login,                                \\
   password=my-zoneedit-password                           \\
   my.domain.name
@@ -2908,7 +2918,7 @@ sub nic_zoneedit1_update {
     debug("\nnic_zoneedit1_update -------------------");
 
     ## group hosts with identical attributes together 
-    my %groups = group_hosts_by([ @_ ], [ qw(login password server) ]);
+    my %groups = group_hosts_by([ @_ ], [ qw(login password server zone) ]);
 
     ## update each set of hosts that had similar configurations
     foreach my $sig (keys %groups) {
@@ -2925,6 +2935,7 @@ sub nic_zoneedit1_update {
 	$url  .= "http://$config{$h}{'server'}/auth/dynamic.html";
 	$url  .= "?host=$hosts";
 	$url  .= "&dnsto=$ip"   if $ip;
+	$url  .= "&zone=$config{$h}{'zone'}" if defined $config{$h}{'zone'};
 
 	my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
 	if (!defined($reply) || !$reply) {
