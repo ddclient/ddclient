@@ -2165,11 +2165,14 @@ sub nic_updateable {
 
     } elsif (defined($sub) && &$sub($host)) {
 	$update = 1;
-
-    } elsif (($cache{$host}{'static'} ne $config{$host}{'static'}) ||
-	     ($cache{$host}{'wildcard'} ne $config{$host}{'wildcard'}) ||
-	     ($cache{$host}{'mx'} ne $config{$host}{'mx'}) ||
-	     ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'})) {
+    } elsif ((defined($cache{$host}{'static'}) && defined($config{$host}{'static'}) &&
+              ($cache{$host}{'static'} ne $config{$host}{'static'})) ||
+             (defined($cache{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
+              ($cache{$host}{'wildcard'} ne $config{$host}{'wildcard'})) ||
+             (defined($cache{$host}{'mx'}) && defined($config{$host}{'mx'}) &&
+              ($cache{$host}{'mx'} ne $config{$host}{'mx'})) ||
+             (defined($cache{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
+              ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'})) ) {
 	info("updating %s because host settings have been changed.", $host);
 	$update = 1;
 
