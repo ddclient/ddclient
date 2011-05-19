@@ -420,6 +420,10 @@ my %variables = (
     'zoneedit-service-common-defaults'       => {
         'zone'                => setv(T_OFQDN,  0, 0, 1, undef,               undef),
     },
+    'dtdns-common-defaults'       => {
+	'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
+	'client'              => setv(T_STRING, 0, 1, 1, $program,            undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -544,6 +548,15 @@ my %services = (
 			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, 0, interval('5m')),},
 			  $variables{'service-common-defaults'},
 			),
+    },
+    'dtdns' => {
+	'updateable' => undef,
+	'update'     => \&nic_dtdns_update,
+	'examples'   => \&nic_dtdns_examples,
+	'variables'  => merge(
+			  $variables{'dtdns-common-defaults'},
+			  $variables{'service-common-defaults'},
+		        ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -3556,6 +3569,89 @@ sub nic_freedns_update {
 		failed("updating %s: Invalid reply.", $h);
 	    }
 	}
+    }
+}
+
+######################################################################
+
+######################################################################
+## nic_dtdns_examples
+######################################################################
+sub nic_dtdns_examples {
+    return <<EoEXAMPLE; 
+o 'dtdns'
+                          
+The 'dtdns' protocol is the protocol used by the dynamic hostname services
+of the 'DtDNS' dns services. This is currently used by the free
+dynamic DNS service offered by www.dtdns.com.
+    
+Configuration variables applicable to the 'dtdns' protocol are:
+  protocol=dtdns               ## 
+  server=www.fqdn.of.service   ## defaults to www.dtdns.com
+  password=service-password    ## password registered with the service
+  client=name_of_updater       ## defaults to $program (10 chars max, no spaces)
+  fully.qualified.host         ## the host registered with the service.
+                        
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=dtdns,                                       \\
+  password=my-dydns.za.net-password,                    \\
+  client=ddclient                                       \\
+  myhost.dtdns.net
+                        
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dtdns_update
+## by Achim Franke
+######################################################################
+sub nic_dtdns_update {
+    debug("\nnic_dtdns_update -------------------");
+
+    ## update each configured host
+    foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+        $url  = "http://$config{$h}{'server'}/api/autodns.cfm";
+        $url .= "?id=";
+        $url .= $h;
+        $url .= "&pw=";
+        $url .= $config{$h}{'password'};
+        $url .= "&ip=";
+        $url .= $ip;
+        $url .= "&client=";
+        $url .= $config{$h}{'client'};
+
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        # Response found, just declare as success (this is ugly, we need more error checking)
+        if ($reply =~ /now\spoints\sto/)
+        {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("updating %s: good: IP address set to %s", $h, $ip);
+         }
+         else
+         {
+                my @reply = split /\n/, $reply;
+                my $returned = pop(@reply);
+                $config{$h}{'status'} = 'failed';
+                failed("updating %s: Server said: '$returned'", $h);
+         }
     }
 }
 
