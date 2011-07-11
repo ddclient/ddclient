@@ -1,17 +1,20 @@
 This directory will contain anything related to releasing a new version of 
 ddclient.  It will be a replacement for 
-http://ddclient.wiki.sourceforge.net/HowtoRelease
+https://sourceforge.net/apps/trac/ddclient/wiki/HowtoRelease
 
 Releasing files
 
 * tagging current version: see svn book
-* update RELEASE NOTES
-* update ChangeLog
+{{{
+svn copy \
+	https://ddclient.svn.sourceforge.net/svnroot/ddclient/trunk \
+	https://ddclient.svn.sourceforge.net/svnroot/ddclient/tags/release-3.8.1
+}}}
+* update RELEASENOTE
+* update ChangeLog: {{{ svn2cl --group-by-day -i }}}
 * update version number
-* svn copy https://ddclient.svn.sourceforge.net/svnroot/ddclient/trunk https://ddclient.svn.sourceforge.net/svnroot/ddclient/tags/release-3.7.2
-( on the last release it has been done by just copying the local dir )
 * bz2 en gz file aanmaken
-* rsync -av ddclient-3.8.0.* wimpunk@frs.sf.net:uploads
+* rsync -av ddclient-3.8.1.* wimpunk@frs.sf.net:uploads
 * aanmaken release:
 
 Release Notes 3.6.5 	2004-11-24
