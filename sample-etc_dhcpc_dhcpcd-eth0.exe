@@ -1,0 +1,20 @@
+#!/bin/sh
+######################################################################
+## $Id: sample-etc_dhcpc_dhcpcd-eth0.exe 96 2008-06-13 20:24:24Z wimpunk $
+######################################################################
+PATH=/usr/sbin:${PATH}
+
+## update the DNS server unless the IP address is a private address
+## that may be used as an internal LAN address. This may be true if
+## other interfaces are assigned private addresses from internal
+## DHCP server.
+
+case "$1" in
+10.*)   	;;
+172.1[6-9].* | 172.2[0-9].* | 172.3[0-1].*)	;;
+192.168.*)	;;
+*)
+	logger -t dhcpcd IP address changed to $1
+	ddclient -daemon=0 -syslog -use=ip -ip=$1 >/dev/null 2>&1
+	;;
+esac

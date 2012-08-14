@@ -1,0 +1,41 @@
+#!/bin/sh
+# $Id: sample-etc_rc.d_init.d_ddclient.redhat 96 2008-06-13 20:24:24Z wimpunk $
+# ddclient      This shell script takes care of starting and stopping
+#               ddclient.
+#
+# chkconfig: 2345 65 35
+# description: ddclient provides support for updating dynamic DNS services.
+
+[ -f /etc/ddclient/ddclient.conf ] || exit 0
+
+. /etc/rc.d/init.d/functions
+
+# See how we were called.
+case "$1" in
+  start)
+	# Start daemon.
+	echo -n "Starting ddclient: "
+	touch /var/lock/subsys/ddclient
+	daemon ddclient -daemon 300
+	echo    
+	;;
+  stop)
+	# Stop daemon.
+	echo -n "Shutting down ddclient: "
+	killproc ddclient
+	echo
+	rm -f /var/lock/subsys/ddclient
+	;;
+  restart)
+	$0 stop
+	$0 start
+	;;
+  status)
+	status ddclient
+	;;
+  *)
+	echo "Usage: ddclient {start|stop|restart|status}"
+	exit 1
+esac
+
+exit 0

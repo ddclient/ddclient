@@ -1,0 +1,44 @@
+#!/bin/sh
+######################################################################
+## $Id: sample-etc_ppp_ip-up.local 128 2011-07-11 20:24:43Z wimpunk $
+######################################################################
+## 
+## On my host, pppd invokes this script with args:
+## /etc/ppp/ip-up.local ppp0 /dev/pts/1 115200 192.168.2.1 192.168.2.3
+##
+## From the manual page for my pppd, these aguments are:
+##   scriptname interface-name tty-device speed local-IP-address remote-IP-address ipparam
+##
+## Some people have reported that their pppd returns their 
+## local-IP-address as $3.  If that's also the case for you,
+## you may need to change the $4 below to $3.  This may not
+## be necessary if your pppd also passes the local-ip-address
+## in the environment as either PPP_LOCAL or IPLOCAL.
+##
+######################################################################
+PATH=/usr/sbin:${PATH}
+IP=
+IP=${IP:-$PPP_LOCAL}
+IP=${IP:-$IPLOCAL}
+IP=${IP:-$4}
+
+IFACE=
+IFACE=${IFACE:-$PPP_IFACE}
+IFACE=${IFACE:-$1}
+
+## update the DNS server unless the IP address is a private address
+## that may be used as an internal LAN address (or PPtP tunnel).
+
+logger -t ddclient $0 $*
+case "$IP" in
+10.*)		;;
+172.1[6-9].* | 172.2[0-9].* | 172.3[0-1].*)	;;
+192.168.*)	;;
+"")		logger -t ddclient No local IP given so cannot update
+		;;
+*)		(
+			sleep 5
+			ddclient -daemon=0 -syslog -use=if -if=$IFACE >/dev/null 2>&1
+		) &
+		;;
+esac

@@ -1,0 +1,11 @@
+It's been a while but here is new release of ddclient. There are some important
+changes and some documentation is modified.  A detailed overview can be found
+in ChangeLog but here's a quick overview:
+
+	* Added ddclient-noip.patch send by Kurt Bussche.
+ 	* Added and applied default timeout patch from
+          https://bugs.launchpad.net/ubuntu/+source/ddclient/+bug/116066
+ 	* Sending mail when killed, not after TERM-signal
+	* Added support for multiple IP adresses.
+
+

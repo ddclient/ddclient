@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# ddclient      This shell script takes care of starting and stopping
+#               ddclient.
+#
+# chkconfig: 2345 65 35
+# description: ddclient provides support for updating dynamic DNS services.
+#
+# Above is for RedHat and now the LSB part
+### BEGIN INIT INFO
+# Provides:          ddclient
+# Required-Start:    $syslog $remote_fs
+# Should-Start: $time ypbind sendmail
+# Required-Stop:     $syslog $remote_fs
+# Should-Stop: $time ypbind sendmail
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 6
+# Short-Description: ddclient provides support for updating dynamic DNS services
+# Description:       ddclient is a Perl client used to update dynamic DNS
+#                    entries for accounts on many dynamic DNS services and
+#                    can be used on many types of firewalls
+### END INIT INFO
+# 
+# $Id: sample-etc_rc.d_init.d_ddclient.lsb 96 2008-06-13 20:24:24Z wimpunk $
+#
+###
+
+[ -f /etc/ddclient/ddclient.conf ] || exit 0
+
+DDCLIENT_BIN=/usr/sbin/ddclient
+
+#
+# LSB Standard (SuSE,RedHat,...)
+#
+if [ -f /lib/lsb/init-functions ] ; then
+   . /lib/lsb/init-functions
+fi
+
+# See how we were called.
+case "$1" in
+  start)
+        echo -n "Starting ddclient "
+        start_daemon $DDCLIENT_BIN -daemon 300
+        rc_status -v
+        ;;
+  stop)
+        echo -n "Shutting down ddclient "
+        killproc -TERM `basename $DDCLIENT_BIN`
+        rc_status -v
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        rc_status
+        ;;
+  status)
+        echo -n "Checking for service ddclient "
+        checkproc `basename $DDCLIENT_BIN`w
+        rc_status -v
+        ;;
+  *)
+        echo "Usage: ddclient {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0

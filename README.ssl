@@ -1,0 +1,10 @@
+$Id: README.ssl 96 2008-06-13 20:24:24Z wimpunk $
+
+Since 3.7.0, ddclient support ssl-updates
+To use ssl, put "ssl=yes" in your configuration and make sure
+you have IO::Socket::SSL.
+
+On debian, you need libio-socket-ssl-perl to have IO::Socket::SSL
+
+ssl support is tested on folowing dynamic dns providers:
+- dyndns.com

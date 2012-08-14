@@ -1,0 +1,35 @@
+$Id: README.cisco 96 2008-06-13 20:24:24Z wimpunk $
+Method 1 ------------------------------------------------------
+
+The following config will allow the Linux machine (10.1.1.2) to read
+the IP address from the DHCP interface on the Cisco router (eth0) as
+user ddclient.  Since ddclient is configured with a priv level of 1 it
+cannot do anything except look at the routers stats, ip addresses,
+etc.  This should be pretty harmless even if ddclient's password were
+to be discovered.
+
+This has been tested with Cisco IOS 12.1(5)T5 running on a Cisco 2621
+router.
+
+Cisco Router Config (Assuming eth0 is DHCP interface)
+-----------------------------------------------------
+user ddclient password password
+user ddclient priv 1
+ip http auth local
+ip http access-class 99
+ip http port 1021
+ip http server
+access-list 99 permit host 10.1.1.2
+
+DDClient Config
+---------------------------------------------------
+use=cisco, fw=10.1.1.1, if=eth0, fw-login=ddclient, fw-password=password
+
+
+Method 2 ------------------------------------------------------
+
+use=fw
+fw=192.168.1.1/exec/show/interfaces/CR
+fw-skip=FastEthernet0/0
+fw-login=ddclient
+fw-password=xxxxxxxx

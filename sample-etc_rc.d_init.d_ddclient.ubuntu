@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Start ddclient that provides support for updating dynamic DNS services.
+#
+# Submitted by paolo martinelli
+
+DDCLIENT=/usr/sbin/ddclient
+CONF=/etc/ddclient/ddclient.conf
+PIDFILE=/var/run/ddclient.pid
+
+test -x $DDCLIENT || exit 0
+test -f $CONF || exit 0
+
+. /lib/lsb/init-functions
+
+case "$1" in
+start)
+log_begin_msg "Starting ddclient..."
+DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
+if [ -z "$DELAY" ] ; then
+DELAY="-daemon 300"
+else
+DELAY=''
+fi
+start-stop-daemon -S -q -p $PIDFILE -x $DDCLIENT -- $DELAY
+log_end_msg $?
+;;
+stop)
+if [ -f $PIDFILE ] ; then
+log_begin_msg "Stopping ddclient..."
+start-stop-daemon -K -q -p $PIDFILE
+log_end_msg $?
+rm -f $PIDFILE
+fi
+;;
+restart|reload|force-reload)
+$0 stop
+$0 start
+;;
+*)
+log_success_msg "Usage: $0 {start|stop|restart|reload|force-reload}"
+exit 1
+;;
+esac
+
+exit 0
+

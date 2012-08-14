@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# ddclient      This shell script takes care of starting and stopping
+#               ddclient.
+#
+# chkconfig: 2345 65 35
+# description: ddclient provides support for updating dynamic DNS services.
+
+CONF=/etc/ddclient/ddclient.conf
+program=ddclient
+
+[ -f $CONF ] || exit 0
+
+system=unknown
+if [ -f /etc/fedora-release ]; then
+    system=fedora
+elif [ -f /etc/redhat-release ]; then
+    system=redhat
+elif [ -f /etc/debian_version ]; then
+    system=debian
+fi
+
+PID=''
+if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+    . /etc/init.d/functions
+    PID=`pidofproc $program`
+else
+    PID=`ps -aef | grep "$program - sleep" | grep -v grep | awk '{print $2}'`
+fi
+
+PATH=/usr/sbin:/usr/local/sbin:${PATH}
+export PATH
+
+# See how we were called.
+case "$1" in
+  start)
+	# Start daemon.
+    DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
+    if [ -z "$DELAY" ] ; then
+        DELAY="-daemon 300"
+    else
+        DELAY=''
+    fi
+	echo -n "Starting ddclient: "
+    if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+        daemon $program $DELAY
+    else
+	    ddclient $DELAY
+    fi
+	echo    
+	;;
+  stop)
+	# Stop daemon.
+	echo -n "Shutting down ddclient: "
+    if [ -n "$PID" ] ; then
+        if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+            killproc $program
+        else
+	        kill $PID
+        fi
+    else
+        echo "ddclient is not running"
+    fi
+	echo
+	;;
+  restart)
+	$0 stop
+	$0 start
+	;;
+  status)
+    if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+        status $program
+    else
+	    if test "$PID"
+	    then
+		    for p in $PID
+		    do
+			    echo "$program (pid $p) is running"
+		    done
+	    else
+		    echo "$program is stopped"
+        fi
+	fi
+	;;
+  *)
+	echo "Usage: ddclient {start|stop|restart|status}"
+	exit 1
+esac
+
+exit 0
+
