@@ -1,33 +1,23 @@
 ===============================================================================
-DDCLIENT v3.6.7
+# DDCLIENT v3.8.0
 
 ddclient is a Perl client used to update dynamic DNS entries for accounts
 on many dynamic DNS services.
-
-IMPORTANT:	The format and options used by ddclient have CHANGED.
-		Please examine the sample configuration file.
-		It is highly recommended that you take advantage of the
-		new daemon mode of operation.
-
-IMPORTANT:	The installation location for the ddclient script has changed from
-			/root/bin/
-		to
-			/usr/sbin/
 
 ===============================================================================
 
 Dynamic DNS services currently supported include:
 
-DynDNS.com  - See http://www.dyndns.com for details on obtaining a free account.
-Hammernode  - See http://www.hn.org for details on obtaining a free account.
-Zoneedit    - See http://www.zoneedit.com for details.
-EasyDNS     - See http://www.easydns.com for details.
-NameCheap   - See http://www.namecheap.com for details
-ConCont     - See http://www.dydns.za.net for details
-DnsPark     - See http://www.dnspark.com for details
-DslReports  - See http://www.dslreports.com for details
-Sitelutions - see http://www.sitelutions.com for details
-Loopia      - See http://www.loopia.se for details
+    DynDNS.com  - See http://www.dyndns.com for details on obtaining a free account.
+    Hammernode  - See http://www.hn.org for details on obtaining a free account.
+    Zoneedit    - See http://www.zoneedit.com for details.
+    EasyDNS     - See http://www.easydns.com for details.
+    NameCheap   - See http://www.namecheap.com for details
+    ConCont     - See http://www.dydns.za.net for details
+    DnsPark     - See http://www.dnspark.com for details
+    DslReports  - See http://www.dslreports.com for details
+    Sitelutions - see http://www.sitelutions.com for details
+    Loopia      - See http://www.loopia.se for details
 
 DDclient now supports many of cable/dsl broadband routers. 
 
@@ -50,50 +40,51 @@ REQUIREMENTS:
 -------------------------------------------------------------------------------
 INSTALLATION:
 
-  cp ddclient /usr/sbin/
-  mkdir /etc/ddclient
-  mkdir /var/cache/ddclient
-  cp sample-etc_ddclient.conf /etc/ddclient/ddclient.conf
-  vi /etc/ddclient/ddclient.conf
-  -- and change hostnames, logins, and passwords appropriately
+    cp ddclient /usr/sbin/
+    mkdir /etc/ddclient
+    mkdir /var/cache/ddclient
+    cp sample-etc_ddclient.conf /etc/ddclient/ddclient.conf
+    vi /etc/ddclient/ddclient.conf
+    -- and change hostnames, logins, and passwords appropriately
 
-  ## For those using Redhat style rc files and using daemon-mode:
-  cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
-  ## enable automatic startup when booting
-  ## check your distribution
-  /sbin/chkconfig --add ddclient
-  ## start the first time by hand
-  /etc/rc.d/init.d/ddclient start
+    ## For those using Redhat style rc files and using daemon-mode:
+    cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
+    ## enable automatic startup when booting
+    ## check your distribution
+    /sbin/chkconfig --add ddclient
+    ## start the first time by hand
+    /etc/rc.d/init.d/ddclient start
 
-  ## If you are not using daemon-mode, configure cron and dhcp or ppp
-  ## as described below.
+    ## If you are not using daemon-mode, configure cron and dhcp or ppp
+    ## as described below.
 
 -------------------------------------------------------------------------------
 TROUBLESHOOTING:
 
   1. enable debugging and verbose messages.
-	$ ddclient -daemon=0 -debug -verbose -noquiet
+	 ``$ ddclient -daemon=0 -debug -verbose -noquiet``
 
   2. Do you need to specify a proxy?
      If so, just add a
-	proxy=your.isp.proxy
+	``proxy=your.isp.proxy``
      to the ddclient.conf file.
 
-  3. Define the IP address of your router with fw=xxx.xxx.xxx.xxx in
-     /etc/ddclient/ddclient.conf and then try
-    	$ ddclient -daemon=0 -query
+  3. Define the IP address of your router with ``fw=xxx.xxx.xxx.xxx`` in
+     ``/etc/ddclient/ddclient.conf`` and then try
+    	``$ ddclient -daemon=0 -query``
      to see if the router status web page can be understood.
 
   4. Need support for another router/firewall?
      Define the router status page yourself with:
-	fw=url-to-your-router's-status-page
-	fw-skip=any-string-preceding-your-IP-address
+	``fw=url-to-your-router``'s-status-page
+	``fw-skip=any-string-preceding-your-IP-address``
 
      ddclient does something like this to provide builtin support for 
      common routers.
      For example, the Linksys routers could have been added with:
+     
         fw=192.168.1.1/Status.htm
-	fw-skip=WAN.*?IP Address
+	    fw-skip=WAN.*?IP Address
 
      OR
      Send me the output from:
