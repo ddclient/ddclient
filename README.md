@@ -1,5 +1,5 @@
 ===============================================================================
-# DDCLIENT v3.8.0
+# DDCLIENT v3.8.1
 
 ddclient is a Perl client used to update dynamic DNS entries for accounts
 on many dynamic DNS services.
@@ -16,8 +16,11 @@ Dynamic DNS services currently supported include:
     ConCont     - See http://www.dydns.za.net for details
     DnsPark     - See http://www.dnspark.com for details
     DslReports  - See http://www.dslreports.com for details
-    Sitelutions - see http://www.sitelutions.com for details
+    Sitelutions - See http://www.sitelutions.com for details
     Loopia      - See http://www.loopia.se for details
+    Noip        - See http://www.noip.com/ for details
+    Freedns     - See http://freedns.afraid.org/ for details
+    dtdns       - See http://www.dtdns.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
 
@@ -108,8 +111,9 @@ USING DDCLIENT WITH ppp
 
 If you are using a ppp connection, you can easily update your DynDNS
 entry with each connection, with:
-  ## configure pppd to update DynDNS with each connection
-  cp sample-etc_ppp_ip-up.local /etc/ppp/ip-up.local
+
+    ## configure pppd to update DynDNS with each connection
+    cp sample-etc_ppp_ip-up.local /etc/ppp/ip-up.local
 
 Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ppp interface.
@@ -121,9 +125,9 @@ If you have not configured ddclient to use daemon-mode, you'll need to
 configure cron to force an update once a month so that the dns entry will
 not become stale.
 
-  ## configure cron to force an update twice a month
-  cp sample-etc_cron.d_ddclient /etc/cron.d/ddclient
-  vi /etc/cron.d/ddclient
+    ## configure cron to force an update twice a month
+    cp sample-etc_cron.d_ddclient /etc/cron.d/ddclient
+    vi /etc/cron.d/ddclient
 
 -------------------------------------------------------------------------------
 USING DDCLIENT WITH dhcpcd-1.3.17
@@ -131,16 +135,17 @@ USING DDCLIENT WITH dhcpcd-1.3.17
 If you are using dhcpcd-1.3.17 or thereabouts, you can easily update
 your DynDNS entry automatically every time your lease is obtained
 or renewed by creating an executable file named:
-  /etc/dhcpc/dhcpcd-{your-interface}.exe
+    /etc/dhcpc/dhcpcd-{your-interface}.exe
 ie.:
-  cp sample-etc_dhcpc_dhcpcd-eth0.exe /etc/dhcpc/dhcpcd-{your-interface}.exe
+    cp sample-etc_dhcpc_dhcpcd-eth0.exe /etc/dhcpc/dhcpcd-{your-interface}.exe
 
 In my case, it is named dhcpcd-eth0.exe and contains the lines:
-  #!/bin/sh
-  PATH=/usr/sbin:/root/bin:${PATH}
-  logger -t dhcpcd IP address changed to $1
-  ddclient -proxy fasthttp.sympatico.ca -wildcard -ip $1 | logger -t ddclient 
-  exit 0
+
+    #!/bin/sh
+    PATH=/usr/sbin:/root/bin:${PATH}
+    logger -t dhcpcd IP address changed to $1
+    ddclient -proxy fasthttp.sympatico.ca -wildcard -ip $1 | logger -t ddclient 
+    exit 0
 
 Other DHCP clients may have another method of calling out to programs
 for updating DNS entries. 
@@ -154,9 +159,9 @@ USING DDCLIENT WITH dhclient
 If you are using the ISC DHCP client (dhclient), you can update 
 your DynDNS entry automatically every time your lease is obtained
 or renewed by creating an executable file named:
-  /etc/dhclient-exit-hooks
+    /etc/dhclient-exit-hooks
 ie.:
-  cp sample-etc_dhclient-exit-hooks /etc/dhclient-exit-hooks
+    cp sample-etc_dhclient-exit-hooks /etc/dhclient-exit-hooks
 
 Edit /etc/dhclient-exit-hooks to change any options required.
 
