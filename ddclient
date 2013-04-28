@@ -554,6 +554,16 @@ my %services = (
 			  $variables{'service-common-defaults'},
 			),
     },
+    'changeip' => {
+        'updateable' => undef,
+        'update'     => \&nic_changeip_update,
+        'examples'   => \&nic_changeip_examples,
+        'variables'  => merge(
+			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'nic.changeip.com',    undef)    },
+			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, 0, interval('5m')),},
+			  $variables{'service-common-defaults'},
+			),
+    },
     'dtdns' => {
 	'updateable' => undef,
 	'update'     => \&nic_dtdns_update,
@@ -3588,7 +3598,79 @@ sub nic_freedns_update {
     }
 }
 
+###################################################################### 
+## nic_changeip_examples 
+###################################################################### 
+sub nic_changeip_examples {
+return <<EoEXAMPLE;
+
+o 'changeip'
+
+The 'changeip' protocol is used by DNS services offered by changeip.com.
+
+Configuration variables applicable to the 'changeip' protocol are:
+  protocol=changeip            ##
+  server=fqdn.of.service       ## defaults to nic.changeip.com
+  login=service-login          ## login name and password registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=changeip,                                               \\
+  login=my-my-changeip.com-login,                                  \\
+  password=my-changeip.com-password                                \\
+  myhost.changeip.org
+
+EoEXAMPLE
+} 
+
 ######################################################################
+## nic_changeip_update
+##
+## adapted by Michele Giorato
+##
+## https://nic.ChangeIP.com/nic/update?hostname=host.example.org&myip=66.185.162.19
+##
+######################################################################
+sub nic_changeip_update {
+
+
+    debug("\nnic_changeip_update -------------------");
+
+    ## update each configured host
+    foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        my $url;
+        $url   = "http://$config{$h}{'server'}/nic/update";
+        $url  .= "?hostname=$h";
+        $url  .= "&ip=";
+        $url  .= $ip if $ip;
+
+		my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        if (grep /success/i, @reply) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            warning("SENT:    %s", $url) unless opt('verbose');
+            warning("REPLIED: %s", $reply);
+            failed("updating %s: Invalid reply.", $h);
+        }
+    }
+}
 
 ######################################################################
 ## nic_dtdns_examples
