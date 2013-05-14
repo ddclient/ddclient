@@ -1789,13 +1789,18 @@ EOM
 ######################################################################
 sub load_sha1_support {
     my $sha1_loaded = eval {require Digest::SHA1};
-    unless ($sha1_loaded) {
+    my $sha_loaded = eval {require Digest::SHA};
+    unless ($sha1_loaded || $sha_loaded) {
         fatal(<<"EOM");
-Error loading the Perl module Digest::SHA1 needed for freedns update.
-On Debian, the package libdigest-sha1-perl must be installed.
+Error loading the Perl module Digest::SHA1 or Digest::SHA needed for freedns update.
+On Debian, the package libdigest-sha1-perl or libdigest-sha-perl must be installed.
 EOM
     }
-    import  Digest::SHA1 (qw/sha1_hex/);
+    if($sha1_loaded) {
+    	import  Digest::SHA1 (qw/sha1_hex/);
+    } elsif($sha_loaded) {
+    	import  Digest::SHA (qw/sha1_hex/);
+    }
 }
 ######################################################################
 ## geturl
