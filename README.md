@@ -20,6 +20,7 @@ Dynamic DNS services currently supported include:
     Loopia      - See http://www.loopia.se for details
     Noip        - See http://www.noip.com/ for details
     Freedns     - See http://freedns.afraid.org/ for details
+	ChangeIP    - See http://www.changeip.com/ for details
     dtdns       - See http://www.dtdns.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
@@ -169,4 +170,4 @@ Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ethernet interface.
 
 -------------------------------------------------------------------------------
-$Id: README.md 148 2013-04-28 14:28:00Z wimpunk $
+$Id: README.md 150 2013-04-28 14:55:34Z wimpunk $
