@@ -783,15 +783,16 @@ sub update_nics {
 		foreach my $h (sort keys %config) {
 			next if $config{$h}{'protocol'} ne lc($s);
 			$examined{$h} = 1;
-			my $use = $config{$h}{'use'} || opt('use');
-			local $opt{$use} = $config{$h}{$use} if $config{$h}{$use};
-			# bug #13: we should only do this once
-			# use isn't enough, we have to save the origin to.
-			# this will break the multiple ip stuff if use has 
-			# been used twice for the same device.
+			# we only do this once per 'use' and argument combination
+			my $use = opt('use', $h);
+			my $arg_ip = opt('ip', $h) || '';
+			my $arg_fw = opt('fw', $h) || '';
+			my $arg_if = opt('if', $h) || '';
+			my $arg_web = opt('web', $h) || '';
+			my $arg_cmd = opt('cmd', $h) || '';
 			my $ip = "";
-			if (defined $iplist{$use}) {
-				$ip = $iplist{$use};
+			if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
+				$ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
 			} else {
 				$ip = get_ip($use, $h);
 				if (!defined $ip || !$ip) {
@@ -803,7 +804,7 @@ sub update_nics {
 					warning("malformed IP address (%s)", $ip);
 					next;
 				}
-				$iplist{$use} = $ip;
+				$iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
 			}
 			$config{$h}{'wantip'} = $ip;
 			next if !nic_updateable($h, $updateable);
@@ -1943,7 +1944,7 @@ sub geturl {
 sub get_ip {
     my $use = lc shift;
     my $h = shift;
-    my ($ip, $arg, $reply, $url, $skip) = (undef, opt($use), '');
+    my ($ip, $arg, $reply, $url, $skip) = (undef, opt($use, $h), '');
     $arg = '' unless $arg;
 
     if ($use eq 'ip') {
