@@ -1958,6 +1958,7 @@ sub get_ip {
     } elsif ($use eq 'if') {
 	$skip  = opt('if-skip', $h)  || '';
 	$reply = `ifconfig $arg 2> /dev/null`;
+	$reply = `ip addr list dev $arg 2> /dev/null` if $?;
 	$reply = '' if $?;
 
     } elsif ($use eq 'cmd') {
