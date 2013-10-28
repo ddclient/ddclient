@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #!/usr/local/bin/perl -w
 ######################################################################
-# $Id: ddclient 154 2013-10-28 21:37:16Z wimpunk $
+# $Id: ddclient 155 2013-10-28 22:38:56Z wimpunk $
 #
 # DDCLIENT - a Perl client for updating DynDNS information
 #
@@ -20,7 +20,7 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 
-my ($VERSION) = q$Revision: 154 $ =~ /(\d+)/;
+my ($VERSION) = q$Revision: 155 $ =~ /(\d+)/;
 
 my $version  = "3.8.0-r". $VERSION;
 my $programd  = $0; 
@@ -1958,6 +1958,7 @@ sub get_ip {
     } elsif ($use eq 'if') {
 	$skip  = opt('if-skip', $h)  || '';
 	$reply = `ifconfig $arg 2> /dev/null`;
+	$reply = `ip addr list dev $arg 2> /dev/null` if $?;
 	$reply = '' if $?;
 
     } elsif ($use eq 'cmd') {
