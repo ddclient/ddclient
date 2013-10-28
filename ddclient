@@ -733,6 +733,10 @@ do {
 
 		$0 = sprintf("%s - sleeping for %s seconds", $program, $left);
         	$left -= sleep $delay;
+		# preventing deep sleep - see [bugs:#46]
+		if ($left > $daemon) {
+			$left = $daemon;
+		}
 	}
 	$caught_hup = 0;
 	$result = 0;
