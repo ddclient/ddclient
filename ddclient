@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #!/usr/local/bin/perl -w
 ######################################################################
-# $Id: ddclient 153 2013-07-08 13:20:35Z wimpunk $
+# $Id: ddclient 154 2013-10-28 21:37:16Z wimpunk $
 #
 # DDCLIENT - a Perl client for updating DynDNS information
 #
@@ -20,7 +20,7 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 
-my ($VERSION) = q$Revision: 153 $ =~ /(\d+)/;
+my ($VERSION) = q$Revision: 154 $ =~ /(\d+)/;
 
 my $version  = "3.8.0-r". $VERSION;
 my $programd  = $0; 
@@ -733,6 +733,10 @@ do {
 
 		$0 = sprintf("%s - sleeping for %s seconds", $program, $left);
         	$left -= sleep $delay;
+		# preventing deep sleep - see [bugs:#46]
+		if ($left > $daemon) {
+			$left = $daemon;
+		}
 	}
 	$caught_hup = 0;
 	$result = 0;
