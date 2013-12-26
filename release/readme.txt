@@ -10,17 +10,22 @@ Releasing files
 * tagging current version: 
 {{{
 svn copy trunk \
-	https://ddclient.svn.sourceforge.net/svnroot/ddclient/tags/release-3.8.1
+	svn+ssh://wimpunk@svn.code.sf.net/p/ddclient/code/tags/release-3.8.2 \
+	-m 'Release of version 3.8.2'
 }}}
 * svn update tags
+* git commit ddclient ChangeLog README.md RELEASENOTE
+* git tag -a v3.8.2 -m 'Release of version 3.8.2' 
+* git push origin v3.8.2
 * svn revert trunk
-* mkdir trunk/release/ddclient-3.8.1
-* cp ChangeLog trunk/release/ddclient-3.8.1
-* cp tags/release-3.8.1 trunk/release/ddclient-3.8.1
+* mkdir trunk/release/ddclient-3.8.2
+* cp -R tags/release-3.8.2 trunk/release/ddclient-3.8.2
+* ChangeLog doesn't get copied because it's exlucluded from the svn repository:
+  {{{ cp ChangeLog trunk/release/ddclient-3.8.2 }}}
 * cd trunk/release
-* remove unneeded directories release, patches, ...
-* tar -cvzf ddclient-3.8.1.tar.gz ddclient-3.8.1
-* tar -cvjf ddclient-3.8.1.tar.bz2 ddclient-3.8.1
+* remove unneeded directories release, ...
+* tar -cvzf ddclient-3.8.2.tar.gz ddclient-3.8.2
+* tar -cvjf ddclient-3.8.2.tar.bz2 ddclient-3.8.2
 * transfert via project page.  Seems to be changed.
 * news updaten
 * mail to ddclient-support @ lists.sourceforge.net
