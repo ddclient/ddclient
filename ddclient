@@ -22,7 +22,7 @@ use IO::Socket;
 
 my ($VERSION) = q$Revision: 155 $ =~ /(\d+)/;
 
-my $version  = "3.8.0-r". $VERSION;
+my $version  = "3.8.2";
 my $programd  = $0; 
 $programd =~ s%^.*/%%;
 my $program   = $programd;

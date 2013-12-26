@@ -1,5 +1,5 @@
 ===============================================================================
-# DDCLIENT v3.8.1
+# DDCLIENT v3.8.2
 
 ddclient is a Perl client used to update dynamic DNS entries for accounts
 on many dynamic DNS services.
@@ -20,7 +20,7 @@ Dynamic DNS services currently supported include:
     Loopia      - See http://www.loopia.se for details
     Noip        - See http://www.noip.com/ for details
     Freedns     - See http://freedns.afraid.org/ for details
-	ChangeIP    - See http://www.changeip.com/ for details
+    ChangeIP    - See http://www.changeip.com/ for details
     dtdns       - See http://www.dtdns.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
