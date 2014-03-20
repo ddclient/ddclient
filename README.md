@@ -59,6 +59,15 @@ INSTALLATION:
     ## start the first time by hand
     /etc/rc.d/init.d/ddclient start
 
+    ## For those using Alpine style rc files and using daemon-mode:
+    cp sample-etc_rc.d_init.d_ddclient.alpine /etc/init.d/ddclient
+    ## enable automatic startup when booting
+    rc-update add ddclient
+    ## make sure you have perl installed 
+    apk add perl
+    ## start the first time by hand
+    rc-service ddclient start
+
     ## If you are not using daemon-mode, configure cron and dhcp or ppp
     ## as described below.
 

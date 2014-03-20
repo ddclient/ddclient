@@ -1,0 +1,38 @@
+#!/sbin/runscript
+description="ddclient Daemon for Alpine"
+command="/usr/sbin/ddclient"
+config_file="/etc/ddclient/ddclient.conf"
+command_args=""
+pidfile=$(grep -v '^\s*#' "${config_file}" | grep -i -m 1 pid= | awk -F '=' '{print $2}')
+delay=$(grep -v '^\s*#' "${config_file}" | grep -i -m 1 "daemon" | awk -F '=' '{print $2}')
+
+if [ -z "${delay}" ]
+then
+	command_args="-daemon 300"
+else
+	command_args=""
+fi
+
+
+depend() {
+    use logger
+    need net
+    after firewall
+}
+
+start() {
+    ebegin "Starting ddclient"
+    start-stop-daemon --start \
+        --exec "${command}" \
+        --pidfile "${pidfile}" \
+        -- \
+        ${command_args}
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping ddclient"
+    start-stop-daemon --stop --exec "${command}" \
+        --pidfile "${pidfile}"
+    eend $?
+}
