@@ -448,6 +448,10 @@ my %variables = (
 	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
 	'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
     },
+    'duckdns-common-defaults'       => {
+        'server'              => setv(T_FQDNP,  1, 0, 1, 'www.duckdns.org', undef),
+        'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -612,6 +616,15 @@ my %services = (
             $variables{'cloudflare-common-defaults'},
             $variables{'service-common-defaults'},
             ),
+    },
+    'duckdns' => {
+        'updateable' => undef,
+        'update'     => \&nic_duckdns_update,
+        'examples'   => \&nic_duckdns_examples,
+        'variables'  => merge(
+                          $variables{'duckdns-common-defaults'},
+                          $variables{'service-common-defaults'},
+                        ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -4030,6 +4043,83 @@ sub nic_cloudflare_update {
 	}
 }
 
+######################################################################
+## nic_duckdns_examples
+######################################################################
+sub nic_duckdns_examples {
+    return <<EoEXAMPLE;
+o 'duckdns'
+
+The 'duckdns' protocol is the protocol used by the dynamic hostname services
+of the 'Duck DNS' dns services. This is currently used by the free
+dynamic DNS service offered by www.duckdns.org.
+
+Configuration variables applicable to the 'duckdns' protocol are:
+  protocol=duckdns               ##
+  server=www.fqdn.of.service   ## defaults to www.duckdns.org
+  password=service-password    ## password (token) registered with the service
+  non-fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=duckdns,                                       \\
+  password=z0mgs3cjur3p4ss                    \\
+  myhost
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_duckdns_update
+## by George Kranis (copypasta from nic_dtdns_update)
+######################################################################
+sub nic_duckdns_update {
+    debug("\nnic_duckdns_update -------------------");
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+        $url  = "http://$config{$h}{'server'}/update";
+        $url .= "?domains=";
+        $url .= $h;
+        $url .= "&token=";
+        $url .= $config{$h}{'password'};
+        $url .= "&ip=";
+        $url .= $ip;
+        
+
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        if ($reply =~ /OK/)
+        {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("updating %s: good: IP address set to %s", $h, $ip);
+         }
+         else
+         {
+                my @reply = split /\n/, $reply;
+                my $returned = pop(@reply);
+                $config{$h}{'status'} = 'failed';
+                failed("updating %s: Server said: '$returned'", $h);
+         }
+    }
+}
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
