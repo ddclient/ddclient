@@ -4050,8 +4050,7 @@ sub nic_duckdns_examples {
     return <<EoEXAMPLE;
 o 'duckdns'
 
-The 'duckdns' protocol is the protocol used by the dynamic hostname services
-of the 'Duck DNS' dns services. This is currently used by the free
+The 'duckdns' protocol is used by the free
 dynamic DNS service offered by www.duckdns.org.
 
 Configuration variables applicable to the 'duckdns' protocol are:
