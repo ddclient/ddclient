@@ -1,5 +1,3 @@
-$Id: README.ssl 96 2008-06-13 20:24:24Z wimpunk $
-
 Since 3.7.0, ddclient support ssl-updates
 To use ssl, put "ssl=yes" in your configuration and make sure
 you have IO::Socket::SSL.
