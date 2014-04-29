@@ -1,5 +1,3 @@
-$Id$
-
 Since 3.7.0, ddclient support ssl-updates
 To use ssl, put "ssl=yes" in your configuration and make sure
 you have IO::Socket::SSL.

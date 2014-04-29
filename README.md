@@ -179,4 +179,3 @@ Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ethernet interface.
 
 -------------------------------------------------------------------------------
-$Id$
