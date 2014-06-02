@@ -22,6 +22,7 @@ Dynamic DNS services currently supported include:
     Freedns     - See http://freedns.afraid.org/ for details
     ChangeIP    - See http://www.changeip.com/ for details
     dtdns       - See http://www.dtdns.com/ for details
+    nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
 
 DDclient now supports many of cable/dsl broadband routers. 
 
