@@ -3854,7 +3854,7 @@ zone $zone.
 EoINSTR1
 		foreach (@hosts) {
 			$instructions .= <<EoINSTR2;
-update delete $_.
+update delete $_. A
 update add $_. $config{$_}{'ttl'} A $ip
 EoINSTR2
 		}
