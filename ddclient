@@ -2603,10 +2603,6 @@ sub nic_noip_update {
 	$url  .= "&myip=";
 	$url  .= $ip            if $ip;
 
-
-	print "here..." . $config{$h}{'login'} . " --> " . $config{$h}{'password'} . "\n";
-	
-
 	my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
 	if (!defined($reply) || !$reply) {
 	    failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
