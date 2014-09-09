@@ -1875,7 +1875,7 @@ sub geturl {
     $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
 
-    my $auth = encode_base64("${login}:${password}");
+    my $auth = encode_base64("${login}:${password}", "");
     $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
     $request .= "Connection: close\n";
