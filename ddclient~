@@ -3945,87 +3945,87 @@ EoEXAMPLE
 ## nic_cloudflare_update
 ######################################################################
 sub nic_cloudflare_update {
-	debug("\nnic_cloudflare_update -------------------");
+    debug("\nnic_cloudflare_update -------------------");
 
-	## group hosts with identical attributes together 
-	my %groups = group_hosts_by([ @_ ], [ qw(ssh login password server wildcard mx backupmx zone) ]);
+    ## group hosts with identical attributes together 
+    my %groups = group_hosts_by([ @_ ], [ qw(ssh login password server wildcard mx backupmx zone) ]);
 
-	## update each set of hosts that had similar configurations
-	foreach my $sig (keys %groups) {
-		my @hosts = @{$groups{$sig}};
-		my $hosts = join(',', @hosts);
-		my $key   = $hosts[0];
-		my $ip    = $config{$key}{'wantip'};
+    ## update each set of hosts that had similar configurations
+    foreach my $sig (keys %groups) {
+    	my @hosts = @{$groups{$sig}};
+    	my $hosts = join(',', @hosts);
+    	my $key   = $hosts[0];
+    	my $ip    = $config{$key}{'wantip'};
+    	
+    	# FQDNs
+    	for my $domain (@hosts) {
+	    my $hostname = $domain =~ s/\.$config{$key}{zone}$//r;
+	    delete $config{$domain}{'wantip'};
+	    
+	    info("setting IP address to %s for %s", $ip, $domain);
+	    verbose("UPDATE:","updating %s", $domain);
 
-		# FQDNs
-		for my $domain (@hosts) {
-			my $hostname = $domain =~ s/\.$config{$key}{zone}$//r;
-			delete $config{$domain}{'wantip'};
-
-			info("setting IP address to %s for %s", $ip, $domain);
-			verbose("UPDATE:","updating %s", $domain);
-
-			# Get domain ID
-			my $url = "https://$config{$key}{'server'}/api_json.html?a=rec_load_all";
-			$url   .= "&z=".$config{$key}{'zone'};
-			$url   .= "&email=".$config{$key}{'login'};	
-			$url   .= "&tkn=".$config{$key}{'password'};
-
-			my $reply = geturl(opt('proxy'), $url);
-			unless ($reply) {
-				failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
-				last;
-			}
-			last if !header_ok($domain, $reply);
-
-			# Strip header
-			$reply =~ s/^.*?\n\n//s;
-			my $response = JSON::Any->jsonToObj($reply);
-			if ($response->{result} eq 'error') {
-				failed ("%s", $response->{msg});
-				next; 
-			}
-
-			# Pull the ID out of the json, messy
-			my ($id) = map { $_->{name} eq $domain ? $_->{rec_id} : () } @{ $response->{response}->{recs}->{objs} };
-			unless($id) {
-				failed("updating %s: No domain ID found.", $domain);
-				next;
-			}
-
-			# Set domain
-			$url   = "https://$config{$key}{'server'}/api_json.html?a=rec_edit&type=A&ttl=1";
-			$url     .= "&name=$hostname";
-			$url     .= "&z=".$config{$key}{'zone'};
-			$url     .= "&id=".$id;	
-			$url     .= "&email=".$config{$key}{'login'};	
-			$url     .= "&tkn=".$config{$key}{'password'};    
-			$url     .= "&content=";
-			$url     .= "$ip"       if $ip;
-
-			$reply = geturl(opt('proxy'), $url);
-			unless ($reply) {
-				failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
-				last;
-			}
-			last if !header_ok($domain, $reply);
-
-			# Strip header
-			$reply =~ s/^.*?\n\n//s;
-			$response = JSON::Any->jsonToObj($reply);
-			if ($response->{result} eq 'error') {
-				failed ("%s", $response->{msg});	
-			} else {
-				success ("%s -- Updated Successfully to %s", $domain, $ip);
-
-			}
-
-			# Cache
-			$config{$key}{'ip'}     = $ip;
-			$config{$key}{'mtime'}  = $now;
-			$config{$key}{'status'} = 'good';
-		}
+	    # Get domain ID
+	    my $url = "https://$config{$key}{'server'}/api_json.html?a=rec_load_all";
+	    $url   .= "&z=".$config{$key}{'zone'};
+	    $url   .= "&email=".$config{$key}{'login'};	
+	    $url   .= "&tkn=".$config{$key}{'password'};
+	    
+	    my $reply = geturl(opt('proxy'), $url);
+	    unless ($reply) {
+		failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+		last;
+	    }
+	    last if !header_ok($domain, $reply);
+	    
+	    # Strip header
+	    $reply =~ s/^.*?\n\n//s;
+	    my $response = JSON::Any->jsonToObj($reply);
+	    if ($response->{result} eq 'error') {
+		failed ("%s", $response->{msg});
+		next; 
+	    }
+	    
+	    # Pull the ID out of the json, messy
+	    my ($id) = map { $_->{name} eq $domain ? $_->{rec_id} : () } @{ $response->{response}->{recs}->{objs} };
+	    unless($id) {
+		failed("updating %s: No domain ID found.", $domain);
+		next;
+	    }
+	    
+	    # Set domain
+	    $url   = "https://$config{$key}{'server'}/api_json.html?a=rec_edit&type=A&ttl=1";
+	    $url     .= "&name=$hostname";
+	    $url     .= "&z=".$config{$key}{'zone'};
+	    $url     .= "&id=".$id;	
+	    $url     .= "&email=".$config{$key}{'login'};	
+	    $url     .= "&tkn=".$config{$key}{'password'};    
+	    $url     .= "&content=";
+	    $url     .= "$ip"       if $ip;
+	    
+	    $reply = geturl(opt('proxy'), $url);
+	    unless ($reply) {
+		failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
+		last;
+	    }
+	    last if !header_ok($domain, $reply);
+	    
+	    # Strip header
+	    $reply =~ s/^.*?\n\n//s;
+	    $response = JSON::Any->jsonToObj($reply);
+	    if ($response->{result} eq 'error') {
+		failed ("%s", $response->{msg});	
+	    } else {
+		success ("%s -- Updated Successfully to %s", $domain, $ip);
+		 
+	    }
+	    
+	    # Cache
+	    $config{$key}{'ip'}     = $ip;
+	    $config{$key}{'mtime'}  = $now;
+	    $config{$key}{'status'} = 'good';
 	}
+    }
 }
 
 
