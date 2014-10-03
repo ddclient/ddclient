@@ -1895,7 +1895,7 @@ sub geturl {
     $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
 
-    my $auth = encode_base64("${login}:${password}");
+    my $auth = encode_base64("${login}:${password}", "");
     $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
     $request .= "Connection: close\n";
@@ -2622,10 +2622,6 @@ sub nic_noip_update {
 	$url  .= "&hostname=$hosts";
 	$url  .= "&myip=";
 	$url  .= $ip            if $ip;
-
-
-	print "here..." . $config{$h}{'login'} . " --> " . $config{$h}{'password'} . "\n";
-	
 
 	my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
 	if (!defined($reply) || !$reply) {
