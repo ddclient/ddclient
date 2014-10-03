@@ -25,7 +25,7 @@ use strict;
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
-use JSON::ANY;
+use JSON::Any;
 
 # my ($VERSION) = q$Revision: 161 $ =~ /(\d+)/;
 
