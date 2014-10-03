@@ -3930,12 +3930,14 @@ Configuration variables applicable to the 'cloudflare' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=cloudflare,                                         \\
+  zone=dns.zone,                                               \\
   login=my-cloudflare.com-login,                               \\
   password=my-cloudflare.com-secure-token                      \\
   myhost.com 
 
   ## multiple host update to the custom DNS service
   protocol=cloudflare,                                         \\
+  zone=dns.zone,                                               \\
   login=my-cloudflare.com-login,                               \\
   password=my-cloudflare.com-secure-token                      \\
   my-toplevel-domain.com,my-other-domain.com
