@@ -23,6 +23,7 @@ Dynamic DNS services currently supported include:
     ChangeIP    - See http://www.changeip.com/ for details
     dtdns       - See http://www.dtdns.com/ for details
     nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
+    CloudFlare  - See https://www.cloudflare.com/ for defails
 
 DDclient now supports many of cable/dsl broadband routers. 
 
@@ -37,8 +38,9 @@ REQUIREMENTS:
 
 - one or more accounts from one of the dynamic DNS services
 
-- Perl 5.004 or later
-  (you need the IO::Socket::SSL perl library for ssl-support)
+- Perl 5.014 or later
+  (you need the IO::Socket::SSL perl library for ssl-support
+  and JSON::Any perl library for JSON support)
 
 - Linux or probably any common Unix system
 
