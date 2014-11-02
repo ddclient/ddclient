@@ -4071,6 +4071,8 @@ EoEXAMPLE
 ######################################################################
 ## nic_duckdns_update
 ## by George Kranis (copypasta from nic_dtdns_update)
+## http://www.duckdns.org/update?domains=mydomain1,mydomain2&token=xxxx-xxx-xx-x&ip=x.x.x.x
+## response contains OK or KO
 ######################################################################
 sub nic_duckdns_update {
     debug("\nnic_duckdns_update -------------------");
@@ -4103,7 +4105,9 @@ sub nic_duckdns_update {
         }
         last if !header_ok($h, $reply);
 
-        if ($reply =~ /OK/)
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ /OK/)
         {
                 $config{$h}{'ip'}     = $ip;
                 $config{$h}{'mtime'}  = $now;
@@ -4112,8 +4116,6 @@ sub nic_duckdns_update {
          }
          else
          {
-                my @reply = split /\n/, $reply;
-                my $returned = pop(@reply);
                 $config{$h}{'status'} = 'failed';
                 failed("updating %s: Server said: '$returned'", $h);
          }
