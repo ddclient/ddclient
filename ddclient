@@ -4052,6 +4052,7 @@ o 'duckdns'
 
 The 'duckdns' protocol is used by the free
 dynamic DNS service offered by www.duckdns.org.
+Check http://www.duckdns.org/install.jsp?tab=linux-cron for API
 
 Configuration variables applicable to the 'duckdns' protocol are:
   protocol=duckdns               ##
