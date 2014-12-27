@@ -1984,6 +1984,48 @@ sub geturl {
     return $reply;
 }
 ######################################################################
+## un_zero_pad
+######################################################################
+sub un_zero_pad {
+	my $in_str = shift(@_);
+	my @out_str = ();
+
+	if ($in_str eq '0.0.0.0') {
+	    return $in_str;
+	}
+
+	foreach my $block (split /\./, $in_str) {
+		$block =~ s/^0+//;
+		if ($block eq '') {
+			$block = '0';
+		}
+		push @out_str, $block;
+	}
+	return join('.', @out_str);
+}
+######################################################################
+## filter_local
+######################################################################
+sub filter_local {
+	my $in_ip = shift(@_);
+
+	if ($in_ip eq '0.0.0.0') {
+	    return $in_ip;
+	}
+
+	my @guess_local = (
+		'^10\.',
+		'^172\.(?:1[6-9]|2[0-9]|3[01])\.',
+		'^192\.168'
+	);
+	foreach my $block (@guess_local) {
+		if ($in_ip =~ /$block/) {
+			return '0.0.0.0';
+		}
+	}
+	return $in_ip;
+}
+######################################################################
 ## get_ip
 ######################################################################
 sub get_ip {
@@ -2080,6 +2122,8 @@ sub get_ip {
     }
     if ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
 	$ip = $1;
+	$ip = un_zero_pad($ip);
+	$ip = filter_local($ip);
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
 	$ip = undef;
