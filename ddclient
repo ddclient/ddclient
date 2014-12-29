@@ -339,6 +339,7 @@ my %variables = (
 	'web-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
 	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
 	'fw-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
+	'fw-banlocal'         => setv(T_BOOL,  0, 0, 1, 0,                    undef),
 	'fw-login'            => setv(T_LOGIN, 1, 0, 1, '',                   undef),
 	'fw-password'         => setv(T_PASSWD,1, 0, 1, '',                   undef),
 	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
@@ -378,6 +379,7 @@ my %variables = (
 	'web-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
 	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
 	'fw-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
+	'fw-banlocal'         => setv(T_BOOL,  0, 0, 1, 0,                    undef),
 	'fw-login'            => setv(T_LOGIN, 0, 0, 1, '',                   undef),
 	'fw-password'         => setv(T_PASSWD,0, 0, 1, '',                   undef),
 	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
@@ -645,6 +647,7 @@ my @opt = (
     "",
     [ "fw",          "=s", "-fw address|url       : obtain IP address from firewall at 'address'" ],
     [ "fw-skip",     "=s", "-fw-skip pattern      : skip any IP addresses before 'pattern' on the firewall address|url" ],
+    [ "fw-banlocal", "!", "-fw-banlocal           : ignore local IP addresses on the firewall address|url" ],
     [ "fw-login",    "=s", "-fw-login login       :   use 'login' when getting IP from fw" ],
     [ "fw-password", "=s", "-fw-password secret   :   use password 'secret' when getting IP from fw" ],
     "",			     
@@ -1995,11 +1998,11 @@ sub un_zero_pad {
 	}
 
 	foreach my $block (split /\./, $in_str) {
-		$block =~ s/^0+//;
-		if ($block eq '') {
-			$block = '0';
-		}
-		push @out_str, $block;
+	    $block =~ s/^0+//;
+	    if ($block eq '') {
+		$block = '0';
+	    }
+	    push @out_str, $block;
 	}
 	return join('.', @out_str);
 }
@@ -2014,14 +2017,14 @@ sub filter_local {
 	}
 
 	my @guess_local = (
-		'^10\.',
-		'^172\.(?:1[6-9]|2[0-9]|3[01])\.',
-		'^192\.168'
+	    '^10\.',
+	    '^172\.(?:1[6-9]|2[0-9]|3[01])\.',
+	    '^192\.168'
 	);
 	foreach my $block (@guess_local) {
-		if ($in_ip =~ /$block/) {
-			return '0.0.0.0';
-		}
+	    if ($in_ip =~ /$block/) {
+		return '0.0.0.0';
+	    }
 	}
 	return $in_ip;
 }
@@ -2123,7 +2126,7 @@ sub get_ip {
     if ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
 	$ip = $1;
 	$ip = un_zero_pad($ip);
-	$ip = filter_local($ip);
+	$ip = filter_local($ip) if opt('fw-banlocal', $h);
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
 	$ip = undef;
