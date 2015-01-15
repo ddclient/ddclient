@@ -448,6 +448,9 @@ my %variables = (
 	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
 	'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
     },
+	'googledomains-common-defaults'       => {
+		'server'	      => setv(T_FQDNP,  1, 0, 1, 'domains.google.com', undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -610,6 +613,14 @@ my %services = (
             { 'server'       => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef)          },
             { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
             $variables{'cloudflare-common-defaults'},
+    },
+    'googledomains' => {
+        'updateable' => undef,
+        'update'     => \&nic_googledomains_update,
+        'examples'   => \&nic_googledomains_examples,
+        'variables'  => merge(
+            { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
+            $variables{'googledomains-common-defaults'},
             $variables{'service-common-defaults'},
             ),
     },
@@ -1870,21 +1881,21 @@ sub geturl {
     $server =~ s%/.*%%;
     $url    = "/" unless $url =~ m%/%;
     $url    =~ s%^[^/]*/%%;
- 
+
     debug("server = $server");
     opt('fw') && debug("opt(fw = ",opt('fw'),")");
-    $globals{'fw'} && debug("glo fw = $globals{'fw'}"); 
+    $globals{'fw'} && debug("glo fw = $globals{'fw'}");
     #if ( $globals{'ssl'} and $server ne $globals{'fw'} ) {
     ## always omit SSL for connections to local router
     if ( $force_ssl || ($globals{'ssl'} and (caller(1))[3] ne 'main::get_ip') ) {
         $use_ssl      = 1;
         $default_port = 443;
-		load_ssl_support;
+        load_ssl_support;
     } else {
         $use_ssl      = 0;
         $default_port = 80;
     }
-   
+
     ## determine peer and port to use.
     $peer   = $proxy || $server;
     $peer   =~ s%/.*%%;
@@ -1892,7 +1903,7 @@ sub geturl {
     $port   =~ s%^.*:%%;
     $port   = $default_port unless $port =~ /^\d+$/;
     $peer   =~ s%:.*$%%;
-  
+
     my $to =  sprintf "%s%s", $server, $proxy ? " via proxy $peer:$port" : "";
     verbose("CONNECT:", "%s", $to);
 
@@ -3802,6 +3813,82 @@ sub nic_dtdns_update {
                 failed("updating %s: Server said: '$returned'", $h);
          }
     }
+}
+######################################################################
+
+######################################################################
+## nic_googledomains_examples
+##
+## written by Nelson Araujo
+##
+######################################################################
+sub nic_googledomains_examples {
+    return <<EoEXAMPLE;
+o 'googledomains'
+
+The 'googledomains' protocol is used by DNS service offered by www.google.com/domains.
+
+Configuration variables applicable to the 'googledomains' protocol are:
+  protocol=googledomains       ##
+  login=service-login          ## the user name provided by the admin interface
+  password=service-password    ## the password provided by the admin interface
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=googledomains,                                      \\
+  login=my-generated-user-name,                                \\
+  password=my-genereated-password                              \\
+  myhost.com
+
+  ## multiple host update to the custom DNS service
+  protocol=googledomains,                                      \\
+  login=my-generated-user-name,                                \\
+  password=my-genereated-password                              \\
+  my-toplevel-domain.com,my-other-domain.com
+EoEXAMPLE
+}
+######################################################################
+## nic_googledomains_update
+######################################################################
+sub nic_googledomains_update {
+  debug("\nnic_googledomains_update -------------------");
+
+  ## group hosts with identical attributes together
+  my %groups = group_hosts_by([ @_ ], [ qw(server login password) ]);
+
+  ## update each set of hosts that had similar configurations
+  foreach my $sig (keys %groups) {
+    my @hosts = @{$groups{$sig}};
+    my $key   = $hosts[0];
+    my $ip    = $config{$key}{'wantip'};
+
+    # FQDNs
+    for my $host (@hosts) {
+      delete $config{$host}{'wantip'};
+
+      info("setting IP address to %s for %s", $ip, $host);
+      verbose("UPDATE:","updating %s", $host);
+
+      # Update the DNS record
+      my $url = "https://$config{$host}{'server'}/nic/update";
+      $url   .= "?hostname=$host";
+      $url   .= "&myip=";
+      $url   .= $ip if $ip;
+
+      my $reply = geturl(opt('proxy'), $url, $config{$host}{'login'}, $config{$host}{'password'});
+      unless ($reply) {
+        failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+        last;
+      }
+      last if !header_ok($host, $reply);
+
+      # Cache
+      $config{$host}{'ip'}     = $ip;
+      $config{$host}{'mtime'}  = $now;
+      $config{$host}{'status'} = 'good';
+    }
+  }
 }
 
 ######################################################################
