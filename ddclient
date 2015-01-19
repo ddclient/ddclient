@@ -1610,7 +1610,6 @@ sub split_by_comma {
     return split /\s*[, ]\s*/, $string if defined $string;
     return ();
 }
-
 sub merge {
     my %merged = ();
     foreach my $h (@_) {
@@ -1620,17 +1619,14 @@ sub merge {
     }
     return \%merged;
 }
-
 sub default {
     my $v = shift;
     return $variables{'merged'}{$v}{'default'};
 }
-
 sub minimum {
     my $v = shift;
     return $variables{'merged'}{$v}{'minimum'};
 }
-
 sub opt {
     my $v = shift;
     my $h = shift;
@@ -1640,7 +1636,6 @@ sub opt {
     return default($v)     if defined default($v);
     return undef;
 }
-
 sub min {
     my $min = shift;
     foreach my $arg (@_) {
@@ -1648,7 +1643,6 @@ sub min {
     }
     return $min;
 }
-
 sub max {
     my $max = shift;
     foreach my $arg (@_) {
@@ -2051,14 +2045,12 @@ sub get_ip {
     if ( $use eq 'ip' ) {
         $ip = opt( 'ip', $h );
         $arg = 'ip';
-
     }
     elsif ( $use eq 'if' ) {
         $skip  = opt( 'if-skip', $h ) || '';
         $reply = `ifconfig $arg 2> /dev/null`;
         $reply = `ip addr list dev $arg 2> /dev/null` if $?;
         $reply = '' if $?;
-
     }
     elsif ( $use eq 'cmd' ) {
         if ($arg) {
@@ -2066,7 +2058,6 @@ sub get_ip {
             $reply = `$arg`;
             $reply = '' if $?;
         }
-
     }
     elsif ( $use eq 'web' ) {
         $url  = opt( 'web',      $h ) || '';
@@ -2081,10 +2072,8 @@ sub get_ip {
         if ($url) {
             $reply = geturl( opt( 'proxy', $h ), $url ) || '';
         }
-
     }
     elsif ( ( $use eq 'cisco' ) ) {
-
         # Stuff added to support Cisco router ip http daemon
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
@@ -2100,10 +2089,8 @@ sub get_ip {
         $url = "http://" . opt( 'fw', $h ) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
         $reply = geturl( '', $url, opt( 'fw-login', $h ), opt( 'fw-password', $h ) ) || '';
         $arg = $url;
-
     }
     elsif ( ( $use eq 'cisco-asa' ) ) {
-
         # Stuff added to support Cisco ASA ip https daemon
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
@@ -2119,7 +2106,6 @@ sub get_ip {
         $url = "https://" . opt( 'fw', $h ) . "/exec/show%20interface%20${queryif}";
         $reply = geturl( '', $url, opt( 'fw-login', $h ), opt( 'fw-password', $h ) ) || '';
         $arg = $url;
-
     }
     else {
         $url  = opt( 'fw',      $h ) || '';
@@ -2245,21 +2231,17 @@ sub nic_updateable {
 
     if ( $config{$host}{'login'} eq '' ) {
         warning( "null login name specified for host %s.", $host );
-
     }
     elsif ( $config{$host}{'password'} eq '' ) {
         warning( "null password specified for host %s.", $host );
-
     }
     elsif ( $opt{'force'} ) {
         info( "forcing update of %s.", $host );
         $update = 1;
-
     }
     elsif ( !exists( $cache{$host} ) ) {
         info( "forcing updating %s because no cached entry exists.", $host );
         $update = 1;
-
     }
     elsif ( $cache{$host}{'wtime'} && $cache{$host}{'wtime'} > $now ) {
         warning(
@@ -2267,7 +2249,6 @@ sub nic_updateable {
             $host, ( $cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>' ),
             $ip, prettytime( $cache{$host}{'wtime'} )
         );
-
     }
     elsif ( $cache{$host}{'mtime'} && interval_expired( $host, 'mtime', 'max-interval' ) ) {
         warning(
@@ -2278,15 +2259,12 @@ sub nic_updateable {
             prettytime( $cache{$host}{'mtime'} )
         );
         $update = 1;
-
     }
-    elsif (( !exists( $cache{$host}{'ip'} ) )
-        || ( "$cache{$host}{'ip'}" ne "$ip" ) )
+    elsif (( !exists( $cache{$host}{'ip'} ) ) || ( "$cache{$host}{'ip'}" ne "$ip" ) )
     {
         if ( ( $cache{$host}{'status'} eq 'good' )
             && !interval_expired( $host, 'mtime', 'min-interval' ) )
         {
-
             warning(
                 "skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                 $host,
@@ -2297,10 +2275,8 @@ sub nic_updateable {
             ) if opt('verbose') || !define( $cache{$host}{'warned-min-interval'}, 0 );
 
             $cache{$host}{'warned-min-interval'} = $now;
-
         }
         elsif ( ( $cache{$host}{'status'} ne 'good' ) && !interval_expired( $host, 'atime', 'min-error-interval' ) ) {
-
             warning(
                 "skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                 $host,
@@ -2312,18 +2288,17 @@ sub nic_updateable {
             ) if opt('verbose') || !define( $cache{$host}{'warned-min-error-interval'}, 0 );
 
             $cache{$host}{'warned-min-error-interval'} = $now;
-
         }
         else {
             $update = 1;
         }
-
     }
     elsif ( defined($sub) && &$sub($host) ) {
         $update = 1;
     }
     elsif (
-        ( defined( $cache{$host}{'static'} ) && defined( $config{$host}{'static'} ) && ( $cache{$host}{'static'} ne $config{$host}{'static'} ) )
+        (    defined( $cache{$host}{'static'} ) && defined( $config{$host}{'static'} )
+          && ( $cache{$host}{'static'} ne $config{$host}{'static'} ) )
         || (   defined( $cache{$host}{'wildcard'} )
             && defined( $config{$host}{'wildcard'} )
             && ( $cache{$host}{'wildcard'} ne $config{$host}{'wildcard'} ) )
@@ -2337,7 +2312,6 @@ sub nic_updateable {
     {
         info( "updating %s because host settings have been changed.", $host );
         $update = 1;
-
     }
     else {
         success( "%s: skipped: IP address was already set to %s.", $host, $ip )
@@ -2370,12 +2344,10 @@ sub header_ok {
 
         if ( $result eq '200' ) {
             $ok = 1;
-
         }
         elsif ( $result eq '401' ) {
             failed( "updating %s: authorization failed (%s)", $host, $line );
         }
-
     }
     else {
         failed( "updating %s: unexpected line (%s)", $host, $line );
@@ -2463,7 +2435,6 @@ sub nic_dyndns1_update {
             warning( "SENT:    %s", $url ) unless opt('verbose');
             warning( "REPLIED: %s", $reply );
             failed( "updating %s: %s", $h, $title );
-
         }
         else {
             $config{$h}{'ip'}     = $ip;
@@ -2483,18 +2454,14 @@ sub nic_dyndns2_updateable {
     if ( $config{$host}{'mx'} ne $cache{$host}{'mx'} ) {
         info( "forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'} );
         $update = 1;
-
     }
     elsif ( $config{$host}{'mx'} && ( ynu( $config{$host}{'backupmx'}, 1, 2, 3 ) ne ynu( $config{$host}{'backupmx'}, 1, 2, 3 ) ) ) {
         info( "forcing updating %s because 'backupmx' has changed to %s.", $host, ynu( $config{$host}{'backupmx'}, "YES", "NO", "NO" ) );
         $update = 1;
-
     }
     elsif ( $config{$host}{'static'} ne $cache{$host}{'static'} ) {
-
         info( "forcing updating %s because 'static' has changed to %s.", $host, ynu( $config{$host}{'static'}, "YES", "NO", "NO" ) );
         $update = 1;
-
     }
     return $update;
 }
@@ -2592,14 +2559,11 @@ sub nic_dyndns2_update {
             #      warning("updating %s: 'custom' and 'offline' may not be used together. ('offline' ignored)", $hosts)
             #        if $config{$h}{'offline'};
             $url .= 'custom';
-
         }
         elsif ( $config{$h}{'static'} ) {
-
             #      warning("updating %s: 'static' and 'offline' may not be used together. ('offline' ignored)", $hosts)
             #        if $config{$h}{'offline'};
             $url .= 'statdns';
-
         }
         else {
             $url .= 'dyndns';
@@ -2630,11 +2594,9 @@ sub nic_dyndns2_update {
         foreach my $line (@reply) {
             if ( $state eq 'header' ) {
                 $state = 'body';
-
             }
             elsif ( $state eq 'body' ) {
                 $state = 'results' if $line eq '';
-
             }
             elsif ( $state =~ /^results/ ) {
                 $state = 'results2';
@@ -2650,7 +2612,6 @@ sub nic_dyndns2_update {
                     $config{$h}{'ip'}    = $ip;
                     $config{$h}{'mtime'} = $now;
                     success( "updating %s: %s: IP address set to %s", $h, $status, $ip );
-
                 }
                 elsif ( exists $errors{$status} ) {
                     if ( $status eq 'nochg' ) {
@@ -2658,12 +2619,10 @@ sub nic_dyndns2_update {
                         $config{$h}{'ip'}     = $ip;
                         $config{$h}{'mtime'}  = $now;
                         $config{$h}{'status'} = 'good';
-
                     }
                     else {
                         failed( "updating %s: %s: %s", $h, $status, $errors{$status} );
                     }
-
                 }
                 elsif ( $status =~ /w(\d+)(.)/ ) {
                     my ( $wait, $units ) = ( $1,    lc $2 );
@@ -2676,7 +2635,6 @@ sub nic_dyndns2_update {
                     $sec = $wait * $scale;
                     $config{$h}{'wtime'} = $now + $sec;
                     warning( "updating %s: %s: wait $wait $units before further updates", $h, $status, $ip );
-
                 }
                 else {
                     failed( "updating %s: %s: unexpected status (%s)", $h, $line );
@@ -2738,11 +2696,9 @@ sub nic_noip_update {
         foreach my $line (@reply) {
             if ( $state eq 'header' ) {
                 $state = 'body';
-
             }
             elsif ( $state eq 'body' ) {
                 $state = 'results' if $line eq '';
-
             }
             elsif ( $state =~ /^results/ ) {
                 $state = 'results2';
@@ -2755,7 +2711,6 @@ sub nic_noip_update {
                     $config{$h}{'ip'}    = $ip;
                     $config{$h}{'mtime'} = $now;
                     success( "updating %s: %s: IP address set to %s", $h, $status, $ip );
-
                 }
                 elsif ( exists $errors{$status} ) {
                     if ( $status eq 'nochg' ) {
@@ -2763,12 +2718,10 @@ sub nic_noip_update {
                         $config{$h}{'ip'}     = $ip;
                         $config{$h}{'mtime'}  = $now;
                         $config{$h}{'status'} = 'good';
-
                     }
                     else {
                         failed( "updating %s: %s: %s", $h, $status, $errors{$status} );
                     }
-
                 }
                 elsif ( $status =~ /w(\d+)(.)/ ) {
                     my ( $wait, $units ) = ( $1,    lc $2 );
@@ -2781,7 +2734,6 @@ sub nic_noip_update {
                     $sec = $wait * $scale;
                     $config{$h}{'wtime'} = $now + $sec;
                     warning( "updating %s: %s: wait $wait $units before further updates", $h, $status, $ip );
-
                 }
                 else {
                     failed( "updating %s: %s: unexpected status (%s)", $h, $line );
@@ -2969,7 +2921,6 @@ sub nic_dslreports1_update {
             warning( "SENT:    %s", $url ) unless opt('verbose');
             warning( "REPLIED: %s", $reply );
             failed( "updating %s", $h );
-
         }
         else {
             $config{$h}{'ip'}     = $ip;
@@ -3144,7 +3095,6 @@ sub nic_zoneedit1_update {
                         $config{$h}{'status'} = 'good';
 
                         success( "updating %s: IP address set to %s (%s: %s)", $h, $ip, $status_code, $status_text );
-
                     }
                     else {
                         $config{$h}{'status'} = 'failed';
@@ -3172,18 +3122,14 @@ sub nic_easydns_updateable {
     if ( $config{$host}{'mx'} ne $cache{$host}{'mx'} ) {
         info( "forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'} );
         $update = 1;
-
     }
     elsif ( $config{$host}{'mx'} && ( ynu( $config{$host}{'backupmx'}, 1, 2, 3 ) ne ynu( $config{$host}{'backupmx'}, 1, 2, 3 ) ) ) {
         info( "forcing updating %s because 'backupmx' has changed to %s.", $host, ynu( $config{$host}{'backupmx'}, "YES", "NO", "NO" ) );
         $update = 1;
-
     }
     elsif ( $config{$host}{'static'} ne $cache{$host}{'static'} ) {
-
         info( "forcing updating %s because 'static' has changed to %s.", $host, ynu( $config{$host}{'static'}, "YES", "NO", "NO" ) );
         $update = 1;
-
     }
     return $update;
 }
@@ -3287,11 +3233,9 @@ sub nic_easydns_update {
         foreach my $line (@reply) {
             if ( $state eq 'header' ) {
                 $state = 'body';
-
             }
             elsif ( $state eq 'body' ) {
                 $state = 'results' if $line eq '';
-
             }
             elsif ( $state =~ /^results/ ) {
                 $state = 'results2';
@@ -3304,7 +3248,6 @@ sub nic_easydns_update {
                     $config{$h}{'ip'}    = $ip;
                     $config{$h}{'mtime'} = $now;
                     success( "updating %s: %s: IP address set to %s", $h, $status, $ip );
-
                 }
                 elsif ( $status =~ /TOOSOON/ ) {
                     ## make sure we wait at least a little
@@ -3316,11 +3259,9 @@ sub nic_easydns_update {
                     ( $scale, $units ) = ( 60 * 60, 'hours' ) if $units eq 'h';
                     $config{$h}{'wtime'} = $now + $sec;
                     warning( "updating %s: %s: wait $wait $units before further updates", $h, $status, $ip );
-
                 }
                 elsif ( exists $errors{$status} ) {
                     failed( "updating %s: %s: %s", $h, $line, $errors{$status} );
-
                 }
                 else {
                     failed( "updating %s: %s: unexpected status (%s)", $h, $line );
@@ -3452,11 +3393,9 @@ sub nic_dnspark_update {
         foreach my $line (@reply) {
             if ( $state eq 'header' ) {
                 $state = 'body';
-
             }
             elsif ( $state eq 'body' ) {
                 $state = 'results' if $line eq '';
-
             }
             elsif ( $state =~ /^results/ ) {
                 $state = 'results2';
@@ -3469,7 +3408,6 @@ sub nic_dnspark_update {
                     $config{$h}{'ip'}    = $ip;
                     $config{$h}{'mtime'} = $now;
                     success( "updating %s: %s: IP address set to %s", $h, $status, $ip );
-
                 }
                 elsif ( $status =~ /TOOSOON/ ) {
                     ## make sure we wait at least a little
@@ -3481,11 +3419,9 @@ sub nic_dnspark_update {
                     ( $scale, $units ) = ( 60 * 60, 'hours' ) if $units eq 'h';
                     $config{$h}{'wtime'} = $now + $sec;
                     warning( "updating %s: %s: wait $wait $units before further updates", $h, $status, $ip );
-
                 }
                 elsif ( exists $errors{$status} ) {
                     failed( "updating %s: %s: %s", $h, $line, $errors{$status} );
-
                 }
                 else {
                     failed( "updating %s: %s: unexpected status (%s)", $h, $line );
@@ -4136,7 +4072,6 @@ sub nic_cloudflare_update {
             }
             else {
                 success( "%s -- Updated Successfully to %s", $domain, $ip );
-
             }
 
             # Cache
