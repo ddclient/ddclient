@@ -16,9 +16,9 @@ test -f $CONF || exit 0
 case "$1" in
 start)
 log_begin_msg "Starting ddclient..."
-DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
+DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '#' '{print $1}' | awk -F '=' '{print $2}'`
 if [ -z "$DELAY" ] ; then
-DELAY="-daemon 300"
+DELAY="-daemon $DELAY"
 else
 DELAY=''
 fi

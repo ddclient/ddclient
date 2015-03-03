@@ -613,6 +613,7 @@ my %services = (
             { 'server'       => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef)          },
             { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
             $variables{'cloudflare-common-defaults'},
+            $variables{'service-common-defaults'},
         ),
     },
     'googledomains' => {
