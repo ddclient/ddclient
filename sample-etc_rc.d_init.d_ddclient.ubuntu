@@ -1,8 +1,13 @@
 #!/bin/sh
-#
-# Start ddclient that provides support for updating dynamic DNS services.
-#
-# Submitted by paolo martinelli
+### BEGIN INIT INFO
+# Provides:          ddclient
+# Required-Start:    $remote_fs $syslog $network
+# Required-Stop:     $remote_fs $syslog $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start ddclient daemon at boot time
+# Description:       Start ddclient that provides support for updating dynamic DNS services.  Originally submitted by paolo martinelli, updated by joe passavanti
+### END INIT INFO
 
 DDCLIENT=/usr/sbin/ddclient
 CONF=/etc/ddclient/ddclient.conf
@@ -14,34 +19,33 @@ test -f $CONF || exit 0
 . /lib/lsb/init-functions
 
 case "$1" in
-start)
-log_begin_msg "Starting ddclient..."
-DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
-if [ -z "$DELAY" ] ; then
-DELAY="-daemon 300"
-else
-DELAY=''
-fi
-start-stop-daemon -S -q -p $PIDFILE -x $DDCLIENT -- $DELAY
-log_end_msg $?
-;;
-stop)
-if [ -f $PIDFILE ] ; then
-log_begin_msg "Stopping ddclient..."
-start-stop-daemon -K -q -p $PIDFILE
-log_end_msg $?
-rm -f $PIDFILE
-fi
-;;
-restart|reload|force-reload)
-$0 stop
-$0 start
-;;
-*)
-log_success_msg "Usage: $0 {start|stop|restart|reload|force-reload}"
-exit 1
-;;
+  start)
+      log_begin_msg "Starting ddclient..."
+      DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
+      if [ -z "$DELAY" ] ; then
+        DELAY="-daemon 300"
+      else
+        DELAY=''
+      fi
+      start-stop-daemon -S -q -p $PIDFILE -x $DDCLIENT -- $DELAY
+      log_end_msg $?
+      ;;
+  stop)
+      if [ -f $PIDFILE ] ; then
+        log_begin_msg "Stopping ddclient..."
+        start-stop-daemon -K -q -p $PIDFILE
+        log_end_msg $?
+        rm -f $PIDFILE
+      fi
+      ;;
+  restart|reload|force-reload)
+      $0 stop
+      $0 start
+      ;;
+  *)
+      log_success_msg "Usage: $0 {start|stop|restart|reload|force-reload}"
+      exit 1
+      ;;
 esac
 
 exit 0
-
