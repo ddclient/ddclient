@@ -72,7 +72,7 @@ my %builtinweb = (
    'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' =>
    'Current IP Address:', },
    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
-   'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current Address:', },
+   'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
 );
 my %builtinfw = (
     'watchguard-soho'        => {
