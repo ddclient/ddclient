@@ -440,14 +440,14 @@ my %variables = (
 	'ttl'                 => setv(T_NUMBER, 0, 1, 0, 600,                 undef),
 	'zone'                => setv(T_STRING, 1, 1, 1, '',                  undef),
     },
-    'cloudflare-common-defaults'       => {
-	'server'	      => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef),
-	'zone'                => setv(T_FQDN,   1, 0, 1, '',                  undef),
-	'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-	'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
-	'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-    },
+	'cloudflare-common-defaults'       => {
+		'server'	      => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef),
+		'zone'                => setv(T_FQDN,   1, 0, 1, '',                  undef),
+		'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+		'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+		'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
+		'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+	},
 	'googledomains-common-defaults'       => {
 		'server'	      => setv(T_FQDNP,  1, 0, 1, 'domains.google.com', undef),
 	},
