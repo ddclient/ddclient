@@ -25,7 +25,6 @@ use strict;
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
-use JSON::Any;
 
 # my ($VERSION) = q$Revision: 161 $ =~ /(\d+)/;
 
@@ -1296,6 +1295,7 @@ sub init_config {
 	$proto = opt('protocol')          if !defined($proto);
 
 	load_sha1_support() if ($proto eq "freedns");
+	load_json_support() if ($proto eq "cloudflare");
 
  	if (!exists($services{$proto})) {
 	    warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -1873,6 +1873,18 @@ EOM
     } elsif($sha_loaded) {
     	import  Digest::SHA (qw/sha1_hex/);
     }
+}
+######################################################################
+## load_json_support
+######################################################################
+sub load_json_support {
+	my $json_loaded = eval {require JSON::Any};
+	unless ($json_loaded) {
+		fatal(<<"EOM");
+Error loading the Perl module JSON::Any needed for cloudflare update.
+EOM
+	}
+	import JSON::Any;
 }
 ######################################################################
 ## geturl
