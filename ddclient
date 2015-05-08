@@ -20,7 +20,7 @@
 #
 #
 ######################################################################
-require 5.014;
+require 5.004;
 use strict;
 use Getopt::Long;
 use Sys::Hostname;
@@ -4075,7 +4075,7 @@ sub nic_cloudflare_update {
 
 		# FQDNs
 		for my $domain (@hosts) {
-			my $hostname = $domain =~ s/\.$config{$key}{zone}$//r;
+			(my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
 			delete $config{$domain}{'wantip'};
 
 			info("setting IP address to %s for %s", $ip, $domain);
