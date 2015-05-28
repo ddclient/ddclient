@@ -1,11 +1,12 @@
-It's been a while and has been announced a while ago but here is new release of 
-ddclient. There are some important changes and some documentation is modified.
+Yet again it's been a while but here is new release of ddclient. As usual,
+there are some important changes and some documentation is modified.
 A detailed overview can be found in ChangeLog but here's a quick overview:
 
-	* adding support by ChangeIP - patch send by Michele Giorato
-	* sha-1 patch send by pirast to allow Digest::SHA
-	* allow reuse of use - patch send by Rodrigo Araujo
-	* preventing deep sleep - see [bugs:#46]
-	* Fallback to iproute if ifconfig doesn't work send by Maccied Grela
+	* added Alpine Linux init scritp - patch send by @Tal on github.
+	* adding support for nsupdate - patch send by @droe on github
+	* allow log username-password combinations - patch send by @dirdi on github
+	* adding support for cloudflare - patch send by @roberthawdon on github
+	* adding support for duckdns - patch send by @gkranis
 
-
+A very big thank you for everyone who created a pull request on github and
+for everyone who helped to fix the little issues caused by the new providers.

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 #!/usr/local/bin/perl -w
 ######################################################################
-# $Id: ddclient 161 2014-03-20 20:02:14Z wimpunk $
+# $Id: ddclient 184 2015-05-28 19:59:34Z wimpunk $
 #
 # DDCLIENT - a Perl client for updating DynDNS information
 #
@@ -26,9 +26,9 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 
-# my ($VERSION) = q$Revision: 161 $ =~ /(\d+)/;
+# my ($VERSION) = q$Revision: 184 $ =~ /(\d+)/;
 
-my $version  = "3.8.2";
+my $version  = "3.8.3";
 my $programd  = $0; 
 $programd =~ s%^.*/%%;
 my $program   = $programd;

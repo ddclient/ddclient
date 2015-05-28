@@ -1,7 +1,141 @@
+2015-05-28  wimpunk
+
+	* [r183] ., release: Removing unneeded release directory
+
+2015-03-23  wimpunk
+
+	* [r182] ddclient: Reverting to the old perl requirements like
+	  suggested in #75
+
+		The new requirements were added when adding support for cloudflare. By the
+		simple fix suggested by Roy Tam we could revert the requirements which make
+		ddclient back usable on CentOS and RHEL.
+
+	* [r181] ddclient: ddclient: made json optional
+
+	  As suggested in pull 7 on github by @abelbeck and @Bugsbane it is
+	  better to make the
+	  use of JSON related to the use of cloudflare.
+
+	* [r180] ddclient: ddclient: reindenting cloudflare
+
+	  Indenting cloudflare according to the vim tags
+
+	* [r179] ddclient: ddclient: correction after duckdns merge
+
+	  Correcting duckdns configuration after commit r178
+
+	* [r178] ddclient: Added simple support for Duckdns www.duckdns.org
+
+	  Patch provided by gkranis on github.
+	  Merge branch 'gkranis'
+
+2015-03-21  wimpunk
+
+	* [r177] README.md: Added duckDNS to the README.md
+	* [r176] sample-etc_rc.d_init.d_ddclient.ubuntu: update ubuntu init.d script
+
+	  Merge pull request #9 from gottaloveit/master
+
+	* [r175] Changelog, Changelog.old: Renamed Changelog to
+	  Changelog.old
+
+	  Avoiding conflicts on case insensitive filesystems
+
+	* [r174] ddclient: Add missing config line for CloudFlare
+
+	  Merge pull request #19 from shikasta-net/fixes
+
+	* [r173] ddclient: Merge pull request #22 from reddyr/patch-1
+
+	  loopia.se changed the "Current Address:" output string to "Current IP
+		Address:"
+
+	* [r172] ddclient: fixed missing ) for cloudflare service hash
+
+	  Merge pull request #16 from adepretis/master
+
+2015-01-20  wimpunk
+
+	* [r171] README.md, ddclient, sample-etc_ddclient.conf: Adding
+	  support for google domain
+
+	  Patch gently provided through github on
+	  https://github.com/wimpunk/ddclient/pull/13
+
+2014-10-08  wimpunk
+
+	* [r170] README.md, ddclient, sample-etc_ddclient.conf: Added
+	  support for Cloudflare and multi domain support for namecheap
+
+	  Pull request #7 from @roberthawdon
+	  See https://github.com/wimpunk/ddclient/pull/7 for more info.
+
+2014-09-09  wimpunk
+
+	* [r169] ddclient: Bugfix: allowing long username-password
+	  combinations
+
+	  Patch provided by @dirdi through github.
+
+2014-08-20  wimpunk
+
+	* [r166] ddclient: Fixing bug #72: Account info revealed during
+	  noip update
+
+	* [r165] ddclient: Interfaces can be named almost anything on
+	  modern systems.
+
+	  Patch provided by Stephen Couchman through github
+
+2014-06-30  wimpunk
+
+	* [r164] ddclient: Only delete A RR, not any RR for the FQDN
+
+	  Make the delete command specific to A RRs. This prevents ddclient
+	  from deleting other RRs unrelated to the dynamic address, but on the
+	  same FQDN. This can be specifically a problem with KEY RRs when using
+	  SIG(0) instead of symmetric keys.
+
+	  Reported by: Wellie Chao
+	  Bug report: http://sourceforge.net/p/ddclient/bugs/71/
+
+	  Fixes #71
+
+2014-06-02  wimpunk
+
+	* [r163] README.md, ddclient: Adding support for nsupdate.
+
+	  Patch provided by Daniel Roethlisberger <daniel@roe.ch> through
+	  github.
+
+2014-04-29  wimpunk
+
+	* [r162] README.md, README.ssl, ddclient: Removed revision
+	  information
+
+	  Revision information isn't very usable when switching to git.
+
+2014-03-20  wimpunk
+
+	* [r161] README.md, README.ssl, ddclient,
+	  sample-etc_rc.d_init.d_ddclient.alpine: Added Alpine Linux init
+	  script
+
+	  Patch send by Tal on github.
+
+	* [r160] RELEASENOTE: Corrected release note
+
+2013-12-26  wimpunk
+
+	* [r159] release/readme.txt: Commiting updated release information
+	* [r158] README.md, RELEASENOTE: Committing release notes and
+	  readme information to trunk
+
 2013-11-05  wimpunk
 
 	* [r156] patches: Moving patching to the root of the repository.
-	  
+
 	  The patches are mostly there for historical reasons. They've been
 	  moved away to make cleaning easier. I think the applied patches should
 	  even be removed.
@@ -9,17 +143,17 @@
 2013-10-28  wimpunk
 
 	* [r155] ddclient: Fallback to iproute if ifconfig doesn't work.
-	  
-	  This fix applies the patch provided by Maccied Grela in
-	  [bugs:#26]
+
+	  This fix applies the patch provided by Maccied Grela in [bugs:#26]
+
 	* [r154] ddclient: preventing deep sleep - see [bugs:#46]
-	  
+
 	  Fixing [bugs:#46] by applying the provided patch.
 
 2013-07-08  wimpunk
 
 	* [r153] ddclient: Applying patch from [fb1ad014] fixing bug [#14]
-	  
+
 	  More info can be found on [fb1ad014] and has been discussed in
 	  the mailinglist:
 	  http://article.gmane.org/gmane.network.dns.ddclient.user/71. The
@@ -424,4 +558,3 @@
 2006-05-22  wimpunk
 
 	* [r2] Reorganise
-
