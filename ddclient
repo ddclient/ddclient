@@ -446,7 +446,7 @@ my %variables = (
 		'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
 		'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
 		'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-		'ttl'		      => setv(T_NUMBER, 1, 0, 1, 1                    undef),
+		'ttl'		      => setv(T_NUMBER, 1, 0, 1, 1,                   undef),
 	},
 	'googledomains-common-defaults'       => {
 		'server'	      => setv(T_FQDNP,  1, 0, 1, 'domains.google.com', undef),
@@ -4112,7 +4112,7 @@ sub nic_cloudflare_update {
 
 			# Set domain
 			$url   = "https://$config{$key}{'server'}/api_json.html?a=rec_edit&type=A";
-			$url	 .= "$ttl=".$config{$key}{'ttl'};
+			$url	 .= "&ttl=".$config{$key}{'ttl'};
 			$url     .= "&name=$hostname";
 			$url     .= "&z=".$config{$key}{'zone'};
 			$url     .= "&id=".$id;	
