@@ -454,6 +454,29 @@ my %variables = (
 			'server'              => setv(T_FQDNP,  1, 0, 1, 'www.duckdns.org', undef),
 			'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
 	},
+    'woima-common-defaults'       => {
+        'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
+        'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'custom'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'script'              => setv(T_STRING, 1, 1, 1, '/nic/update',       undef),
+    },
+    'woima-service-common-defaults'       => {
+        'server'	          => setv(T_FQDNP,  1, 0, 1, 'dyn.woima.fi',      undef),
+        'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
+        'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
+        'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
+        'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
+        'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
+        'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
+        'status'              => setv(T_ANY,    0, 1, 0, '',                  undef),
+        'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),     0),
+        'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('25d'),     0),
+        'min-error-interval'  => setv(T_DELAY,  0, 0, 1, interval('5m'),      0),
+        'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
+        'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -637,6 +660,15 @@ my %services = (
                           $variables{'duckdns-common-defaults'},
                           $variables{'service-common-defaults'},
                         ),
+    },
+    'woima' => {
+        'updateable' => undef,
+        'update'     => \&nic_woima_update,
+        'examples'   => \&nic_woima_examples,
+        'variables'  => merge(
+            $variables{'woima-common-defaults'},
+            $variables{'woima-service-common-defaults'},
+        ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -4223,6 +4255,182 @@ sub nic_duckdns_update {
          }
     }
 }
+
+######################################################################
+## nic_woima_examples
+######################################################################
+sub nic_woima_examples {
+    return <<EoEXAMPLE;
+o 'woima'
+
+The 'woima' protocol is used by the free
+dynamic DNS service offered by woima.fi.
+It offers also nameservers for own domains for free.
+Dynamic DNS service for own domains is not free.
+
+Configuration variables applicable to the 'woima' protocol are:
+  protocol=woima             ## 
+  server=fqdn.of.service       ## defaults to dyn.woima.fi
+  script=/path/to/script       ## defaults to /nic/update
+  backupmx=no|yes              ## indicates that this host is the primary MX for the domain.
+  static=no|yes                ## indicates that this host has a static IP address.
+  custom=no|yes                ## indicates that this host is a 'custom' top-level domain name.
+  mx=any.host.domain           ## a host MX'ing for this host definition.
+  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to {host}
+  login=service-login          ## login name and password  registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=woima,                                         \\
+  login=my-dyndns.org-login,                                \\
+  password=my-dyndns.org-password                           \\
+  myhost.dyndns.org 
+
+  ## multiple host update with wildcard'ing mx, and backupmx
+  protocol=woima,                                         \\
+  login=my-dyndns.org-login,                                \\
+  password=my-dyndns.org-password,                          \\
+  mx=a.host.willing.to.mx.for.me,backupmx=yes,wildcard=yes  \\
+  myhost.dyndns.org,my2ndhost.dyndns.org 
+
+  ## multiple host update to the custom DNS service
+  protocol=woima,                                         \\
+  login=my-dyndns.org-login,                                \\
+  password=my-dyndns.org-password                           \\
+  my-toplevel-domain.com,my-other-domain.com
+EoEXAMPLE
+}
+######################################################################
+## nic_woima_update
+######################################################################
+sub nic_woima_update {
+    debug("\nnic_woima_update -------------------");
+    
+    my %errors = (
+       'badauth'  => 'Bad authorization (username or password)',
+       'badsys'   => 'The system parameter given was not valid',
+
+       'notfqdn'  => 'A Fully-Qualified Domain Name was not provided',
+       'nohost'   => 'The hostname specified does not exist in the database',
+       '!yours'   => 'The hostname specified exists, but not under the username currently being used',
+       '!donator' => 'The offline setting was set, when the user is not a donator',
+       '!active'  => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+       'abuse',   => 'The hostname specified is blocked for abuse; you should receive an email notification ' . 
+                     'which provides an unblock request link.  More info can be found on ' . 
+                     'https://www.dyndns.com/support/abuse.html',
+
+       'numhost'  => 'System error: Too many or too few hosts found. Contact support@dyndns.org',
+       'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
+
+       'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+    );
+    
+    my @hosts = @_;
+    foreach my $key (keys @hosts) {
+        my $h = $hosts[$key];
+        my $ip = $config{$h}{'wantip'};
+        delete $config{$h}{'wantip'};
+    
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+    
+        ## Select the DynDNS system to update
+        my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
+        if ($config{$h}{'custom'}) {
+            warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $h)
+            if $config{$h}{'static'};
+    #	    warning("updating %s: 'custom' and 'offline' may not be used together. ('offline' ignored)", $h)
+    #	      if $config{$h}{'offline'};
+            $url .= 'custom';
+    
+        } elsif  ($config{$h}{'static'}) {
+    #	    warning("updating %s: 'static' and 'offline' may not be used together. ('offline' ignored)", $h)
+    #	      if $config{$h}{'offline'};
+            $url .= 'statdns';
+    
+        } else {
+            $url .= 'dyndns';
+        }
+    
+        $url  .= "&hostname=$h";
+        $url  .= "&myip=";
+        $url  .= $ip            if $ip;
+    
+        ## some args are not valid for a custom domain.
+        $url  .= "&wildcard=ON" if ynu($config{$h}{'wildcard'}, 1, 0, 0);
+        if ($config{$h}{'mx'}) {
+            $url .= "&mx=$config{$h}{'mx'}";
+            $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
+        }
+    
+        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+    
+        my @reply = split /\n/, $reply;
+        my $state = 'header';
+        my $returnedip = $ip;
+    
+        foreach my $line (@reply) {
+            if ($state eq 'header') {
+                $state = 'body';
+            
+            } elsif ($state eq 'body') {
+                $state = 'results' if $line eq '';
+            
+            } elsif ($state =~ /^results/) {
+                $state = 'results2';
+    
+                # bug #10: some dyndns providers does not return the IP so
+                # we can't use the returned IP
+                my ($status, $returnedip) = split / /, lc $line;
+                $ip = $returnedip if (not $ip);
+                #my $h = shift @hosts;
+            
+                $config{$h}{'status'} = $status;
+                if ($status eq 'good') {
+                    $config{$h}{'ip'}     = $ip;
+                    $config{$h}{'mtime'}  = $now;
+                    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+                
+                } elsif (exists $errors{$status}) {
+                    if ($status eq 'nochg') {
+                    warning("updating %s: %s: %s", $h, $status, $errors{$status});
+                    $config{$h}{'ip'}     = $ip;
+                        $config{$h}{'mtime'}  = $now;
+                    $config{$h}{'status'} = 'good';
+                    
+                    } else {
+                    failed("updating %s: %s: %s", $h, $status, $errors{$status});
+                    }
+        
+                } elsif ($status =~ /w(\d+)(.)/) {
+                    my ($wait, $units) = ($1, lc $2);
+                    my ($sec,  $scale) = ($wait, 1);
+                
+                    ($scale, $units) = (1, 'seconds')   if $units eq 's';
+                    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
+                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
+        
+                    $sec = $wait * $scale;
+                    $config{$h}{'wtime'} = $now + $sec;
+                    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
+                
+                } else {
+                    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+                } 	
+            }
+        }
+        failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
+            if $state ne 'results2';
+    }
+}
+
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
