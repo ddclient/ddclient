@@ -1,5 +1,5 @@
-.svn
 patches
 release
+.svn
 .cvsignore
-UPGRADE
+*~
