@@ -1,0 +1,560 @@
+2015-05-28  wimpunk
+
+	* [r183] ., release: Removing unneeded release directory
+
+2015-03-23  wimpunk
+
+	* [r182] ddclient: Reverting to the old perl requirements like
+	  suggested in #75
+
+		The new requirements were added when adding support for cloudflare. By the
+		simple fix suggested by Roy Tam we could revert the requirements which make
+		ddclient back usable on CentOS and RHEL.
+
+	* [r181] ddclient: ddclient: made json optional
+
+	  As suggested in pull 7 on github by @abelbeck and @Bugsbane it is
+	  better to make the
+	  use of JSON related to the use of cloudflare.
+
+	* [r180] ddclient: ddclient: reindenting cloudflare
+
+	  Indenting cloudflare according to the vim tags
+
+	* [r179] ddclient: ddclient: correction after duckdns merge
+
+	  Correcting duckdns configuration after commit r178
+
+	* [r178] ddclient: Added simple support for Duckdns www.duckdns.org
+
+	  Patch provided by gkranis on github.
+	  Merge branch 'gkranis'
+
+2015-03-21  wimpunk
+
+	* [r177] README.md: Added duckDNS to the README.md
+	* [r176] sample-etc_rc.d_init.d_ddclient.ubuntu: update ubuntu init.d script
+
+	  Merge pull request #9 from gottaloveit/master
+
+	* [r175] Changelog, Changelog.old: Renamed Changelog to
+	  Changelog.old
+
+	  Avoiding conflicts on case insensitive filesystems
+
+	* [r174] ddclient: Add missing config line for CloudFlare
+
+	  Merge pull request #19 from shikasta-net/fixes
+
+	* [r173] ddclient: Merge pull request #22 from reddyr/patch-1
+
+	  loopia.se changed the "Current Address:" output string to "Current IP
+		Address:"
+
+	* [r172] ddclient: fixed missing ) for cloudflare service hash
+
+	  Merge pull request #16 from adepretis/master
+
+2015-01-20  wimpunk
+
+	* [r171] README.md, ddclient, sample-etc_ddclient.conf: Adding
+	  support for google domain
+
+	  Patch gently provided through github on
+	  https://github.com/wimpunk/ddclient/pull/13
+
+2014-10-08  wimpunk
+
+	* [r170] README.md, ddclient, sample-etc_ddclient.conf: Added
+	  support for Cloudflare and multi domain support for namecheap
+
+	  Pull request #7 from @roberthawdon
+	  See https://github.com/wimpunk/ddclient/pull/7 for more info.
+
+2014-09-09  wimpunk
+
+	* [r169] ddclient: Bugfix: allowing long username-password
+	  combinations
+
+	  Patch provided by @dirdi through github.
+
+2014-08-20  wimpunk
+
+	* [r166] ddclient: Fixing bug #72: Account info revealed during
+	  noip update
+
+	* [r165] ddclient: Interfaces can be named almost anything on
+	  modern systems.
+
+	  Patch provided by Stephen Couchman through github
+
+2014-06-30  wimpunk
+
+	* [r164] ddclient: Only delete A RR, not any RR for the FQDN
+
+	  Make the delete command specific to A RRs. This prevents ddclient
+	  from deleting other RRs unrelated to the dynamic address, but on the
+	  same FQDN. This can be specifically a problem with KEY RRs when using
+	  SIG(0) instead of symmetric keys.
+
+	  Reported by: Wellie Chao
+	  Bug report: http://sourceforge.net/p/ddclient/bugs/71/
+
+	  Fixes #71
+
+2014-06-02  wimpunk
+
+	* [r163] README.md, ddclient: Adding support for nsupdate.
+
+	  Patch provided by Daniel Roethlisberger <daniel@roe.ch> through
+	  github.
+
+2014-04-29  wimpunk
+
+	* [r162] README.md, README.ssl, ddclient: Removed revision
+	  information
+
+	  Revision information isn't very usable when switching to git.
+
+2014-03-20  wimpunk
+
+	* [r161] README.md, README.ssl, ddclient,
+	  sample-etc_rc.d_init.d_ddclient.alpine: Added Alpine Linux init
+	  script
+
+	  Patch send by Tal on github.
+
+	* [r160] RELEASENOTE: Corrected release note
+
+2013-12-26  wimpunk
+
+	* [r159] release/readme.txt: Commiting updated release information
+	* [r158] README.md, RELEASENOTE: Committing release notes and
+	  readme information to trunk
+
+2013-11-05  wimpunk
+
+	* [r156] patches: Moving patching to the root of the repository.
+
+	  The patches are mostly there for historical reasons. They've been
+	  moved away to make cleaning easier. I think the applied patches should
+	  even be removed.
+
+2013-10-28  wimpunk
+
+	* [r155] ddclient: Fallback to iproute if ifconfig doesn't work.
+
+	  This fix applies the patch provided by Maccied Grela in [bugs:#26]
+
+	* [r154] ddclient: preventing deep sleep - see [bugs:#46]
+
+	  Fixing [bugs:#46] by applying the provided patch.
+
+2013-07-08  wimpunk
+
+	* [r153] ddclient: Applying patch from [fb1ad014] fixing bug [#14]
+
+	  More info can be found on [fb1ad014] and has been discussed in
+	  the mailinglist:
+	  http://article.gmane.org/gmane.network.dns.ddclient.user/71. The
+	  patch was send by Rodrigo Araujo.
+
+2013-05-14  wimpunk
+
+	* [r152] ddclient: Adding sha1-patch provided by pirast in
+	  [9742ac09]
+
+2013-04-28  wimpunk
+
+	* [r150] README.md, ddclient, sample-etc_ddclient.conf: Adding
+	  support for ChangeIP based on the patch from Michele Giorato
+	  http://sourceforge.net/p/ddclient/discussion/399428/thread/e85661ad/
+	* [r148] README.md: Updated README file
+	* [r147] ., README, README.md: Applying markdown syntax to README
+
+2011-07-11  wimpunk
+
+	* [r131] release/readme.txt: Updates after releasing 3.8.1
+	* [r129] release/readme.txt: Corrected release/readme.txt
+	* [r128] sample-etc_ppp_ip-up.local: Applied ip-up_run-parts.diff
+	  from ubuntu
+	* [r127] ddclient: Applied smc-barricade-fw-alt.diff from ubuntu
+
+2011-07-03  wimpunk
+
+	* [r126] ddclient: Fixing #28: FreeDNS.afraid.org changed api
+	  slightly
+
+2011-05-19  wimpunk
+
+	* [r125] ddclient, sample-etc_ddclient.conf: Added patch for
+	  dtdns-support (#39)
+
+2011-03-09  wimpunk
+
+	* [r124] ddclient: Patching with nic_updateable-warning patch
+	  provided by antespi in ticket #2
+
+2011-03-08  wimpunk
+
+	* [r123] ddclient: Patching with zoneedit patch provided by
+	  killer-jk in ticket #15
+
+2010-12-07  wimpunk
+
+	* [r122] ddclient: Added longer password support, sended by Ingo
+	  Schwarze (#3130634)
+
+2010-10-13  wimpunk
+
+	* [r121] ddclient: Fixing bug #13: multiple fetch-ip but
+	  introducing a multiple ip bug
+
+2010-09-14  wimpunk
+
+	* [r120] ddclient: patch for #10: invalid value for keyword ip
+
+2010-09-13  wimpunk
+
+	* [r119] ddclient: Applied patch from ticket #8, patch for cache
+	  content leaks to global
+	* [r118] ddclient: Applied patch from ticket #7, provided by Chris
+	  Carr
+
+2010-07-01  wimpunk
+
+	* [r117] ddclient: Fixed #6: Add Red Hat package name to Perl
+	  module IO::Socket::SSL error message
+
+2010-02-24  wimpunk
+
+	* [r116] ddclient: Subversion revision added
+
+2009-11-09  wimpunk
+
+	* [r115] ddclient, patches/cisco-asa.patch: Added cisco-asa patch
+	  (2891001) submitted by Philip Gladstone
+	* [r114] ddclient, patches/prevent-hang.patch: Added prevent-hang
+	  patch (2880462) submitted by Panos
+
+2009-10-19  wimpunk
+
+	* [r113] ddclient, patches/foreground.patch: Added foreground patch
+	  (1893144) submitted by John Palkovic
+
+2009-09-10  wimpunk
+
+	* [r112] README, ddclient, patches/loopia.patch,
+	  sample-etc_ddclient.conf: #1609799 Support for LoopiaDNS
+	  (submitted by scilence)
+
+2009-08-05  wimpunk
+
+	* [r111] ddclient, patches/freedns-patch: applied freedns patch
+	  (patch 2832129)
+
+2009-05-16  wimpunk
+
+	* [r110] ddclient: Bug 2792436: fixed abuse message of dyndns
+
+2009-02-27  wimpunk
+
+	* [r109] sample-etc_ddclient.conf: Added warning about the update
+	  interval (#2619505)
+
+2009-01-27  wimpunk
+
+	* [r108] .cvsignore, RELEASENOTE, ddclient, release,
+	  release/readme.txt: Modified during the release of ddclient-3.8.0
+
+2008-12-04  wimpunk
+
+	* [r106] ddclient: help about postscript added
+
+2008-11-19  wimpunk
+
+	* [r105] ddclient, patches/password.patch: Added better password
+	  handling sended by Ingo Schwarze
+	* [r104] TODO, sample-ddclient-wrapper.sh: Added ddclient wrapper
+	  script
+	* [r103] ddclient: Extra fix for multiple IP's
+
+2008-11-01  wimpunk
+
+	* [r102] sample-etc_ddclient.conf: Added some remarks concerning
+	  the postscript. See
+	  https://sourceforge.net/forum/message.php?msg_id=5550545
+
+2008-09-30  wimpunk
+
+	* [r101] ddclient, patches/multiple-ip.patch: Added support for
+	  multiple IP adresses. See
+	  http://permalink.gmane.org/gmane.network.dns.ddclient.user/17
+	* [r100] patches/namecheap.patch: extra comments added to namecheap
+	  patch
+
+2008-07-04  wimpunk
+
+	* [r99] patches/namecheap.patch: namecheap patch added to patches
+	  section
+
+2008-06-13  wimpunk
+
+	* [r98] .: New trunk created based on the old trunk/svn
+	* [r96] svn: Moved old trunk/svn to ddclient and it will be the new
+	  trunk
+	* [r95] svn: Ignoring test configuration
+	* [r94] svn/.cvsignore, svn/RELEASENOTE, svn/UPGRADE: Added some
+	  release related files
+	* [r93] svn/patches/no-host.patch: Added not used no-host patch to
+	  patches section
+
+2008-06-05  wimpunk
+
+	* [r90] svn/ddclient: Added more info about the daemon interval
+	* [r89] svn/ddclient: Preventing error while reading cache when ip
+	  wasn't set correctly before
+	* [r88] svn/ddclient: Preventing an error when trying to send a
+	  message on mail-failure
+
+2008-06-02  wimpunk
+
+	* [r87] svn/ddclient, svn/sample-etc_ddclient.conf: Modified
+	  documentation about zoneedit based on the comments from Oren Held
+
+2008-03-04  wimpunk
+
+	* [r86] svn/patches/ddclient.daemon-timeout.patch: Added patch
+	  which was applied to rev 27 (posted by James deBoer)
+
+2008-02-19  wimpunk
+
+	* [r85] svn/patches/eurodns.patch: Patch modified to apply on
+	  ddclient 3.7.3
+
+2008-02-08  wimpunk
+
+	* [r84] svn/patches/mail-on-kill.patch: Added mail-on-kill patch to
+	  patches section
+
+2008-02-05  wimpunk
+
+	* [r83] svn/ddclient: Sending mail when killed, not after
+	  TERM-signal
+	* [r82] svn/README: Added creation of cache dir
+
+2007-10-29  wimpunk
+
+	* [r81] svn/ddclient, svn/patches/ubuntu/default-timeout.patch:
+	  Added and applied default timeout patch from
+	  https://bugs.launchpad.net/ubuntu/+source/ddclient/+bug/116066
+
+2007-08-29  wimpunk
+
+	* [r80] svn/ddclient, svn/patches/ddclient-noip.patch: Added
+	  ddclient-noip.patch send by Kurt Bussche.
+
+2007-08-07  wimpunk
+
+	* [r78] svn/ddclient: Updated version number to 3.7.3
+
+2007-08-01  wimpunk
+
+	* [r77] svn/ddclient, svn/patches/typo_dnspark.patch: Applied
+	  typo_dnspark.patch send by Marco
+
+2007-07-31  wimpunk
+
+	* [r76] svn/README.ssl: Renamed dyndns.org to dyndns.com
+	* [r75] svn/README: Removed ^M at line 37
+	* [r74] svn/ddclient: Removed line 183, comments on Vigor 2200 USB
+
+2007-07-30  wimpunk
+
+	* [r73] svn: Ignoring ChangeLog since autogenerated
+	* [r72] svn/Changelog: Notification about changed ChangeLog
+	  configuration
+	* [r71] svn/patches/ubuntu/dyndns_com.diff: Removed patch since
+	  it's invalid
+	* [r70] svn/patches/opendns.patch: Added not applied opendns.patch,
+	  see tracker #1758564
+	* [r69] svn/patches/debianpatches,
+	  svn/patches/debianpatches/abuse_msg.diff,
+	  svn/patches/debianpatches/cachedir.diff,
+	  svn/patches/debianpatches/cisco_fw.diff,
+	  svn/patches/debianpatches/config_path.diff,
+	  svn/patches/debianpatches/daemon_check.diff,
+	  svn/patches/debianpatches/daemon_interval.diff,
+	  svn/patches/debianpatches/help_nonroot(2).diff,
+	  svn/patches/debianpatches/help_nonroot.diff,
+	  svn/patches/debianpatches/ip-up_run-parts.diff,
+	  svn/patches/debianpatches/maxinterval.diff,
+	  svn/patches/debianpatches/readme.txt,
+	  svn/patches/debianpatches/sample_path.diff,
+	  svn/patches/debianpatches/smc-barricade-7401bra.patch,
+	  svn/patches/debianpatches/smc-barricade-fw-alt.diff,
+	  svn/patches/debianpatches/update-new-config.patch,
+	  svn/patches/ubuntu, svn/patches/ubuntu/checked_ssl_load.diff,
+	  svn/patches/ubuntu/config_path.diff,
+	  svn/patches/ubuntu/daemon_interval.diff,
+	  svn/patches/ubuntu/dyndns_com.diff,
+	  svn/patches/ubuntu/sample_ubuntu.diff, svn/patches/ubuntu/series,
+	  svn/patches/ubuntu/smc-barricade-fw-alt.diff: Added debian and
+	  ubuntu patches
+
+2007-07-29  wimpunk
+
+	* [r68] svn/TODO: Added url to feature request dyndns
+
+2007-07-12  wimpunk
+
+	* [r67] svn/README, svn/patches/readme.patch: Run dos2unix on
+	  readme and it's patch which Marco Rodrigues submitted.
+	* [r66] svn/README, svn/patches/readme.patch: Partial applied
+	  readme.patch. See tracker #1752931
+
+2007-07-10  wimpunk
+
+	* [r65] svn/ddclient: signature modified
+	* [r64] svn/ddclient: Added website to ddclient comments
+	* [r63] svn/patches/regex_vlan.patch: Added extra comments to the
+	  patch.
+	* [r62] svn/ddclient, svn/patches/create_patch.sh,
+	  svn/patches/regex_vlan.patch,
+	  svn/patches/typo_namecheap_patch.diff.new: Added patches and
+	  applied regex_vlan.patch. See bug #1747337
+	* [r61] svn/ddclient: Applied typo_namecheap_patch.diff send by
+	  Marco Rodrigues
+
+2007-07-07  wimpunk
+
+	* [r60] svn/sample-etc_ppp_ip-up.local: Reverted the patch from
+	  torsten. See [ 1749470 ] Bug in Script sample-etc_ppp_ip-up.local
+
+2007-07-04  wimpunk
+
+	* [r59] svn/release, svn/release/readme.txt: Adding some release
+	  documentation
+
+2007-06-14  wimpunk
+
+	* [r57] svn/Changelog, svn/ddclient: Changed version number
+	* [r55] svn/patches, svn/patches/3com-oc-remote812.patch,
+	  svn/patches/easydns.patch, svn/patches/eurodns.patch: Patches
+	  directory added
+
+2007-06-12  wimpunk
+
+	* [r54] svn/ddclient: 3com-oc-remote812 patch by The_Beast via IRC:
+	  see patches/3com-oc-remote812.patch
+
+2007-06-05  wimpunk
+
+	* [r53] svn/ddclient: Applied easydns.patch, patch 117054
+
+2007-05-28  wimpunk
+
+	* [r52] svn/ddclient: Changed nic_namecheap_update following the
+	  suggestion of edmdude on the forum
+	  (https://sourceforge.net/forum/message.php?msg_id=4316938)
+
+2007-05-19  wimpunk
+
+	* [r48] svn/ddclient: Cosmetic change about checkip
+	* [r47] svn/ddclient: Applied checked_ssl_load.diff from ubuntu
+	* [r46] svn/ddclient: Removed the two empty lines at the end of
+	  ddclient
+
+2007-02-26  wimpunk
+
+	* [r44] svn/TODO: added a TODO list
+
+2007-02-21  wimpunk
+
+	* [r43] svn/Changelog, svn/ddclient: Preventing unitialized values,
+	  check https://sourceforge.net/forum/message.php?msg_id=4167772
+
+2007-01-24  wimpunk
+
+	* [r40] svn/Changelog, svn/ddclient: Changed max-interval to
+	  25days. See https://www.dyndns.com/services/dns/dyndns/faq.html
+
+2006-12-03  wimpunk
+
+	* [r39] svn/Changelog, svn/ddclient: Applied maxinterval.diff:
+	  Increase max interval for updates.
+	  See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=129370
+	  http://www.dyndns.com/support/services/dyndns/faq.html#q15
+	* [r38] svn/ddclient: Applied cisco_fw.diff: Use configured
+	  hostname for firewall access with
+	  -use=cisco (closes: #345712). Thanks to Per Carlson for the
+	  patch!
+	  See http://bugs.debian.org/345712.
+
+2006-12-02  wimpunk
+
+	* [r37] svn/Changelog, svn/ddclient: Applied
+	  smc-barricade-7401bra.patch: Support for SMC Barricade 7401BRA FW
+	  firewall (submitted by Torsten)
+	  Changelog modified for all previous patches from Torsten
+	* [r36] svn/ddclient: Applied update-new-config.patch: Force update
+	  if config has changed
+	  (submitted by Torsten)
+	* [r35] svn/sample-etc_ppp_ip-up.local: Applied
+	  ip-up_run-parts.diff: Fix parameter in ip-up script.
+	  (submitted by Torsten)
+	* [r34] svn/ddclient: Applied help_nonroot.diff: Allow calling the
+	  help function as non-root.
+	  (submitted by Torsten)
+	* [r33] svn/ddclient: Applied cachedir.diff: Original ddclient
+	  stores a cache file in /etc which
+	  would belong in /var/cache in my opinion and according to the
+	  FHS. Patch
+	  changes that. (submitted by Torsten)
+	* [r32] svn/ddclient: Applied abuse_msg.diff: ddclient still
+	  reports the email to contact dyndns.org
+	  but they prefer a web form today (IIRC). This patch adjusts the
+	  abuse warning
+	  printed by ddclient. (submitted by Torsten)
+	* [r31] svn/Changelog: Changed Changelog syntax
+
+2006-11-27  wimpunk
+
+	* [r30] svn/Changelog, svn/ddclient: Don't send any mail when in
+	  not running daemon mode (patch submitted by Daniel Thaler)
+
+2006-11-03  wimpunk
+
+	* [r28] svn/Changelog, svn/ddclient: Added patch "Patch: Treat
+	  --daemon values as intervals"
+	  (submitted by James deBoer)
+
+2006-09-30  wimpunk
+
+	* [r22] svn/Changelog, svn/sample-etc_rc.d_init.d_ddclient.ubuntu:
+	  Added initscript for Ubuntu (posted by Paolo Martinelli)
+
+2006-09-14  wimpunk
+
+	* [r21] svn/Changelog, svn/ddclient: URL of zoneedit has changed
+	  (see bug #1558483)
+
+2006-06-14  wimpunk
+
+	* [r11] svn/Changelog, svn/ddclient: Changed version number
+	* [r8] ., html, svn, xml: Created trunk and tags, moved directories
+	  to it
+	* [r6] Changed the order of perl and update of README.ssl
+
+2006-06-11  ddfisher
+
+	* [r5] see Changelog
+
+2006-06-10  ddfisher
+
+	* [r4] updated changelog
+	* [r3] See Changelog
+
+2006-05-22  wimpunk
+
+	* [r2] Reorganise
