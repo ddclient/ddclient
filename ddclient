@@ -25,8 +25,6 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 
-# my ($VERSION) = q$Revision$ =~ /(\d+)/;
-
 my $version  = "3.8.3";
 my $programd  = $0; 
 $programd =~ s%^.*/%%;
