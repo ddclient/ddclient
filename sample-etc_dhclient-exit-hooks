@@ -1,7 +1,5 @@
 #!/bin/sh
 ######################################################################
-## $Id: sample-etc_dhclient-exit-hooks 96 2008-06-13 20:24:24Z wimpunk $
-######################################################################
 # The /etc/dhclient-enter-hooks script is run by the ISC DHCP client's standard
 # update script whenever dhclient obtains or renews an address. 
 
