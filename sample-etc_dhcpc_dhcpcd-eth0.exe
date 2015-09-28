@@ -1,7 +1,5 @@
 #!/bin/sh
 ######################################################################
-## $Id$
-######################################################################
 PATH=/usr/sbin:${PATH}
 
 ## update the DNS server unless the IP address is a private address

@@ -21,8 +21,6 @@
 #                    can be used on many types of firewalls
 ### END INIT INFO
 # 
-# $Id$
-#
 ###
 
 [ -f /etc/ddclient/ddclient.conf ] || exit 0

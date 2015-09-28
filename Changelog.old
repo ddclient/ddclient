@@ -299,6 +299,4 @@ Changelog
   This feature can be used to reissue updates that may have failed due to
   network connectivity problems or a DynDNS server outage
 
--------------------------------------------------------------------------------
-$Id$
 ------------------------------------------------------------------------

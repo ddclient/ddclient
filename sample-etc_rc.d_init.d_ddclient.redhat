@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id$
+#
 # ddclient      This shell script takes care of starting and stopping
 #               ddclient.
 #
