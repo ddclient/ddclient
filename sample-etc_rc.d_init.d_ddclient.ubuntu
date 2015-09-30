@@ -20,15 +20,19 @@ test -f $CONF || exit 0
 
 case "$1" in
   start)
-      log_begin_msg "Starting ddclient..."
-      DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
-      if [ -z "$DELAY" ] ; then
-        DELAY="-daemon 300"
+      if [ ! -f $PIDFILE ]; then
+        log_begin_msg "Starting ddclient..."
+        DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
+        if [ -z "$DELAY" ] ; then
+          DELAY="-daemon 300"
+        else
+          DELAY=''
+        fi
+        start-stop-daemon -S -q -p $PIDFILE -x $DDCLIENT -- $DELAY
+        log_end_msg $?
       else
-        DELAY=''
+        log_warning_msg "Service ddclient already running..."
       fi
-      start-stop-daemon -S -q -p $PIDFILE -x $DDCLIENT -- $DELAY
-      log_end_msg $?
       ;;
   stop)
       if [ -f $PIDFILE ] ; then
@@ -36,6 +40,8 @@ case "$1" in
         start-stop-daemon -K -q -p $PIDFILE
         log_end_msg $?
         rm -f $PIDFILE
+      else
+        log_warning_msg "No ddclient running..."
       fi
       ;;
   restart|reload|force-reload)
