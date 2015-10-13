@@ -73,6 +73,15 @@ INSTALLATION:
     apk add perl
     ## start the first time by hand
     rc-service ddclient start
+    
+    ## For those using Ubuntu style rc files and using daemon-mode:
+    cp sample-etc_rc.d_init.d_ddclient.ubuntu /etc/init.d/ddclient
+    ## enable automatic startup when booting
+    update-rc.d ddclient defaults
+    ## make sure you have perl installed 
+    apt-get install perl
+    ## start the first time by hand
+    service ddclient start
 
     ## If you are not using daemon-mode, configure cron and dhcp or ppp
     ## as described below.
