@@ -1944,6 +1944,26 @@ EOM
 	import JSON::Any;
 }
 ######################################################################
+## urladd
+######################################################################
+sub urladd {
+    my $url      = shift || '';
+    debug("url    = %s", $url);
+    unless ($url =~ /(\?[^#]*)?(#.*)?$/) {
+	    failed("invalid url: %s", $url);
+	    return undef;
+	}
+	return $url if (@_ == 0);
+	my ($base, $query, $fragment) = ($`, $1, $2);
+	if (!$query) {
+		$query = '?' . shift;
+	}
+	foreach my $param (@_) {
+		$query .= '&' . $param;
+	}
+	return $base . $query . $fragment;
+}
+######################################################################
 ## geturl
 ######################################################################
 sub geturl {
@@ -3806,7 +3826,7 @@ sub nic_freedns_update {
 	    $config{$h}{'status'} = 'good'; 
 	    success("update not necessary %s: good: IP address already set to %s", $h, $ip); 
 	} else {
-	    my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]);
+	    my $reply = geturl(opt('proxy'), urladd($freedns_hosts{$h}->[2], "address=$ip"));
 	    if (!defined($reply) || !$reply) {
 	        failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
 		last;
