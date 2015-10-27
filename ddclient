@@ -349,8 +349,8 @@ my %variables = (
 	'syslog'              => setv(T_BOOL,  0, 0, 1, 0,                    undef),
 	'facility'            => setv(T_STRING,0, 0, 1, 'daemon',             undef),
 	'priority'            => setv(T_STRING,0, 0, 1, 'notice',             undef),
-        'mail'                => setv(T_EMAIL, 0, 0, 1, '',                   undef),
-        'mail-failure'        => setv(T_EMAIL, 0, 0, 1, '',                   undef),
+    'mail'                => setv(T_EMAIL, 0, 0, 1, '',                   undef),
+    'mail-failure'        => setv(T_EMAIL, 0, 0, 1, '',                   undef),
 
 	'exec'                => setv(T_BOOL,  0, 0, 1, 1,                    undef),
 	'debug'               => setv(T_BOOL,  0, 0, 1, 0,                    undef),
@@ -903,8 +903,10 @@ sub update_nics {
 					next;
 				}
 				if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
-					warning("malformed IP address (%s)", $ip);
-					next;
+                    if( !ipv6_match($ip) ) {            
+					    warning("malformed IP address (%s)", $ip);
+					    next;
+                    }
 				}
 				$iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
 			}
@@ -1850,7 +1852,9 @@ sub check_value {
 #	return undef if $value =~ /:/;
 
     } elsif ($type eq T_IP) {
-	return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+    if( !ipv6_match($value) ) {
+        return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+      }
     }
     return $value;
 }
@@ -2192,9 +2196,14 @@ sub get_ip {
     	$reply =~ s/^.*?${skip}//is;
     }
     if ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
-	$ip = $1;
-	$ip = un_zero_pad($ip);
-	$ip = filter_local($ip) if opt('fw-banlocal', $h);
+	    $ip = $1;
+	    $ip = un_zero_pad($ip);
+	    $ip = filter_local($ip) if opt('fw-banlocal', $h);
+    } elsif ( $ip = ipv6_match($reply) ) {
+        $ip = un_zero_pad($ip);
+        $ip = filter_local($ip) if opt('fw-banlocal', $h);
+    } else {
+       warning("found neither ipv4 nor ipv6 address");
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
 	$ip = undef;
@@ -2202,6 +2211,34 @@ sub get_ip {
 
     debug("get_ip: using %s, %s reports %s", $use, $arg, define($ip, "<undefined>"));
     return $ip;
+}
+
+######################################################################
+## ipv6_match determine ipv6 address from given string and return them
+######################################################################
+sub ipv6_match {
+	my $content = shift;
+	my $omits;
+    my $ip = "";
+    my $linenumbers = 0;
+ 
+    my @values = split('\n', $content);
+    foreach my $val (@values) {
+        next unless $val =~ /((:{0,2}[A-F0-9]{1,4}){0,7}:{1,2}[A-F0-9]{1,4})/ai; # invalid char
+        my $parsed = $1;
+        
+        # check for at least 7 colons
+        my $count_colon = () = $parsed =~ /:/g;
+        if ($count_colon != 7) {
+            # or one double colon
+            my $count_double_colon = () = $parsed =~ /::/g;
+            if ($count_double_colon != 1) {
+                next
+            } 
+        }       
+        return $parsed;
+    }
+    return;    
 }
 
 ######################################################################
