@@ -510,6 +510,16 @@ my %services = (
 			  $variables{'noip-service-common-defaults'},
 		        ),
     },
+    'myonlineportal' => {
+	'updateable' => undef,
+	'update'     => \&nic_myonlineportal_update,
+	'examples'   => \&nic_myonlineportal_examples,
+	'variables'  => merge(
+			  { 'custom'  => setv(T_BOOL,   0, 1, 1, 0, undef),	},
+			  $variables{'myonlineportal-common-defaults'},
+			  $variables{'myonlineportal-service-common-defaults'},
+		        ),
+    },
     'concont' => {
         'updateable' => undef,
         'update'     => \&nic_concont_update,

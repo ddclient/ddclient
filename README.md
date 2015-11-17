@@ -27,7 +27,6 @@ Dynamic DNS services currently supported include:
     Google         - See http://www.google.com/domains for details
     Duckdns        - See https://duckdns.org/ for details
     woima.fi       - See https://woima.fi/ for details
-    myonlineportal - See https://myonlineportal.net/howto_dyndns_ddclient
 
 DDclient now supports many of cable/dsl broadband routers. 
 
