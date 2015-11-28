@@ -3751,8 +3751,12 @@ sub nic_freedns_update {
                 $config{$h}{'mtime'}  = $now; 
                 $config{$h}{'status'} = 'good'; 
                 success("updating %s: good: IP address set to %s", $h, $ip); 
-            } elsif ($reply =~ /Address .* has not changed/) {
-                success("updating %s: good: IP address has not changed", $h, $ip);
+            } elsif ($reply =~ /Address (\d+\.\d+\.\d+\.\d+) has not changed/) {
+                $ip = $1;
+                $config{$h}{'mtime'}  = $now; 
+                $config{$h}{'status'} = 'good'; 
+                $config{$h}{'ip'}     = $ip; 
+                success("updating %s: good: IP address %s has not changed", $h, $ip);
             } else {
                 $config{$h}{'status'} = 'failed';
                 warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
