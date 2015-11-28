@@ -3704,10 +3704,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_freedns_update {
-
-
     debug("\nnic_freedns_update -------------------");
-
     ## First get the list of updatable hosts
     my $url;
     $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=".&sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
@@ -3733,34 +3730,36 @@ sub nic_freedns_update {
 	info("setting IP address to %s for %s", $ip, $h);
 	verbose("UPDATE:","updating %s", $h);
 
-	if($ip eq $freedns_hosts{$h}->[1]) { 
-	    $config{$h}{'ip'}     = $ip; 
-	    $config{$h}{'mtime'}  = $now; 
-	    $config{$h}{'status'} = 'good'; 
-	    success("update not necessary %s: good: IP address already set to %s", $h, $ip); 
-	} else {
-	    my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]);
-	    if (!defined($reply) || !$reply) {
-	        failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
-		last;
-	    }
-	    if(!header_ok($h, $reply)) { 
-		$config{$h}{'status'} = 'failed'; 
-		last; 
-	    }
+        if($ip eq $freedns_hosts{$h}->[1]) { 
+            $config{$h}{'ip'}     = $ip; 
+            $config{$h}{'mtime'}  = $now; 
+            $config{$h}{'status'} = 'good'; 
+            success("update not necessary %s: good: IP address already set to %s", $h, $ip); 
+        } else {
+            my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]);
+            if (!defined($reply) || !$reply) {
+                failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
+                last;
+            }
+            if(!header_ok($h, $reply)) { 
+                $config{$h}{'status'} = 'failed'; 
+                last; 
+            }
 
-	    if($reply =~ /Updated.*$h.*to.*$ip/) { 
-		$config{$h}{'ip'}     = $ip; 
-		$config{$h}{'mtime'}  = $now; 
-		$config{$h}{'status'} = 'good'; 
-		success("updating %s: good: IP address set to %s", $h, $ip); 
-	    } else {
-	        $config{$h}{'status'} = 'failed';
-		warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
-		warning("REPLIED: %s", $reply);
-		failed("updating %s: Invalid reply.", $h);
-	    }
-	}
+            if($reply =~ /Updated.*$h.*to.*$ip/) { 
+                $config{$h}{'ip'}     = $ip; 
+                $config{$h}{'mtime'}  = $now; 
+                $config{$h}{'status'} = 'good'; 
+                success("updating %s: good: IP address set to %s", $h, $ip); 
+            } elsif ($reply =~ /Address .* has not changed/) {
+                success("updating %s: good: IP address has not changed", $h, $ip);
+            } else {
+                $config{$h}{'status'} = 'failed';
+                warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
+                warning("REPLIED: %s", $reply);
+                failed("updating %s: Invalid reply.", $h);
+            }
+        }
     }
 }
 
