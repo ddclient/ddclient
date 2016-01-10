@@ -477,6 +477,11 @@ my %variables = (
         'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
         'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
     },
+    'mydns-common-defaults'       => {
+        'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),    0),
+        'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('6d'),     0),
+        'server'              => setv(T_FQDNP,  1, 0, 1, 'www.mydns.jp', undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -669,6 +674,18 @@ my %services = (
             $variables{'woima-common-defaults'},
             $variables{'woima-service-common-defaults'},
         ),
+    },
+    'mydns' => {
+        'updateable' => undef,
+        'update'     => \&nic_mydns_update,
+        'examples'   => \&nic_mydns_examples,
+        'variables'  => merge(
+                          { 'server' => setv(T_FQDNP,  1, 0, 1, 'www.mydns.jp', undef), },
+                        ),
+	'variables'  => merge(
+                          $variables{'mydns-common-defaults'},
+                          $variables{'service-common-defaults'},
+                        ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -4480,6 +4497,65 @@ sub nic_woima_update {
     }
 }
 
+######################################################################
+## nic_mydns_examples
+######################################################################
+sub nic_mydns_examples {
+    return <<EoEXAMPLE;
+o 'mydns'
+
+The 'mydns' protocol is used by a free dynamic DNS service offered by www.mydns.jp.
+
+Configuration variables applicable to the 'mydns' protocol are:
+  protocol=mydns               ##
+  server=fqdn.of.service       ## defaults to www.mydns.jp
+  login=service-login          ## login name and password registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=mydns,               \\
+  login=my-mydns.jp-login,      \\
+  password=my-mydns.jp-password \\
+  myhost.mydns.jp
+EoEXAMPLE
+}
+######################################################################
+## nic_mydns_update
+######################################################################
+sub nic_mydns_update {
+    debug("\nnic_mydns_update -------------------");
+
+    ## update each configured host
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        my $url = "http://$config{$h}{'server'}/login.html";
+
+        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        if (!defined($reply) || !$reply)  {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        if (grep /login_status = 1/i, @reply) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} ='failed';
+            warning("SENT:    %s",  $url) unless opt('verbose');
+            warning("REPLIED: %s",$reply);
+            failed("updating %s: Invalid reply.", $h);
+        }
+    }
+}
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
