@@ -1903,9 +1903,9 @@ sub load_ipv6_support {
     unless ($ipv6_loaded) {
         fatal(<<"EOM");
 Error loading the Perl module IO::Socket::INET6 needed for ipv6 connect.
-On Debian, the package libio-socket-ssl-perl must be installed.
-On Red Hat, the package perl-IO-Socket-SSL must be installed.
-On Alpine, the package perl-io-socket-ssl must be installed.
+On Debian, the package libio-socket-inet6-perl must be installed.
+On Red Hat, the package perl-IO-Socket-INET6 must be installed.
+On Alpine, the package perl-io-socket-inet6 must be installed.
 EOM
     }
     import IO::Socket::INET6;
