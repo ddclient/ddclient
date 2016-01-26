@@ -25,7 +25,7 @@ Dynamic DNS services currently supported include:
     nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
     CloudFlare  - See https://www.cloudflare.com/ for details
     Google      - See http://www.google.com/domains for details
-    Duckdns      - See https://duckdns.org/ for details
+    Duckdns     - See https://duckdns.org/ for details
     woima.fi    - See https://woima.fi/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
