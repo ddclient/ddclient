@@ -437,6 +437,7 @@ my %variables = (
     'nsupdate-common-defaults' => {
 	'ttl'                 => setv(T_NUMBER, 0, 1, 0, 600,                 undef),
 	'zone'                => setv(T_STRING, 1, 1, 1, '',                  undef),
+	'tcp'                 => setv(T_BOOL,   0, 1, 1, 0,                   undef),
     },
 	'cloudflare-common-defaults'       => {
 		'server'	      => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef),
@@ -4091,6 +4092,10 @@ Configuration variables applicable to the 'nsupdate' protocol are:
   zone=dyn.example.com         ## forward zone that is to be updated
   ttl=600                      ## time to live of the record;
                                ## defaults to 600 seconds
+  tcp=off|on                   ## nsupdate uses UDP by default, and switches to
+                               ## TCP if the update is too large to fit in a
+                               ## UDP datagram; this setting forces TCP;
+                               ## defaults to off
   login=/usr/bin/nsupdate      ## path and name of nsupdate binary;
                                ## defaults to '/usr/bin/nsupdate'
   <hostname>                   ## fully qualified hostname to update
@@ -4147,6 +4152,7 @@ EoINSTR2
 send
 EoINSTR3
 		my $command = "$binary -k $keyfile";
+		$command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
 		$command .= " -d" if (opt('debug'));
 		verbose("UPDATE:", "nsupdate command is: %s", $command);
 		verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
