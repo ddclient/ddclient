@@ -345,12 +345,12 @@ my %variables = (
 	'retry'               => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'force'               => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'ssl'                 => setv(T_BOOL,  0, 0, 0, 0,                    undef),
-
+    'ipv6'                 => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'syslog'              => setv(T_BOOL,  0, 0, 1, 0,                    undef),
 	'facility'            => setv(T_STRING,0, 0, 1, 'daemon',             undef),
 	'priority'            => setv(T_STRING,0, 0, 1, 'notice',             undef),
-        'mail'                => setv(T_EMAIL, 0, 0, 1, '',                   undef),
-        'mail-failure'        => setv(T_EMAIL, 0, 0, 1, '',                   undef),
+    'mail'                => setv(T_EMAIL, 0, 0, 1, '',                   undef),
+    'mail-failure'        => setv(T_EMAIL, 0, 0, 1, '',                   undef),
 
 	'exec'                => setv(T_BOOL,  0, 0, 1, 1,                    undef),
 	'debug'               => setv(T_BOOL,  0, 0, 1, 0,                    undef),
@@ -380,7 +380,7 @@ my %variables = (
 	'fw-password'         => setv(T_PASSWD,0, 0, 1, '',                   undef),
 	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
 	'cmd-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
-
+    'ipv6'                => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
 	'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
 	'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
@@ -437,6 +437,7 @@ my %variables = (
     'nsupdate-common-defaults' => {
 	'ttl'                 => setv(T_NUMBER, 0, 1, 0, 600,                 undef),
 	'zone'                => setv(T_STRING, 1, 1, 1, '',                  undef),
+	'tcp'                 => setv(T_BOOL,   0, 1, 1, 0,                   undef),
     },
 	'cloudflare-common-defaults'       => {
 		'server'	      => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef),
@@ -681,7 +682,7 @@ my @opt = (
     "usage: ${program} [options]",
     "options are:",
     [ "daemon",      "=s", "-daemon delay         : run as a daemon, specify delay as an interval." ],
-     [ "foreground",  "!",  "-foreground           : do not fork" ],
+    [ "foreground",  "!",  "-foreground           : do not fork" ],
     [ "proxy",       "=s", "-proxy host           : use 'host' as the HTTP proxy" ],
     [ "server",      "=s", "-server host          : update DNS information on 'host'" ],
     [ "protocol",    "=s", "-protocol type        : update protocol used" ],
@@ -729,6 +730,7 @@ my @opt = (
     [ "debug",       "!",  "-{no}debug            : print {no} debugging information" ],
     [ "verbose",     "!",  "-{no}verbose          : print {no} verbose information" ],
     [ "quiet",       "!",  "-{no}quiet            : print {no} messages for unnecessary updates" ],
+    [ "ipv6",        "!",  "-{no}ipv6             : use ipv6" ],
     [ "help",        "",   "-help                 : this message" ],
     [ "postscript",  "",   "-postscript           : script to run after updating ddclient, has new IP as param" ],
 
@@ -903,8 +905,10 @@ sub update_nics {
 					next;
 				}
 				if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
-					warning("malformed IP address (%s)", $ip);
-					next;
+                    if( !ipv6_match($ip) ) {            
+					    warning("malformed IP address (%s)", $ip);
+					    next;
+                    }
 				}
 				$iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
 			}
@@ -1046,7 +1050,7 @@ sub parse_assignment {
     my ($c, $name, $value);
     my ($escape, $quote) = (0, '');
 
-    if ($rest =~ /^\s*([a-z][a-z_-]*)=(.*)/i) {
+    if ($rest =~ /^\s*([a-z][0-9a-z_-]*)=(.*)/i) {
 	($name, $rest, $value) = ($1, $2, '');
 
 	while (length($c = substr($rest,0,1))) {
@@ -1159,7 +1163,7 @@ sub _read_config {
 	
 	## verify that keywords are valid...and check the value
 	foreach my $k (keys %locals) {
-	    $locals{$k} = $passwords{$k} if defined $passwords{$k};
+        $locals{$k} = $passwords{$k} if defined $passwords{$k};
 	    if (!exists $variables{'merged'}{$k}) {
             warning("unrecognized keyword '%s' (ignored)", $k);
             delete $locals{$k};
@@ -1256,14 +1260,14 @@ sub init_config {
 	## and those in -options=...
 	if (exists  $options{'host'}) {
 	    foreach my $h (split_by_comma($options{'host'})) {
-		push @hosts, $h;
+		    push @hosts, $h;
 	    }
 	    delete $options{'host'};
 	}
 	## merge options into host definitions or globals
 	if (@hosts) {
 	    foreach my $h (@hosts) {
-		$config{$h} = merge(\%options, $config{$h});
+		    $config{$h} = merge(\%options, $config{$h});
 	    }
 	    $opt{'host'} = join(',', @hosts);
 	} else {
@@ -1273,14 +1277,14 @@ sub init_config {
 
     ## override global options with those on the command-line.
     foreach my $o (keys %opt) {
-	if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
-	    $globals{$o} = $opt{$o};
-	}
+        if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
+            $globals{$o} = $opt{$o};
+	    }
     }
 
     ## sanity check
     if (defined $opt{'host'} && defined $opt{'retry'}) {
-	usage("options -retry and -host (or -option host=..) are mutually exclusive");
+	   usage("options -retry and -host (or -option host=..) are mutually exclusive");
     }
 
     ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
@@ -1310,14 +1314,14 @@ sub init_config {
     ## make sure config entries have all defaults and they meet minimums
     ## first the globals...
     foreach my $k (keys %globals) {
-	my $def    = $variables{'merged'}{$k};
-	my $ovalue = define($globals{$k}, $def->{'default'});
-	my $value  = check_value($ovalue, $def);
-	if ($def->{'required'} && !defined $value) {
-	    $value = default($k);
-	    warning("'%s=%s' is an invalid %s. (using default of %s)", $k, $ovalue, $def->{'type'}, $value);
-	}
-	$globals{$k} = $value;
+        my $def    = $variables{'merged'}{$k};
+	    my $ovalue = define($globals{$k}, $def->{'default'});
+	    my $value  = check_value($ovalue, $def);
+	    if ($def->{'required'} && !defined $value) {
+	       $value = default($k);
+	       warning("'%s=%s' is an invalid %s. (using default of %s)", $k, $ovalue, $def->{'type'}, $value);
+	    }
+	    $globals{$k} = $value;
     }
 
     ## now the host definitions...
@@ -1850,7 +1854,9 @@ sub check_value {
 #	return undef if $value =~ /:/;
 
     } elsif ($type eq T_IP) {
-	return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+    if( !ipv6_match($value) ) {
+        return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+      }
     }
     return $value;
 }
@@ -1889,6 +1895,24 @@ EOM
     import  IO::Socket::SSL;
     { no warnings; $IO::Socket::SSL::DEBUG = 0; }
 }
+
+######################################################################
+## load_ipv6_support
+######################################################################
+sub load_ipv6_support {
+    my $ipv6_loaded = eval {require IO::Socket::INET6};
+    unless ($ipv6_loaded) {
+        fatal(<<"EOM");
+Error loading the Perl module IO::Socket::INET6 needed for ipv6 connect.
+On Debian, the package libio-socket-inet6-perl must be installed.
+On Red Hat, the package perl-IO-Socket-INET6 must be installed.
+On Alpine, the package perl-io-socket-inet6 must be installed.
+EOM
+    }
+    import IO::Socket::INET6;
+    { no warnings; $IO::Socket::INET6::DEBUG = 0; }
+}
+
 ######################################################################
 ## load_sha1_support
 ######################################################################
@@ -1984,8 +2008,8 @@ sub geturl {
     # local $^W = 0;
     $0 = sprintf("%s - connecting to %s port %s", $program, $peer, $port);
     if (! opt('exec')) {
-	debug("skipped network connection");
-	verbose("SENDING:", "%s", $request);
+	   debug("skipped network connection");
+	   verbose("SENDING:", "%s", $request);
     } elsif ($use_ssl) {
 	    $sd = IO::Socket::SSL->new(
             PeerAddr => $peer,
@@ -1995,6 +2019,16 @@ sub geturl {
             Timeout => opt('timeout'),
         );
 	    defined $sd or warning("cannot connect to $peer:$port socket: $@ " . IO::Socket::SSL::errstr());
+    } elsif ($globals{'ipv6'}) {
+        load_ipv6_support;
+	    $sd = IO::Socket::INET6->new(
+            PeerAddr => $peer,
+            PeerPort => $port,
+            Proto => 'tcp',
+            MultiHomed => 1,
+            Timeout => opt('timeout'),
+        );
+	    defined $sd or warning("cannot connect to $peer:$port socket: $@");
     } else {
 	    $sd = IO::Socket::INET->new(
             PeerAddr => $peer,
@@ -2137,64 +2171,69 @@ sub get_ip {
         }
 
     } elsif (($use eq 'cisco')) {
-	# Stuff added to support Cisco router ip http daemon
-	# User fw-login should only have level 1 access to prevent
-	# password theft.  This is pretty harmless.
-	my $queryif  = opt('if', $h);
-	$skip = opt('fw-skip', $h)  || '';
+        # Stuff added to support Cisco router ip http daemon
+        # User fw-login should only have level 1 access to prevent
+        # password theft.  This is pretty harmless.
+        my $queryif  = opt('if', $h);
+        $skip = opt('fw-skip', $h)  || '';
 
-	# Convert slashes to protected value "\/"
-	$queryif =~ s%\/%\\\/%g;
+        # Convert slashes to protected value "\/"
+        $queryif =~ s%\/%\\\/%g;
 
-	# Protect special HTML characters (like '?')
-	$queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
+        # Protect special HTML characters (like '?')
+        $queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
 
-	$url   = "http://".opt('fw', $h)."/level/1/exec/show/ip/interface/brief/${queryif}/CR";
-	$reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
-	$arg   = $url;
+        $url   = "http://".opt('fw', $h)."/level/1/exec/show/ip/interface/brief/${queryif}/CR";
+        $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+        $arg   = $url;
 
     } elsif (($use eq 'cisco-asa')) {
-	# Stuff added to support Cisco ASA ip https daemon
-	# User fw-login should only have level 1 access to prevent
-	# password theft.  This is pretty harmless.
-	my $queryif  = opt('if', $h);
-	$skip = opt('fw-skip', $h)  || '';
+        # Stuff added to support Cisco ASA ip https daemon
+        # User fw-login should only have level 1 access to prevent
+        # password theft.  This is pretty harmless.
+        my $queryif  = opt('if', $h);
+        $skip = opt('fw-skip', $h)  || '';
 
-	# Convert slashes to protected value "\/"
-	$queryif =~ s%\/%\\\/%g;
+        # Convert slashes to protected value "\/"
+        $queryif =~ s%\/%\\\/%g;
 
-	# Protect special HTML characters (like '?')
-	$queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
+        # Protect special HTML characters (like '?')
+        $queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
 
-	$url   = "https://".opt('fw', $h)."/exec/show%20interface%20${queryif}";
-	$reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
-	$arg   = $url;
+        $url   = "https://".opt('fw', $h)."/exec/show%20interface%20${queryif}";
+        $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+        $arg   = $url;
 
     } else {
-	$url  = opt('fw', $h)       || '';
-	$skip = opt('fw-skip', $h)  || '';
+        $url  = opt('fw', $h)       || '';
+        $skip = opt('fw-skip', $h)  || '';
 
-	if (exists $builtinfw{$use}) {
-	    $skip = $builtinfw{$use}->{'skip'} unless $skip;
-	    $url  = "http://${url}" . $builtinfw{$use}->{'url'} unless $url =~ /\//;
-	}	    
-	$arg = $url;
+        if (exists $builtinfw{$use}) {
+            $skip = $builtinfw{$use}->{'skip'} unless $skip;
+            $url  = "http://${url}" . $builtinfw{$use}->{'url'} unless $url =~ /\//;
+        }	    
+        $arg = $url;
 
-	if ($url) {
-	    $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+        if ($url) {
+            $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+            }
         }
-    }
-    if (!defined $reply) {
-	$reply = '';
+        if (!defined $reply) {
+        $reply = '';
     }
     if ($skip) {
-	$skip  =~ s/ /\\s/is;
-    	$reply =~ s/^.*?${skip}//is;
+        $skip  =~ s/ /\\s/is;
+        $reply =~ s/^.*?${skip}//is;
     }
     if ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
-	$ip = $1;
-	$ip = un_zero_pad($ip);
-	$ip = filter_local($ip) if opt('fw-banlocal', $h);
+	    $ip = $1;
+        $ip = un_zero_pad($ip);
+	    $ip = filter_local($ip) if opt('fw-banlocal', $h);
+    } elsif ( $ip = ipv6_match($reply) ) {
+        $ip = un_zero_pad($ip);
+        $ip = filter_local($ip) if opt('fw-banlocal', $h);
+    } else {
+       warning("found neither ipv4 nor ipv6 address");
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
 	$ip = undef;
@@ -2202,6 +2241,34 @@ sub get_ip {
 
     debug("get_ip: using %s, %s reports %s", $use, $arg, define($ip, "<undefined>"));
     return $ip;
+}
+
+######################################################################
+## ipv6_match determine ipv6 address from given string and return them
+######################################################################
+sub ipv6_match {
+	my $content = shift;
+	my $omits;
+    my $ip = "";
+    my $linenumbers = 0;
+ 
+    my @values = split('\n', $content);
+    foreach my $val (@values) {
+        next unless $val =~ /((:{0,2}[A-F0-9]{1,4}){0,7}:{1,2}[A-F0-9]{1,4})/ai; # invalid char
+        my $parsed = $1;
+        
+        # check for at least 7 colons
+        my $count_colon = () = $parsed =~ /:/g;
+        if ($count_colon != 7) {
+            # or one double colon
+            my $count_double_colon = () = $parsed =~ /::/g;
+            if ($count_double_colon != 1) {
+                next
+            } 
+        }       
+        return $parsed;
+    }
+    return;    
 }
 
 ######################################################################
@@ -4022,6 +4089,10 @@ Configuration variables applicable to the 'nsupdate' protocol are:
   zone=dyn.example.com         ## forward zone that is to be updated
   ttl=600                      ## time to live of the record;
                                ## defaults to 600 seconds
+  tcp=off|on                   ## nsupdate uses UDP by default, and switches to
+                               ## TCP if the update is too large to fit in a
+                               ## UDP datagram; this setting forces TCP;
+                               ## defaults to off
   login=/usr/bin/nsupdate      ## path and name of nsupdate binary;
                                ## defaults to '/usr/bin/nsupdate'
   <hostname>                   ## fully qualified hostname to update
@@ -4078,6 +4149,7 @@ EoINSTR2
 send
 EoINSTR3
 		my $command = "$binary -k $keyfile";
+		$command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
 		$command .= " -d" if (opt('debug'));
 		verbose("UPDATE:", "nsupdate command is: %s", $command);
 		verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
