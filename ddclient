@@ -25,6 +25,7 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 use Data::Validate::IP;
+use Net::Address::IP::Local;
 
 my $version  = "3.8.3";
 my $programd  = $0; 
@@ -2145,10 +2146,15 @@ sub get_ip {
 	$arg = 'ip';
 
     } elsif ($use eq 'if') {
-	$skip  = opt('if-skip', $h)  || '';
-	$reply = `ifconfig $arg 2> /dev/null`;
-	$reply = `ip addr list dev $arg 2> /dev/null` if $?;
-	$reply = '' if $?;
+	if ($arg eq '') {
+	    $ip = Net::Address::IP::Local->public;
+	}
+	if (!$ip) {
+	    $skip  = opt('if-skip', $h)  || '';
+	    $reply = `ifconfig $arg 2> /dev/null`;
+	    $reply = `ip addr list dev $arg 2> /dev/null` if $?;
+	    $reply = '' if $?;
+	}
 
     } elsif ($use eq 'cmd') {
 	if ($arg) {
@@ -2226,15 +2232,17 @@ sub get_ip {
         $skip  =~ s/ /\\s/is;
         $reply =~ s/^.*?${skip}//is;
     }
-    if ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
+    if (!$ip) {
+        if ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
 	    $ip = $1;
-        $ip = un_zero_pad($ip);
+            $ip = un_zero_pad($ip);
 	    $ip = filter_local($ip) if opt('fw-banlocal', $h);
-    } elsif ( $ip = ipv6_match($reply) ) {
-        $ip = un_zero_pad($ip);
-        $ip = filter_local($ip) if opt('fw-banlocal', $h);
-    } else {
-       warning("found neither ipv4 nor ipv6 address");
+        } elsif ( $ip = ipv6_match($reply) ) {
+            $ip = un_zero_pad($ip);
+            $ip = filter_local($ip) if opt('fw-banlocal', $h);
+        } else {
+            warning("found neither ipv4 nor ipv6 address");
+        }
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
 	$ip = undef;
