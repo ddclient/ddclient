@@ -330,7 +330,7 @@ my %variables = (
 
 	'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
 	'ip'                  => setv(T_IP,    0, 0, 1, undef,                undef),
-	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
+	'if'                  => setv(T_IF,    0, 0, 1, '',                   undef),
 	'if-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
 	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
 	'web-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
@@ -370,7 +370,7 @@ my %variables = (
 	'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
 
 	'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
-	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
+	'if'                  => setv(T_IF,    0, 0, 1, '',                   undef),
 	'if-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
 	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
 	'web-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
