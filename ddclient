@@ -24,6 +24,7 @@ use strict;
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
+use Data::Validate::IP;
 
 my $version  = "3.8.3";
 my $programd  = $0; 
@@ -4132,6 +4133,12 @@ sub nic_nsupdate_update {
 		my $server = $config{$h}{'server'};
 		my $zone = $config{$h}{'zone'};
 		my $ip = $config{$h}{'wantip'};
+		my $recordtype = '';
+		if (is_ipv6($ip)) {
+		    $recordtype = 'AAAA';
+		} else {
+		    $recordtype = 'A';
+		}
 		delete $config{$_}{'wantip'} foreach @hosts;
 
 		info("setting IP address to %s for %s", $ip, $hosts);
@@ -4144,8 +4151,8 @@ zone $zone.
 EoINSTR1
 		foreach (@hosts) {
 			$instructions .= <<EoINSTR2;
-update delete $_. A
-update add $_. $config{$_}{'ttl'} A $ip
+update delete $_. $recordtype
+update add $_. $config{$_}{'ttl'} $recordtype $ip
 EoINSTR2
 		}
 		$instructions .= <<EoINSTR3;
