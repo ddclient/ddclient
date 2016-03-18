@@ -2186,9 +2186,11 @@ sub geturl {
             $0 = sprintf("%s - curl sending to %s", $program, '${protocol}://${server}/${url}');
             my $timeout = opt('timeout');
 
-            $reply = `/usr/bin/curl -si0 --user "${login}:${password}" --user-agent "${program}/${version}" \\
+            $reply = <<`USE_CURL`;
+              /usr/bin/curl -si0 --user '${login}:${password}' --user-agent '${program}/${version}' \\
               --connect-timeout $timeout --max-time $timeout $curlopt \\
-              --url "${protocol}://${server}/${url}" 2>/dev/null`;
+              --url '${protocol}://${server}/${url}' 2>/dev/null
+USE_CURL
 
             if (! $reply) {
                 warning("curl cannot connect to ${protocol}://${server}/${url}");
