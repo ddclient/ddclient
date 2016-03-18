@@ -2078,7 +2078,7 @@ sub geturl {
         $default_port = 80;
     }
    
-    if (! opt('curl') ) {
+    if ( (!opt('curl')) and ($ipversion ne '6') ) {
         # Access network using perl functions.
         ## determine peer and port to use.
         $peer   = $proxy || $server;
@@ -2110,16 +2110,6 @@ sub geturl {
         if (! opt('exec')) {
 	       debug("skipped network connection");
 	       verbose("SENDING:", "%s", $request);
-        } elsif ($ipversion eq '6') {
-                load_ipv6_support;
-	        $sd = IO::Socket::INET6->new(
-                PeerAddr => $peer,
-                PeerPort => $port,
-                Proto => 'tcp',
-                MultiHomed => 1,
-                Timeout => opt('timeout'),
-            );
-	        defined $sd or warning("cannot connect to $peer:$port socket: $@");
         } elsif ($use_ssl) {
 		load_ssl_support;
 	        $sd = IO::Socket::SSL->new(
