@@ -66,6 +66,7 @@ sub T_POSTS	{'postscript'};
 
 ## strategies for obtaining an ip address.
 my %builtinweb = (
+   'ipify'        => { 'url' => 'https://api.ipify.org', },
    'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' =>
    'Current IP Address:', },
    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
