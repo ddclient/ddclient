@@ -304,6 +304,7 @@ sub ip_strategies_usage {
 }
 
 my %web_strategies = (
+	'ipify'=> 1,
 	'dyndns'=> 1,
 	'dnspark'=> 1,
 	'loopia'=> 1,
@@ -333,7 +334,7 @@ my %variables = (
 	'ip'                  => setv(T_IP,    0, 0, 1, undef,                undef),
 	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
 	'if-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
-	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
+	'web'                 => setv(T_STRING,0, 0, 1, 'ipify',             undef),
 	'web-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
 	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
 	'fw-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
@@ -373,7 +374,7 @@ my %variables = (
 	'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
 	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
 	'if-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
-	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
+	'web'                 => setv(T_STRING,0, 0, 1, 'ipify',             undef),
 	'web-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
 	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
 	'fw-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
