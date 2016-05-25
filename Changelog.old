@@ -299,6 +299,4 @@ Changelog
   This feature can be used to reissue updates that may have failed due to
   network connectivity problems or a DynDNS server outage
 
--------------------------------------------------------------------------------
-$Id: Changelog 96 2008-06-13 20:24:24Z wimpunk $
 ------------------------------------------------------------------------

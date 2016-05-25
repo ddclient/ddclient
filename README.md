@@ -1,5 +1,5 @@
 ===============================================================================
-# DDCLIENT v3.8.2
+# DDCLIENT v3.8.3
 
 ddclient is a Perl client used to update dynamic DNS entries for accounts
 on many dynamic DNS services.
@@ -25,6 +25,8 @@ Dynamic DNS services currently supported include:
     nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
     CloudFlare  - See https://www.cloudflare.com/ for details
     Google      - See http://www.google.com/domains for details
+    Duckdns     - See https://duckdns.org/ for details
+    woima.fi    - See https://woima.fi/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
 
@@ -40,8 +42,9 @@ REQUIREMENTS:
 - one or more accounts from one of the dynamic DNS services
 
 - Perl 5.014 or later
-  (you need the IO::Socket::SSL perl library for ssl-support
-  and JSON::Any perl library for JSON support)
+  (you need the IO::Socket::SSL perl library for ssl-support,
+  JSON::Any perl library for JSON support and
+  IO::Socket:INET6 perl library for ipv6-support)
 
 - Linux or probably any common Unix system
 
@@ -71,6 +74,15 @@ INSTALLATION:
     apk add perl
     ## start the first time by hand
     rc-service ddclient start
+    
+    ## For those using Ubuntu style rc files and using daemon-mode:
+    cp sample-etc_rc.d_init.d_ddclient.ubuntu /etc/init.d/ddclient
+    ## enable automatic startup when booting
+    update-rc.d ddclient defaults
+    ## make sure you have perl installed 
+    apt-get install perl
+    ## start the first time by hand
+    service ddclient start
 
     ## If you are not using daemon-mode, configure cron and dhcp or ppp
     ## as described below.

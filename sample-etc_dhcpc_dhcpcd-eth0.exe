@@ -1,7 +1,5 @@
 #!/bin/sh
 ######################################################################
-## $Id: sample-etc_dhcpc_dhcpcd-eth0.exe 96 2008-06-13 20:24:24Z wimpunk $
-######################################################################
 PATH=/usr/sbin:${PATH}
 
 ## update the DNS server unless the IP address is a private address
