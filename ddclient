@@ -67,7 +67,8 @@ sub T_POSTS	{'postscript'};
 
 ## strategies for obtaining an ip address.
 my %builtinweb = (
-   'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:', },
+   'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' =>
+   'Current IP Address:', },
    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
    'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
    'whatismyv6'   => { 'url' => 'http://whatismyv6.com/', 'skip' => 'Address of:', },
@@ -469,7 +470,7 @@ my %variables = (
 	'tcp'                 => setv(T_BOOL,   0, 1, 1, 0,                   undef),
     },
 	'cloudflare-common-defaults'       => {
-		'server'	      => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef),
+		'server'	      => setv(T_FQDNP,  1, 0, 1, 'api.cloudflare.com/client/v4', undef),
 		'zone'                => setv(T_FQDN,   1, 0, 1, '',                  undef),
 		'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
 		'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
@@ -666,7 +667,7 @@ my %services = (
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables'  => merge(
-            { 'server'       => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef)          },
+            { 'server'       => setv(T_FQDNP,  1, 0, 1, 'api.cloudflare.com/client/v4', undef) },
             { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
             $variables{'cloudflare-common-defaults'},
             $variables{'service-common-defaults'},
@@ -1496,7 +1497,8 @@ sub test_possible_ip {
     local $opt{'debug'} = 0;
 
     printf "use=ip, ip=%s address is %s\n", opt('ip'), define(get_ip('ip'), 'NOT FOUND')
-    if defined opt('ip');
+	if defined opt('ip');
+
     {
 	local $opt{'use'} = 'if';
 	foreach my $if (grep {/^[a-zA-Z]/} `ifconfig -a`) {
@@ -2048,6 +2050,9 @@ sub geturl {
     my $url      = shift || '';
     my $login    = shift || '';
     my $password = shift || '';
+    my $headers  = shift || '';
+    my $method   = shift || 'GET';
+    my $data     = shift || '';
     my $ipversion  = shift || '';
     my ($peer, $server, $port, $default_port, $use_ssl);
     my ($sd, $rq, $request, $reply);
@@ -2091,7 +2096,7 @@ sub geturl {
         my $to =  sprintf "%s%s", $server, $proxy ? " via proxy $peer:$port" : "";
         verbose("CONNECT:", "%s", $to);
 
-        $request  = "GET ";
+        $request  = "$method ";
         $request .= "http://$server" if $proxy;
         $request .= "/$url HTTP/1.0\n";
         $request .= "Host: $server\n";
@@ -2100,7 +2105,10 @@ sub geturl {
         $request .= "Authorization: Basic $auth\n" if $login || $password;
         $request .= "User-Agent: ${program}/${version}\n";
         $request .= "Connection: close\n";
+        $request .= "$headers\n";
+        $request .= "Content-Length: ".length($data)."\n" if $data;
         $request .= "\n";
+        $request .= $data;
 
         ## make sure newlines are <cr><lf> for some pedantic proxy servers
         ($rq = $request) =~ s/\n/\r\n/g;
@@ -2293,7 +2301,7 @@ sub get_ip {
 
 	if ($url) {
 	    # when using a web server to find public IPv4 address we should force use of IPv4
-	    $reply = geturl(opt('proxy', $h), $url, '', '', '4') || '';
+	    $reply = geturl(opt('proxy', $h), $url, undef, undef, undef, undef, undef, '4') || '';
         }
 
     } elsif (($use eq 'cisco')) {
@@ -2407,7 +2415,7 @@ sub get_ipv6 {
 
 	if ($url) {
 	    # when using a web server to find our IPv6 address we should force use of IPv6
-	    $reply = geturl(opt('proxy', $h), $url, '', '', '6') || '';
+	    $reply = geturl(opt('proxy', $h), $url, undef, undef, undef, undef, undef, '6') || '';
         }
 
     }
@@ -3961,10 +3969,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_freedns_update {
-
-
     debug("\nnic_freedns_update -------------------");
-
     ## First get the list of updatable hosts
     my $url;
     # note, use '&v=2' in $url in order to pull IPv6 AAAA records as well as IPv4 A records
@@ -4023,8 +4028,8 @@ sub nic_freedns_update {
                     last;
                 }
 
-                if($reply =~ /Updated.*$h.*to.*$ip/) {
-                    $config{$h}{'ip'} = $ip;
+            if ($reply =~ /Updated.*$h.*to.*$ip/) {
+                $config{$h}{'ip'}     = $ip;
                     $config{$h}{'mtime'}  = $now;
                     $config{$h}{'status'} = 'good';
                     success("updating %s: good: IP address set to %s", $h, $ip);
@@ -4480,7 +4485,7 @@ The 'cloudflare' protocol is used by DNS service offered by www.cloudflare.com.
 
 Configuration variables applicable to the 'cloudflare' protocol are:
   protocol=cloudflare          ## 
-  server=fqdn.of.service       ## defaults to www.cloudflare.com
+  server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   fully.qualified.host         ## the host registered with the service.
@@ -4517,6 +4522,10 @@ sub nic_cloudflare_update {
 		my $key   = $hosts[0];
 		my $ip    = $config{$key}{'wantip'};
 
+		my $headers = "X-Auth-Email: $config{$key}{'login'}\n";
+		$headers .= "X-Auth-Key: $config{$key}{'password'}\n";
+		$headers .= "Content-Type: application/json";
+
 		# FQDNs
 		for my $domain (@hosts) {
 			(my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
@@ -4525,13 +4534,11 @@ sub nic_cloudflare_update {
 			info("setting IP address to %s for %s", $ip, $domain);
 			verbose("UPDATE:","updating %s", $domain);
 
-			# Get domain ID
-			my $url = "https://$config{$key}{'server'}/api_json.html?a=rec_load_all";
-			$url   .= "&z=".$config{$key}{'zone'};
-			$url   .= "&email=".$config{$key}{'login'};	
-			$url   .= "&tkn=".$config{$key}{'password'};
+			# Get zone ID
+			my $url = "https://$config{$key}{'server'}/zones?";
+			$url   .= "name=".$config{$key}{'zone'};
 
-			my $reply = geturl(opt('proxy'), $url);
+			my $reply = geturl(opt('proxy'), $url, undef, undef, $headers);
 			unless ($reply) {
 				failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
 				last;
@@ -4547,24 +4554,44 @@ sub nic_cloudflare_update {
 			}
 
 			# Pull the ID out of the json, messy
-			my ($id) = map { $_->{name} eq $domain ? $_->{rec_id} : () } @{ $response->{response}->{recs}->{objs} };
-			unless($id) {
-				failed("updating %s: No domain ID found.", $domain);
+			my ($zone_id) = map { $_->{name} eq $config{$key}{'zone'} ? $_->{id} : () } @{ $response->{result} };
+			unless($zone_id) {
+				failed("updating %s: No zone ID found.", $config{$key}{'zone'});
 				next;
 			}
+			info("zone ID is $zone_id");
+
+			# Get DNS record ID
+			$url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
+			$url .= "type=A&name=$domain";
+
+			$reply = geturl(opt('proxy'), $url, undef, undef, $headers);
+			unless ($reply) {
+				failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+				last;
+			}
+			last if !header_ok($domain, $reply);
+
+			# Strip header
+			$reply =~ s/^.*?\n\n//s;
+			$response = JSON::Any->jsonToObj($reply);
+			if ($response->{result} eq 'error') {
+				failed ("%s", $response->{msg});
+				next; 
+			}
+
+			# Pull the ID out of the json, messy
+			my ($dns_rec_id) = map { $_->{name} eq $domain ? $_->{id} : () } @{ $response->{result} };
+			unless($dns_rec_id) {
+				failed("updating %s: No DNS record ID found.", $domain);
+				next;
+			}
+			info("DNS record ID is $dns_rec_id");
 
 			# Set domain
-			$url   = "https://$config{$key}{'server'}/api_json.html?a=rec_edit&type=A";
-			$url	 .= "&ttl=".$config{$key}{'ttl'};
-			$url     .= "&name=$hostname";
-			$url     .= "&z=".$config{$key}{'zone'};
-			$url     .= "&id=".$id;	
-			$url     .= "&email=".$config{$key}{'login'};	
-			$url     .= "&tkn=".$config{$key}{'password'};    
-			$url     .= "&content=";
-			$url     .= "$ip"       if $ip;
-
-			$reply = geturl(opt('proxy'), $url);
+			$url   = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
+			my $data = "{\"content\":\"$ip\"}";
+			$reply = geturl(opt('proxy'), $url, undef, undef, $headers, "PATCH", $data);
 			unless ($reply) {
 				failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
 				last;
