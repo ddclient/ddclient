@@ -25,6 +25,9 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 use Data::Validate::IP;
+use Email::Simple;
+use Email::Sender::Simple;
+use Email::Address;
 
 my $version  = "3.8.3";
 my $programd  = $0; 
@@ -479,6 +482,15 @@ my %variables = (
         'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
         'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
     },
+    'email-common-defaults'        => {
+	# Server, login, password not required for email protocol, redeclare as not required
+	'server'	      => setv(T_FQDNP,  0, 0, 0, '',                  undef),
+	'login'               => setv(T_LOGIN,  0, 0, 0, '',                  undef),
+	'password'            => setv(T_PASSWD, 0, 0, 0, '',                  undef),
+	'sender'              => setv(T_EMAIL,  1, 0, 1, '',                  undef),
+	'recipients'          => setv(T_STRING, 1, 0, 1, '',                  undef),
+	'subject'             => setv(T_STRING, 0, 0, 1, 'IP address change notification', undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -671,6 +683,15 @@ my %services = (
             $variables{'woima-common-defaults'},
             $variables{'woima-service-common-defaults'},
         ),
+    },
+    'email' => {
+	'updateable' => undef,
+	'update'     => \&nic_email_update,
+	'examples'   => \&nic_email_examples,
+        'variables'  => merge(
+	                  $variables{'email-common-defaults'},
+			  $variables{'service-common-defaults'},
+                        ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -2367,11 +2388,12 @@ sub nic_updateable {
     my $sub    = shift;
     my $update = 0;
     my $ip     = $config{$host}{'wantip'};
+    my $svars  = $services{$config{$host}{'protocol'}}{'variables'};
 
-    if ($config{$host}{'login'} eq '') {
+    if ($svars->{'login'} && $svars->{'login'}{'required'} && $config{$host}{'login'} eq '') {
 	warning("null login name specified for host %s.", $host);
 
-    } elsif ($config{$host}{'password'} eq '') {
+    } elsif ($svars->{'login'} && $svars->{'login'}{'required'} && $config{$host}{'password'} eq '') {
 	warning("null password specified for host %s.", $host);
 
     } elsif ($opt{'force'}) {
@@ -4587,6 +4609,91 @@ sub nic_woima_update {
     }
 }
 
+######################################################################
+## nic_email_examples
+######################################################################
+sub nic_email_examples {
+    return <<EoEXAMPLE;
+o 'email'
+
+The 'email' protocol is a poor man's IP address update scheme where
+an email message containing the new IP address is sent to the specified
+recipients.
+
+Configuration variables applicable to the 'email' protocol are:
+  protocol=email                     ##
+  sender=email-address               ## The address of the sender to use in
+                                     ## the email header
+  recipients=list-of-email-addresses ## A comma-separated list of addresses
+                                     ## of the recipients of the IP
+
+                                     ## address change notification
+  subject=text                       ## The text that will be used
+                                     ## in the subject line of the email
+  hostname                           ## A string identifying the service
+
+Example ${program}.conf file entries:
+  ## single notification recipient, default subject line
+  protocol=email,                                        \\
+  sender="\\"ddclient\\" <user\@host.com>"                  \\
+  recipients=user\@webmail.com                            \\
+  webmail
+
+  ## multiple notification recipients
+  protocol=email                                         \\
+  sender=user\@host.com                                   \\
+  recipients="user1\@webmail.com, user2\@anothermail.com"  \\
+  subject="IP address change notification"               \\
+  email.service
+EoEXAMPLE
+}
+######################################################################
+## nic_email_update
+######################################################################
+sub nic_email_update {
+    debug("\nnic_email_update -------------------");
+    ## update each configured host
+    foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
+	info("setting IP address to %s for %s", $ip, $h);
+	verbose("UPDATE:","updating %s", $h);
+
+	my @from = Email::Address->parse($config{$h}{'sender'});
+	if (! @from) {
+	    failed("invalid sender address for host %s.", $h);
+	}
+	my $from = $from[0];
+	my @to = Email::Address->parse($config{$h}{'recipients'});
+	if (! @to) {
+	    failed("invalid recipient email address %s specified for host %s.", $config{$h}{'recipients'}, $h);
+	}
+	my $to = join(",", @to);
+	my $subject = $config{$h}{'subject'} if defined $config{$h}{'subject'};
+	my $body = sprintf("IP address of %s set to %s", $h, $ip);
+	my $email = Email::Simple->create(
+            header => [
+		From    => "$from",
+                To      => "$to",
+		Subject => "$subject"
+	    ],
+	    body => "$body",
+	);
+
+	eval {
+	    Email::Sender::Simple->send($email);
+	};
+	if ($@) {
+	    $config{$h}{'status'} = 'failed';
+	    warning("error sending email to host %s: %s", $h, $@);
+	}
+	else {
+	    $config{$h}{'ip'}     = $ip;
+	    $config{$h}{'mtime'}  = $now;
+	    $config{$h}{'status'} = 'good';
+	    success("updating %s: good: IP address set to %s", $h, $ip);
+	}
+    }
+}
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
