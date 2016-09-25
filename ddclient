@@ -2568,7 +2568,7 @@ sub nic_updateable {
 		);
 		$update = 1;
 
-    } elsif (defined($cache{$host}{'use'} && ($cache{$host}{'use'} ne 'no')) &&
+    } elsif ((defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no')) &&
 			 ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
 	    if (($cache{$host}{'status'} eq 'good') && 
 			    !interval_expired($host, 'mtime', 'min-interval')) {
@@ -2600,7 +2600,7 @@ sub nic_updateable {
 			$update = 1;
 		}
 		
-    } elsif (defined($cache{$host}{'usev6'} && ($cache{$host}{'usev6'} ne 'no') ) &&
+    } elsif ((defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no') ) &&
 			 ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
         if (($cache{$host}{'status'} eq 'good') &&
              !interval_expired($host, 'mtime', 'min-interval')) {
@@ -2644,8 +2644,13 @@ sub nic_updateable {
 		$update = 1;
 
     } else {
-		success("%s: skipped: IP address was already set to %s.", $host, $ip)
-			if opt('verbose');
+		if opt('verbose') {
+			
+			if (defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no'))
+				success("%s: skipped: IP address was already set to %s.", $host, $ip)
+			if (defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no'))
+				success("%s: skipped: IP address was already set to %s.", $host, $ipv6)
+		}
     }
     $config{$host}{'status'} = define($cache{$host}{'status'},'');
     $config{$host}{'update'} = $update;
