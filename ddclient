@@ -2644,12 +2644,13 @@ sub nic_updateable {
 		$update = 1;
 
     } else {
-		if opt('verbose') {
-			
-			if (defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no'))
-				success("%s: skipped: IP address was already set to %s.", $host, $ip)
-			if (defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no'))
-				success("%s: skipped: IP address was already set to %s.", $host, $ipv6)
+		if (opt('verbose')) {
+			if (defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no')) {
+				success("%s: skipped: IP address was already set to %s.", $host, $ip);
+			}
+			if (defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no')) {
+				success("%s: skipped: IP address was already set to %s.", $host, $ipv6);
+			}
 		}
     }
     $config{$host}{'status'} = define($cache{$host}{'status'},'');
