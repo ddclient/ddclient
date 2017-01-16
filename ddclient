@@ -456,6 +456,10 @@ my %variables = (
 			'server'              => setv(T_FQDNP,  1, 0, 1, 'www.duckdns.org', undef),
 			'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
 	},
+	'freemyip-common-defaults'       => {
+                        'server'              => setv(T_FQDNP,  1, 0, 1, 'freemyip.com', undef),
+                        'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
+        },
     'woima-common-defaults'       => {
         'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
         'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
@@ -660,6 +664,15 @@ my %services = (
         'examples'   => \&nic_duckdns_examples,
         'variables'  => merge(
                           $variables{'duckdns-common-defaults'},
+                          $variables{'service-common-defaults'},
+                        ),
+    },
+    'freemyip' => {
+        'updateable' => undef,
+        'update'     => \&nic_freemyip_update,
+        'examples'   => \&nic_freemyip_examples,
+        'variables'  => merge(
+                          $variables{'freemyip-common-defaults'},
                           $variables{'service-common-defaults'},
                         ),
     },
@@ -4385,6 +4398,80 @@ sub nic_duckdns_update {
         $url .= $ip;
         
 
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ /OK/)
+        {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("updating %s: good: IP address set to %s", $h, $ip);
+         }
+         else
+         {
+                $config{$h}{'status'} = 'failed';
+                failed("updating %s: Server said: '$returned'", $h);
+         }
+    }
+}
+
+######################################################################
+## nic_freemyip_examples
+######################################################################
+sub nic_freemyip_examples {
+    return <<EoEXAMPLE;
+o 'freemyip'
+
+The 'freemyip' protocol is used by the free
+dynamic DNS service available at freemyip.com.
+API is documented here: https://freemyip.com/help.py
+
+Configuration variables applicable to the 'freemyip' protocol are:
+  protocol=freemyip               ##
+  password=service-token             ## token for your domain
+  non-fully.qualified.host        ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=freemyip,                                     \\
+  password=35a6b8d65c6e67c7f78cca65cd                    \\
+  myhost
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_freemyip_update
+## by Cadence (reused code from nic_duckdns)
+## http://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
+## response contains OK or ERROR
+######################################################################
+sub nic_freemyip_update {
+    debug("\nnic_freemyip_update -------------------");
+
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+        $url  = "http://$config{$h}{'server'}/update";
+        $url .= "?token=";
+        $url .= $config{$h}{'password'};
+        $url .= "&domain=";
+        $url .= $h;
+        
         # Try to get URL
         my $reply = geturl(opt('proxy'), $url);
 
