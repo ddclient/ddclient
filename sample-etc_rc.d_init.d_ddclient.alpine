@@ -1,4 +1,4 @@
-#!/sbin/runscript
+#!/sbin/openrc-run
 description="ddclient Daemon for Alpine"
 command="/usr/sbin/ddclient"
 config_file="/etc/ddclient/ddclient.conf"
