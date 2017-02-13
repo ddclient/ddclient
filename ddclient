@@ -24,6 +24,7 @@ use strict;
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
+use Data::Validate::IP;
 
 my $version  = "3.8.3";
 my $programd  = $0; 
@@ -440,7 +441,7 @@ my %variables = (
 	'tcp'                 => setv(T_BOOL,   0, 1, 1, 0,                   undef),
     },
 	'cloudflare-common-defaults'       => {
-		'server'	      => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef),
+		'server'	      => setv(T_FQDNP,  1, 0, 1, 'api.cloudflare.com/client/v4', undef),
 		'zone'                => setv(T_FQDN,   1, 0, 1, '',                  undef),
 		'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
 		'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
@@ -455,6 +456,10 @@ my %variables = (
 			'server'              => setv(T_FQDNP,  1, 0, 1, 'www.duckdns.org', undef),
 			'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
 	},
+	'freemyip-common-defaults'       => {
+                        'server'              => setv(T_FQDNP,  1, 0, 1, 'freemyip.com', undef),
+                        'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
+        },
     'woima-common-defaults'       => {
         'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
         'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
@@ -637,7 +642,7 @@ my %services = (
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables'  => merge(
-            { 'server'       => setv(T_FQDNP,  1, 0, 1, 'www.cloudflare.com', undef)          },
+            { 'server'       => setv(T_FQDNP,  1, 0, 1, 'api.cloudflare.com/client/v4', undef) },
             { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
             $variables{'cloudflare-common-defaults'},
             $variables{'service-common-defaults'},
@@ -659,6 +664,15 @@ my %services = (
         'examples'   => \&nic_duckdns_examples,
         'variables'  => merge(
                           $variables{'duckdns-common-defaults'},
+                          $variables{'service-common-defaults'},
+                        ),
+    },
+    'freemyip' => {
+        'updateable' => undef,
+        'update'     => \&nic_freemyip_update,
+        'examples'   => \&nic_freemyip_examples,
+        'variables'  => merge(
+                          $variables{'freemyip-common-defaults'},
                           $variables{'service-common-defaults'},
                         ),
     },
@@ -1951,6 +1965,9 @@ sub geturl {
     my $url      = shift || '';
     my $login    = shift || '';
     my $password = shift || '';
+    my $headers  = shift || '';
+    my $method   = shift || 'GET';
+    my $data     = shift || '';
     my ($peer, $server, $port, $default_port, $use_ssl);
     my ($sd, $rq, $request, $reply);
 
@@ -1991,7 +2008,7 @@ sub geturl {
     my $to =  sprintf "%s%s", $server, $proxy ? " via proxy $peer:$port" : "";
     verbose("CONNECT:", "%s", $to);
 
-    $request  = "GET ";
+    $request  = "$method ";
     $request .= "http://$server" if $proxy;
     $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
@@ -2000,7 +2017,10 @@ sub geturl {
     $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
     $request .= "Connection: close\n";
+    $request .= "$headers\n";
+    $request .= "Content-Length: ".length($data)."\n" if $data;
     $request .= "\n";
+    $request .= $data;
 
     ## make sure newlines are <cr><lf> for some pedantic proxy servers
     ($rq = $request) =~ s/\n/\r\n/g;
@@ -4129,6 +4149,12 @@ sub nic_nsupdate_update {
 		my $server = $config{$h}{'server'};
 		my $zone = $config{$h}{'zone'};
 		my $ip = $config{$h}{'wantip'};
+		my $recordtype = '';
+		if (is_ipv6($ip)) {
+		    $recordtype = 'AAAA';
+		} else {
+		    $recordtype = 'A';
+		}
 		delete $config{$_}{'wantip'} foreach @hosts;
 
 		info("setting IP address to %s for %s", $ip, $hosts);
@@ -4141,8 +4167,8 @@ zone $zone.
 EoINSTR1
 		foreach (@hosts) {
 			$instructions .= <<EoINSTR2;
-update delete $_. A
-update add $_. $config{$_}{'ttl'} A $ip
+update delete $_. $recordtype
+update add $_. $config{$_}{'ttl'} $recordtype $ip
 EoINSTR2
 		}
 		$instructions .= <<EoINSTR3;
@@ -4185,7 +4211,7 @@ The 'cloudflare' protocol is used by DNS service offered by www.cloudflare.com.
 
 Configuration variables applicable to the 'cloudflare' protocol are:
   protocol=cloudflare          ## 
-  server=fqdn.of.service       ## defaults to www.cloudflare.com
+  server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   fully.qualified.host         ## the host registered with the service.
@@ -4222,6 +4248,10 @@ sub nic_cloudflare_update {
 		my $key   = $hosts[0];
 		my $ip    = $config{$key}{'wantip'};
 
+		my $headers = "X-Auth-Email: $config{$key}{'login'}\n";
+		$headers .= "X-Auth-Key: $config{$key}{'password'}\n";
+		$headers .= "Content-Type: application/json";
+
 		# FQDNs
 		for my $domain (@hosts) {
 			(my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
@@ -4230,13 +4260,11 @@ sub nic_cloudflare_update {
 			info("setting IP address to %s for %s", $ip, $domain);
 			verbose("UPDATE:","updating %s", $domain);
 
-			# Get domain ID
-			my $url = "https://$config{$key}{'server'}/api_json.html?a=rec_load_all";
-			$url   .= "&z=".$config{$key}{'zone'};
-			$url   .= "&email=".$config{$key}{'login'};	
-			$url   .= "&tkn=".$config{$key}{'password'};
+			# Get zone ID
+			my $url = "https://$config{$key}{'server'}/zones?";
+			$url   .= "name=".$config{$key}{'zone'};
 
-			my $reply = geturl(opt('proxy'), $url);
+			my $reply = geturl(opt('proxy'), $url, undef, undef, $headers);
 			unless ($reply) {
 				failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
 				last;
@@ -4252,24 +4280,44 @@ sub nic_cloudflare_update {
 			}
 
 			# Pull the ID out of the json, messy
-			my ($id) = map { $_->{name} eq $domain ? $_->{rec_id} : () } @{ $response->{response}->{recs}->{objs} };
-			unless($id) {
-				failed("updating %s: No domain ID found.", $domain);
+			my ($zone_id) = map { $_->{name} eq $config{$key}{'zone'} ? $_->{id} : () } @{ $response->{result} };
+			unless($zone_id) {
+				failed("updating %s: No zone ID found.", $config{$key}{'zone'});
 				next;
 			}
+			info("zone ID is $zone_id");
+
+			# Get DNS record ID
+			$url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
+			$url .= "type=A&name=$domain";
+
+			$reply = geturl(opt('proxy'), $url, undef, undef, $headers);
+			unless ($reply) {
+				failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+				last;
+			}
+			last if !header_ok($domain, $reply);
+
+			# Strip header
+			$reply =~ s/^.*?\n\n//s;
+			$response = JSON::Any->jsonToObj($reply);
+			if ($response->{result} eq 'error') {
+				failed ("%s", $response->{msg});
+				next; 
+			}
+
+			# Pull the ID out of the json, messy
+			my ($dns_rec_id) = map { $_->{name} eq $domain ? $_->{id} : () } @{ $response->{result} };
+			unless($dns_rec_id) {
+				failed("updating %s: No DNS record ID found.", $domain);
+				next;
+			}
+			info("DNS record ID is $dns_rec_id");
 
 			# Set domain
-			$url   = "https://$config{$key}{'server'}/api_json.html?a=rec_edit&type=A";
-			$url	 .= "&ttl=".$config{$key}{'ttl'};
-			$url     .= "&name=$hostname";
-			$url     .= "&z=".$config{$key}{'zone'};
-			$url     .= "&id=".$id;	
-			$url     .= "&email=".$config{$key}{'login'};	
-			$url     .= "&tkn=".$config{$key}{'password'};    
-			$url     .= "&content=";
-			$url     .= "$ip"       if $ip;
-
-			$reply = geturl(opt('proxy'), $url);
+			$url   = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
+			my $data = "{\"content\":\"$ip\"}";
+			$reply = geturl(opt('proxy'), $url, undef, undef, $headers, "PATCH", $data);
 			unless ($reply) {
 				failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
 				last;
@@ -4347,6 +4395,80 @@ sub nic_duckdns_update {
         $url .= $ip;
         
 
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ /OK/)
+        {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("updating %s: good: IP address set to %s", $h, $ip);
+         }
+         else
+         {
+                $config{$h}{'status'} = 'failed';
+                failed("updating %s: Server said: '$returned'", $h);
+         }
+    }
+}
+
+######################################################################
+## nic_freemyip_examples
+######################################################################
+sub nic_freemyip_examples {
+    return <<EoEXAMPLE;
+o 'freemyip'
+
+The 'freemyip' protocol is used by the free
+dynamic DNS service available at freemyip.com.
+API is documented here: https://freemyip.com/help.py
+
+Configuration variables applicable to the 'freemyip' protocol are:
+  protocol=freemyip               ##
+  password=service-token             ## token for your domain
+  non-fully.qualified.host        ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=freemyip,                                     \\
+  password=35a6b8d65c6e67c7f78cca65cd                    \\
+  myhost
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_freemyip_update
+## by Cadence (reused code from nic_duckdns)
+## http://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
+## response contains OK or ERROR
+######################################################################
+sub nic_freemyip_update {
+    debug("\nnic_freemyip_update -------------------");
+
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+        $url  = "http://$config{$h}{'server'}/update";
+        $url .= "?token=";
+        $url .= $config{$h}{'password'};
+        $url .= "&domain=";
+        $url .= $h;
+        
         # Try to get URL
         my $reply = geturl(opt('proxy'), $url);
 
