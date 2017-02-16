@@ -409,8 +409,6 @@ my %variables = (
 	'cmd-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
 	'cmdv6'               => setv(T_PROG,  0, 0, 1, '',                   undef),
 	'cmdv6-skip'          => setv(T_STRING,0, 0, 1, '',                   undef),
-
-
 	'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
 	'ipv6'                => setv(T_IPV6,   0, 1, 0, undef,               undef),
 	'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
@@ -2288,35 +2286,35 @@ sub get_ip {
     $arg = '' unless $arg;
 
     if ($use eq 'ip') {
-		$ip  = opt('ip', $h);
-		$arg = 'ip';
+	$ip  = opt('ip', $h);
+	$arg = 'ip';
 
     } elsif ($use eq 'if') {
-		$skip  = opt('if-skip', $h)  || '';
-		$reply = `ifconfig $arg 2> /dev/null`;
-		$reply = `ip addr list dev $arg 2> /dev/null` if $?;
-		$reply = '' if $?;
+	$skip  = opt('if-skip', $h)  || '';
+	$reply = `ifconfig $arg 2> /dev/null`;
+	$reply = `ip addr list dev $arg 2> /dev/null` if $?;
+	$reply = '' if $?;
 
     } elsif ($use eq 'cmd') {
-		if ($arg) {
-			$skip  = opt('cmd-skip', $h)  || '';
-			$reply = `$arg`;
-			$reply = '' if $?;
-		}
+	if ($arg) {
+	    $skip  = opt('cmd-skip', $h)  || '';
+	    $reply = `$arg`;
+	    $reply = '' if $?;
+	}
 
     } elsif ($use eq 'web') {
-		$url  = opt('web', $h)       || '';
-		$skip = opt('web-skip', $h)  || '';
+	$url  = opt('web', $h)       || '';
+	$skip = opt('web-skip', $h)  || '';
 
-		if (exists $builtinweb{$url}) {
-			$skip = $builtinweb{$url}->{'skip'} unless $skip;
-			$url  = $builtinweb{$url}->{'url'};
-		}
-		$arg = $url;
+	if (exists $builtinweb{$url}) {
+	    $skip = $builtinweb{$url}->{'skip'} unless $skip;
+	    $url  = $builtinweb{$url}->{'url'};
+	}	    
+	$arg = $url;
 
-		if ($url) {
-			# when using a web server to find public IPv4 address we should force use of IPv4
-			$reply = geturl(opt('proxy', $h), $url, undef, undef, undef, undef, undef, '4') || '';
+	if ($url) {
+	    # when using a web server to find public IPv4 address we should force use of IPv4
+	    $reply = geturl(opt('proxy', $h), $url, undef, undef, undef, undef, undef, '4') || '';
         }
 
     } elsif (($use eq 'cisco')) {
@@ -2372,8 +2370,7 @@ sub get_ip {
         }
         if (!defined $reply) {
         $reply = '';
-	}
-	
+    }
     if ($skip) {
         $skip  =~ s/ /\\s/is;
         $reply =~ s/^.*?${skip}//is;
@@ -2384,7 +2381,7 @@ sub get_ip {
 	    $ip = filter_local($ip) if opt('fw-banlocal', $h);
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
-		$ip = undef;
+	$ip = undef;
     }
 
     debug("get_ip: using %s, %s reports %s", $use, $arg, define($ip, "<undefined>"));
@@ -2555,66 +2552,68 @@ sub nic_updateable {
     my $ipv6   = $config{$host}{'wantipv6'};
 
     if ($config{$host}{'login'} eq '') {
-		warning("null login name specified for host %s.", $host);
+	warning("null login name specified for host %s.", $host);
 
     } elsif ($config{$host}{'password'} eq '') {
-		warning("null password specified for host %s.", $host);
+	warning("null password specified for host %s.", $host);
 
     } elsif ($opt{'force'}) {
-		info("forcing update of %s.", $host);
-		$update = 1;
+	info("forcing update of %s.", $host);
+	$update = 1;
 
     } elsif (!exists($cache{$host})) {
-		info("forcing updating %s because no cached entry exists.", $host);
-		$update = 1;
+	info("forcing updating %s because no cached entry exists.", $host);
+	$update = 1;
 
     } elsif ($cache{$host}{'wtime'} && $cache{$host}{'wtime'} > $now) {
-		warning("cannot update %s from %s to %s until after %s.", 
-		 $host, 
-		 ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
-		 prettytime($cache{$host}{'wtime'})
-		);
+	warning("cannot update %s from %s to %s until after %s.", 
+		$host, 
+		($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
+		prettytime($cache{$host}{'wtime'})
+	);
 
     } elsif ($cache{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
-		warning("forcing update of %s from %s to %s; %s since last update on %s.", 
-		 $host, 
-		 ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
-		 prettyinterval($config{$host}{'max-interval'}),
-		 prettytime($cache{$host}{'mtime'})
-		);
-		$update = 1;
+	warning("forcing update of %s from %s to %s; %s since last update on %s.", 
+		$host, 
+		($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
+		prettyinterval($config{$host}{'max-interval'}),
+		prettytime($cache{$host}{'mtime'})
+	);
+	$update = 1;
 
     } elsif ((defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no')) &&
 			 ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
 	    if (($cache{$host}{'status'} eq 'good') && 
 			    !interval_expired($host, 'mtime', 'min-interval')) {
 
-			warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.", 
-			 $host, 
-			 ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'), 
-			 $ip,
-			 ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-			 prettyinterval($config{$host}{'min-interval'})		
-			)
-			if opt('verbose') || !define($cache{$host}{'warned-min-interval'}, 0);
-				$cache{$host}{'warned-min-interval'} = $now;
+	    warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.", 
+		 $host, 
+		 ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'), 
+		 $ip,
+		 ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+		 prettyinterval($config{$host}{'min-interval'})		
+		 )
+		if opt('verbose') || !define($cache{$host}{'warned-min-interval'}, 0);
+
+	    $cache{$host}{'warned-min-interval'} = $now;
 	    
-		} elsif (($cache{$host}{'status'} ne 'good') && !interval_expired($host, 'atime', 'min-error-interval')) {
+	} elsif (($cache{$host}{'status'} ne 'good') && !interval_expired($host, 'atime', 'min-error-interval')) {
 
-			warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
-			 $host,
-			 ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'),
-			 $ip,
-			 ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-			 ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
-			 prettyinterval($config{$host}{'min-error-interval'})
-			)
-			if opt('verbose') || !define($cache{$host}{'warned-min-error-interval'}, 0);
-				$cache{$host}{'warned-min-error-interval'} = $now;
+	    warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.", 
+		 $host, 
+		 ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'), 
+		 $ip,
+		 ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+		 ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+		 prettyinterval($config{$host}{'min-error-interval'})		
+		 )
+		if opt('verbose') || !define($cache{$host}{'warned-min-error-interval'}, 0);
 
-		} else {
-			$update = 1;
-		}
+	    $cache{$host}{'warned-min-error-interval'} = $now;
+
+	} else {
+	    $update = 1;
+	}
 		
     } elsif ((defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no') ) &&
 			 ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
@@ -2647,7 +2646,7 @@ sub nic_updateable {
         }
         
     } elsif (defined($sub) && &$sub($host)) {
-		$update = 1;
+	$update = 1;
     } elsif ((defined($cache{$host}{'static'}) && defined($config{$host}{'static'}) &&
               ($cache{$host}{'static'} ne $config{$host}{'static'})) ||
              (defined($cache{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
@@ -2656,8 +2655,8 @@ sub nic_updateable {
               ($cache{$host}{'mx'} ne $config{$host}{'mx'})) ||
              (defined($cache{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
               ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'})) ) {
-		info("updating %s because host settings have been changed.", $host);
-		$update = 1;
+	info("updating %s because host settings have been changed.", $host);
+	$update = 1;
 
     } else {
 		if (opt('verbose')) {
@@ -2672,19 +2671,18 @@ sub nic_updateable {
     $config{$host}{'status'} = define($cache{$host}{'status'},'');
     $config{$host}{'update'} = $update;
     if ($update) {
-		$config{$host}{'status'}                    = 'noconnect';
-		$config{$host}{'atime'}                     = $now;
-		$config{$host}{'wtime'}                     = 0;
-		$config{$host}{'warned-min-interval'}       = 0;
-		$config{$host}{'warned-min-error-interval'} = 0;
+	$config{$host}{'status'}                    = 'noconnect';
+	$config{$host}{'atime'}                     = $now;
+	$config{$host}{'wtime'}                     = 0;
+	$config{$host}{'warned-min-interval'}       = 0;
+	$config{$host}{'warned-min-error-interval'} = 0;
 
-		delete $cache{$host}{'warned-min-interval'};
-		delete $cache{$host}{'warned-min-error-interval'};
+	delete $cache{$host}{'warned-min-interval'};
+	delete $cache{$host}{'warned-min-error-interval'};
     }
 	    
     return $update;
 }
-
 ######################################################################
 ## header_ok
 ######################################################################
