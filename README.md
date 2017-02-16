@@ -26,6 +26,7 @@ Dynamic DNS services currently supported include:
     CloudFlare  - See https://www.cloudflare.com/ for details
     Google      - See http://www.google.com/domains for details
     Duckdns     - See https://duckdns.org/ for details
+    Freemyip    - See https://freemyip.com for details
     woima.fi    - See https://woima.fi/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
@@ -43,7 +44,7 @@ REQUIREMENTS:
 
 - Perl 5.014 or later
   (you need the IO::Socket::SSL perl library for ssl-support,
-  JSON::Any perl library for JSON support and
+  JSON::PP perl library for JSON support and
   IO::Socket:INET6 perl library for ipv6-support)
 
 - Linux or probably any common Unix system
