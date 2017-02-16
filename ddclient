@@ -2406,11 +2406,10 @@ sub get_ipv6 {
 
     } elsif ($usev6 eq 'if') {
         $skip  = opt('if-skip', $h)  || '';
-        $reply = `ip -6 addr list dev $arg | grep "scope.global" 2> /dev/null`;
-        if ($reply =~ /.*? ([0-9:][^\/]*)/i) {
+        $reply = `ip -6 -o addr show dev $arg scope global 2>/dev/null`;
+        if ($reply =~ /^.*? ([a-f0-9]{1,4}:[a-f0-9:]+:[a-f0-9]{1,4})\/.*/is) {
 			$reply = $1;
-        }
-        else {
+        } else {
             $reply = ''
         }
     }  elsif ($usev6 eq 'cmd') {
@@ -2450,7 +2449,11 @@ sub get_ipv6 {
     }
 
     # Extract IPv6 address from the text
-    $ipv6 = $& if ($reply =~ /(?i)(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])/);
+    if ($reply =~ /(?i)(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])/) {
+        $ipv6 = $&;
+    } elsif ($reply =~ /^.*?\b([a-f0-9]{1,4}:[a-f0-9:]+:[a-f0-9]{1,4})\b.*/is) {
+        $ipv6 = $1;
+    }
 
     if (($usev6 ne 'ip') && (define($ipv6,'') eq '::')) {
         $ipv6 = undef;
@@ -2659,10 +2662,10 @@ sub nic_updateable {
     } else {
 		if (opt('verbose')) {
 			if (defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no')) {
-				success("%s: skipped: IP address was already set to %s.", $host, $ip);
+				success("%s: skipped: IPv4 address was already set to %s.", $host, $ip);
 			}
 			if (defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no')) {
-				success("%s: skipped: IP address was already set to %s.", $host, $ipv6);
+				success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
 			}
 		}
     }
@@ -2988,7 +2991,7 @@ sub nic_dyndns2_update {
 		    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
 		
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 	    }
 	}
@@ -3088,7 +3091,7 @@ sub nic_noip_update {
 		    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
 		
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 	    }
 	}
@@ -3619,7 +3622,7 @@ sub nic_easydns_update {
 		    failed("updating %s: %s: %s", $h, $line, $errors{$status});
 
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 		last;
 	    }
@@ -3778,7 +3781,7 @@ sub nic_dnspark_update {
 		    failed("updating %s: %s: %s", $h, $line, $errors{$status});
 
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 		last;
 	    }
