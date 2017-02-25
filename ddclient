@@ -996,7 +996,7 @@ sub update_nics {
 		if (@hosts) {
 			$0 = sprintf("%s - updating %s", $program, join(',', @hosts));
 			&$update(@hosts);
-			runpostscript(join ' ', keys %ips);
+			runpostscript(join ' ', keys %ips, keys %ipsv6);
 		}
 	}
 	foreach my $h (sort keys %config) {
