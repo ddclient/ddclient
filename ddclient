@@ -26,7 +26,7 @@ use Sys::Hostname;
 use IO::Socket;
 use Data::Validate::IP;
 
-my $version  = "3.9.0";
+my $version  = "3.8.3";
 my $programd  = $0; 
 $programd =~ s%^.*/%%;
 my $program   = $programd;
@@ -3614,14 +3614,14 @@ Configuration variables applicable to the 'namecheap' protocol are:
   server=fqdn.of.service       ## defaults to dynamicdns.park-your-domain.com
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
-  hostname                     ## the hostname to update.
+  fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=namecheap,                                         \\
   login=my-namecheap.com-login,                               \\
   password=my-namecheap.com-password                          \\
-  myhost
+  myhost.namecheap.com 
 
 EoEXAMPLE
 }
@@ -3630,10 +3630,9 @@ EoEXAMPLE
 ##
 ## written by Dan Boardman
 ##
-## based on https://www.namecheap.com/support/knowledgebase/
-## article.aspx/29/11/how-to-use-the-browser-to-dynamically-update-hosts-ip
+## based on http://www.namecheap.com/resources/help/index.asp?t=dynamicdns
 ## needs this url to update:
-## https://dynamicdns.park-your-domain.com/update?host=host_name&
+## http://dynamicdns.park-your-domain.com/update?host=host_name&
 ## domain=domain.com&password=domain_password[&ip=your_ip]
 ##
 ######################################################################
@@ -3649,9 +3648,11 @@ sub nic_namecheap_update {
         verbose("UPDATE:","updating %s", $h);
 
         my $url;
-        $url   = "https://$config{$h}{'server'}/update";
+        $url   = "http://$config{$h}{'server'}/update";
 	my $domain = $config{$h}{'login'};
-	$url  .= "?host=$h";
+	my $host = $h;
+	$host  =~ s/(.*)\.$domain(.*)/$1$2/;
+	$url  .= "?host=$host";
 	$url  .= "&domain=$domain";
         $url  .= "&password=$config{$h}{'password'}";
         $url  .= "&ip=";
@@ -4160,8 +4161,6 @@ sub nic_nsupdate_update {
 		my $binary = $config{$h}{'login'};
 		my $keyfile = $config{$h}{'password'};
 		my $server = $config{$h}{'server'};
-		## nsupdate requires a port number to be separated by whitepace, not colon
-		$server =~ s/:/ /;
 		my $zone = $config{$h}{'zone'};
 		my $ip = $config{$h}{'wantip'};
 		my $recordtype = '';
@@ -4304,11 +4303,7 @@ sub nic_cloudflare_update {
 
 			# Get DNS record ID
 			$url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
-			if (is_ipv6($ip)) {
-				$url .= "type=AAAA&name=$domain";
-			} else {
-				$url .= "type=A&name=$domain";
-			}
+			$url .= "type=A&name=$domain";
 
 			$reply = geturl(opt('proxy'), $url, undef, undef, $headers);
 			unless ($reply) {
@@ -4769,6 +4764,7 @@ sub nic_mydns_update {
         }
     }
 }
+
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
