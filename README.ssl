@@ -8,3 +8,4 @@ On alpine, you need perl-io-socket-ssl to have IO::Socket::SSL
 
 ssl support is tested on folowing dynamic dns providers:
 - dyndns.com
+- freemyip.com

@@ -26,6 +26,7 @@ Dynamic DNS services currently supported include:
     CloudFlare  - See https://www.cloudflare.com/ for details
     Google      - See http://www.google.com/domains for details
     Duckdns     - See https://duckdns.org/ for details
+    Freemyip    - See https://freemyip.com for details
     woima.fi    - See https://woima.fi/ for details
     MyDNS.JP    - See http://www.mydns.jp/ for details
 
@@ -43,8 +44,9 @@ REQUIREMENTS:
 - one or more accounts from one of the dynamic DNS services
 
 - Perl 5.014 or later
-  (you need the IO::Socket::SSL perl library for ssl-support
-  and JSON::Any perl library for JSON support)
+  (you need the IO::Socket::SSL perl library for ssl-support,
+  JSON::PP perl library for JSON support and
+  IO::Socket:INET6 perl library for ipv6-support)
 
 - Linux or probably any common Unix system
 
