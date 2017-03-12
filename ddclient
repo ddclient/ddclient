@@ -296,6 +296,7 @@ my %ip_strategies = (
      'cmd'                    => ": obtain IP from the -cmd {external-command}",
      'cisco'                  => ": obtain IP from Cisco FW at the -fw {address}",
      'cisco-asa'              => ": obtain IP from Cisco ASA at the -fw {address}",
+     'f660a'                  => ": obtain IP from ZTE F660A at the -fw {address}",
      map { $_ => sprintf ": obtain IP from %s at the -fw {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
 );
 sub ip_strategies_usage {
@@ -2238,6 +2239,44 @@ sub get_ip {
         $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
         $arg   = $url;
 
+    } elsif ($use eq 'f660a') {
+        use WWW::Mechanize;
+        use Digest::MD5 qw(md5_hex);
+
+        my $token;
+        my $random = '10000000';
+        my $mech = WWW::Mechanize->new(autocheck => 1);
+        
+        $url = 'http://192.168.1.1';
+        $skip = 'TextIPAddress0';
+        $mech->get($url);
+        $reply = $mech->content();
+        if ($reply =~ /(getObj\("Frm_Logintoken"\)\.value = ")(\d+)/) {
+            $token = $2;
+        }
+
+        $mech->submit_form(
+            form_name => 'fLogin',
+            fields => {
+                Frm_Logintoken => $token,
+                UserRandomNum => $random,
+                Username => opt('fw-login', $h),
+                Password => md5_hex(opt('fw-password', $h) . $random)
+            }
+        );
+        if (!$mech->success()) {
+            return;
+        }
+
+        $mech->get($url . '/getpage.gch?pid=1002&nextpage=IPv46_status_wan_if_t.gch');
+        $reply = $mech->content();
+
+        $mech->submit_form(
+            form_name => 'flogout',
+            fields => {
+                logout => '1'
+            }
+        );
     } else {
         $url  = opt('fw', $h)       || '';
         $skip = opt('fw-skip', $h)  || '';
