@@ -710,6 +710,7 @@ my @opt = (
     [ "ip",          "=s", "-ip address           : set the IP address to 'address'" ],
     "",			     
     [ "if",          "=s", "-if interface         : obtain IP address from 'interface'" ],
+                         "                          Specify 'defaultroute' to obtain interface name from default route.",
     [ "if-skip",     "=s", "-if-skip pattern      : skip any IP addresses before 'pattern' in the output of ifconfig {if}" ],
     "",
     [ "web",         "=s", "-web provider|url     : obtain IP address from provider's IP checking page" ],
@@ -2164,10 +2165,22 @@ sub get_ip {
 	$arg = 'ip';
 
     } elsif ($use eq 'if') {
+        my $iface;
 	$skip  = opt('if-skip', $h)  || '';
-	$reply = `ifconfig $arg 2> /dev/null`;
-	$reply = `ip addr list dev $arg 2> /dev/null` if $?;
-	$reply = '' if $?;
+        if ($arg eq 'defaultroute') {
+            ($iface) = (grep(/^0\.0\.0\.0\b/, `route -n`))[0] =~ /(\S+)$/;
+        }
+        else {
+            $iface = $arg;
+        }
+        if (! $iface) {
+            $reply = '';
+        }
+        else {
+            $reply = `ifconfig $iface 2> /dev/null`;
+            $reply = `ip addr list dev $iface 2> /dev/null` if $?;
+            $reply = '' if $?;
+        }
 
     } elsif ($use eq 'cmd') {
 	if ($arg) {
