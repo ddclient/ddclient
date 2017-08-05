@@ -588,6 +588,18 @@ my %services = (
                           $variables{'service-common-defaults'},
                         ),
     },
+    'nfsn' => {
+		'updateable' => undef,
+		'update'     => \&nic_nfsn_update,
+		'examples'   => \&nic_nfsn_examples,
+		'variables'  => merge(
+			{ 'server'       => setv(T_FQDNP,  1, 0, 1, 'api.nearlyfreespeech.net', undef) },
+			{ 'min_interval' => setv(T_FQDNP,  0, 0, 1, 0, interval('5m')) },
+			{ 'ttl'          => setv(T_NUMBER, 1, 0, 1, 300, undef) },
+			{ 'zone'         => setv(T_FQDN,   1, 0, 1, undef, undef) },
+			$variables{'service-common-defaults'},
+		),
+    },
     'sitelutions' => {
         'updateable' => undef,
         'update'     => \&nic_sitelutions_update,
@@ -1345,8 +1357,8 @@ sub init_config {
 	$proto = $config{$h}{'protocol'};
 	$proto = opt('protocol')          if !defined($proto);
 
-	load_sha1_support() if ($proto eq "freedns");
-	load_json_support() if ($proto eq "cloudflare");
+	load_sha1_support($proto) if ($proto eq "freedns" || $proto eq "nfsn");
+	load_json_support($proto) if ($proto eq "cloudflare" || $proto eq "nfsn");
 
  	if (!exists($services{$proto})) {
 	    warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -1931,11 +1943,12 @@ EOM
 ## load_sha1_support
 ######################################################################
 sub load_sha1_support {
+    my $why = shift;
     my $sha1_loaded = eval {require Digest::SHA1};
     my $sha_loaded = eval {require Digest::SHA};
     unless ($sha1_loaded || $sha_loaded) {
         fatal(<<"EOM");
-Error loading the Perl module Digest::SHA1 or Digest::SHA needed for freedns update.
+Error loading the Perl module Digest::SHA1 or Digest::SHA needed for $why update.
 On Debian, the package libdigest-sha1-perl or libdigest-sha-perl must be installed.
 EOM
     }
@@ -1949,10 +1962,11 @@ EOM
 ## load_json_support
 ######################################################################
 sub load_json_support {
+	my $why = shift;
 	my $json_loaded = eval {require JSON::PP};
 	unless ($json_loaded) {
 		fatal(<<"EOM");
-Error loading the Perl module JSON::PP needed for cloudflare update.
+Error loading the Perl module JSON::PP needed for $why update.
 EOM
 	}
 	import JSON::PP (qw/decode_json/);
@@ -2307,6 +2321,35 @@ sub group_hosts_by {
     }
     return %groups;
 }
+######################################################################
+## encode_www_form_urlencoded
+######################################################################
+sub encode_www_form_urlencoded {
+        my $formdata = shift;
+
+        my $must_encode = qr'[<>"#%{}|\\^~\[\]`;/?:=&+]';
+	my $encoded;
+	my $i = 0;
+        foreach my $k (keys %$formdata) {
+		my $kenc = $k;
+		my $venc = $formdata->{$k};
+
+		$kenc =~ s/($must_encode)/sprintf('%%%02X', ord($1))/ge;
+		$venc =~ s/($must_encode)/sprintf('%%%02X', ord($1))/ge;
+
+		$kenc =~ s/ /+/g;
+		$venc =~ s/ /+/g;
+
+		$encoded .= $kenc.'='.$venc;
+		if ($i < (keys %$formdata) - 1) {
+			$encoded .= '&';
+		}
+		$i++;
+        }
+
+	return $encoded;
+}
+
 ######################################################################
 ## nic_examples
 ######################################################################
@@ -3667,6 +3710,189 @@ sub nic_namecheap_update {
 
 ######################################################################
 
+######################################################################
+## nic_nfsn_examples
+######################################################################
+sub nic_nfsn_examples {
+
+}
+
+######################################################################
+## nic_nfsn_gen_auth_header
+######################################################################
+sub nic_nfsn_gen_auth_header {
+	my $h = shift;
+	my $path = shift;
+	my $body = shift || '';
+
+	## API requests must include a custom HTTP header in the
+	## following format:
+	##
+	## X-NFSN-Authentication: login;timestamp;salt;hash
+	##
+	## In this header, login is the member login name of the user
+	## making the API request.
+	my $auth_header = 'X-NFSN-Authentication: ';
+	$auth_header .= $config{$h}{'login'} . ';';
+
+	## timestamp is the standard 32-bit unsigned Unix timestamp
+	## value.
+	my $timestamp = time();
+	$auth_header .= $timestamp . ';';
+
+	## salt is a randomly generated 16 character alphanumeric value
+	## (a-z, A-Z, 0-9).
+	my @chars = ('A'..'Z', 'a'..'z', '0'..'9');
+	my $salt;
+	for (my $i = 0; $i < 16; $i++) {
+		$salt .= $chars[int(rand(@chars))];
+	}
+	$auth_header .= $salt . ';';
+
+	## hash is a SHA1 hash of a string in the following format:
+	## login;timestamp;salt;api-key;request-uri;body-hash
+	my $hash_string = $config{$h}{'login'}	  . ';' .
+			  $timestamp		  . ';' .
+			  $salt			  . ';' .
+			  $config{$h}{'password'} . ';';
+
+	## The request-uri value is the path portion of the requested URL
+	## (i.e. excluding the protocol and hostname).
+	$hash_string .= $path . ';';
+
+	## The body-hash is the SHA1 hash of the request body (if any).
+	## If there is no request body, the SHA1 hash of the empty string
+	## must be used.
+	my $body_hash = sha1_hex($body);
+	$hash_string .= $body_hash;
+
+	my $hash = sha1_hex($hash_string);
+	$auth_header .= $hash;
+
+	return $auth_header;
+}
+
+######################################################################
+## nic_nfsn_make_request
+######################################################################
+sub nic_nfsn_make_request {
+	my $h = shift;
+	my $path = shift;
+	my $method = shift || 'GET';
+	my $body = shift || '';
+
+	my $base_url = "https://$config{$h}{'server'}";
+	my $url = $base_url . $path;
+	my $header = nic_nfsn_gen_auth_header($h, $path, $body);
+	if ($method eq 'POST' && $body ne '') {
+		$header .= "\nContent-Type: application/x-www-form-urlencoded";
+	}
+
+	return geturl(opt('proxy'), $url, '', '', $header, $method, $body);
+}
+
+######################################################################
+## nic_nfsn_handle_error
+######################################################################
+sub nic_nfsn_handle_error {
+	my $resp = shift;
+	my $h = shift;
+
+	$resp =~ s/^.*?\n\n//s; # Strip header
+	my $json = eval {decode_json($resp)};
+	if ($@ || ref($json) ne 'HASH' || not defined $json->{'error'}) {
+		failed("Invalid error response: %s", $resp);
+		return;
+	}
+
+	failed($json->{'error'});
+	if (defined $json->{'debug'}) {
+		failed($json->{'debug'});
+	}
+}
+
+######################################################################
+## nic_nfsn_update
+######################################################################
+sub nic_nfsn_update {
+	debug("\nnic_nfsn_update -------------------");
+
+	## update each configured host
+	foreach my $h (@_) {
+		my $zone = $config{$h}{'zone'};
+		my $name;
+
+		if ($h eq $zone) {
+			$name = '';
+		} elsif ($h !~ /$zone$/) {
+			$config{$h}{'status'} = 'failed';
+			failed("updating %s: %s is outside zone %s", $h, $h,
+			       $zone);
+			next;
+		} else {
+			$name =~ s/(.*)\.${zone}$/$1/;
+		}
+
+		my $ip = delete $config{$h}{'wantip'};
+		info("setting IP address to %s for %s", $ip, $h);
+		verbose("UPDATE", "updating %s", $h);
+
+		my $list_path = "/dns/$zone/listRRs";
+		my $list_body = encode_www_form_urlencoded({name => $name,
+							    type => 'A'});
+		my $list_resp = nic_nfsn_make_request($h, $list_path, 'POST',
+						      $list_body);
+		if (!header_ok($h, $list_resp)) {
+			$config{$h}{'status'} = 'failed';
+			nic_nfsn_handle_error($list_resp, $h);
+			next;
+		}
+
+		$list_resp =~ s/^.*?\n\n//s; # Strip header
+		my $list = eval{decode_json($list_resp)};
+		if ($@) {
+			$config{$h}{'status'} = 'failed';
+			failed("updating %s: JSON decoding failure", $h);
+			next;
+		}
+
+		my $rr_ttl = $config{$h}{'ttl'};
+
+		if (ref($list) eq 'ARRAY' && defined $list->[0]->{'data'}) {
+			my $rr_data = $list->[0]->{'data'};
+			my $rm_path = "/dns/$zone/removeRR";
+			my $rm_data = {name => $name,
+				       type => 'A',
+				       data => $rr_data};
+			my $rm_body = encode_www_form_urlencoded($rm_data);
+			my $rm_resp = nic_nfsn_make_request($h, $rm_path,
+							    'POST', $rm_body);
+			if (!header_ok($h, $rm_resp)) {
+				$config{$h}{'status'} = 'failed';
+				nic_nfsn_handle_error($rm_resp);
+				next;
+			}
+		}
+
+		my $add_path = "/dns/$zone/addRR";
+		my $add_data = {name => $name,
+				type => 'A',
+				data => $ip,
+				ttl => $rr_ttl};
+		my $add_body = encode_www_form_urlencoded($add_data);
+		my $add_resp = nic_nfsn_make_request($h, $add_path, 'POST',
+						     $add_body);
+		if (header_ok($h, $add_resp)) {
+			$config{$h}{'ip'}     = $ip;
+			$config{$h}{'mtime'}  = $now;
+			$config{$h}{'status'} = 'good';
+			success("updating %s: good: IP address set to %s", $h, $ip);
+		} else {
+			$config{$h}{'status'} = 'failed';
+			nic_nfsn_handle_error($add_resp, $h);
+		}
+	}
+}
 
 ######################################################################
 
