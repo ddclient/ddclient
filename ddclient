@@ -488,7 +488,7 @@ my %variables = (
 		'use'         => setv(T_USE,  0, 1, 1, 'web',undef),
 		'server'      => setv(T_FQDNP,  0, 1, 1, 'update.dnsexit.com', undef),
 		'script'      => setv(T_STRING,  0, 1, 1, '/RemoteUpdate.sv', undef),
-+    },
+    },
 );
 my %services = (
     'dyndns1' => {
