@@ -4716,11 +4716,11 @@ Example ${program}.conf file entries:
                         
 EoEXAMPLE
 }
-+######################################################################
-+## nic_dnsexit_update
-+## modified copy of nic_dtns_update above
-+## by Dan Campbell
-+######################################################################
+######################################################################
+## nic_dnsexit_update
+## modified copy of nic_dtns_update above
+## by Dan Campbell
+######################################################################
 sub nic_dnsexit_update {
     debug("\nnic_dnsexit_update -------------------");
 
