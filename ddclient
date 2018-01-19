@@ -4720,7 +4720,7 @@ EoEXAMPLE
 ## nic_dnsexit_update
 ## Need update URL in this format:
 ##   http://update.dnsexit.com/RemoteUpdate.sv?login=yourlogin&password=your_ip_update_password&host=yourhost.yourdomain.com&myip=xxx.xx.xx.xxx
-## Successful responses are: '0=Success', '4=IP not changed. To save our system resources, please don't post updates unless the IP got changed.', '11=fail to find XXX.XXX.XXX.XXX'
+## Successful responses are: '0=Success', '1=IP is the same as the IP on the system', '4=IP not changed. To save our system resources, please don't post updates unless the IP got changed.'
 ######################################################################
 sub nic_dnsexit_update {
     debug("\nnic_dnsexit_update -------------------");
@@ -4754,7 +4754,7 @@ sub nic_dnsexit_update {
         last if !header_ok($h, $reply);
 
         # Response found, look for 0, 4, or 11 status as success"
-        if ($reply =~ /0=|4=|11=/)
+        if ($reply =~ /0=|4=|1=/)
         {
             $config{$h}{'ip'}     = $ip;
             $config{$h}{'mtime'}  = $now;
