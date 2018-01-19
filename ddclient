@@ -4718,8 +4718,11 @@ EoEXAMPLE
 }
 ######################################################################
 ## nic_dnsexit_update
-## modified copy of nic_dtns_update above
-## by Dan Campbell
+## Need update URL in this format:
+##   http://update.dnsexit.com/RemoteUpdate.sv?login=yourlogin&password=your_ip_update_password&host=yourhost.yourdomain.com&myip=xxx.xx.xx.xxx
+## Successful response is:
+##    HTTP/1.1 200 OK
+##   0=Success
 ######################################################################
 sub nic_dnsexit_update {
     debug("\nnic_dnsexit_update -------------------");
@@ -4738,7 +4741,7 @@ sub nic_dnsexit_update {
         $url .= "&password=";
         $url .= $config{$h}{'password'};
         $url .= "&host=";
-        $url .= $h;
+        $url .= $ip;
 
         # Try to get URL
         my $reply = geturl(opt('proxy'), $url);
@@ -4750,8 +4753,8 @@ sub nic_dnsexit_update {
         }
         last if !header_ok($h, $reply);
 
-        # Response found, just declare as success (this is ugly, we need more error checking)
-        if ($reply =~ /success/i)
+        # Response found, look for "0=Success"
+        if ($reply =~ /0=Success/)
         {
             $config{$h}{'ip'}     = $ip;
             $config{$h}{'mtime'}  = $now;
