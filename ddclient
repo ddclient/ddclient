@@ -2037,6 +2037,8 @@ sub geturl {
             Proto => 'tcp',
             MultiHomed => 1,
             Timeout => opt('timeout'),
+	    SSL_verify_mode => 'SSL_VERIFY_PEER',
+            SSL_ca_path => '/etc/pki/tls/certs/',
         );
 	    defined $sd or warning("cannot connect to $peer:$port socket: $@ " . IO::Socket::SSL::errstr());
     } elsif ($globals{'ipv6'}) {
