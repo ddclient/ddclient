@@ -2248,7 +2248,7 @@ sub get_ip {
         my $mech = WWW::Mechanize->new(autocheck => 1);
         
         $url = 'http://192.168.1.1';
-        $skip = 'TextIPAddress0';
+        $skip = 'TestContent0';
         $mech->get($url);
         $reply = $mech->content();
         if ($reply =~ /(getObj\("Frm_Logintoken"\)\.value = ")(\d+)/) {
