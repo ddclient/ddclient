@@ -3616,9 +3616,10 @@ EoEXAMPLE
 ##
 ## written by Dan Boardman
 ##
-## based on http://www.namecheap.com/resources/help/index.asp?t=dynamicdns
+## based on https://www.namecheap.com/support/knowledgebase/
+## article.aspx/29/11/how-to-use-the-browser-to-dynamically-update-hosts-ip
 ## needs this url to update:
-## http://dynamicdns.park-your-domain.com/update?host=host_name&
+## https://dynamicdns.park-your-domain.com/update?host=host_name&
 ## domain=domain.com&password=domain_password[&ip=your_ip]
 ##
 ######################################################################
@@ -3634,7 +3635,7 @@ sub nic_namecheap_update {
         verbose("UPDATE:","updating %s", $h);
 
         my $url;
-        $url   = "http://$config{$h}{'server'}/update";
+        $url   = "https://$config{$h}{'server'}/update";
 	my $domain = $config{$h}{'login'};
 	$url  .= "?host=$h";
 	$url  .= "&domain=$domain";
