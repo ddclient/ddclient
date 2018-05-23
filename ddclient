@@ -4288,7 +4288,11 @@ sub nic_cloudflare_update {
 
 			# Get DNS record ID
 			$url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
-			$url .= "type=A&name=$domain";
+			if (is_ipv6($ip)) {
+				$url .= "type=AAAA&name=$domain";
+			} else {
+				$url .= "type=A&name=$domain";
+			}
 
 			$reply = geturl(opt('proxy'), $url, undef, undef, $headers);
 			unless ($reply) {
