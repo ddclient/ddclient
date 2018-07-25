@@ -4146,6 +4146,8 @@ sub nic_nsupdate_update {
 		my $binary = $config{$h}{'login'};
 		my $keyfile = $config{$h}{'password'};
 		my $server = $config{$h}{'server'};
+		## nsupdate requires a port number to be separated by whitepace, not colon
+		$server =~ s/:/ /;
 		my $zone = $config{$h}{'zone'};
 		my $ip = $config{$h}{'wantip'};
 		my $recordtype = '';
