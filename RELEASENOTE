@@ -2,11 +2,11 @@ Yet again it's been a while but here is new release of ddclient. As usual,
 there are some important changes and some documentation is modified.
 A detailed overview can be found in ChangeLog but here's a quick overview:
 
-	* added Alpine Linux init scritp - patch send by @Tal on github.
-	* adding support for nsupdate - patch send by @droe on github
-	* allow log username-password combinations - patch send by @dirdi on github
-	* adding support for cloudflare - patch send by @roberthawdon on github
-	* adding support for duckdns - patch send by @gkranis
+	* support ipv6 for cloudfare
+	* added suppport for freemyip
+	* adding configurable TTL to Cloudflare
+	* added support for woima.fi dyndns service
+	* added support for google domain
 
 A very big thank you for everyone who created a pull request on github and
 for everyone who helped to fix the little issues caused by the new providers.

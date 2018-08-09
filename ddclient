@@ -26,7 +26,7 @@ use Sys::Hostname;
 use IO::Socket;
 use Data::Validate::IP;
 
-my $version  = "3.8.3";
+my $version  = "3.9.0";
 my $programd  = $0; 
 $programd =~ s%^.*/%%;
 my $program   = $programd;

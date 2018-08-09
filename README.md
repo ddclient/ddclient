@@ -1,5 +1,5 @@
 ===============================================================================
-# DDCLIENT v3.8.3
+# DDCLIENT v3.9.0
 
 ddclient is a Perl client used to update dynamic DNS entries for accounts
 on many dynamic DNS services.

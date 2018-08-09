@@ -1,3 +1,97 @@
+2018-08-09  wimpunk
+
+        * [r208] ddclient: cosmetic, remove stray space indent
+        * [r207] ddclient: Support IPv6 for CloudFlare
+        * [r206] ddclient: name cheap support https now
+
+          From name cheap it seems http is supported now.
+          Since the password was send on plaintext, https should be used
+
+        * [r205] ddclient: Use JSON::PP instead of the (deprecated)
+          JSON::Any
+        * [r204] ddclient: Follow expected behavior
+
+          Align ddclient behavior and documentation with namecheap's -
+          https://www.namecheap.com/support/knowledgebase/article.aspx/583/11/how-do-i-configure-ddclient
+
+        * [r203] ddclient: Specify port number properly to 'nsupdate' (#58)
+
+          If a port number is included in the 'server' configuration item,
+          ddclient allows a port number to be specified by appending a
+          colon
+          and the port number to the server's name or IPv4 address.
+          However,
+          nsupdate does not support this syntax, it requires the port
+          number
+          to be separated from the server name/address by whitespace.
+
+          Signed-off-by: Kevin P. Fleming <kevin@km6g.us>
+
+2017-04-30  wimpunk
+
+        * [r202] README.md, README.ssl, ddclient, sample-etc_ddclient.conf,
+          sample-etc_rc.d_init.d_ddclient.alpine: Adding support for
+          freemyip.com
+
+          Support provided by @Cadence-GitHub in by pull request #47
+
+2015-10-13  wimpunk
+
+        * [r195] ddclient, sample-etc_ddclient.conf: Merge pull request #25
+          from dancapper/master
+
+          Adding configurable TTL to Cloudflare
+
+          This change adds configurable TTL to cloudflare instead of just
+          using hardcoded value of 1 which sets "automatic" TTL any time
+          ddclient updates the IP address.
+
+        * [r194] sample-etc_ddclient.conf: Merge pull request #24 from
+          gkranis/master
+
+          Adding duckdns example
+
+          Duckdns example added to sample-etc_ddclient.conf
+
+        * [r193] README.md, sample-etc_rc.d_init.d_ddclient.ubuntu: Prevent
+          service to start multiple times.
+          Added messages if trying to start/stop already started/stopped
+          service.
+          Added daemon install instructions for ubuntu.
+
+        * [r192] ddclient: odd-fw-patch-squashed
+        * [r191] README.md, ddclient: Added support for woima.fi dyndns
+          service
+
+2015-09-28  wimpunk
+
+        * [r190] ddclient: Cleanup: removing revision info.
+
+          Removing revision info even when it's just in the comments.
+
+        * [r189] ChangeLog: Adding ChangeLog
+
+          Since we are not going to fetch the changes from svn anymore,
+          we add the old ChangeLog again.
+
+        * [r188] .cvsignore, .gitignore: Cleanup: removing old ignore files
+
+          Switching to git so we don't need .cvsignore anymore
+
+        * [r187] COPYING: FSF address
+
+          Address for FSF was wrong, corrected
+
+        * [r186] Changelog.old, README.cisco, ddclient,
+          sample-etc_cron.d_ddclient, sample-etc_ddclient.conf,
+          sample-etc_dhclient-exit-hooks, sample-etc_dhcpc_dhcpcd-eth0.exe,
+          sample-etc_ppp_ip-up.local, sample-etc_rc.d_init.d_ddclient.lsb,
+          sample-etc_rc.d_init.d_ddclient.redhat: Cleanup: removing Id tags
+          from the files
+
+          Preparing a complete move to git. The Id tag isn't useful so
+          removing from the files seemed to be the best solotion
+
 2015-05-28  wimpunk
 
 	* [r183] ., release: Removing unneeded release directory
