@@ -3714,7 +3714,34 @@ sub nic_namecheap_update {
 ## nic_nfsn_examples
 ######################################################################
 sub nic_nfsn_examples {
+    return <<EoEXAMPLE;
 
+o 'nfsn'
+
+The 'nfsn' protocol is used for the DNS service offered by www.nearlyfreespeech.net.
+
+Configuration variables applicable to the 'nfsn' protocol are:
+  protocol=nfsn
+  server=api-server    ## defaults to api.nearlyfreespeech.net
+  login=member-login   ## NearlyFreeSpeech.net login name
+  password=api-key     ## NearlyFreeSpeech.net API key
+  zone=zone            ## The DNS zone under which the hostname falls; e.g. example.com
+  hostname             ## the hostname to update in the specified zone; e.g. example.com or www.example.com
+
+Example ${program}.conf file entries:
+  ## update two hosts (example.com and www.example.com) in example.com zone
+  protocol=nfsn,                                         \\
+  login=my-nfsn-member-login,                            \\
+  password=my-nfsn-api-key,                              \\
+  zone=example.com                                       \\
+  example.com,www.example.com
+
+  ## repeat the above for other zones, e.g. example.net:
+  [...]
+  zone=example.net                                       \\
+  subdomain1.example.net,subdomain2.example.net
+
+EoEXAMPLE
 }
 
 ######################################################################
@@ -3813,6 +3840,15 @@ sub nic_nfsn_handle_error {
 
 ######################################################################
 ## nic_nfsn_update
+##
+## Written by John Brooks
+##
+## Based on API docs: https://members.nearlyfreespeech.net/wiki/API/Introduction
+## Uses the API endpoints under https://api.nearlyfreespeech.net/dns/$zone/
+##
+## NB: There is no "updateRR" API function; to update an existing RR, we use
+##     removeRR to delete the RR, and then addRR to re-add it with the new data.
+##
 ######################################################################
 sub nic_nfsn_update {
 	debug("\nnic_nfsn_update -------------------");
