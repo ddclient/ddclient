@@ -483,6 +483,10 @@ my %variables = (
         'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
         'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
     },
+    'dnsmadeeasy-common-defaults'   => {
+        'server'          => setv(T_FQDNP,  1, 0, 1, 'cp.dnsmadeeasy.com',    undef),
+        'script'          => setv(T_STRING, 1, 1, 1, '/servlet/updateip',     undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -684,6 +688,15 @@ my %services = (
             $variables{'woima-common-defaults'},
             $variables{'woima-service-common-defaults'},
         ),
+    },
+    'dnsmadeeasy' => {
+        'updateable' => undef,
+        'update'     => \&nic_dnsmadeeasy_update,
+        'examples'   => \&nic_dnsmadeeasy_examples,
+        'variables'  => merge(
+                          $variables{'dnsmadeeasy-common-defaults'},
+                          $variables{'service-common-defaults'},
+                        ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -4673,6 +4686,93 @@ sub nic_woima_update {
         }
         failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
             if $state ne 'results2';
+    }
+}
+
+######################################################################
+## nic_dnsmadeeasy_examples
+######################################################################
+sub nic_dnsmadeeasy_examples {
+    return <<EoEXAMPLE;
+o 'dnsmadeeasy'
+
+The 'dnsmadeeasy' protocol is used by the DNS Made Easy service at https://www.dnsmadeeasy.com.
+API is documented here: https://dnsmadeeasy.com/technology/dynamic-dns/
+
+Configuration variables applicable to the 'dnsmadeeasy' protocol are:
+  protocol=dnsmadeeasy               ##
+  login=email-address                ## Email address used to log in to your account.
+  password=dynamic-record-password   ## Generated password for your dynamic DNS record.
+  record-id-1,record-id-2,...        ## Numeric dynamic DNS record IDs, comma-separated if updating multiple.
+
+Note: Dynamic record ID is generated when you create a new Dynamic DNS record in the DNS Made Easy control panel.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=dnsmadeeasy,              \\
+  username=dme\@example.com,          \\
+  password=myg3nerat3dp4ssword,      \\
+  1007,1008
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dnsmadeeasy_update
+######################################################################
+sub nic_dnsmadeeasy_update {
+    debug("\nnic_dnsmadeeasy_update -------------------");
+
+    my %messages = (
+        'error-auth' => 'Invalid username or password, or invalid IP syntax',
+        'error-auth-suspend' => 'User has had their account suspended due to complaints or misuse of the service.',
+        'error-auth-voided' => 'User has had their account permanently revoked.',
+        'error-record-invalid' =>'Record ID number does not exist in the system.',
+        'error-record-auth' => 'User does not have access to this record.',
+        'error-record-ip-same' => 'No update required.',
+        'error-system' => 'General system error which is caught and recognized by the system.',
+        'error' => 'General system error unrecognized by the system.',
+        'success' => 'Record successfully updated!',
+    );
+
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("Setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","Updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+		$url  = $globals{'ssl'} ? "https://" : "http://";
+        $url .= $config{$h}{'server'}.$config{$h}{'script'};
+		$url .= "?username=$config{$h}{'login'}";
+        $url .= "&password=$config{$h}{'password'}";
+		$url .= "&ip=$ip";
+        $url .= "&id=$h";
+
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ 'success')
+        {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("Updating %s: good: IP address set to %s", $h, $ip);
+        }
+        else
+        {
+            $config{$h}{'status'} = 'failed';
+            failed("Updating %s: Server said: '$returned': $messages{$returned}", $h);
+        }
     }
 }
 
