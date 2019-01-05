@@ -4262,7 +4262,7 @@ sub nic_cloudflare_update {
 			verbose("UPDATE:","updating %s", $domain);
 
 			# Get zone ID
-			my $url = "https://$config{$key}{'server'}/zones?";
+			my $url = "https://$config{$key}{'server'}/zones/?";
 			$url   .= "name=".$config{$key}{'zone'};
 
 			my $reply = geturl(opt('proxy'), $url, undef, undef, $headers);
