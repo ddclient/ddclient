@@ -28,6 +28,7 @@ Dynamic DNS services currently supported include:
     Duckdns     - See https://duckdns.org/ for details
     Freemyip    - See https://freemyip.com for details
     woima.fi    - See https://woima.fi/ for details
+    dnsmadeeasy - See https://dnsmadeeasy.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
 
