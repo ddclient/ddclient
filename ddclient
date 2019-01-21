@@ -598,6 +598,16 @@ my %services = (
                           $variables{'service-common-defaults'},
                         ),
     },
+    'dnsmadeeasy' => {
+        'updateable' => undef,
+        'update'     => \&nic_dnsmadeeasy_update,
+        'examples'   => \&nic_dnsmadeeasy_examples,
+        'variables'  => merge(
+                          { 'server'       => setv(T_FQDNP,  1, 0, 1, 'cp.dnsmadeeasy.com',   undef)    },
+                          { 'min-interval' => setv(T_DELAY,  0, 0, 1, 0, interval('5m')),},
+                          $variables{'service-common-defaults'},
+                        ),
+    },
     'freedns' => {
         'updateable' => undef,
         'update'     => \&nic_freedns_update,
@@ -4676,6 +4686,86 @@ sub nic_woima_update {
     }
 }
 
+
+######################################################################
+
+
+######################################################################
+
+######################################################################
+## nic_dnsmadeeasy_examples
+######################################################################
+sub nic_dnsmadeeasy_examples {
+    return <<EoEXAMPLE;
+o 'dnsmadeeasy'
+The 'dnsmadeeasy' protocol is used by DNS services offered by www.dnsmadeeasy.com.
+Configuration variables applicable to the 'dnsmadeeasy' protocol are:
+  protocol=dnsmadeeasy         ## 
+  server=fqdn.of.service       ## defaults to cp.dnsmadeeasy.com
+  login=service-login          ## login name and password  registered with the service
+  password=service-password    ##
+  A_record_id                  ## Id of the A record for the host registered with the service.
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=dnsmadeeasy,                                         \\
+  login=my-dnsmadeeasy.com-login,                               \\
+  password=my-dnsmadeeasy.com-password                          \\
+  my-dnsmadeeasy.com-id_of_A_record
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dnsmadeeasy_update
+##
+## based upon work written by Mike W. Smith (sitelutions)
+## Co-opted by jkelley for DNSMadeEasy
+## 
+## based on https://dnsmadeeasy.com/technology/dynamic-dns/ 
+## needs this url to update:
+## https://cp.dnsmadeeasy.com/servlet/updateip?
+## username=user&id=id_Host_Record&password=domain_password&ip=your_ip
+##
+######################################################################
+sub nic_dnsmadeeasy_update {
+
+
+    debug("\nnic_dnsmadeeasy_update -------------------");
+
+    ## update each configured host
+    foreach my $h (@_) {
+	my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        my $url;
+        $url   = "http://$config{$h}{'server'}/servlet/updateip";
+        $url  .= "?id=$h";
+        $url  .= "&username=$config{$h}{'login'}";
+        $url  .= "&pass=$config{$h}{'password'}";
+        $url  .= "&ip=";
+        $url  .= $ip if $ip;
+
+        my $reply = geturl(opt('proxy'), $url);
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        if (grep /success/i, @reply) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            warning("SENT:    %s", $url) unless opt('verbose');
+            warning("REPLIED: %s", $reply);
+            failed("updating %s: Invalid reply.", $h);
+        }
+    }
+}
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
