@@ -3600,14 +3600,14 @@ Configuration variables applicable to the 'namecheap' protocol are:
   server=fqdn.of.service       ## defaults to dynamicdns.park-your-domain.com
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
-  hostname                     ## the hostname to update.
+  fully.qualified.host         ## the hostname to update.
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=namecheap,                                         \\
   login=my-namecheap.com-login,                               \\
   password=my-namecheap.com-password                          \\
-  myhost
+  myhost.namecheap.com
 
 EoEXAMPLE
 }
@@ -3630,15 +3630,17 @@ sub nic_namecheap_update {
 
     ## update each configured host
     foreach my $h (@_) {
-	my $ip = delete $config{$h}{'wantip'};
+        my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 
         my $url;
         $url   = "https://$config{$h}{'server'}/update";
-	my $domain = $config{$h}{'login'};
-	$url  .= "?host=$h";
-	$url  .= "&domain=$domain";
+        my $domain = $config{$h}{'login'};
+        my $host = $h;
+        $host  =~ s/(.*)\.$domain(.*)/$1$2/;
+        $url  .= "?host=$host";
+        $url  .= "&domain=$domain";
         $url  .= "&password=$config{$h}{'password'}";
         $url  .= "&ip=";
         $url  .= $ip if $ip;
