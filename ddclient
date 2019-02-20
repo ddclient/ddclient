@@ -3604,8 +3604,8 @@ Configuration variables applicable to the 'namecheap' protocol are:
 
 Example ${program}.conf file entries:
   ## single host update
-  protocol=namecheap,                                         \\
-  login=my-namecheap.com-login,                               \\
+  protocol=namecheap                                          \\
+  login=my-namecheap.com-login                                \\
   password=my-namecheap.com-password                          \\
   myhost
 
