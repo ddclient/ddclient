@@ -71,17 +71,19 @@ INSTALLATION:
     cp sample-etc_rc.d_init.d_ddclient.alpine /etc/init.d/ddclient
     ## enable automatic startup when booting
     rc-update add ddclient
-    ## make sure you have perl installed 
+    ## make sure you have perl installed
     apk add perl
     ## start the first time by hand
     rc-service ddclient start
-    
+
     ## For those using Ubuntu style rc files and using daemon-mode:
     cp sample-etc_rc.d_init.d_ddclient.ubuntu /etc/init.d/ddclient
     ## enable automatic startup when booting
     update-rc.d ddclient defaults
-    ## make sure you have perl installed 
-    apt-get install perl
+    ## make sure you have perl and the required modules installed
+    apt-get install perl libdata-validate-ip-perl
+    ## if you plan to use cloudflare or feedns you need the perl json module
+    apt-get install libjson-any-perl
     ## start the first time by hand
     service ddclient start
 
