@@ -483,6 +483,9 @@ my %variables = (
         'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
         'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
     },
+    'yandex-common-defaults'       => {
+        'server'              => setv(T_FQDNP,  1, 0, 1, 'pddimp.yandex.ru', undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -684,6 +687,16 @@ my %services = (
             $variables{'woima-common-defaults'},
             $variables{'woima-service-common-defaults'},
         ),
+    },
+    'yandex' => {
+        'updateable' => undef,
+        'update'     => \&nic_yandex_update,
+        'examples'   => \&nic_yandex_examples,
+        'variables'  => merge(
+            { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
+            $variables{'yandex-common-defaults'},
+            $variables{'service-common-defaults'},
+            ),
     },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
@@ -2009,16 +2022,23 @@ sub geturl {
     verbose("CONNECT:", "%s", $to);
 
     $request  = "$method ";
-    $request .= "http://$server" if $proxy;
+    if (!$use_ssl) {
+        $request .= "http://$server" if $proxy;
+    } else {
+        $request .= "https://$server" if $proxy;
+    }
     $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
 
     my $auth = encode_base64("${login}:${password}", "");
     $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
+    if ($data) {
+        $request .= "Content-Type: application/x-www-form-urlencoded\n";
+        $request .= "Content-Length: " . length($data) . "\n";
+    }
     $request .= "Connection: close\n";
     $request .= "$headers\n";
-    $request .= "Content-Length: ".length($data)."\n" if $data;
     $request .= "\n";
     $request .= $data;
 
@@ -4347,6 +4367,120 @@ sub nic_cloudflare_update {
 			$config{$key}{'status'} = 'good';
 		}
 	}
+}
+######################################################################
+## nic_yandex_examples
+######################################################################
+sub nic_yandex_examples {
+    return <<EoEXAMPLE;
+o Yandex
+
+The 'yandex' protocol is used to by DNS service offered by Yandex.
+
+Configuration variables applicable to the 'yandex' protocol are:
+  protocol=yandex             ##
+  server=fqdn.of.service       ## defaults to pddimp.yandex.ru
+  login=dns.zone               ## Your zone name
+  password=pdd-token           ## PDD token for authentication
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=yandex,                                         \\
+  login=myhost.com,                                        \\
+  password=123456789ABCDEF0000000000000000000000000000000000000 \\
+  record.myhost.com
+
+  ## multiple host update
+  protocol=yandex,                                         \\
+  login=myhost.com,                                        \\
+  password=123456789ABCDEF0000000000000000000000000000000000000 \\
+  record.myhost.com,other.myhost.com
+EoEXAMPLE
+}
+######################################################################
+## nic_yandex_update
+##
+## written by Denis Akimkin
+##
+######################################################################
+sub nic_yandex_update {
+    debug("\nnic_yandex_update -------------------");
+
+    ## group hosts with identical attributes together
+    my %groups = group_hosts_by([ @_ ], [ qw(server login pasword) ]);
+
+    ## update each set of hosts that had similar configurations
+    foreach my $sig (keys %groups) {
+        my @hosts = @{$groups{$sig}};
+        my $key   = $hosts[0];
+        my $ip    = $config{$key}{'wantip'};
+        my $headers = 'PddToken: ' . $config{$key}{'password'};
+
+        # FQDNs
+        for my $host (@hosts) {
+            delete $config{$host}{'wantip'};
+
+            info("setting IP address to %s for %s", $ip, $host);
+            verbose("UPDATE:","updating %s", $host);
+
+            # Get record ID for host
+            my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
+            $url       .= "domain=";
+            $url       .= $config{$key}{'login'};
+            my $reply = geturl(opt('proxy'), $url, '', '', $headers);
+            unless ($reply) {
+                    failed("updating %s: Could not connect to %s.", $host, $config{$key}{'server'});
+                    last;
+            }
+            last if !header_ok($host, $reply);
+
+            # Strip header
+            $reply =~ s/^.*?\n\n//s;
+            my $response = JSON::Any->jsonToObj($reply);
+            if ($response->{success} eq 'error') {
+                    failed ("%s", $response->{error});
+                    next;
+            }
+
+            # Pull the ID out of the json
+            my ($id) = map { $_->{fqdn} eq $host ? $_->{record_id} : () } @{ $response->{records} };
+            unless($id) {
+                    failed("updating %s: DNS record ID not found.", $host);
+                    next;
+            }
+
+            # Update the DNS record
+            $url = "https://$config{$host}{'server'}/api2/admin/dns/edit";
+            my $data   = "domain=";
+            $data   .= $config{$key}{'login'};
+            $data   .= "&record_id=";
+            $data   .= $id;
+            $data   .= "&content=";
+            $data   .= $ip if $ip;
+
+            $reply = geturl(opt('proxy'), $url, '', '', $headers, 'POST', $data);
+            unless ($reply) {
+                failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+                last;
+            }
+            last if !header_ok($host, $reply);
+
+            # Strip header
+            $reply =~ s/^.*?\n\n//s;
+            $response = JSON::Any->jsonToObj($reply);
+            if ($response->{success} eq 'error') {
+                    failed ("%s", $response->{error});
+            } else {
+                    success ("%s -- Updated Successfully to %s", $host, $ip);
+            }
+
+            # Cache
+            $config{$host}{'ip'}     = $ip;
+            $config{$host}{'mtime'}  = $now;
+            $config{$host}{'status'} = 'good';
+        }
+    }
 }
 
 ######################################################################
