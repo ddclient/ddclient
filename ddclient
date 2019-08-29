@@ -2034,7 +2034,7 @@ sub geturl {
     $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
     if ($data) {
-        $request .= "Content-Type: application/x-www-form-urlencoded\n";
+        $request .= "Content-Type: application/x-www-form-urlencoded\n" if ! $headers =~ /^Content-Type: /;
         $request .= "Content-Length: " . length($data) . "\n";
     }
     $request .= "Connection: close\n";
