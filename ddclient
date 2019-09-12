@@ -489,6 +489,9 @@ my %variables = (
     'dnsmadeeasy-common-defaults'   => {
         'server'          => setv(T_FQDNP,  1, 0, 1, 'cp.dnsmadeeasy.com',    undef),
         'script'          => setv(T_STRING, 1, 1, 1, '/servlet/updateip',     undef),
+    },    
+    'dondominio-common-defaults'       => {
+        'server'	      => setv(T_FQDNP,  1, 0, 1, 'dondns.dondominio.com', undef),
     },
 );
 my %services = (
@@ -711,11 +714,20 @@ my %services = (
                           $variables{'service-common-defaults'},
                         ),
     },
+    'dondominio' => {
+        'updateable' => undef,
+        'update'     => \&nic_dondominio_update,
+        'examples'   => \&nic_dondominio_examples,
+        'variables'  => merge(
+            $variables{'dondominio-common-defaults'},
+            $variables{'service-common-defaults'},
+            ),
+    },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
-			     $variables{'service-common-defaults'},
-			     $variables{'dyndns-common-defaults'},
-			     map { $services{$_}{'variables'} } keys %services,
+    $variables{'service-common-defaults'},
+    $variables{'dyndns-common-defaults'},
+    map { $services{$_}{'variables'} } keys %services,
 );
 
 my @opt = (
@@ -4826,6 +4838,80 @@ sub nic_woima_update {
 }
 
 ######################################################################
+## nic_dondominio_examples
+######################################################################
+sub nic_dondominio_examples {
+    return <<EoEXAMPLE;
+o 'dondominio'
+The 'dondominio' protocol is used by DNS service offered by www.dondominio.com/ .
+API information and user instructions available at: https://dev.dondominio.com/dondns/docs/api/
+Configuration variables applicable to the 'dondominio' protocol are:
+  protocol=dondominio          ##
+  login=service-login          ## the username registered with the service
+  password=dondominio-apikey   ## API key provided by dondominio -see link above-
+  fully.qualified.host         ## the host registered with the service.
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=dondominio,                                   \\
+  login=my-generated-user-name,                          \\
+  password=dondominio-apikey                             \\
+  myhost.tld
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dondominio_examples
+######################################################################
+
+sub nic_dondominio_update {
+    debug("\nnic_duckdns_update -------------------");
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to update
+        my $url;
+        $url  = "https://$config{$h}{'server'}/plain/";
+        $url .= "?user=";
+        $url .= $config{$h}{'login'};
+        $url .= "&password=";
+        $url .= $config{$h}{'password'};
+        $url .= "&host=";
+        $url .= $h;
+        $url .= "&ip=";
+        $url .= $ip if $ip;
+
+
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ /OK/) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '$returned'", $h);
+        }
+    }
+}
+
+######################################################################
 ## nic_dnsmadeeasy_examples
 ######################################################################
 sub nic_dnsmadeeasy_examples {
@@ -4871,6 +4957,8 @@ sub nic_dnsmadeeasy_update {
         'success' => 'Record successfully updated!',
     );
 
+    ## update each configured host
+    ## should improve to update in one pass
     foreach my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
@@ -4911,7 +4999,6 @@ sub nic_dnsmadeeasy_update {
         }
     }
 }
-
 
 ######################################################################
 # vim: ai ts=4 sw=4 tw=78 :
