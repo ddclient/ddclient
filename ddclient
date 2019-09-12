@@ -483,6 +483,12 @@ my %variables = (
         'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
         'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
     },
+    'yandex-common-defaults'       => {
+        'server'              => setv(T_FQDNP,  1, 0, 1, 'pddimp.yandex.ru', undef),
+    },
+    'dondominio-common-defaults'       => {
+        'server'	      => setv(T_FQDNP,  1, 0, 1, 'dondns.dondominio.com', undef),
+    },
 );
 my %services = (
     'dyndns1' => {
@@ -685,11 +691,30 @@ my %services = (
             $variables{'woima-service-common-defaults'},
         ),
     },
+    'yandex' => {
+        'updateable' => undef,
+        'update'     => \&nic_yandex_update,
+        'examples'   => \&nic_yandex_examples,
+        'variables'  => merge(
+            { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
+            $variables{'yandex-common-defaults'},
+            $variables{'service-common-defaults'},
+            ),
+    },
+    'dondominio' => {
+        'updateable' => undef,
+        'update'     => \&nic_dondominio_update,
+        'examples'   => \&nic_dondominio_examples,
+        'variables'  => merge(
+            $variables{'dondominio-common-defaults'},
+            $variables{'service-common-defaults'},
+            ),
+    },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
-			     $variables{'service-common-defaults'},
-			     $variables{'dyndns-common-defaults'},
-			     map { $services{$_}{'variables'} } keys %services,
+    $variables{'service-common-defaults'},
+    $variables{'dyndns-common-defaults'},
+    map { $services{$_}{'variables'} } keys %services,
 );
 
 my @opt = (
@@ -2009,16 +2034,23 @@ sub geturl {
     verbose("CONNECT:", "%s", $to);
 
     $request  = "$method ";
-    $request .= "http://$server" if $proxy;
+    if (!$use_ssl) {
+        $request .= "http://$server" if $proxy;
+    } else {
+        $request .= "https://$server" if $proxy;
+    }
     $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
 
     my $auth = encode_base64("${login}:${password}", "");
     $request .= "Authorization: Basic $auth\n" if $login || $password;
     $request .= "User-Agent: ${program}/${version}\n";
+    if ($data) {
+        $request .= "Content-Type: application/x-www-form-urlencoded\n" if ! $headers =~ /^Content-Type: /;
+        $request .= "Content-Length: " . length($data) . "\n";
+    }
     $request .= "Connection: close\n";
     $request .= "$headers\n";
-    $request .= "Content-Length: ".length($data)."\n" if $data;
     $request .= "\n";
     $request .= $data;
 
@@ -3600,12 +3632,12 @@ Configuration variables applicable to the 'namecheap' protocol are:
   server=fqdn.of.service       ## defaults to dynamicdns.park-your-domain.com
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
-  hostname                     ## the hostname to update.
+  fully.qualified.host         ## the hostname to update.
 
 Example ${program}.conf file entries:
   ## single host update
-  protocol=namecheap,                                         \\
-  login=my-namecheap.com-login,                               \\
+  protocol=namecheap                                          \\
+  login=my-namecheap.com-login                                \\
   password=my-namecheap.com-password                          \\
   myhost
 
@@ -3630,15 +3662,17 @@ sub nic_namecheap_update {
 
     ## update each configured host
     foreach my $h (@_) {
-	my $ip = delete $config{$h}{'wantip'};
+        my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 
         my $url;
         $url   = "https://$config{$h}{'server'}/update";
-	my $domain = $config{$h}{'login'};
-	$url  .= "?host=$h";
-	$url  .= "&domain=$domain";
+        my $domain = $config{$h}{'login'};
+        my $host = $h;
+        $host  =~ s/(.*)\.$domain(.*)/$1$2/;
+        $url  .= "?host=$host";
+        $url  .= "&domain=$domain";
         $url  .= "&password=$config{$h}{'password'}";
         $url  .= "&ip=";
         $url  .= $ip if $ip;
@@ -4346,6 +4380,120 @@ sub nic_cloudflare_update {
 		}
 	}
 }
+######################################################################
+## nic_yandex_examples
+######################################################################
+sub nic_yandex_examples {
+    return <<EoEXAMPLE;
+o Yandex
+
+The 'yandex' protocol is used to by DNS service offered by Yandex.
+
+Configuration variables applicable to the 'yandex' protocol are:
+  protocol=yandex             ##
+  server=fqdn.of.service       ## defaults to pddimp.yandex.ru
+  login=dns.zone               ## Your zone name
+  password=pdd-token           ## PDD token for authentication
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=yandex,                                         \\
+  login=myhost.com,                                        \\
+  password=123456789ABCDEF0000000000000000000000000000000000000 \\
+  record.myhost.com
+
+  ## multiple host update
+  protocol=yandex,                                         \\
+  login=myhost.com,                                        \\
+  password=123456789ABCDEF0000000000000000000000000000000000000 \\
+  record.myhost.com,other.myhost.com
+EoEXAMPLE
+}
+######################################################################
+## nic_yandex_update
+##
+## written by Denis Akimkin
+##
+######################################################################
+sub nic_yandex_update {
+    debug("\nnic_yandex_update -------------------");
+
+    ## group hosts with identical attributes together
+    my %groups = group_hosts_by([ @_ ], [ qw(server login pasword) ]);
+
+    ## update each set of hosts that had similar configurations
+    foreach my $sig (keys %groups) {
+        my @hosts = @{$groups{$sig}};
+        my $key   = $hosts[0];
+        my $ip    = $config{$key}{'wantip'};
+        my $headers = 'PddToken: ' . $config{$key}{'password'};
+
+        # FQDNs
+        for my $host (@hosts) {
+            delete $config{$host}{'wantip'};
+
+            info("setting IP address to %s for %s", $ip, $host);
+            verbose("UPDATE:","updating %s", $host);
+
+            # Get record ID for host
+            my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
+            $url       .= "domain=";
+            $url       .= $config{$key}{'login'};
+            my $reply = geturl(opt('proxy'), $url, '', '', $headers);
+            unless ($reply) {
+                    failed("updating %s: Could not connect to %s.", $host, $config{$key}{'server'});
+                    last;
+            }
+            last if !header_ok($host, $reply);
+
+            # Strip header
+            $reply =~ s/^.*?\n\n//s;
+            my $response = JSON::Any->jsonToObj($reply);
+            if ($response->{success} eq 'error') {
+                    failed ("%s", $response->{error});
+                    next;
+            }
+
+            # Pull the ID out of the json
+            my ($id) = map { $_->{fqdn} eq $host ? $_->{record_id} : () } @{ $response->{records} };
+            unless($id) {
+                    failed("updating %s: DNS record ID not found.", $host);
+                    next;
+            }
+
+            # Update the DNS record
+            $url = "https://$config{$host}{'server'}/api2/admin/dns/edit";
+            my $data   = "domain=";
+            $data   .= $config{$key}{'login'};
+            $data   .= "&record_id=";
+            $data   .= $id;
+            $data   .= "&content=";
+            $data   .= $ip if $ip;
+
+            $reply = geturl(opt('proxy'), $url, '', '', $headers, 'POST', $data);
+            unless ($reply) {
+                failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+                last;
+            }
+            last if !header_ok($host, $reply);
+
+            # Strip header
+            $reply =~ s/^.*?\n\n//s;
+            $response = JSON::Any->jsonToObj($reply);
+            if ($response->{success} eq 'error') {
+                    failed ("%s", $response->{error});
+            } else {
+                    success ("%s -- Updated Successfully to %s", $host, $ip);
+            }
+
+            # Cache
+            $config{$host}{'ip'}     = $ip;
+            $config{$host}{'mtime'}  = $now;
+            $config{$host}{'status'} = 'good';
+        }
+    }
+}
 
 ######################################################################
 ## nic_duckdns_examples
@@ -4673,6 +4821,80 @@ sub nic_woima_update {
         }
         failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
             if $state ne 'results2';
+    }
+}
+
+######################################################################
+## nic_dondominio_examples
+######################################################################
+sub nic_dondominio_examples {
+    return <<EoEXAMPLE;
+o 'dondominio'
+The 'dondominio' protocol is used by DNS service offered by www.dondominio.com/ .
+API information and user instructions available at: https://dev.dondominio.com/dondns/docs/api/
+Configuration variables applicable to the 'dondominio' protocol are:
+  protocol=dondominio          ##
+  login=service-login          ## the username registered with the service
+  password=dondominio-apikey   ## API key provided by dondominio -see link above-
+  fully.qualified.host         ## the host registered with the service.
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=dondominio,                                   \\
+  login=my-generated-user-name,                          \\
+  password=dondominio-apikey                             \\
+  myhost.tld
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dondominio_examples
+######################################################################
+
+sub nic_dondominio_update {
+    debug("\nnic_duckdns_update -------------------");
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to update
+        my $url;
+        $url  = "https://$config{$h}{'server'}/plain/";
+        $url .= "?user=";
+        $url .= $config{$h}{'login'};
+        $url .= "&password=";
+        $url .= $config{$h}{'password'};
+        $url .= "&host=";
+        $url .= $h;
+        $url .= "&ip=";
+        $url .= $ip if $ip;
+
+
+        # Try to get URL
+        my $reply = geturl(opt('proxy'), $url);
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ /OK/) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '$returned'", $h);
+        }
     }
 }
 

@@ -28,29 +28,32 @@ Dynamic DNS services currently supported include:
     Duckdns     - See https://duckdns.org/ for details
     Freemyip    - See https://freemyip.com for details
     woima.fi    - See https://woima.fi/ for details
+    Yandex      - See https://domain.yandex.com/ for details
+    DonDominio  - See https://www.dondominio.com for details
 
-DDclient now supports many of cable/dsl broadband routers. 
+DDclient now supports many of cable/dsl broadband routers.
 
-Comments, suggestions and requests: use the forums on 
+Comments, suggestions and requests: use the forums on
 	http://sourceforge.net/projects/ddclient/
 
-The code was originally written by Paul Burry and is now hosted and maintained  
+The code was originally written by Paul Burry and is now hosted and maintained
 through sourceforge.net. Please check out http://ddclient.sf.net
 
 -------------------------------------------------------------------------------
-REQUIREMENTS:
+## REQUIREMENTS:
 
 - one or more accounts from one of the dynamic DNS services
 
 - Perl 5.014 or later
-  (you need the IO::Socket::SSL perl library for ssl-support,
-  JSON::PP perl library for JSON support and
-  IO::Socket:INET6 perl library for ipv6-support)
+  - `Data::Validate::IP` perl library
+  - `IO::Socket::SSL` perl library for ssl-support
+  - `JSON::PP` perl library for JSON support
+  - `IO::Socket:INET6` perl library for ipv6-support
 
 - Linux or probably any common Unix system
 
 -------------------------------------------------------------------------------
-INSTALLATION:
+## INSTALLATION:
 
     cp ddclient /usr/sbin/
     mkdir /etc/ddclient
@@ -58,6 +61,13 @@ INSTALLATION:
     cp sample-etc_ddclient.conf /etc/ddclient/ddclient.conf
     vi /etc/ddclient/ddclient.conf
     -- and change hostnames, logins, and passwords appropriately
+
+    ## For those using systemd:
+    cp sample-etc_systemd.service /etc/systemd/system/ddclient.service
+    ## enable automatic startup when booting
+    systemctl enable ddclient.service
+    ## start the first time by hand
+    systemctl start ddclient.service
 
     ## For those using Redhat style rc files and using daemon-mode:
     cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
@@ -91,7 +101,7 @@ INSTALLATION:
     ## as described below.
 
 -------------------------------------------------------------------------------
-TROUBLESHOOTING:
+## TROUBLESHOOTING:
 
   1. enable debugging and verbose messages.
 	 ``$ ddclient -daemon=0 -debug -verbose -noquiet``
@@ -111,10 +121,10 @@ TROUBLESHOOTING:
 	``fw=url-to-your-router``'s-status-page
 	``fw-skip=any-string-preceding-your-IP-address``
 
-     ddclient does something like this to provide builtin support for 
+     ddclient does something like this to provide builtin support for
      common routers.
      For example, the Linksys routers could have been added with:
-     
+
         fw=192.168.1.1/Status.htm
 	    fw-skip=WAN.*?IP Address
 
@@ -136,7 +146,7 @@ TROUBLESHOOTING:
      while some others accept anything.
 
 -------------------------------------------------------------------------------
-USING DDCLIENT WITH ppp
+## USING DDCLIENT WITH ppp
 
 If you are using a ppp connection, you can easily update your DynDNS
 entry with each connection, with:
@@ -148,7 +158,7 @@ Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ppp interface.
 
 -------------------------------------------------------------------------------
-USING DDCLIENT WITH cron
+## USING DDCLIENT WITH cron
 
 If you have not configured ddclient to use daemon-mode, you'll need to
 configure cron to force an update once a month so that the dns entry will
@@ -159,7 +169,7 @@ not become stale.
     vi /etc/cron.d/ddclient
 
 -------------------------------------------------------------------------------
-USING DDCLIENT WITH dhcpcd-1.3.17
+## USING DDCLIENT WITH dhcpcd-1.3.17
 
 If you are using dhcpcd-1.3.17 or thereabouts, you can easily update
 your DynDNS entry automatically every time your lease is obtained
@@ -173,19 +183,19 @@ In my case, it is named dhcpcd-eth0.exe and contains the lines:
     #!/bin/sh
     PATH=/usr/sbin:/root/bin:${PATH}
     logger -t dhcpcd IP address changed to $1
-    ddclient -proxy fasthttp.sympatico.ca -wildcard -ip $1 | logger -t ddclient 
+    ddclient -proxy fasthttp.sympatico.ca -wildcard -ip $1 | logger -t ddclient
     exit 0
 
 Other DHCP clients may have another method of calling out to programs
-for updating DNS entries. 
+for updating DNS entries.
 
 Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ethernet interface.
 
 -------------------------------------------------------------------------------
-USING DDCLIENT WITH dhclient
+## USING DDCLIENT WITH dhclient
 
-If you are using the ISC DHCP client (dhclient), you can update 
+If you are using the ISC DHCP client (dhclient), you can update
 your DynDNS entry automatically every time your lease is obtained
 or renewed by creating an executable file named:
     /etc/dhclient-exit-hooks
