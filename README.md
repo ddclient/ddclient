@@ -29,6 +29,7 @@ Dynamic DNS services currently supported include:
     Freemyip    - See https://freemyip.com for details
     woima.fi    - See https://woima.fi/ for details
     Yandex      - See https://domain.yandex.com/ for details
+    DNS Made Easy - See https://dnsmadeeasy.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers. 
 
