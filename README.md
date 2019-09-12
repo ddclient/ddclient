@@ -62,6 +62,13 @@ through sourceforge.net. Please check out http://ddclient.sf.net
     vi /etc/ddclient/ddclient.conf
     -- and change hostnames, logins, and passwords appropriately
 
+    ## For those using systemd:
+    cp sample-etc_systemd.service /etc/systemd/system/ddclient.service
+    ## enable automatic startup when booting
+    systemctl enable ddclient.service
+    ## start the first time by hand
+    systemctl start ddclient.service
+
     ## For those using Redhat style rc files and using daemon-mode:
     cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
     ## enable automatic startup when booting
