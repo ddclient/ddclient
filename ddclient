@@ -1384,7 +1384,7 @@ sub init_config {
 	$proto = opt('protocol')          if !defined($proto);
 
 	load_sha1_support() if ($proto eq "freedns");
-	load_json_support() if ($proto eq "cloudflare");
+	load_json_support() if (grep (/^$proto$/, ("cloudflare","yandex")));
 
  	if (!exists($services{$proto})) {
 	    warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -4462,7 +4462,7 @@ sub nic_yandex_update {
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
-            my $response = JSON::Any->jsonToObj($reply);
+            my $response = eval { decode_json($reply) };
             if ($response->{success} eq 'error') {
                     failed ("%s", $response->{error});
                     next;
@@ -4493,7 +4493,7 @@ sub nic_yandex_update {
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
-            $response = JSON::Any->jsonToObj($reply);
+            $response = eval { decode_json($reply) };
             if ($response->{success} eq 'error') {
                     failed ("%s", $response->{error});
             } else {
