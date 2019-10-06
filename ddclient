@@ -3765,7 +3765,8 @@ sub nic_nfsn_examples {
 
 o 'nfsn'
 
-The 'nfsn' protocol is used for the DNS service offered by www.nearlyfreespeech.net.
+The 'nfsn' protocol is used for the DNS service offered by www.nearlyfreespeech.net. Use this URL to get your API-Key-password:
+  https://members.nearlyfreespeech.net/support/assist?tag=apikey
 
 Configuration variables applicable to the 'nfsn' protocol are:
   protocol=nfsn
@@ -3913,6 +3914,7 @@ sub nic_nfsn_update {
                    $zone);
             next;
         } else {
+            $name = $h;
             $name =~ s/(.*)\.${zone}$/$1/;
         }
 
