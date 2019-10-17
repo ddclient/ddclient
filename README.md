@@ -35,11 +35,11 @@ Dynamic DNS services currently supported include:
 
 DDclient now supports many of cable/dsl broadband routers.
 
-Comments, suggestions and requests: use the forums on
-	http://sourceforge.net/projects/ddclient/
+Comments, suggestions and requests: use the issues on
+	https://github.com/ddclient/ddclient/issues/new
 
 The code was originally written by Paul Burry and is now hosted and maintained
-through sourceforge.net. Please check out http://ddclient.sf.net
+through github.com. Please check out http://ddclient.net
 
 -------------------------------------------------------------------------------
 ## REQUIREMENTS:
