@@ -2556,11 +2556,11 @@ sub group_hosts_by {
 
     my %groups = ();
     foreach my $h (@$hosts) {
-	my @keys = (@$attributes, 'wantip');
-	map { $config{$h}{$_} = '' unless exists $config{$h}{$_} } @keys;
-	my $sig  = join(',', map { "$_=$config{$h}{$_}" } @keys);
+		my @keys = (@$attributes, 'wantip');
+		map { $config{$h}{$_} = '' unless exists $config{$h}{$_} } @keys;
+		my $sig  = join(',', map { "$_=$config{$h}{$_}" } @keys);
 
-	push @{$groups{$sig}}, $h;
+		push @{$groups{$sig}}, $h;
     }
     return %groups;
 }
@@ -3015,13 +3015,21 @@ sub nic_dyndns2_update {
 	my $hosts = join(',', @hosts);
 	my $h     = $hosts[0];
 	my $ip    = $config{$h}{'wantip'};
+	my $ipv6  = $config{$h}{'wantipv6'};
 	delete $config{$_}{'wantip'} foreach @hosts;
+	delete $config{$_}{'wantipv6'} foreach @hosts;
 
 	info("setting IP address to %s for %s", $ip, $hosts);
 	verbose("UPDATE:","updating %s", $hosts);
 
+	my $prot = "http";
+	my $use_ssl;
+	if ($use_ssl || $globals{'ssl'}) {
+	   $prot = "https";
+    }
+
 	## Select the DynDNS system to update
-	my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
+	my $url = "$prot://$config{$h}{'server'}$config{$h}{'script'}?system=";
 	if ($config{$h}{'custom'}) {
 	    warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
 	      if $config{$h}{'static'};
@@ -3041,6 +3049,11 @@ sub nic_dyndns2_update {
 	$url  .= "&hostname=$hosts";
 	$url  .= "&myip=";
 	$url  .= $ip            if $ip;
+
+	if ($ipv6) {
+        $url  .= "&myipv6=";
+        $url  .= $ipv6;
+	}
 
 	## some args are not valid for a custom domain.
 	$url  .= "&wildcard=ON" if ynu($config{$h}{'wildcard'}, 1, 0, 0);
