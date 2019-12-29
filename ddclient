@@ -69,6 +69,7 @@ sub T_POSTS	{'postscript'};
 my %builtinweb = (
    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
    'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:', },
+   'ipify'        => { 'url' => 'https://api.ipify.org', },
    'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
    'nsupdate.info' => { 'url' => 'https://ipv6.nsupdate.info/myip', , },
    'whatismyv6'   => { 'url' => 'http://whatismyv6.com/', 'skip' => 'Address of:', },
@@ -320,6 +321,7 @@ sub ipv6_strategies_usage {
 my %web_strategies = (
 	'dyndns'=> 1,
 	'dnspark'=> 1,
+	'ipify'=> 1,
 	'loopia'=> 1,
 );
 
