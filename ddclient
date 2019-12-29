@@ -24,7 +24,6 @@ use strict;
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
-use Data::Validate::IP;
 
 my $version  = "3.9.0";
 my $programd  = $0; 
@@ -59,9 +58,11 @@ sub T_FILE	{'file name'};
 sub T_FQDNP	{'fully qualified host name and optional port number'};
 sub T_PROTO	{'protocol'}
 sub T_USE	{'ip strategy'}
+sub T_USEV6	{'ipv6 strategy'}
 sub T_IF        {'interface'}
 sub T_PROG      {'program name'}
 sub T_IP        {'ip'}
+sub T_IPV6	{'ipv6'}
 sub T_POSTS	{'postscript'};
 
 ## strategies for obtaining an ip address.
@@ -70,6 +71,8 @@ my %builtinweb = (
    'Current IP Address:', },
    'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
    'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
+   'whatismyv6'   => { 'url' => 'http://whatismyv6.com/', 'skip' => 'Address of:', },
+   'nsupdate.info' => { 'url' => 'https://ipv6.nsupdate.info/myip', , },
 );
 my %builtinfw = (
     'watchguard-soho'        => {
@@ -289,6 +292,7 @@ my %builtinfw = (
     },
 );
 my %ip_strategies = (
+     'no'                     => ": do not obtain an IPv4 address for this host",
      'ip'                     => ": obtain IP from -ip {address}",
      'web'                    => ": obtain IP from an IP discovery page on the web",
      'fw'                     => ": obtain IP from the firewall specified by -fw {type|address}",
@@ -300,6 +304,18 @@ my %ip_strategies = (
 );
 sub ip_strategies_usage {
     return map { sprintf("    -use=%-22s %s.", $_, $ip_strategies{$_}) } sort keys %ip_strategies;
+}
+
+
+my %ipv6_strategies = (
+     'no'                     => ": do not obtain an IPv6 address for this host",
+     'ip'                     => ": obtain IP from -ipv6 {address}",
+     'if'                     => ": obtain IP from the -if {interface}",
+     'cmd'                    => ": obtain IP from the -cmdv6 {external-command}",
+     'web'                    => ": obtain IP from an IP discovery page on the web"
+);
+sub ipv6_strategies_usage {
+    return map { sprintf("    -usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
 }
 
 my %web_strategies = (
@@ -329,11 +345,15 @@ my %variables = (
 	'protocol'            => setv(T_PROTO, 0, 0, 1, 'dyndns2',            undef),
 
 	'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
+	'usev6'               => setv(T_USEV6, 0, 0, 1, undef,                undef),
 	'ip'                  => setv(T_IP,    0, 0, 1, undef,                undef),
+	'ipv6'                => setv(T_IPV6,  0, 0, 1, undef,                undef),
 	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
 	'if-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
 	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
 	'web-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
+	'webv6'               => setv(T_STRING,0, 0, 1, '',                   undef),
+	'webv6-skip'          => setv(T_STRING,1, 0, 1, '',                   undef),
 	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
 	'fw-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
 	'fw-banlocal'         => setv(T_BOOL,  0, 0, 1, 0,                    undef),
@@ -341,12 +361,15 @@ my %variables = (
 	'fw-password'         => setv(T_PASSWD,1, 0, 1, '',                   undef),
 	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
 	'cmd-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
+	'cmdv6'               => setv(T_PROG,  0, 0, 1, '',                   undef),
+	'cmdv6-skip'          => setv(T_STRING,1, 0, 1, '',                   undef),
 
 	'timeout'             => setv(T_DELAY, 0, 0, 1, interval('120s'),     interval('120s')),
 	'retry'               => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'force'               => setv(T_BOOL,  0, 0, 0, 0,                    undef),
 	'ssl'                 => setv(T_BOOL,  0, 0, 0, 0,                    undef),
-    'ipv6'                 => setv(T_BOOL,  0, 0, 0, 0,                    undef),
+	'curl'                => setv(T_BOOL,  0, 0, 0, 0,                    undef),
+
 	'syslog'              => setv(T_BOOL,  0, 0, 1, 0,                    undef),
 	'facility'            => setv(T_STRING,0, 0, 1, 'daemon',             undef),
 	'priority'            => setv(T_STRING,0, 0, 1, 'notice',             undef),
@@ -370,10 +393,13 @@ my %variables = (
 	'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
 
 	'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
+	'usev6'               => setv(T_USEV6, 0, 0, 1, undef,                undef),
 	'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
 	'if-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
 	'web'                 => setv(T_STRING,0, 0, 1, 'dyndns',             undef),
 	'web-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
+	'webv6'               => setv(T_STRING,0, 0, 1, '',	              undef),
+	'webv6-skip'          => setv(T_STRING,0, 0, 1, '',                   undef),
 	'fw'                  => setv(T_ANY,   0, 0, 1, '', 		      undef),
 	'fw-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
 	'fw-banlocal'         => setv(T_BOOL,  0, 0, 1, 0,                    undef),
@@ -381,8 +407,10 @@ my %variables = (
 	'fw-password'         => setv(T_PASSWD,0, 0, 1, '',                   undef),
 	'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
 	'cmd-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
-    'ipv6'                => setv(T_BOOL,  0, 0, 0, 0,                    undef),
+	'cmdv6'               => setv(T_PROG,  0, 0, 1, '',                   undef),
+	'cmdv6-skip'          => setv(T_STRING,0, 0, 1, '',                   undef),
 	'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
+	'ipv6'                => setv(T_IPV6,   0, 1, 0, undef,               undef),
 	'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
 	'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
 	'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
@@ -418,6 +446,7 @@ my %variables = (
 	'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
 	'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
 	'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
+	'ipv6'                => setv(T_IPV6,   0, 1, 0, undef,               undef),
 	'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
 	'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
 	'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
@@ -756,14 +785,19 @@ my @opt = (
     "",			     
     [ "use",         "=s", "-use which            : how the should IP address be obtained." ],
                                                   &ip_strategies_usage(),
+    [ "usev6",       "=s", "-usev6 which          : how the should IPv6 address be obtained." ],
+                                                  &ipv6_strategies_usage(),
     "",			     
     [ "ip",          "=s", "-ip address           : set the IP address to 'address'" ],
+    [ "ipv6",        "=s", "-ipv6 address         : set the IPv6 address to 'address'" ],
     "",			     
     [ "if",          "=s", "-if interface         : obtain IP address from 'interface'" ],
     [ "if-skip",     "=s", "-if-skip pattern      : skip any IP addresses before 'pattern' in the output of ifconfig {if}" ],
     "",
     [ "web",         "=s", "-web provider|url     : obtain IP address from provider's IP checking page" ],
     [ "web-skip",    "=s", "-web-skip pattern     : skip any IP addresses before 'pattern' on the web provider|url" ],
+    [ "webv6",       "=s", "-webv6 provider|url   : obtain IPv6 address from provider's IP checking page" ],
+    [ "webv6-skip",  "=s", "-webv6-skip pattern   : skip any IPv6 addresses before 'pattern' on the web provider|url" ],
     "",
     [ "fw",          "=s", "-fw address|url       : obtain IP address from firewall at 'address'" ],
     [ "fw-skip",     "=s", "-fw-skip pattern      : skip any IP addresses before 'pattern' on the firewall address|url" ],
@@ -773,6 +807,8 @@ my @opt = (
     "",			     
     [ "cmd",         "=s", "-cmd program          : obtain IP address from by calling {program}" ],
     [ "cmd-skip",    "=s", "-cmd-skip pattern     : skip any IP addresses before 'pattern' in the output of {cmd}" ],
+    [ "cmdv6",       "=s", "-cmdv6 program        : obtain IPv6 address from by calling {program}" ],
+    [ "cmdv6-skip",  "=s", "-cmdv6-skip pattern   : skip any IPv6 addresses before 'pattern' in the output of {cmd}" ],
     "",			     
     [ "login",       "=s", "-login user           : login as 'user'" ],
     [ "password",    "=s", "-password secret      : use password 'secret'" ],
@@ -781,6 +817,7 @@ my @opt = (
     [ "options",     "=s",  "-options opt,opt     : optional per-service arguments (see below)" ],
     "",			     
     [ "ssl",         "!",  "-{no}ssl              : do updates over encrypted SSL connection" ],
+    [ "curl",        "!",  "-{no}curl             : use cURL for network connections (default nocurl)" ],
     [ "retry",       "!",  "-{no}retry            : retry failed updates." ],
     [ "force",       "!",  "-{no}force            : force an update even if the update may be unnecessary" ],
     [ "timeout",     "=i", "-timeout max          : wait at most 'max' seconds for the host to respond" ],
@@ -794,7 +831,6 @@ my @opt = (
     [ "debug",       "!",  "-{no}debug            : print {no} debugging information" ],
     [ "verbose",     "!",  "-{no}verbose          : print {no} verbose information" ],
     [ "quiet",       "!",  "-{no}quiet            : print {no} messages for unnecessary updates" ],
-    [ "ipv6",        "!",  "-{no}ipv6             : use ipv6" ],
     [ "help",        "",   "-help                 : this message" ],
     [ "postscript",  "",   "-postscript           : script to run after updating ddclient, has new IP as param" ],
 
@@ -881,7 +917,11 @@ do {
 #   usage("invalid argument '-use %s'; possible values are:\n\t%s", $opt{'use'}, join("\n\t,",sort keys %ip_strategies))
     usage("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n",ip_strategies_usage()))
       unless exists $ip_strategies{lc opt('use')};
-    
+    if (defined($opt{'usev6'})) {
+        usage("invalid argument '-usev6 %s'; possible values are:\n%s", $opt{'usev6'}, join("\n",ipv6_strategies_usage()))
+            unless exists $ipv6_strategies{lc opt('usev6')};
+    }
+
     $daemon = $opt{'daemon'};
     $daemon = 0 if opt('force');
 
@@ -942,9 +982,10 @@ sub runpostscript {
 sub update_nics {
 	my %examined = ();
 	my %iplist = ();
+	my %ipv6list = ();
 
 	foreach my $s (sort keys %services) {
-		my (@hosts, %ips) = ();
+		my (@hosts, %ips, %ipsv6) = ();
 		my $updateable = $services{$s}{'updateable'};
 		my $update     = $services{$s}{'update'};
 
@@ -953,38 +994,59 @@ sub update_nics {
 			$examined{$h} = 1;
 			# we only do this once per 'use' and argument combination
 			my $use = opt('use', $h);
+			my $usev6 = opt('usev6', $h);
 			my $arg_ip = opt('ip', $h) || '';
+			my $arg_ipv6 = opt('ipv6', $h) || '';
 			my $arg_fw = opt('fw', $h) || '';
 			my $arg_if = opt('if', $h) || '';
 			my $arg_web = opt('web', $h) || '';
+			my $arg_webv6 = opt('webv6', $h) || '';
 			my $arg_cmd = opt('cmd', $h) || '';
+			my $arg_cmdv6 = opt('cmdv6', $h) || '';
 			my $ip = "";
+			my $ipv6 = "";
 			if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
 				$ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
 			} else {
 				$ip = get_ip($use, $h);
 				if (!defined $ip || !$ip) {
-					warning("unable to determine IP address")
+					warning("%s: unable to determine IPv4 address with strategy use=%s", $h, $use)
 						if !$daemon || opt('verbose');
-					next;
+				} elsif ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
+					warning("%s: malformed IPv4 address (%s)", $h, $ip);
+				} else {
+					$iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
 				}
-				if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
-                    if( !ipv6_match($ip) ) {            
-					    warning("malformed IP address (%s)", $ip);
-					    next;
-                    }
-				}
-				$iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
+				debug("IPv4 %s", define($ip, "<undefined>"));
 			}
 			$config{$h}{'wantip'} = $ip;
+			if (defined($usev6)) {
+				if (exists $ipv6list{$usev6}{$arg_ipv6}{$arg_fw}{$arg_if}{$arg_webv6}{$arg_cmdv6}) {
+					$ipv6 = $ipv6list{$usev6}{$arg_ipv6}{$arg_fw}{$arg_if}{$arg_webv6}{$arg_cmdv6};
+				} else {
+					$ipv6 = get_ipv6($usev6, $h);
+					if (!defined $ipv6 || !$ipv6) {
+						warning("%s: unable to determine IPv6 address with strategy usev6=%s", $h, $usev6)
+							if !$daemon || opt('verbose');
+					} elsif ($ipv6 !~ /^(((?=.*(::))(?!.*\3.+\3))\3?|([\dA-F]{1,4}(\3|:\b|$)|\2))(?4){5}((?4){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\z/ai) {
+						# That little gem from http://home.deds.nl/~aeron/regex/
+						warning("%s: malformed IPv6 address (%s)", $h, $ipv6);
+					} else {
+						$ipv6list{$usev6}{$arg_ipv6}{$arg_fw}{$arg_if}{$arg_webv6}{$arg_cmdv6} = $ipv6;
+					}
+					debug("IPv6 %s", define($ipv6, "<undefined>"));
+				}
+				$config{$h}{'wantipv6'} = $ipv6;
+			}
 			next if !nic_updateable($h, $updateable);
 			push @hosts, $h;
-			$ips{$ip} = $h;
+			$ips{$ip} = $h if (defined($ip));
+			$ipsv6{$ipv6} = $h if (defined($ipv6));
 		}
 		if (@hosts) {
 			$0 = sprintf("%s - updating %s", $program, join(',', @hosts));
 			&$update(@hosts);
-			runpostscript(join ' ', keys %ips);
+			runpostscript(join ' ', keys %ips, keys %ipsv6);
 		}
 	}
 	foreach my $h (sort keys %config) {
@@ -1032,7 +1094,7 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     foreach my $h (keys %config) {
 	if (! exists $cache{$h} || $config{$h}{'update'}) {
-	    map {$cache{$h}{$_} = $config{$h}{$_} } @{$config{$h}{'cacheable'}};
+	    map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
 
 	} else {
 	    map {$cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
@@ -1292,6 +1354,10 @@ sub init_config {
     $opt{'use'} = 'if'  if !define($opt{'use'}) && defined($opt{'if'});
     $opt{'use'} = 'web' if !define($opt{'use'}) && defined($opt{'web'});
 
+    ## infer the IPv6 strategy if possible
+    $opt{'usev6'} = 'ip'  if !define($opt{'usev6'}) && defined($opt{'ipv6'});
+    $opt{'usev6'} = 'web' if !define($opt{'usev6'}) && defined($opt{'webv6'});
+
     ## sanity check
     $opt{'max-interval'}       = min(interval(opt('max-interval')), interval(default('max-interval')));
     $opt{'min-interval'}       = max(interval(opt('min-interval')), interval(default('min-interval')));
@@ -1529,6 +1595,32 @@ sub test_possible_ip {
 	local $opt{'use'} = 'cmd';
 	printf "use=cmd, cmd=%s address is %s\n", opt('cmd'), define(get_ip('cmd'), 'NOT FOUND');
     }
+
+    # Now for IPv6
+    printf "use=ip, ipv6=%s address is %s\n", opt('ipv6'), define(get_ipv6('ip'), 'NOT FOUND')
+    if defined opt('ipv6');
+    {
+	local $opt{'use'} = 'if';
+	foreach my $if (grep {/^[a-zA-Z]/} `ifconfig -a`) {
+	    $if =~ s/:?\s.*//is;
+	    local $opt{'if'} = $if;
+	    printf "use=if, ifv6=%s address is %s\n", opt('if'), define(get_ipv6('if'), 'NOT FOUND');
+	}
+    }
+    {
+	local $opt{'use'} = 'web';
+	foreach my $web (sort keys %builtinweb) {
+	    local $opt{'webv6'} = $web;
+	    printf "use=web, webv6=$web address is %s\n", define(get_ipv6('web'), 'NOT FOUND');
+	}
+	printf "use=web, webv6=%s address is %s\n", opt('webv6'), define(get_ipv6('web'), 'NOT FOUND')
+	    if ! exists $builtinweb{opt('webv6')};
+    }
+    if (opt('cmd')) {
+	local $opt{'use'} = 'cmd';
+	printf "use=cmd, cmdv6=%s address is %s\n", opt('cmd'), define(get_ipv6('cmd'), 'NOT FOUND');
+    }
+
     exit 0 unless opt('debug');
 }
 ######################################################################
@@ -1902,6 +1994,10 @@ sub check_value {
 	$value = lc $value;
 	return undef if ! exists $ip_strategies{$value};
 
+    } elsif ($type eq T_USEV6) {
+	$value = lc $value;
+	return undef if ! exists $ipv6_strategies{$value};
+
     } elsif ($type eq T_FILE) {
 	return undef if $value eq "";
 
@@ -1918,9 +2014,11 @@ sub check_value {
 #	return undef if $value =~ /:/;
 
     } elsif ($type eq T_IP) {
-    if( !ipv6_match($value) ) {
-        return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
-      }
+	return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+
+    } elsif ($type eq T_IPV6) {
+        # This little gem from http://home.deds.nl/~aeron/regex/
+	return undef if $value !~ /^(((?=.*(::))(?!.*\3.+\3))\3?|([\dA-F]{1,4}(\3|:\b|$)|\2))(?4){5}((?4){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\z/ai;
     }
     return $value;
 }
@@ -2020,11 +2118,13 @@ sub geturl {
     my $headers  = shift || '';
     my $method   = shift || 'GET';
     my $data     = shift || '';
+    my $ipversion  = shift || '';
     my ($peer, $server, $port, $default_port, $use_ssl);
     my ($sd, $rq, $request, $reply);
 
     debug("proxy  = $proxy");
     debug("url    = %s", $url);
+    debug("ip ver = %s", $ipversion);
     ## canonify proxy and url
     my $force_ssl;
     $force_ssl = 1 if ($url =~ /^https:/);
@@ -2043,81 +2143,74 @@ sub geturl {
     if ( $force_ssl || ($globals{'ssl'} and (caller(1))[3] ne 'main::get_ip') ) {
         $use_ssl      = 1;
         $default_port = 443;
-		load_ssl_support;
     } else {
         $use_ssl      = 0;
         $default_port = 80;
     }
    
-    ## determine peer and port to use.
-    $peer   = $proxy || $server;
-    $peer   =~ s%/.*%%;
-    $port   = $peer;
-    $port   =~ s%^.*:%%;
-    $port   = $default_port unless $port =~ /^\d+$/;
-    $peer   =~ s%:.*$%%;
+    if ( (!opt('curl')) and ($ipversion ne '6') ) {
+        # Access network using perl functions.
+        ## determine peer and port to use.
+        $peer   = $proxy || $server;
+        $peer   =~ s%/.*%%;
+        $port   = $peer;
+        $port   =~ s%^.*:%%;
+        $port   = $default_port unless $port =~ /^\d+$/;
+        $peer   =~ s%:.*$%%;
   
-    my $to =  sprintf "%s%s", $server, $proxy ? " via proxy $peer:$port" : "";
-    verbose("CONNECT:", "%s", $to);
+        my $to =  sprintf "%s%s", $server, $proxy ? " via proxy $peer:$port" : "";
+        verbose("CONNECT:", "%s", $to);
 
-    $request  = "$method ";
-    if (!$use_ssl) {
-        $request .= "http://$server" if $proxy;
-    } else {
-        $request .= "https://$server" if $proxy;
-    }
-    $request .= "/$url HTTP/1.0\n";
-    $request .= "Host: $server\n";
+        $request  = "$method ";
+        if (!$use_ssl) {
+            $request .= "http://$server" if $proxy;
+        } else {
+            $request .= "https://$server" if $proxy;
+        }
+        $request .= "/$url HTTP/1.0\n";
+        $request .= "Host: $server\n";
 
-    my $auth = encode_base64("${login}:${password}", "");
-    $request .= "Authorization: Basic $auth\n" if $login || $password;
-    $request .= "User-Agent: ${program}/${version}\n";
-    if ($data) {
-        $request .= "Content-Type: application/x-www-form-urlencoded\n" if ! $headers =~ /^Content-Type: /;
-        $request .= "Content-Length: " . length($data) . "\n";
-    }
-    $request .= "Connection: close\n";
-    $request .= "$headers\n";
-    $request .= "\n";
-    $request .= $data;
+        my $auth = encode_base64("${login}:${password}", "");
+        $request .= "Authorization: Basic $auth\n" if $login || $password;
+        $request .= "User-Agent: ${program}/${version}\n";
 
-    ## make sure newlines are <cr><lf> for some pedantic proxy servers
-    ($rq = $request) =~ s/\n/\r\n/g;
+        if ($data) {
+            $request .= "Content-Type: application/x-www-form-urlencoded\n" if ! $headers =~ /^Content-Type: /;
+            $request .= "Content-Length: " . length($data) . "\n";
+        }
+        $request .= "Connection: close\n";
+        $request .= "$headers\n";
+        $request .= "\n";
+        $request .= $data;
 
-    # local $^W = 0;
-    $0 = sprintf("%s - connecting to %s port %s", $program, $peer, $port);
-    if (! opt('exec')) {
-	   debug("skipped network connection");
-	   verbose("SENDING:", "%s", $request);
-    } elsif ($use_ssl) {
-	    $sd = IO::Socket::SSL->new(
-            PeerAddr => $peer,
-            PeerPort => $port,
-            Proto => 'tcp',
-            MultiHomed => 1,
-            Timeout => opt('timeout'),
-        );
+        ## make sure newlines are <cr><lf> for some pedantic proxy servers
+        ($rq = $request) =~ s/\n/\r\n/g;
+
+        # local $^W = 0;
+        $0 = sprintf("%s - connecting to %s port %s", $program, $peer, $port);
+        if (! opt('exec')) {
+	       debug("skipped network connection");
+	       verbose("SENDING:", "%s", $request);
+        } elsif ($use_ssl) {
+		load_ssl_support;
+	        $sd = IO::Socket::SSL->new(
+                PeerAddr => $peer,
+                PeerPort => $port,
+                Proto => 'tcp',
+                MultiHomed => 1,
+                Timeout => opt('timeout'),
+            );
 	    defined $sd or warning("cannot connect to $peer:$port socket: $@ " . IO::Socket::SSL::errstr());
-    } elsif ($globals{'ipv6'}) {
-        load_ipv6_support;
-	    $sd = IO::Socket::INET6->new(
-            PeerAddr => $peer,
-            PeerPort => $port,
-            Proto => 'tcp',
-            MultiHomed => 1,
-            Timeout => opt('timeout'),
-        );
-	    defined $sd or warning("cannot connect to $peer:$port socket: $@");
-    } else {
-	    $sd = IO::Socket::INET->new(
-            PeerAddr => $peer,
-            PeerPort => $port,
-            Proto => 'tcp',
-            MultiHomed => 1,
-            Timeout => opt('timeout'),
-        );
-	    defined $sd or warning("cannot connect to $peer:$port socket: $@");
-    }
+        } else {
+	        $sd = IO::Socket::INET->new(
+                PeerAddr => $peer,
+                PeerPort => $port,
+                Proto => 'tcp',
+                MultiHomed => 1,
+                Timeout => opt('timeout'),
+            );
+	        defined $sd or warning("cannot connect to $peer:$port socket: $@");
+        }
 
 	if (defined $sd) {
 		## send the request to the http server
@@ -2152,6 +2245,39 @@ sub geturl {
 		}
 	}
 	$0 = sprintf("%s - closed %s port %s", $program, $peer, $port);
+
+    } else
+    {
+        # Access network using cURL.
+        my $curlopt = '';
+        my $protocol = 'http';
+        $curlopt = '--ipv4' if ($ipversion eq '4');
+        $curlopt = '--ipv6' if ($ipversion eq '6');
+        if ($use_ssl) {
+            $protocol = 'https';
+            $curlopt .= ' --insecure';
+        }
+
+        if (! opt('exec')) {
+	    debug("skipped network connection");
+	    verbose("SENDING:", "%s", '${protocol}://${server}/${url}');
+        } else
+        {
+            $0 = sprintf("%s - curl sending to %s", $program, '${protocol}://${server}/${url}');
+            my $timeout = opt('timeout');
+
+            $reply = <<`USE_CURL`;
+              /usr/bin/curl -si0 --user '${login}:${password}' --user-agent '${program}/${version}' \\
+              --connect-timeout $timeout --max-time $timeout $curlopt \\
+              --url '${protocol}://${server}/${url}' 2>/dev/null
+USE_CURL
+
+            if (! $reply) {
+                warning("curl cannot connect to ${protocol}://${server}/${url}");
+            }
+        }
+    }
+
 
     ## during testing simulate reading the URL
     if (opt('test')) {
@@ -2246,7 +2372,8 @@ sub get_ip {
 	$arg = $url;
 
 	if ($url) {
-	    $reply = geturl(opt('proxy', $h), $url) || '';
+	    # when using a web server to find public IPv4 address we should force use of IPv4
+	    $reply = geturl(opt('proxy', $h), $url, undef, undef, undef, undef, undef, '4') || '';
         }
 
     } elsif (($use eq 'cisco')) {
@@ -2283,6 +2410,9 @@ sub get_ip {
         $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
         $arg   = $url;
 
+    } elsif ($use eq 'no') {
+		$reply = '0.0.0.0';
+		
     } else {
         $url  = opt('fw', $h)       || '';
         $skip = opt('fw-skip', $h)  || '';
@@ -2308,11 +2438,6 @@ sub get_ip {
 	    $ip = $1;
         $ip = un_zero_pad($ip);
 	    $ip = filter_local($ip) if opt('fw-banlocal', $h);
-    } elsif ( $ip = ipv6_match($reply) ) {
-        $ip = un_zero_pad($ip);
-        $ip = filter_local($ip) if opt('fw-banlocal', $h);
-    } else {
-       warning("found neither ipv4 nor ipv6 address");
     }
     if (($use ne 'ip') && (define($ip,'') eq '0.0.0.0')) {
 	$ip = undef;
@@ -2323,31 +2448,75 @@ sub get_ip {
 }
 
 ######################################################################
-## ipv6_match determine ipv6 address from given string and return them
+## get_ipv6
 ######################################################################
-sub ipv6_match {
-	my $content = shift;
-	my $omits;
-    my $ip = "";
-    my $linenumbers = 0;
- 
-    my @values = split('\n', $content);
-    foreach my $val (@values) {
-        next unless $val =~ /((:{0,2}[A-F0-9]{1,4}){0,7}:{1,2}[A-F0-9]{1,4})/ai; # invalid char
-        my $parsed = $1;
-        
-        # check for at least 7 colons
-        my $count_colon = () = $parsed =~ /:/g;
-        if ($count_colon != 7) {
-            # or one double colon
-            my $count_double_colon = () = $parsed =~ /::/g;
-            if ($count_double_colon != 1) {
-                next
-            } 
-        }       
-        return $parsed;
+sub get_ipv6 {
+    my $usev6 = lc shift;
+    my $h = shift;
+    my ($ipv6, $arg, $reply, $url, $skip) = (undef, opt($usev6, $h), '');
+    $arg = '' unless $arg;
+
+    if ($usev6 eq 'ip') {
+        $ipv6  = opt('ipv6', $h);
+        $arg = 'ipv6';
+
+    } elsif ($usev6 eq 'if') {
+        $skip  = opt('if-skip', $h)  || '';
+        $reply = `ip -6 -o addr show dev $arg scope global 2>/dev/null`;
+        if ($reply =~ /^.*? ([a-f0-9]{1,4}:[a-f0-9:]+:[a-f0-9]{1,4})\/.*/is) {
+			$reply = $1;
+        } else {
+            $reply = ''
+        }
+    }  elsif ($usev6 eq 'cmd') {
+		$arg = opt('cmdv6', $h);
+		if ($arg) {
+			$skip  = opt('cmdv6-skip', $h)  || '';
+			debug("GetIPv6 cmd: %s",$arg);
+			$reply = `$arg`;
+			$reply = '' if $?;
+		}
+
+    } elsif ($usev6 eq 'web') {
+		$url  = opt('webv6', $h)       || '';
+		$skip = opt('webv6-skip', $h)  || '';
+
+		if (exists $builtinweb{$url}) {
+			$skip = $builtinweb{$url}->{'skip'} unless $skip;
+			$url  = $builtinweb{$url}->{'url'};
+		}
+		$arg = $url;
+
+		if ($url) {
+			# when using a web server to find our IPv6 address we should force use of IPv6
+			$reply = geturl(opt('proxy', $h), $url, undef, undef, undef, undef, undef, '6') || '';
+		}
+
+	} elsif ($usev6 eq 'no') {
+		$reply = '';
+	}
+	
+    if (!defined $reply) {
+        $reply = '::';
     }
-    return;    
+    if ($skip) {
+        $skip  =~ s/ /\\s/is;
+        $reply =~ s/^.*?${skip}//is;
+    }
+
+    # Extract IPv6 address from the text
+    if ($reply =~ /(?i)(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])/) {
+        $ipv6 = $&;
+    } elsif ($reply =~ /^.*?\b([a-f0-9]{1,4}:[a-f0-9:]+:[a-f0-9]{1,4})\b.*/is) {
+        $ipv6 = $1;
+    }
+
+    if (($usev6 ne 'ip') && (define($ipv6,'') eq '::')) {
+        $ipv6 = undef;
+    }
+
+    debug("get_ipv6: using %s, %s reports %s", $usev6, $arg, define($ipv6, "<undefined>"));
+    return $ipv6;
 }
 
 ######################################################################
@@ -2468,6 +2637,7 @@ sub nic_updateable {
     my $sub    = shift;
     my $update = 0;
     my $ip     = $config{$host}{'wantip'};
+    my $ipv6   = $config{$host}{'wantipv6'};
 
     if ($config{$host}{'login'} eq '') {
 	warning("null login name specified for host %s.", $host);
@@ -2499,8 +2669,8 @@ sub nic_updateable {
 	);
 	$update = 1;
 
-    } elsif ((!exists($cache{$host}{'ip'})) ||
-		    ("$cache{$host}{'ip'}" ne "$ip")) {
+    } elsif ((defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no')) &&
+			 ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
 	    if (($cache{$host}{'status'} eq 'good') && 
 			    !interval_expired($host, 'mtime', 'min-interval')) {
 
@@ -2532,7 +2702,37 @@ sub nic_updateable {
 	} else {
 	    $update = 1;
 	}
+		
+    } elsif ((defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no') ) &&
+			 ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
+        if (($cache{$host}{'status'} eq 'good') &&
+             !interval_expired($host, 'mtime', 'min-interval')) {
+            warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
+			 $host,
+			 ($cache{$host}{'ipv6'}    ? $cache{$host}{'ipv6'}                : '<nothing>'),
+			 $ipv6,
+			 ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+			 prettyinterval($config{$host}{'min-interval'})
+            )
+            if opt('verbose') || !define($cache{$host}{'warned-min-interval'}, 0);
+				$cache{$host}{'warned-min-interval'} = $now;
 
+        } elsif (($cache{$host}{'status'} ne 'good') && !interval_expired($host, 'atime', 'min-error-interval')) {
+            warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
+			 $host, 
+			 ($cache{$host}{'ipv6'}    ? $cache{$host}{'ipv6'}                : '<nothing>'),
+			 $ipv6,
+			 ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+			 ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+			 prettyinterval($config{$host}{'min-error-interval'})
+            )
+            if opt('verbose') || !define($cache{$host}{'warned-min-error-interval'}, 0);
+				$cache{$host}{'warned-min-error-interval'} = $now;
+
+        } else {
+            $update = 1;
+        }
+        
     } elsif (defined($sub) && &$sub($host)) {
 	$update = 1;
     } elsif ((defined($cache{$host}{'static'}) && defined($config{$host}{'static'}) &&
@@ -2547,8 +2747,14 @@ sub nic_updateable {
 	$update = 1;
 
     } else {
-	success("%s: skipped: IP address was already set to %s.", $host, $ip)
-	    if opt('verbose');
+		if (opt('verbose')) {
+			if (defined($config{$host}{'use'}) && ($config{$host}{'use'} ne 'no')) {
+				success("%s: skipped: IPv4 address was already set to %s.", $host, $ip);
+			}
+			if (defined($config{$host}{'usev6'}) && ($config{$host}{'usev6'} ne 'no')) {
+				success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
+			}
+		}
     }
     $config{$host}{'status'} = define($cache{$host}{'status'},'');
     $config{$host}{'update'} = $update;
@@ -2871,7 +3077,7 @@ sub nic_dyndns2_update {
 		    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
 		
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 	    }
 	}
@@ -2971,7 +3177,7 @@ sub nic_noip_update {
 		    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
 		
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 	    }
 	}
@@ -3502,7 +3708,7 @@ sub nic_easydns_update {
 		    failed("updating %s: %s: %s", $h, $line, $errors{$status});
 
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 		last;
 	    }
@@ -3661,7 +3867,7 @@ sub nic_dnspark_update {
 		    failed("updating %s: %s: %s", $h, $line, $errors{$status});
 
 		} else {
-		    failed("updating %s: %s: unexpected status (%s)", $h, $line);
+		    failed("updating %s: unexpected status (%s)", $h, $line);
 		} 	
 		last;
 	    }
@@ -4107,7 +4313,8 @@ sub nic_freedns_update {
 
     ## First get the list of updatable hosts
     my $url;
-    $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=".&sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
+    # note, use '&v=2' in $url in order to pull IPv6 AAAA records as well as IPv4 A records
+    $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&v=2&sha=".&sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
     my $reply = geturl(opt('proxy'), $url);
     if (!defined($reply) || !$reply || !header_ok($_[0], $reply)) {
         failed("updating %s: Could not connect to %s for site list.", $_[0], $url);
@@ -4115,9 +4322,22 @@ sub nic_freedns_update {
     }
     my @lines = split("\n", $reply);
     my %freedns_hosts;
+    my %freedns_hosts_ipv6;
+
+    # We have retrieved list of URLs associated with users FreeDNS account.
+    # Store them into freedns_hosts separating IPv4 (A records) from IPv6 (AAAA records)
     grep {
         my @rec = split(/\|/, $_);
-	$freedns_hosts{$rec[0]} = \@rec if ($#rec > 0);
+        if ($#rec > 0) {
+            # This little gem from http://home.deds.nl/~aeron/regex/
+            if ($rec[1] =~ /^(((?=.*(::))(?!.*\3.+\3))\3?|([\dA-F]{1,4}(\3|:\b|$)|\2))(?4){5}((?4){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\z/ai) {
+                debug("Host: %s, IPv6: %s", $rec[0], $rec[1]);
+	        $freedns_hosts_ipv6{$rec[0]} = \@rec;
+            } else {
+                debug("Host: %s, IPv4: %s", $rec[0], $rec[1]);
+                $freedns_hosts{$rec[0]} = \@rec;
+            }
+        }
     } @lines;
     if (!keys %freedns_hosts) {
 	failed("Could not get freedns update URLs from %s", $config{$_[0]}{'server'});
@@ -4127,37 +4347,83 @@ sub nic_freedns_update {
     foreach my $h (@_) {
         if(!$h){ next };
         my $ip = delete $config{$h}{'wantip'};
-	info("setting IP address to %s for %s", $ip, $h);
-	verbose("UPDATE:","updating %s", $h);
+        my $ipv6 = delete $config{$h}{'wantipv6'};
 
-	if($ip eq $freedns_hosts{$h}->[1]) { 
-	    $config{$h}{'ip'}     = $ip; 
-	    $config{$h}{'mtime'}  = $now; 
-	    $config{$h}{'status'} = 'good'; 
-	    success("update not necessary %s: good: IP address already set to %s", $h, $ip); 
-	} else {
-	    my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]);
-	    if (!defined($reply) || !$reply) {
-	        failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
-		last;
-	    }
-	    if(!header_ok($h, $reply)) { 
-		$config{$h}{'status'} = 'failed'; 
-		last; 
-	    }
+    	info("%s: setting IP address(s) to %s / %s", $h, define($ip, "<undefined>"), define($ipv6, "<undefined>"));
 
-	    if($reply =~ /Updated.*$h.*to.*$ip/) { 
-		$config{$h}{'ip'}     = $ip; 
-		$config{$h}{'mtime'}  = $now; 
-		$config{$h}{'status'} = 'good'; 
-		success("updating %s: good: IP address set to %s", $h, $ip); 
-	    } else {
-	        $config{$h}{'status'} = 'failed';
-		warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
-		warning("REPLIED: %s", $reply);
-		failed("updating %s: Invalid reply.", $h);
-	    }
-	}
+	    if (defined($freedns_hosts{$h}) && defined($ip)) {
+            if($ip eq $freedns_hosts{$h}->[1]) {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("update not necessary %s: good: IPv4 address already set to %s", $h, $ip);
+            } else {
+                debug("Update: %s", $freedns_hosts{$h}->[2]."&address=".$ip);
+                my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]."&address=".$ip);
+                if (!defined($reply) || !$reply) {
+                    failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
+                    last;
+                }
+                if(!header_ok($h, $reply)) {
+                    $config{$h}{'status'} = 'failed';
+                    last;
+                }
+
+            if ($reply =~ /Updated.*$h.*to.*$ip/) {
+                $config{$h}{'ip'}     = $ip;
+                    $config{$h}{'mtime'}  = $now;
+                    $config{$h}{'status'} = 'good';
+                    success("updating %s: good: IP address set to %s", $h, $ip);
+                } else {
+                    $config{$h}{'status'} = 'failed';
+                    warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
+                    warning("REPLIED: %s", $reply);
+                    failed("updating %s: Invalid reply.", $h);
+                }
+            }
+        } else {
+            if (!$daemon || opt('verbose')) {
+                warning("%s: Cannot set IPv4 to %s No A record at FreeDNS", $h, $ip) if (!defined($freedns_hosts{$h}) && defined($ip));
+                warning("%s: Cannot set IPv4, A record exists but no address provided", $h) if (defined($freedns_hosts{$h}) && !defined($ip));
+            }
+        }
+
+        if (defined($freedns_hosts_ipv6{$h}) && defined($ipv6)) {
+            if($ipv6 eq $freedns_hosts_ipv6{$h}->[1]) {
+                $config{$h}{'ipv6'}     = $ipv6;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("update not necessary %s: good: IPv6 address already set to %s", $h, $ipv6);
+            } else {
+                debug("Update: %s", $freedns_hosts_ipv6{$h}->[2]."&address=".$ipv6);
+                my $reply = geturl(opt('proxy'), $freedns_hosts_ipv6{$h}->[2]."&address=".$ipv6);
+                if (!defined($reply) || !$reply) {
+                    failed("updating %s: Could not connect to %s.", $h, $freedns_hosts_ipv6{$h}->[2]);
+                    last;
+                }
+                if(!header_ok($h, $reply)) {
+                    $config{$h}{'status'} = 'failed';
+                    last;
+                }
+
+                if($reply =~ /Updated.*$h.*to.*$ipv6/) {
+                    $config{$h}{'ipv6'}   = $ipv6;
+                    $config{$h}{'mtime'}  = $now;
+                    $config{$h}{'status'} = 'good';
+                    success("updating %s: good: IPv6 address set to %s", $h, $ipv6);
+                } else {
+                    $config{$h}{'status'} = 'failed';
+                    warning("SENT: %s", $freedns_hosts_ipv6{$h}->[2]) unless opt('verbose');
+                    warning("REPLIED: %s", $reply);
+                    failed("updating %s: Invalid reply.", $h);
+                }
+            }
+        } else {
+            if (!$daemon || opt('verbose')) {
+                warning("%s: Cannot set IPv6 to %s No AAAA record at FreeDNS", $h, $ipv6) if (!defined($freedns_hosts_ipv6{$h}) && defined($ipv6));
+                warning("%s: Cannot set IPv6, AAAA record exists but no address provided", $h) if (defined($freedns_hosts_ipv6{$h}) && !defined($ipv6));
+            }
+        }
     }
 }
 
@@ -4461,48 +4727,87 @@ sub nic_nsupdate_update {
 		$server =~ s/:/ /;
 		my $zone = $config{$h}{'zone'};
 		my $ip = $config{$h}{'wantip'};
-		my $recordtype = '';
-		if (is_ipv6($ip)) {
-		    $recordtype = 'AAAA';
-		} else {
-		    $recordtype = 'A';
-		}
+		my $ipv6 = $config{$h}{'wantipv6'};
 		delete $config{$_}{'wantip'} foreach @hosts;
+		delete $config{$_}{'wantipv6'} foreach @hosts;
 
-		info("setting IP address to %s for %s", $ip, $hosts);
-		verbose("UPDATE:","updating %s", $hosts);
+##TODO
+## Requires testing with new IPv6 code
+##TODO
+		if (defined($ip)) {
+			info("setting IP address to %s for %s", $ip, $hosts);
+			verbose("UPDATE:","updating %s", $hosts);
 
-		## send separate requests for each zone with all hosts in that zone
-		my $instructions = <<EoINSTR1;
+			## send separate requests for each zone with all hosts in that zone
+			my $instructions = <<EoINSTR1;
 server $server
 zone $zone.
 EoINSTR1
-		foreach (@hosts) {
-			$instructions .= <<EoINSTR2;
-update delete $_. $recordtype
-update add $_. $config{$_}{'ttl'} $recordtype $ip
+			foreach (@hosts) {
+				$instructions .= <<EoINSTR2;
+update delete $_. A
+update add $_. $config{$_}{'ttl'} A $ip
 EoINSTR2
-		}
-		$instructions .= <<EoINSTR3;
+			}
+			$instructions .= <<EoINSTR3;
 send
 EoINSTR3
-		my $command = "$binary -k $keyfile";
-		$command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
-		$command .= " -d" if (opt('debug'));
-		verbose("UPDATE:", "nsupdate command is: %s", $command);
-		verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
+			my $command = "$binary -k $keyfile";
+			$command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
+			$command .= " -d" if (opt('debug'));
+			verbose("UPDATE:", "nsupdate command is: %s", $command);
+			verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
 
-		my $status = pipecmd($command, $instructions);
-		if ($status eq 1) {
-			foreach (@hosts) {
-				$config{$_}{'ip'} = $ip;
-				$config{$_}{'mtime'} = $now;
-				success("updating %s: %s: IP address set to %s", $_, $status, $ip);
+			my $status = pipecmd($command, $instructions);
+			if ($status eq 1) {
+				foreach (@hosts) {
+					$config{$_}{'ip'} = $ip;
+					$config{$_}{'mtime'} = $now;
+					success("updating %s: %s: IP address set to %s", $_, $status, $ip);
+				}
+			} else {
+				foreach (@hosts) {
+					failed("updating %s", $_);
+				}
 			}
-		} else {
+		}
+		if ( defined($ipv6) ) {
+			info("setting IPv6 address to %s for %s", $ipv6, $hosts);
+			verbose("UPDATE:","updating %s", $hosts);
+
+			## send separate requests for each zone with all hosts in that zone
+			my $instructions = <<EoINSTR1;
+server $server
+zone $zone.
+EoINSTR1
 			foreach (@hosts) {
-				failed("updating %s", $_);
+				$instructions .= <<EoINSTR2;
+update delete $_. AAAA
+update add $_. $config{$_}{'ttl'} AAAA $ipv6
+EoINSTR2
 			}
+			$instructions .= <<EoINSTR3;
+send
+EoINSTR3
+			my $command = "$binary -k $keyfile";
+			$command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
+			$command .= " -d" if (opt('debug'));
+			verbose("UPDATE:", "nsupdate command is: %s", $command);
+			verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
+
+			my $status = pipecmd($command, $instructions);
+			if ($status eq 1) {
+				foreach (@hosts) {
+					$config{$_}{'ip'} = $ipv6;
+					$config{$_}{'mtime'} = $now;
+					success("updating %s: %s: IPv6 address set to %s", $_, $status, $ipv6);
+				}
+			} else {
+				foreach (@hosts) {
+					failed("updating %s", $_);
+				}
+			}
+
 		}
 	}
 }
