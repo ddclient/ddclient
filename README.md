@@ -33,6 +33,7 @@ Dynamic DNS services currently supported include:
     DonDominio  - See https://www.dondominio.com for details
     NearlyFreeSpeech.net - See https://www.nearlyfreespeech.net/services/dns for details
     MyDNS.JP    - See https://www.mydns.jp/ for details
+    dnsexit     - See https://dnsexit.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers.
 
