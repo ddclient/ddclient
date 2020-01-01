@@ -4906,17 +4906,20 @@ sub nic_cloudflare_update {
 		my $hosts = join(',', @hosts);
 		my $key   = $hosts[0];
 		my $ip    = $config{$key}{'wantip'};
+		my $ipv6  = $config{$key}{'wantipv6'};
 
 		my $headers = "X-Auth-Email: $config{$key}{'login'}\n";
-		$headers .= "X-Auth-Key: $config{$key}{'password'}\n";
-		$headers .= "Content-Type: application/json";
+		$headers   .= "X-Auth-Key: $config{$key}{'password'}\n";
+		$headers   .= "Content-Type: application/json";
 
 		# FQDNs
 		for my $domain (@hosts) {
 			(my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
 			delete $config{$domain}{'wantip'};
+			delete $config{$domain}{'wantipv6'};
 
 			info("setting IP address to %s for %s", $ip, $domain);
+			info("setting IPv6 address to %s for %s", $ipv6, $domain);
 			verbose("UPDATE:","updating %s", $domain);
 
 			# Get zone ID
@@ -4946,59 +4949,61 @@ sub nic_cloudflare_update {
 			}
 			info("zone ID is $zone_id");
 
-			# Get DNS record ID
-			$url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
-			if (is_ipv6($ip)) {
-				$url .= "type=AAAA&name=$domain";
-			} else {
-				$url .= "type=A&name=$domain";
-			}
+			foreach my $ip_addr ($ip, $ipv6) {
+				# Get DNS record ID
+				$url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
+				if ($ip_addr eq $ip) {
+					$url .= "type=A&name=$domain";
+				} elsif ($ip_addr eq $ipv6) {
+					$url .= "type=AAAA&name=$domain";
+				}
 
-			$reply = geturl(opt('proxy'), $url, undef, undef, $headers);
-			unless ($reply) {
-				failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
-				last;
-			}
-			last if !header_ok($domain, $reply);
+				$reply = geturl(opt('proxy'), $url, undef, undef, $headers);
+				unless ($reply) {
+					failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+					last;
+				}
+				last if !header_ok($domain, $reply);
 
-			# Strip header
-			$reply =~ s/^.*?\n\n//s;
-			$response = eval {decode_json($reply)};
-			if (!defined $response || !defined $response->{result}) {
-				failed ("invalid json or result.");
-				next; 
-			}
+				# Strip header
+				$reply =~ s/^.*?\n\n//s;
+				$response = eval {decode_json($reply)};
+				if (!defined $response || !defined $response->{result}) {
+					failed ("invalid json or result.");
+					next;
+				}
 
-			# Pull the ID out of the json, messy
-			my ($dns_rec_id) = map { $_->{name} eq $domain ? $_->{id} : () } @{ $response->{result} };
-			unless($dns_rec_id) {
-				failed("updating %s: No DNS record ID found.", $domain);
-				next;
-			}
-			info("DNS record ID is $dns_rec_id");
+				# Pull the ID out of the json, messy
+				my ($dns_rec_id) = map { $_->{name} eq $domain ? $_->{id} : () } @{ $response->{result} };
+				unless($dns_rec_id) {
+					failed("updating %s: No DNS record ID found.", $domain);
+					next;
+				}
+				info("DNS record ID is $dns_rec_id");
 
-			# Set domain
-			$url   = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
-			my $data = "{\"content\":\"$ip\"}";
-			$reply = geturl(opt('proxy'), $url, undef, undef, $headers, "PATCH", $data);
-			unless ($reply) {
-				failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
-				last;
-			}
-			last if !header_ok($domain, $reply);
+				# Set domain
+				$url   = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
+				my $data = "{\"content\":\"$ip_addr\"}";
+				$reply = geturl(opt('proxy'), $url, undef, undef, $headers, "PATCH", $data);
+				unless ($reply) {
+					failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
+					last;
+				}
+				last if !header_ok($domain, $reply);
 
-			# Strip header
-			$reply =~ s/^.*?\n\n//s;
-			$response = eval {decode_json($reply)};
-			if (!defined $response || !defined $response->{result}) {
-				failed ("invalid json or result.");
-			} else {
-				success ("%s -- Updated Successfully to %s", $domain, $ip);
-
+				# Strip header
+				$reply =~ s/^.*?\n\n//s;
+				$response = eval {decode_json($reply)};
+				if (!defined $response || !defined $response->{result}) {
+					failed ("invalid json or result.");
+				} else {
+					success ("%s -- Updated Successfully to %s", $domain, $ip_addr);
+				}
 			}
 
 			# Cache
 			$config{$key}{'ip'}     = $ip;
+			$config{$key}{'ipv6'}   = $ipv6;
 			$config{$key}{'mtime'}  = $now;
 			$config{$key}{'status'} = 'good';
 		}
