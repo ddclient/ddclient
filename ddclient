@@ -533,6 +533,12 @@ my %variables = (
         'server'              => setv(T_FQDNP,  0, 1, 1, 'update.dnsexit.com', undef),
         'script'              => setv(T_STRING, 0, 1, 1, '/RemoteUpdate.sv',   undef),
     },
+	'ovh-common-defaults' => {
+		'server'              => setv(T_FQDNP,  1, 0, 1, 'www.ovh.com', undef),
+		'script'              => setv(T_STRING, 1, 1, 1, '/nic/update', undef),
+		'login'               => setv(T_LOGIN,  1, 0, 1, '',            undef),
+		'password'            => setv(T_PASSWD, 1, 0, 1, '',            undef),
+	},
 );
 my %services = (
     'dyndns1' => {
@@ -793,6 +799,15 @@ my %services = (
             $variables{'service-common-defaults'},
 			),
      },
+    'ovh' => {
+		'updateable' => undef,
+		'update'     => \&nic_ovh_update,
+		'examples'   => \&nic_ovh_examples,
+		'variables'  => merge(
+			$variables{'ovh-common-defaults'},
+			$variables{'service-common-defaults'},
+			),
+	},
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
     $variables{'service-common-defaults'},
@@ -5769,6 +5784,77 @@ sub nic_dnsexit_update {
             $config{$h}{'status'} = 'failed';
             failed("updating %s: Server said: '$returned'", $h);
          }
+    }
+}
+
+######################################################################
+## nic_ovh_examples
+######################################################################
+sub nic_ovh_examples {
+    return <<EoEXAMPLE;
+o 'ovh'
+The 'ovh' protocol is used by DNS services offered by www.ovh.com.
+API information and user instructions available at: https://docs.ovh.com/gb/en/domains/hosting_dynhost/
+Configuration variables applicable to the 'ovh' protocol are:
+  protocol=ovh                 ##
+  login=dnsdomain-userid       ## The username/id registered with the service
+  password=userid-password     ## The password related to the username/id
+  fully.qualified.host         ## the hostiname registered with the service.
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=ovh,                                   \\
+  login=example.com-dynhostuser,                  \\
+  password=s3cuRePaSsw0rd                         \\
+  test.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_ovh_examples
+######################################################################
+
+sub nic_ovh_update {
+    debug("\nnic_ovh_update -------------------");
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to update
+        my $url;
+        $url  = "https://";
+		$url .= "$config{$h}{'server'}$config{$h}{'script'}";
+        $url .= "?system=dyndns";
+        $url .= "&hostname=";
+        $url .= $h;
+        $url .= "&myip=";
+        $url .= $ip if $ip;
+
+        my $reply = geturl(opt('proxy'), $url, "$config{$h}{'login'}", "$config{$h}{'password'}");
+
+		if (!defined($reply) || !$reply) {
+			failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+			next;
+		}
+
+		my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        if ($returned =~ /good/ || $returned =~ /nochg/) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            if ($returned =~ /good/) {
+                success("updating %s: good: IP address set to %s", $h, $ip);
+		    } else {
+                success("updating %s: skipped: IP address was already set to %s.", $h, $ip);
+		    }
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '$returned'", $h);
+        }
     }
 }
 

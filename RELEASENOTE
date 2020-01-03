@@ -7,6 +7,7 @@ A detailed overview can be found in ChangeLog but here's a quick overview:
 	* adding configurable TTL to Cloudflare
 	* added support for woima.fi dyndns service
 	* added support for google domain
+	* added support for OVH DynHost
 
 A very big thank you for everyone who created a pull request on github and
 for everyone who helped to fix the little issues caused by the new providers.
