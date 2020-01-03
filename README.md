@@ -31,6 +31,7 @@ Dynamic DNS services currently supported include:
     DNS Made Easy - See https://dnsmadeeasy.com/ for details
     DonDominio  - See https://www.dondominio.com for details
     NearlyFreeSpeech.net - See https://www.nearlyfreespeech.net/services/dns for details
+    OVH         - See https://www.ovh.com for details
 
 DDclient now supports many of cable/dsl broadband routers.
 
