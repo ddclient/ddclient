@@ -67,7 +67,6 @@ sub T_POSTS	{'postscript'};
 
 ## strategies for obtaining an ip address.
 my %builtinweb = (
-   'dnspark'      => { 'url' => 'http://ipdetect.dnspark.com/', 'skip' => 'Current Address:', },
    'dyndns'       => { 'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:', },
    'ipify'        => { 'url' => 'https://api.ipify.org', },
    'loopia'       => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
@@ -320,7 +319,6 @@ sub ipv6_strategies_usage {
 
 my %web_strategies = (
 	'dyndns'=> 1,
-	'dnspark'=> 1,
 	'ipify'=> 1,
 	'loopia'=> 1,
 );
@@ -433,10 +431,6 @@ my %variables = (
 	'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
 	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
 	'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-    },
-    'dnspark-common-defaults'       => {
-	'mx'	              => setv(T_OFQDN,  0, 1, 1, '',                  undef),
-	'mxpri'               => setv(T_NUMBER, 0, 0, 1, 5,                   undef),
     },
     'noip-common-defaults'       => {
 	'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
@@ -620,17 +614,6 @@ my %services = (
 			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'members.easydns.com', undef)          },
 			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
 			  $variables{'easydns-common-defaults'},
- 			  $variables{'service-common-defaults'},
-		        ),
-    },
-    'dnspark' => {
-	'updateable' => undef,
-	'update'     => \&nic_dnspark_update,
-	'examples'   => \&nic_dnspark_examples,
-	'variables'  => merge(
-			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'www.dnspark.com', undef)          },
-			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, interval('5m'), 0),},
-			  $variables{'dnspark-common-defaults'},
  			  $variables{'service-common-defaults'},
 		        ),
     },
@@ -3774,166 +3757,6 @@ sub nic_easydns_update {
 	    if $state ne 'results2';
     }
 }	
-######################################################################
-
-######################################################################
-## nic_dnspark_updateable
-######################################################################
-sub nic_dnspark_updateable {
-    my $host   = shift;
-    my $update = 0;
-
-    if ($config{$host}{'mx'} ne $cache{$host}{'mx'}) {
-	info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
-	$update = 1;
-
-    } elsif ($config{$host}{'mx'} && ($config{$host}{'mxpri'} ne $cache{$host}{'mxpri'})) {
-	info("forcing updating %s because 'mxpri' has changed to %s.", $host, $config{$host}{'mxpri'});
-	$update = 1;
-    }
-    return $update;
-}
-######################################################################
-## nic_dnspark_examples
-######################################################################
-sub nic_dnspark_examples {
-    return <<EoEXAMPLE;
-o 'dnspark'
-
-The 'dnspark' protocol is used by DNS service offered by www.dnspark.com.
-
-Configuration variables applicable to the 'dnspark' protocol are:
-  protocol=dnspark             ## 
-  server=fqdn.of.service       ## defaults to www.dnspark.com
-  backupmx=no|yes              ## indicates that DNSPark should be the secondary MX 
-                               ## for this domain or host.
-  mx=any.host.domain           ## a host MX'ing for this host or domain.
-  mxpri=priority               ## MX priority.
-  login=service-login          ## login name and password  registered with the service
-  password=service-password    ##
-  fully.qualified.host         ## the host registered with the service.
-
-Example ${program}.conf file entries:
-  ## single host update
-  protocol=dnspark,                                         \\
-  login=my-dnspark.com-login,                               \\
-  password=my-dnspark.com-password                          \\
-  myhost.dnspark.com 
-
-  ## multiple host update with wildcard'ing mx, and backupmx
-  protocol=dnspark,                                         \\
-  login=my-dnspark.com-login,                               \\
-  password=my-dnspark.com-password,                         \\
-  mx=a.host.willing.to.mx.for.me,                           \\
-  mxpri=10, 	                                            \\
-  my-toplevel-domain.com,my-other-domain.com
-
-  ## multiple host update to the custom DNS service
-  protocol=dnspark,                                         \\
-  login=my-dnspark.com-login,                               \\
-  password=my-dnspark.com-password                          \\
-  my-toplevel-domain.com,my-other-domain.com
-EoEXAMPLE
-}
-######################################################################
-## nic_dnspark_update
-######################################################################
-sub nic_dnspark_update {
-    debug("\nnic_dnspark_update -------------------");
-
-    ## group hosts with identical attributes together 
-    ## my %groups = group_hosts_by([ @_ ], [ qw(login password server wildcard mx backupmx) ]);
-
-    ## each host is in a group by itself
-    my %groups = map { $_ => [ $_ ] } @_;
-
-    my %errors = (
-       'nochange' => 'No changes made to the hostname(s). Continual updates with no changes lead to blocked clients.',
-       'nofqdn' => 'No valid FQDN (fully qualified domain name) was specified',
-       'nohost'=> 'An invalid hostname was specified. This due to the fact the hostname has not been created in the system. Creating new host names via clients is not supported.',
-       'abuse'  => 'The hostname specified has been blocked for abuse.',
-       'unauth'  => 'The username specified is not authorized to update this hostname and domain.',
-       'blocked'  => 'The dynamic update client (specified by the user-agent) has been blocked from the system.',
-       'notdyn'  => 'The hostname specified has not been marked as a dynamic host. Hosts must be marked as dynamic in the system in order to be updated via clients. This prevents unwanted or accidental updates.',
-    );
-
-    ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
-    	my @hosts = @{$groups{$sig}};
-    	my $hosts = join(',', @hosts);
-    	my $h     = $hosts[0];
-	my $ip    = $config{$h}{'wantip'};
-	delete $config{$_}{'wantip'} foreach @hosts;
-
-	info("setting IP address to %s for %s", $ip, $hosts);
-	verbose("UPDATE:","updating %s", $hosts);
-
-	#'http://www.dnspark.com:80/visitors/update.html?myip=10.20.30.40&hostname=test.burry.ca'
-
-	my $url;
-	$url   = "http://$config{$h}{'server'}/visitors/update.html";
-	$url  .= "?hostname=$hosts";
-	$url  .= "&myip=";
-	$url  .= $ip            if $ip;
-
-	if ($config{$h}{'mx'}) {
-	    $url .= "&mx=$config{$h}{'mx'}";
-	    $url .= "&mxpri=" . $config{$h}{'mxpri'};
-	}
-
-	my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
-	if (!defined($reply) || !$reply) {
-	    failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
-	    last;
-	}
-	last if !header_ok($hosts, $reply);
-	
-	my @reply = split /\n/, $reply;
-	my $state = 'header';
-	foreach my $line (@reply) {
-	    if ($state eq 'header') {
-		$state = 'body';
-	    
-	    } elsif ($state eq 'body') {
-		$state = 'results' if $line eq '';
-	    
-	    } elsif ($state =~ /^results/) {
-		$state = 'results2';
-
-		my ($status) = $line =~ /^(\S*)\b.*/;
-		my $h = pop @hosts;
-	    
-		$config{$h}{'status'} = $status;
-		if ($status eq 'ok') {
-		    $config{$h}{'ip'}     = $ip;
-		    $config{$h}{'mtime'}  = $now;
-		    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
-		
-		} elsif ($status =~ /TOOSOON/) {
-		    ## make sure we wait at least a little
-		    my ($wait, $units) = (5, 'm');
-		    my ($sec,  $scale) = ($wait, 1);
-		
-		    ($scale, $units) = (1, 'seconds')   if $units eq 's';
-		    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
-		    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-		    $config{$h}{'wtime'} = $now + $sec;
-		    warning("updating %s: %s: wait $wait $units before further updates", $h, $status, $ip);
-		
-		} elsif (exists $errors{$status}) {
-		    failed("updating %s: %s: %s", $h, $line, $errors{$status});
-
-		} else {
-		    failed("updating %s: unexpected status (%s)", $h, $line);
-		} 	
-		last;
-	    }
-	}
-	failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
-	    if $state ne 'results2';
-    }
-}	
-
 ######################################################################
 
 ######################################################################
