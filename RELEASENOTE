@@ -1,12 +1,18 @@
 Yet again it's been a while but here is new release of ddclient. As usual,
 there are some important changes and some documentation is modified.
-A detailed overview can be found in ChangeLog but here's a quick overview:
+A detailed overview can be found in git log but here's a quick overview:
 
-	* support ipv6 for cloudfare
-	* added suppport for freemyip
-	* adding configurable TTL to Cloudflare
-	* added support for woima.fi dyndns service
-	* added support for google domain
+	* added support for Yandex.Mail for Domain DNS service
+	* added support for NearlyFreeSpeech.net
+	* added support for DNS Made Easy
+	* added systemd instructions
+	* added support for dondominio.com
+	* updated perl instruction
+	* updated fritzbox instructions
+	* fixed multidomain support for namecheap
+	* fixed support for Yandex
 
 A very big thank you for everyone who created a pull request on github and
 for everyone who helped to fix the little issues caused by the new providers.
+And a very special thank you for @DaveSophoServices who started to help with
+the maintenance of ddclient.
