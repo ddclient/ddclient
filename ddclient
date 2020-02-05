@@ -4651,9 +4651,9 @@ sub nic_cloudflare_update {
 			}
 
 			# Cache
-			$config{$key}{'ip'}     = $ip;
-			$config{$key}{'mtime'}  = $now;
-			$config{$key}{'status'} = 'good';
+			$config{$domain}{'ip'}     = $ip;
+			$config{$domain}{'mtime'}  = $now;
+			$config{$domain}{'status'} = 'good';
 		}
 	}
 }
