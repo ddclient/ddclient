@@ -4525,29 +4525,29 @@ The 'cloudflare' protocol is used by DNS service offered by www.cloudflare.com.
 Configuration variables applicable to the 'cloudflare' protocol are:
   protocol=cloudflare          ##
   server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
-  login=service-login          ## login name if using global key
-  password=service-password    ## global key, or api token with at least the permissions "All zones - Zone:Read, DNS:Edit"
+  login=service-login          ## login email when using a global API key
+  password=service-password    ## Global API key, or an API token. If using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
   fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
-  ## single host update using global key
+  ## single host update using a global API key
   protocol=cloudflare,                                         \\
   zone=dns.zone,                                               \\
   login=my-cloudflare.com-login,                               \\
-  password=my-cloudflare.com-global-key                        \\
+  password=my-cloudflare-global-key                            \\
   myhost.com
 
-  ## single host update using api token
+  ## single host update using an API token
   protocol=cloudflare,                                         \\
   zone=dns.zone,                                               \\
-  password=my-cloudflare.com-api-token                         \\
+  password=cloudflare-api-token                                \\
   myhost.com
 
   ## multiple host update to the custom DNS service
   protocol=cloudflare,                                         \\
   zone=dns.zone,                                               \\
   login=my-cloudflare.com-login,                               \\
-  password=my-cloudflare.com-global-key                        \\
+  password=my-cloudflare-global-api-key                        \\
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
