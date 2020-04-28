@@ -47,7 +47,7 @@ through github.com. Please check out http://ddclient.net
 - one or more accounts from one of the dynamic DNS services
 
 - Perl 5.014 or later
-  - `Data::Validate::IP` perl library
+  - `Data::Validate::IP` perl library - `sudo apt install ddclient libdata-validate-ip-perl`
   - `IO::Socket::SSL` perl library for ssl-support
   - `JSON::PP` perl library for JSON support
   - `IO::Socket:INET6` perl library for ipv6-support
