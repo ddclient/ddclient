@@ -3687,15 +3687,15 @@ The 'namecheap' protocol is used by DNS service offered by www.namecheap.com.
 Configuration variables applicable to the 'namecheap' protocol are:
   protocol=namecheap           ##
   server=fqdn.of.service       ## defaults to dynamicdns.park-your-domain.com
-  login=service-login          ## yourdomain.com to update
+  login=service-login          ## example.com to update
   password=service-password    ## Generated password for your dynamic DNS record
   hostname                     ## the hostname to update, use @ for base domain name, * for catch all
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=namecheap                                          \\
-  login=youdomain.com                                         \\
-  password=generatedyourdomain.com-password                   \\
+  login=example.com                                           \\
+  password=example.com-generated-password                     \\
   @
 
 EoEXAMPLE
