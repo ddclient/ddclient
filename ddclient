@@ -4,9 +4,9 @@
 # DDCLIENT - a Perl client for updating DynDNS information
 #
 # Author: Paul Burry (paul+ddclient@burry.ca)
-# ddclient-developers: see https://sourceforge.net/project/memberlist.php?group_id=116817
+# ddclient developers: see https://github.com/orgs/ddclient/people
 #
-# website: http://ddclient.sf.net
+# website: https://ddclient.net
 #
 # Support for multiple IP numbers added by
 # Astaro AG, Ingo Schwarze <ischwarze-OOs/4mkCeqbQT0dZR+AlfA@public.gmane.org> September 16, 2008
@@ -795,7 +795,7 @@ my @opt = (
     nic_examples(),
     "$program version $version, ",
     "  originally written by Paul Burry, paul+ddclient\@burry.ca",
-    "  project now maintained on http://ddclient.sourceforge.net"
+    "  project now maintained on https://ddclient.net"
 );
 
 ## process args
