@@ -823,8 +823,8 @@ my $caught_int  = 0;
 $SIG{'HUP'}  = sub { $caught_hup  = 1; };
 $SIG{'TERM'} = sub { $caught_term = 1; };
 $SIG{'INT'}  = sub { $caught_int  = 1; };
-# don't fork() if foreground or force is on
-if (opt('foreground') || opt('force')) {
+# don't fork() if foreground
+if (opt('foreground')) {
     ;
 } elsif (opt('daemon')) {
     $SIG{'CHLD'} = 'IGNORE';
@@ -867,7 +867,6 @@ do {
         unless exists $ip_strategies{lc opt('use')};
 
     $daemon = opt('daemon');
-    $daemon = 0 if opt('force');
 
     update_nics();
 
