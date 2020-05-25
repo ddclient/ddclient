@@ -2397,7 +2397,7 @@ sub nic_examples {
             $separator = "\n";
         }
     }
-    my $intro = <<EoEXAMPLE;
+    my $intro = <<'EoEXAMPLE';
 == CONFIGURING ${program}
 
 The configuration file, ${program}.conf, can be used to define the
@@ -2576,7 +2576,7 @@ sub header_ok {
 ## nic_dyndns1_examples
 ######################################################################
 sub nic_dyndns1_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'dyndns1'
 
 The 'dyndns1' protocol is a deprecated protocol used by the free dynamic
@@ -2689,7 +2689,7 @@ sub nic_dyndns2_updateable {
 ## nic_dyndns2_examples
 ######################################################################
 sub nic_dyndns2_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'dyndns2'
 
 The 'dyndns2' protocol is a newer low-bandwidth protocol used by a
@@ -2968,7 +2968,7 @@ sub nic_noip_update {
 ## nic_noip_examples
 ######################################################################
 sub nic_noip_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'noip'
 
 The 'No-IP Compatible' protocol is used to make dynamic dns updates
@@ -2997,7 +2997,7 @@ EoEXAMPLE
 ## nic_concont_examples
 ######################################################################
 sub nic_concont_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'concont'
 
 The 'concont' protocol is the protocol used by the content management
@@ -3080,7 +3080,7 @@ sub nic_concont_update {
 ## nic_dslreports1_examples
 ######################################################################
 sub nic_dslreports1_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'dslreports1'
 
 The 'dslreports1' protocol is used by a free DSL monitoring service
@@ -3153,7 +3153,7 @@ sub nic_dslreports1_update {
 ## nic_hammernode1_examples
 ######################################################################
 sub nic_hammernode1_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'hammernode1'
 
 The 'hammernode1' protocol is the protocol used by the free dynamic
@@ -3223,7 +3223,7 @@ sub nic_hammernode1_update {
 ## nic_zoneedit1_examples
 ######################################################################
 sub nic_zoneedit1_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'zoneedit1'
 
 The 'zoneedit1' protocol is used by a DNS service offered by
@@ -3357,7 +3357,7 @@ sub nic_easydns_updateable {
 ## nic_easydns_examples
 ######################################################################
 sub nic_easydns_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'easydns'
 
 The 'easydns' protocol is used by the for fee DNS service offered
@@ -3499,7 +3499,7 @@ sub nic_easydns_update {
 ## nic_namecheap_examples
 ######################################################################
 sub nic_namecheap_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 
 o 'namecheap'
 
@@ -3583,7 +3583,7 @@ sub nic_namecheap_update {
 ## nic_nfsn_examples
 ######################################################################
 sub nic_nfsn_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 
 o 'nfsn'
 
@@ -3807,7 +3807,7 @@ sub nic_nfsn_update {
 ## nic_sitelutions_examples
 ######################################################################
 sub nic_sitelutions_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 
 o 'sitelutions'
 
@@ -3887,7 +3887,7 @@ sub nic_sitelutions_update {
 ## nic_freedns_examples
 ######################################################################
 sub nic_freedns_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 
 o 'freedns'
 
@@ -3987,7 +3987,7 @@ sub nic_freedns_update {
 ## nic_changeip_examples
 ######################################################################
 sub nic_changeip_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 
 o 'changeip'
 
@@ -4061,7 +4061,7 @@ sub nic_changeip_update {
 ## nic_dtdns_examples
 ######################################################################
 sub nic_dtdns_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'dtdns'
 
 The 'dtdns' protocol is the protocol used by the dynamic hostname services
@@ -4143,7 +4143,7 @@ sub nic_dtdns_update {
 ##
 ######################################################################
 sub nic_googledomains_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'googledomains'
 
 The 'googledomains' protocol is used by DNS service offered by www.google.com/domains.
@@ -4215,7 +4215,7 @@ sub nic_googledomains_update {
 ## nic_nsupdate_examples
 ######################################################################
 sub nic_nsupdate_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'nsupdate'
 
 The 'nsupdate' protocol is used to submit Dynamic DNS Update requests as
@@ -4292,17 +4292,17 @@ sub nic_nsupdate_update {
         verbose("UPDATE:", "updating %s", $hosts);
 
         ## send separate requests for each zone with all hosts in that zone
-        my $instructions = <<EoINSTR1;
+        my $instructions = <<'EoINSTR1';
 server $server
 zone $zone.
 EoINSTR1
         foreach (@hosts) {
-            $instructions .= <<EoINSTR2;
+            $instructions .= <<'EoINSTR2';
 update delete $_. $recordtype
 update add $_. $config{$_}{'ttl'} $recordtype $ip
 EoINSTR2
         }
-        $instructions .= <<EoINSTR3;
+        $instructions .= <<'EoINSTR3';
 send
 EoINSTR3
         my $command = "$binary -k $keyfile";
@@ -4335,7 +4335,7 @@ EoINSTR3
 ##
 ######################################################################
 sub nic_cloudflare_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'cloudflare'
 
 The 'cloudflare' protocol is used by DNS service offered by www.cloudflare.com.
@@ -4490,7 +4490,7 @@ sub nic_cloudflare_update {
 ## nic_yandex_examples
 ######################################################################
 sub nic_yandex_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o Yandex
 
 The 'yandex' protocol is used to by DNS service offered by Yandex.
@@ -4605,7 +4605,7 @@ sub nic_yandex_update {
 ## nic_duckdns_examples
 ######################################################################
 sub nic_duckdns_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'duckdns'
 
 The 'duckdns' protocol is used by the free
@@ -4682,7 +4682,7 @@ sub nic_duckdns_update {
 ## nic_freemyip_examples
 ######################################################################
 sub nic_freemyip_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'freemyip'
 
 The 'freemyip' protocol is used by the free
@@ -4753,7 +4753,7 @@ sub nic_freemyip_update {
 ## nic_woima_examples
 ######################################################################
 sub nic_woima_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'woima'
 
 The 'woima' protocol is used by the free
@@ -4928,7 +4928,7 @@ sub nic_woima_update {
 ## nic_dondominio_examples
 ######################################################################
 sub nic_dondominio_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'dondominio'
 The 'dondominio' protocol is used by DNS service offered by www.dondominio.com/ .
 API information and user instructions available at: https://dev.dondominio.com/dondns/docs/api/
@@ -5002,7 +5002,7 @@ sub nic_dondominio_update {
 ## nic_dnsmadeeasy_examples
 ######################################################################
 sub nic_dnsmadeeasy_examples {
-    return <<EoEXAMPLE;
+    return <<'EoEXAMPLE';
 o 'dnsmadeeasy'
 
 The 'dnsmadeeasy' protocol is used by the DNS Made Easy service at https://www.dnsmadeeasy.com.
