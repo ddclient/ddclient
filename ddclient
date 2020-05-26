@@ -834,10 +834,10 @@ if (!opt('daemon') && $programd =~ /d$/) {
 }
 my $caught_hup  = 0;
 my $caught_term = 0;
-my $caught_kill = 0;
+my $caught_int  = 0;
 $SIG{'HUP'}    = sub { $caught_hup  = 1; };
 $SIG{'TERM'}   = sub { $caught_term = 1; };
-$SIG{'KILL'}   = sub { $caught_kill = 1; };
+$SIG{'INT'}    = sub { $caught_int  = 1; };
 # don't fork() if foreground or force is on
 if (opt('foreground') || opt('force')) {
     ;
@@ -893,7 +893,7 @@ do {
 	sendmail();
 
 	my $left = $daemon;
-	while (($left > 0) && !$caught_hup && !$caught_term && !$caught_kill) {
+	while (($left > 0) && !$caught_hup && !$caught_term && !$caught_int) {
 		my $delay = $left > 10 ? 10 : $left;
 
 		$0 = sprintf("%s - sleeping for %s seconds", $program, $left);
@@ -913,9 +913,9 @@ do {
     } else {
 	$result = $result eq 'OK' ? 0 : 1;
     }
-} while ($daemon && !$result && !$caught_term && !$caught_kill);
+} while ($daemon && !$result && !$caught_term && !$caught_int);
 
-warning("caught SIGKILL; exiting") if $caught_kill;
+warning("caught SIGINT; exiting") if $caught_int;
 unlink_pid();
 sendmail();
 
