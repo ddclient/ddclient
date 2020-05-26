@@ -743,6 +743,9 @@ $variables{'merged'} = merge($variables{'global-defaults'},
     map { $services{$_}{'variables'} } keys %services,
 );
 
+# This will hold the processed args.
+my %opt = ();
+
 my @opt = (
     "usage: ${program} [options]",
     "options are:",
@@ -810,7 +813,7 @@ my @opt = (
 );
 
 ## process args
-my ($opt_usage, %opt) = process_args(@opt);
+my $opt_usage = process_args(@opt);
 my ($result, %config, %globals, %cache);
 my $saved_cache = '';
 my %saved_opt = %opt;
@@ -1449,7 +1452,6 @@ sub usage {
 sub process_args {
     my @spec  = ();
     my $usage = "";
-    my %opts  = ();
 
     foreach (@_) {
 	if (ref $_) {
@@ -1486,7 +1488,7 @@ sub process_args {
     if (! GetOptions(\%opt, @spec)) {
 	$opt{"help"} = 1;
     }
-    return ($usage, %opt);
+    return $usage;
 }
 ######################################################################
 ## test_possible_ip - print possible IPs
