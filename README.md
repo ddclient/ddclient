@@ -14,7 +14,6 @@ Dynamic DNS services currently supported include:
     EasyDNS     - See http://www.easydns.com for details.
     NameCheap   - See http://www.namecheap.com for details
     ConCont     - See http://www.dydns.za.net for details
-    DnsPark     - See http://www.dnspark.com for details
     DslReports  - See http://www.dslreports.com for details
     Sitelutions - See http://www.sitelutions.com for details
     Loopia      - See http://www.loopia.se for details
