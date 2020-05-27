@@ -54,52 +54,81 @@ through github.com. Please check out http://ddclient.net
 - Linux or probably any common Unix system
 
 -------------------------------------------------------------------------------
-## INSTALLATION:
+
+## INSTALLATION
 
     cp ddclient /usr/sbin/
-    mkdir /etc/ddclient
-    mkdir /var/cache/ddclient
+    mkdir /etc/ddclient /var/cache/ddclient
     cp sample-etc_ddclient.conf /etc/ddclient/ddclient.conf
     vi /etc/ddclient/ddclient.conf
-    -- and change hostnames, logins, and passwords appropriately
 
-    ## For those using systemd:
+and change hostnames, logins, and passwords appropriately
+
+### systemd
+
     cp sample-etc_systemd.service /etc/systemd/system/ddclient.service
-    ## enable automatic startup when booting
+
+enable automatic startup when booting
+
     systemctl enable ddclient.service
-    ## start the first time by hand
+
+start the first time by hand
+
     systemctl start ddclient.service
 
-    ## For those using Redhat style rc files and using daemon-mode:
+### Redhat style rc files and daemon-mode
+
     cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
-    ## enable automatic startup when booting
-    ## check your distribution
+
+enable automatic startup when booting. also check your distribution
+
     /sbin/chkconfig --add ddclient
-    ## start the first time by hand
+
+start the first time by hand
+
     /etc/rc.d/init.d/ddclient start
 
-    ## For those using Alpine style rc files and using daemon-mode:
+### Alpine style rc files and daemon-mode
+
     cp sample-etc_rc.d_init.d_ddclient.alpine /etc/init.d/ddclient
-    ## enable automatic startup when booting
+
+enable automatic startup when booting
+
     rc-update add ddclient
-    ## make sure you have perl installed
+
+make sure you have perl installed
+
     apk add perl
-    ## start the first time by hand
+
+start the first time by hand
+
     rc-service ddclient start
 
-    ## For those using Ubuntu style rc files and using daemon-mode:
+### Ubuntu style rc files and daemon-mode
+
     cp sample-etc_rc.d_init.d_ddclient.ubuntu /etc/init.d/ddclient
-    ## enable automatic startup when booting
+
+enable automatic startup when booting
+
     update-rc.d ddclient defaults
-    ## make sure you have perl and the required modules installed
-    apt-get install perl libdata-validate-ip-perl
-    ## if you plan to use cloudflare or feedns you need the perl json module
+
+make sure you have perl and the required modules installed
+
+    apt-get install perl libdata-validate-ip-perl libio-socket-ssl-perl
+
+if you plan to use cloudflare or feedns you need the perl json module
+
     apt-get install libjson-any-perl
-    ## start the first time by hand
+
+for IPv6 you also need to instal the perl io-socker-inet6 module
+
+    apt install libio-socket-inet6-perl
+
+start the first time by hand
+
     service ddclient start
 
-    ## If you are not using daemon-mode, configure cron and dhcp or ppp
-    ## as described below.
+If you are not using daemon-mode, configure cron and dhcp or ppp as described below.
 
 -------------------------------------------------------------------------------
 ## TROUBLESHOOTING:
