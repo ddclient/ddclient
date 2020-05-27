@@ -845,7 +845,6 @@ if (opt('foreground') || opt('force')) {
 # write out the pid file if we're daemon'ized
 if (opt('daemon')) {
     write_pid();
-    $opt{'syslog'} = 1;
 }
 
 umask 077;
