@@ -5296,9 +5296,9 @@ Configuration variables applicable to the 'mydns' protocol are:
 
 Example ${program}.conf file entries:
   ## single host update
-  protocol=mydns,                                              \\
-  login=my-mydns.jp-login,                                     \\
-  password=my-mydns.jp-password                                \\
+  protocol=mydns,                \\
+  login=my-mydns.jp-login,       \\
+  password=my-mydns.jp-password  \\
   myhost.mydns.jp
 EoEXAMPLE
 }
