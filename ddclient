@@ -68,6 +68,7 @@ sub T_POSTS  { 'postscript' };
 my %builtinweb = (
     'dyndns'  => { 'url' => 'http://checkip.dyndns.org/',               'skip' => 'Current IP Address:', },
     'loopia'  => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
+    'myonlineportal' => { 'url' => 'https://myonlineportal.net/checkip', },
 );
 my %builtinfw = (
     'watchguard-soho' => {
