@@ -34,11 +34,23 @@ export PATH
 # See how we were called.
 case "$1" in
     start)
-        # Start daemon.
-        DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
-        if [ -z "$DELAY" ]; then
+        # See if daemon=value is specified in the config file.
+        # Assumptions:
+        #   * there are no quoted "#" characters before "daemon="
+        #     (if there is a "#" it starts a comment)
+        #   * "daemon=" does not appear in a password or value
+        #   * if the interval value is 0, it is not quoted
+        INTERVAL=$(sed -e '
+              s/^\([^#]*[,[:space:]]\)\{0,1\}daemon=\([^,[:space:]]*\).*$/\2/
+              t quit
+              d
+              :quit
+              q
+            ' "$CONF")
+        if [ -z "$DELAY" ] || [ "$DELAY" = "0" ]; then
             DELAY="-daemon 300"
         else
+            # use the interval specified in the config file
             DELAY=''
         fi
         echo -n "Starting ddclient: "
