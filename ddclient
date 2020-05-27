@@ -4610,7 +4610,7 @@ o 'duckdns'
 
 The 'duckdns' protocol is used by the free
 dynamic DNS service offered by www.duckdns.org.
-Check http://www.duckdns.org/install.jsp?tab=linux-cron for API
+Check https://www.duckdns.org/install.jsp?tab=linux-cron for API
 
 Configuration variables applicable to the 'duckdns' protocol are:
   protocol=duckdns               ##
@@ -4620,8 +4620,8 @@ Configuration variables applicable to the 'duckdns' protocol are:
 
 Example ${program}.conf file entries:
   ## single host update
-  protocol=duckdns,         \\
-  password=z0mgs3cjur3p4ss  \\
+  protocol=duckdns,        \\
+  password=your_password,  \\
   myhost
 
 EoEXAMPLE
@@ -4645,7 +4645,7 @@ sub nic_duckdns_update {
 
         # Set the URL that we're going to to update
         my $url;
-        $url  = "http://$config{$h}{'server'}/update";
+        $url  = "https://$config{$h}{'server'}/update";
         $url .= "?domains=";
         $url .= $h;
         $url .= "&token=";
