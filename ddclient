@@ -4792,7 +4792,7 @@ Configuration variables applicable to the 'duckdns' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=duckdns,                                       \\
-  password=z0mgs3cjur3p4ss,                    \\
+  password=your_password,                                 \\
   myhost
 
 EoEXAMPLE
