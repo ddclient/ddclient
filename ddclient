@@ -5315,14 +5315,10 @@ sub nic_mydns_update {
         verbose("UPDATE:","updating %s", $h);
 
         ## update the DNS record
-        my $url;
-        my $header;
-        my $data;
-        my $reply;
-        $url = "https://$config{$h}{'server'}/directip.html";
-        $header = 'Content-Type: application/x-www-form-urlencoded';
-        $data = "MID=" . $config{$h}{'login'} . "&PWD=" . $config{$h}{'password'} . "&IPV4ADDR=" . $ip;
-        $reply = geturl(opt('proxy'), $url, undef, undef, $header, 'POST', $data);
+        my $url = "https://$config{$h}{'server'}/directip.html";
+        my $header = 'Content-Type: application/x-www-form-urlencoded';
+        my $data = "MID=" . $config{$h}{'login'} . "&PWD=" . $config{$h}{'password'} . "&IPV4ADDR=" . $ip;
+        my $reply = geturl(opt('proxy'), $url, undef, undef, $header, 'POST', $data);
 
         ## no response, declare as failed
         if (!defined($reply) || !$reply) {
