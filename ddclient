@@ -807,11 +807,7 @@ $result = 'OK';
 
 test_geturl(opt('geturl')) if opt('geturl');
 
-## process help option
-if (opt('help')) {
-    *STDERR = *STDOUT;
-    usage(0);
-}
+usage() if opt('help');
 
 ## read config file because 'daemon' mode may be defined there.
 read_config(define($opt{'file'}, default('file')), \%config, \%globals);
@@ -1411,18 +1407,10 @@ sub init_config {
 ## usage
 ######################################################################
 sub usage {
-    my $exitcode = 1;
-    $exitcode = shift if @_ != 0;  # use first arg if given
-    my $msg = '';
-    if (@_) {
-        my $format = shift;
-        $msg .= sprintf $format, @_;
-        1 while chomp($msg);
-        $msg .= "\n";
-    }
-    printf STDERR "%s%s\n", $msg, $opt_usage;
-    sendmail();
-    exit $exitcode;
+    _msg(1, 1, 'FATAL:', @_) if @_;
+    printf { @_ ? *STDERR : *STDOUT } "%s\n", $opt_usage;
+    sendmail() if @_;
+    exit (@_ ? 1 : 0);
 }
 
 ######################################################################
