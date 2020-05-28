@@ -1757,6 +1757,7 @@ sub ynu {
 ## fatal
 ######################################################################
 sub _msg {
+    my $fh     = shift;
     my $log    = shift;
     my $prefix = shift;
     my $format = shift;
@@ -1774,21 +1775,21 @@ sub _msg {
         $buffer =~ s/\n/\n$prefix /g;
     }
     $buffer .= "\n";
-    print $buffer;
+    print $fh $buffer;
 
     $msgs .= $buffer if $log;
     logger($buffer) if $log;
 
 }
-sub msg     { _msg(0, '',         @_);                                   }
-sub verbose { _msg(1, @_)             if opt('verbose');                 }
-sub info    { _msg(1, 'INFO:',    @_) if opt('verbose');                 }
-sub debug   { _msg(0, 'DEBUG:',   @_) if opt('debug');                   }
-sub debug2  { _msg(0, 'DEBUG:',   @_) if opt('debug') && opt('verbose'); }
-sub warning { _msg(1, 'WARNING:', @_);                                   }
-sub fatal   { _msg(1, 'FATAL:',   @_); sendmail(); exit(1);              }
-sub success { _msg(1, 'SUCCESS:', @_);                                   }
-sub failed  { _msg(1, 'FAILED:',  @_); $result = 'FAILED';               }
+sub msg     { _msg(*STDOUT, 0, '',         @_);                                   }
+sub verbose { _msg(*STDOUT, 1, @_)             if opt('verbose');                 }
+sub info    { _msg(*STDOUT, 1, 'INFO:',    @_) if opt('verbose');                 }
+sub debug   { _msg(*STDOUT, 0, 'DEBUG:',   @_) if opt('debug');                   }
+sub debug2  { _msg(*STDOUT, 0, 'DEBUG:',   @_) if opt('debug') && opt('verbose'); }
+sub warning { _msg(*STDERR, 1, 'WARNING:', @_);                                   }
+sub fatal   { _msg(*STDERR, 1, 'FATAL:',   @_); sendmail(); exit(1);              }
+sub success { _msg(*STDOUT, 1, 'SUCCESS:', @_);                                   }
+sub failed  { _msg(*STDERR, 1, 'FAILED:',  @_); $result = 'FAILED';               }
 sub prettytime { return scalar(localtime(shift)); }
 
 sub prettyinterval {
