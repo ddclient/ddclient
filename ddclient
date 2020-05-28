@@ -505,7 +505,6 @@ my %services = (
         'variables'  => merge(
             { 'custom'  => setv(T_BOOL,   0, 1, 1, 0,             undef), },
             { 'script'  => setv(T_STRING, 1, 1, 1, '/nic/update', undef), },
-            #{ 'offline' => setv(T_BOOL,   0, 1, 1, 0, undef), },
             $variables{'dyndns-common-defaults'},
             $variables{'service-common-defaults'},
         ),
@@ -856,7 +855,6 @@ do {
     if (opt('help')) {
         *STDERR = *STDOUT;
         printf("Help found");
-        #usage();
     }
 
     read_config(define($opt{'file'}, default('file')), \%config, \%globals);
@@ -864,7 +862,6 @@ do {
     read_cache(opt('cache'), \%cache);
     print_info() if opt('debug') && opt('verbose');
 
-    #usage("invalid argument '-use %s'; possible values are:\n\t%s", $opt{'use'}, join("\n\t,", sort keys %ip_strategies))
     usage("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
         unless exists $ip_strategies{lc opt('use')};
 
@@ -1146,7 +1143,6 @@ sub _read_config {
 
     local *FD;
     if (!open(FD, "< $file")) {
-        # fatal("Cannot open file '%s'. ($!)", $file);
         warning("Cannot open file '%s'. ($!)", $file);
     }
     # Check for only owner has any access to config file
@@ -1155,7 +1151,6 @@ sub _read_config {
         if (-f FD && (chmod 0600, $file)) {
             warning("file $file must be accessible only by its owner (fixed).");
         } else {
-            # fatal("file $file must be accessible only by its owner.");
             warning("file $file must be accessible only by its owner.");
         }
     }
@@ -1899,9 +1894,6 @@ sub check_value {
     } elsif ($type eq T_LOGIN) {
         return undef if $value eq "";
 
-    #} elsif ($type eq T_PASSWD) {
-    #    return undef if $value =~ /:/;
-
     } elsif ($type eq T_IP) {
         if (!ipv6_match($value)) {
             return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
@@ -2023,7 +2015,6 @@ sub geturl {
     debug("server = $server");
     opt('fw') && debug("opt(fw = ", opt('fw'),")");
     $globals{'fw'} && debug("glo fw = $globals{'fw'}");
-    #if ($globals{'ssl'} and $server ne $globals{'fw'}) {
     ## always omit SSL for connections to local router
     if ($force_ssl || ($globals{'ssl'} and (caller(1))[3] ne 'main::get_ip')) {
         $use_ssl      = 1;
@@ -2069,7 +2060,6 @@ sub geturl {
     ## make sure newlines are <cr><lf> for some pedantic proxy servers
     ($rq = $request) =~ s/\n/\r\n/g;
 
-    # local $^W = 0;
     $0 = sprintf("%s - connecting to %s port %s", $program, $peer, $port);
     if (!opt('exec')) {
         debug("skipped network connection");
@@ -2775,13 +2765,9 @@ sub nic_dyndns2_update {
         if ($config{$h}{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
                 if $config{$h}{'static'};
-            #warning("updating %s: 'custom' and 'offline' may not be used together. ('offline' ignored)", $hosts)
-            #    if $config{$h}{'offline'};
             $url .= 'custom';
 
         } elsif ($config{$h}{'static'}) {
-            #warning("updating %s: 'static' and 'offline' may not be used together. ('offline' ignored)", $hosts)
-            #    if $config{$h}{'offline'};
             $url .= 'statdns';
 
         } else {
@@ -3402,9 +3388,6 @@ EoEXAMPLE
 ######################################################################
 sub nic_easydns_update {
     debug("\nnic_easydns_update -------------------");
-
-    ## group hosts with identical attributes together
-    ## my %groups = group_hosts_by([ @_ ], [ qw(login password server wildcard mx backupmx) ]);
 
     ## each host is in a group by itself
     my %groups = map { $_ => [ $_ ] } @_;
@@ -4834,13 +4817,9 @@ sub nic_woima_update {
         if ($config{$h}{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $h)
                 if $config{$h}{'static'};
-            #warning("updating %s: 'custom' and 'offline' may not be used together. ('offline' ignored)", $h)
-            #    if $config{$h}{'offline'};
             $url .= 'custom';
 
         } elsif ($config{$h}{'static'}) {
-            #warning("updating %s: 'static' and 'offline' may not be used together. ('offline' ignored)", $h)
-            #    if $config{$h}{'offline'};
             $url .= 'statdns';
 
         } else {
@@ -4883,7 +4862,6 @@ sub nic_woima_update {
                 # we can't use the returned IP
                 my ($status, $returnedip) = split / /, lc $line;
                 $ip = $returnedip if (not $ip);
-                #my $h = shift @hosts;
 
                 $config{$h}{'status'} = $status;
                 if ($status eq 'good') {
