@@ -39,6 +39,11 @@ my $savedir   = ($program =~ /test/i) ? 'URL/' : '/tmp/';
 my $msgs      = '';
 my $last_msgs = '';
 
+## If run as *d (e.g., ddclientd) then daemonize by default (but allow
+## flags and options to override).
+my $daemon_min = interval('60s');
+my $daemon_default = ($programd =~ /d$/) ? $daemon_min : 0;
+
 use vars qw($file $lineno);
 local $file   = '';
 local $lineno = '';
@@ -317,7 +322,7 @@ sub setv {
 };
 my %variables = (
     'global-defaults' => {
-        'daemon'              => setv(T_DELAY, 0, 0, 1, 0,                    interval('60s')),
+        'daemon'              => setv(T_DELAY, 0, 0, 1, $daemon_default,      $daemon_min),
         'foreground'          => setv(T_BOOL,  0, 0, 1, 0,                    undef),
         'file'                => setv(T_FILE,  0, 0, 1, "$etc$program.conf",  undef),
         'cache'               => setv(T_FILE,  0, 0, 1, "$cachedir$program.cache", undef),
@@ -813,9 +818,6 @@ read_config(define($opt{'file'}, default('file')), \%config, \%globals);
 init_config();
 test_possible_ip() if opt('query');
 
-if (!opt('daemon') && $programd =~ /d$/) {
-    $opt{'daemon'} = minimum('daemon');
-}
 my $caught_hup  = 0;
 my $caught_term = 0;
 my $caught_int  = 0;
