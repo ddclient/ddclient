@@ -807,7 +807,10 @@ $result = 'OK';
 
 test_geturl(opt('geturl')) if opt('geturl');
 
-usage() if opt('help');
+if (opt('help')) {
+    printf "%s\n", $opt_usage;
+    exit 0;
+}
 
 ## read config file because 'daemon' mode may be defined there.
 read_config(define($opt{'file'}, default('file')), \%config, \%globals);
@@ -860,7 +863,7 @@ do {
     read_cache(opt('cache'), \%cache);
     print_info() if opt('debug') && opt('verbose');
 
-    usage("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
+    fatal("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
         unless exists $ip_strategies{lc opt('use')};
 
     $daemon = $opt{'daemon'};
@@ -1327,7 +1330,7 @@ sub init_config {
 
     ## sanity check
     if (defined $opt{'host'} && defined $opt{'retry'}) {
-        usage("options -retry and -host (or -option host=..) are mutually exclusive");
+        fatal("options -retry and -host (or -option host=..) are mutually exclusive");
     }
 
     ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
@@ -1401,16 +1404,6 @@ sub init_config {
             $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
         }
     }
-}
-
-######################################################################
-## usage
-######################################################################
-sub usage {
-    _msg(1, 1, 'FATAL:', @_) if @_;
-    printf { @_ ? *STDERR : *STDOUT } "%s\n", $opt_usage;
-    sendmail() if @_;
-    exit (@_ ? 1 : 0);
 }
 
 ######################################################################
