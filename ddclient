@@ -740,7 +740,7 @@ my @opt = (
     [ "protocol",    "=s", "-protocol type        : update protocol used" ],
     [ "file",        "=s", "-file path            : load configuration information from 'path'" ],
     [ "cache",       "=s", "-cache path           : record address used in 'path'" ],
-    [ "pid",         "=s", "-pid path             : record process id in 'path'" ],
+    [ "pid",         "=s", "-pid path             : record process id in 'path' if daemonized" ],
     "",
     [ "use",         "=s", "-use which            : how the should IP address be obtained." ],
     &ip_strategies_usage(),
@@ -837,10 +837,6 @@ if (opt('foreground')) {
     open(STDOUT, ">/dev/null");
     open(STDERR, ">/dev/null");
     open(STDIN,  "</dev/null");
-}
-
-# write out the pid file if we're daemon'ized
-if (opt('daemon')) {
     write_pid();
 }
 
