@@ -1068,14 +1068,13 @@ sub read_cache {
 ## parse_assignment(string)  return (name, value, rest)
 ######################################################################
 sub parse_assignments {
-    my $rest      = shift;
-    my @args      = @_;
+    my ($rest) = @_;
     my %variables = ();
     my ($name, $value);
 
     while (1) {
         $rest =~ s/^\s+//;
-        ($name, $value, $rest) = parse_assignment($rest, @args);
+        ($name, $value, $rest) = parse_assignment($rest);
         if (defined $name) {
             $variables{$name} = $value;
         } else {
@@ -1085,8 +1084,7 @@ sub parse_assignments {
     return ($rest, %variables);
 }
 sub parse_assignment {
-    my $rest = shift;
-    my $stop = @_ ? shift : '[\n\s,]';
+    my ($rest) = @_;
     my ($c, $name, $value);
     my ($escape, $quote) = (0, '');
 
@@ -1104,7 +1102,7 @@ sub parse_assignment {
                 $quote = ''
             } elsif (!$quote && $c =~ /[\'\"]/) {
                 $quote = $c;
-            } elsif (!$quote && $c =~ /^${stop}/) {
+            } elsif (!$quote && $c =~ /^[\n\s,]/) {
                 last;
             } else {
                 $value .= $c;
@@ -1118,19 +1116,15 @@ sub parse_assignment {
 ## read_config
 ######################################################################
 sub read_config {
-    my $file    = shift;
-    my $config  = shift;
-    my $globals = shift;
-    my %globals = ();
-
-    _read_config($config, $globals, '', $file, %globals);
+    my ($file, $config, $globals) = @_;
+    _read_config($config, $globals, '', $file);
 }
 sub _read_config {
     my $config  = shift;
     my $globals = shift;
     my $stamp   = shift;
     local $file = shift;
-    my %globals = @_;
+    my %globals = ();
     my %config  = ();
     my $content = '';
 
