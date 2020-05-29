@@ -33,59 +33,68 @@ export PATH
 
 # See how we were called.
 case "$1" in
-  start)
-	# Start daemon.
-    DELAY=`grep -v '^\s*#' $CONF | grep -i -m 1 "daemon" | awk -F '=' '{print $2}'`
-    if [ -z "$DELAY" ] ; then
-        DELAY="-daemon 300"
-    else
-        DELAY=''
-    fi
-	echo -n "Starting ddclient: "
-    if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
-        daemon $program $DELAY
-    else
-	    ddclient $DELAY
-    fi
-	echo    
-	;;
-  stop)
-	# Stop daemon.
-	echo -n "Shutting down ddclient: "
-    if [ -n "$PID" ] ; then
-        if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
-            killproc $program
+    start)
+        # See if daemon=value is specified in the config file.
+        # Assumptions:
+        #   * there are no quoted "#" characters before "daemon="
+        #     (if there is a "#" it starts a comment)
+        #   * "daemon=" does not appear in a password or value
+        #   * if the interval value is 0, it is not quoted
+        INTERVAL=$(sed -e '
+              s/^\([^#]*[,[:space:]]\)\{0,1\}daemon=\([^,[:space:]]*\).*$/\2/
+              t quit
+              d
+              :quit
+              q
+            ' "$CONF")
+        if [ -z "$DELAY" ] || [ "$DELAY" = "0" ]; then
+            DELAY="-daemon 300"
         else
-	        kill $PID
+            # use the interval specified in the config file
+            DELAY=''
         fi
-    else
-        echo "ddclient is not running"
-    fi
-	echo
-	;;
-  restart)
-	$0 stop
-	$0 start
-	;;
-  status)
-    if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
-        status $program
-    else
-	    if test "$PID"
-	    then
-		    for p in $PID
-		    do
-			    echo "$program (pid $p) is running"
-		    done
-	    else
-		    echo "$program is stopped"
+        echo -n "Starting ddclient: "
+        if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+            daemon $program $DELAY
+        else
+            ddclient $DELAY
         fi
-	fi
-	;;
-  *)
-	echo "Usage: ddclient {start|stop|restart|status}"
-	exit 1
+        echo
+        ;;
+    stop)
+        # Stop daemon.
+        echo -n "Shutting down ddclient: "
+        if [ -n "$PID" ]; then
+            if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+                killproc $program
+            else
+                kill $PID
+            fi
+        else
+            echo "ddclient is not running"
+        fi
+        echo
+        ;;
+    restart)
+        $0 stop
+        $0 start
+        ;;
+    status)
+        if [ "$system" = "fedora" ] || [ "$system" = "redhat" ]; then
+            status $program
+        else
+            if test "$PID"; then
+                for p in $PID; do
+                    echo "$program (pid $p) is running"
+                done
+            else
+                echo "$program is stopped"
+            fi
+        fi
+        ;;
+    *)
+        echo "Usage: ddclient {start|stop|restart|status}"
+        exit 1
 esac
 
 exit 0
-
