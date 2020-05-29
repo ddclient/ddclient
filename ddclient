@@ -807,10 +807,9 @@ $result = 'OK';
 
 test_geturl(opt('geturl')) if opt('geturl');
 
-## process help option
 if (opt('help')) {
-    *STDERR = *STDOUT;
-    usage(0);
+    printf "%s\n", $opt_usage;
+    exit 0;
 }
 
 ## read config file because 'daemon' mode may be defined there.
@@ -864,7 +863,7 @@ do {
     read_cache(opt('cache'), \%cache);
     print_info() if opt('debug') && opt('verbose');
 
-    usage("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
+    fatal("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
         unless exists $ip_strategies{lc opt('use')};
 
     $daemon = $opt{'daemon'};
@@ -1331,7 +1330,7 @@ sub init_config {
 
     ## sanity check
     if (defined $opt{'host'} && defined $opt{'retry'}) {
-        usage("options -retry and -host (or -option host=..) are mutually exclusive");
+        fatal("options -retry and -host (or -option host=..) are mutually exclusive");
     }
 
     ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
@@ -1405,24 +1404,6 @@ sub init_config {
             $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
         }
     }
-}
-
-######################################################################
-## usage
-######################################################################
-sub usage {
-    my $exitcode = 1;
-    $exitcode = shift if @_ != 0;  # use first arg if given
-    my $msg = '';
-    if (@_) {
-        my $format = shift;
-        $msg .= sprintf $format, @_;
-        1 while chomp($msg);
-        $msg .= "\n";
-    }
-    printf STDERR "%s%s\n", $msg, $opt_usage;
-    sendmail();
-    exit $exitcode;
 }
 
 ######################################################################
@@ -1757,6 +1738,7 @@ sub ynu {
 ## fatal
 ######################################################################
 sub _msg {
+    my $fh     = shift;
     my $log    = shift;
     my $prefix = shift;
     my $format = shift;
@@ -1774,21 +1756,21 @@ sub _msg {
         $buffer =~ s/\n/\n$prefix /g;
     }
     $buffer .= "\n";
-    print $buffer;
+    print $fh $buffer;
 
     $msgs .= $buffer if $log;
     logger($buffer) if $log;
 
 }
-sub msg     { _msg(0, '',         @_);                                   }
-sub verbose { _msg(1, @_)             if opt('verbose');                 }
-sub info    { _msg(1, 'INFO:',    @_) if opt('verbose');                 }
-sub debug   { _msg(0, 'DEBUG:',   @_) if opt('debug');                   }
-sub debug2  { _msg(0, 'DEBUG:',   @_) if opt('debug') && opt('verbose'); }
-sub warning { _msg(1, 'WARNING:', @_);                                   }
-sub fatal   { _msg(1, 'FATAL:',   @_); sendmail(); exit(1);              }
-sub success { _msg(1, 'SUCCESS:', @_);                                   }
-sub failed  { _msg(1, 'FAILED:',  @_); $result = 'FAILED';               }
+sub msg     { _msg(*STDOUT, 0, '',         @_);                                   }
+sub verbose { _msg(*STDOUT, 1, @_)             if opt('verbose');                 }
+sub info    { _msg(*STDOUT, 1, 'INFO:',    @_) if opt('verbose');                 }
+sub debug   { _msg(*STDOUT, 0, 'DEBUG:',   @_) if opt('debug');                   }
+sub debug2  { _msg(*STDOUT, 0, 'DEBUG:',   @_) if opt('debug') && opt('verbose'); }
+sub warning { _msg(*STDERR, 1, 'WARNING:', @_);                                   }
+sub fatal   { _msg(*STDERR, 1, 'FATAL:',   @_); sendmail(); exit(1);              }
+sub success { _msg(*STDOUT, 1, 'SUCCESS:', @_);                                   }
+sub failed  { _msg(*STDERR, 1, 'FAILED:',  @_); $result = 'FAILED';               }
 sub prettytime { return scalar(localtime(shift)); }
 
 sub prettyinterval {
