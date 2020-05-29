@@ -795,7 +795,7 @@ my @opt = (
     nic_examples(),
     "$program version $version, ",
     "  originally written by Paul Burry, paul+ddclient\@burry.ca",
-    "  project now maintained on https://ddclient.net"
+    "  project now maintained on https://github.com/ddclient/ddclient"
 );
 
 ## process args
