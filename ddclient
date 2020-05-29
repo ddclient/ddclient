@@ -2952,11 +2952,11 @@ o 'concont'
 
 The 'concont' protocol is the protocol used by the content management
 system ConCont's dydns module. This is currently used by the free
-dynamic DNS service offered by Tyrmida at www.dydns.za.net
+dynamic DNS service offered by Tyrmida at www.dyndns.za.net
 
 Configuration variables applicable to the 'concont' protocol are:
   protocol=concont             ##
-  server=www.fqdn.of.service   ## for example www.dydns.za.net (for most add a www)
+  server=www.fqdn.of.service   ## for example www.dyndns.za.net (for most add a www)
   login=service-login          ## login registered with the service
   password=service-password    ## password registered with the service
   mx=mail.server.fqdn          ## fqdn of the server handling domain\'s mail (leave out for none)
@@ -2966,8 +2966,8 @@ Configuration variables applicable to the 'concont' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=concont,                                     \\
-  login=dydns.za.net,                                   \\
-  password=my-dydns.za.net-password,                    \\
+  login=dyndns.za.net,                                  \\
+  password=my-dyndns.za.net-password,                   \\
   mx=mailserver.fqdn,                                   \\
   wildcard=yes                                          \\
   myhost.hn.org
@@ -4025,7 +4025,7 @@ Configuration variables applicable to the 'dtdns' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=dtdns,                                       \\
-  password=my-dydns.za.net-password,                    \\
+  password=my-dyndns.za.net-password,                   \\
   client=ddclient                                       \\
   myhost.dtdns.net
 
