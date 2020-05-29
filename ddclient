@@ -305,11 +305,6 @@ sub ip_strategies_usage {
     return map { sprintf("    -use=%-22s %s.", $_, $ip_strategies{$_}) } sort keys %ip_strategies;
 }
 
-my %web_strategies = (
-    'dyndns'  => 1,
-    'loopia'  => 1,
-);
-
 sub setv {
     return {
         'type'     => shift,
