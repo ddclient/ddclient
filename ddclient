@@ -4691,14 +4691,14 @@ sub nic_woima_update {
 sub nic_dnsexit_examples {
     return <<"EoEXAMPLE";
 o 'dnsexit'
-                          
+
 The 'dnsexit' protocol is the protocol used by the dynamic hostname services
 of the 'DnsExit' dns services. This is currently used by the free
 dynamic DNS service offered by www.dnsexit.com.
-    
+
 Configuration variables applicable to the 'dnsexit' protocol are:
   ssl=no                       ## turn off ssl
-  protocol=dnsexit             ## 
+  protocol=dnsexit             ##
   server=update.dnsexit.com    ## defaults to update.dnsexit.com
   use=web                      ## defaults to web
   web=update.dnsexit.com       ## defaults to update.dnsexit.com
@@ -4713,7 +4713,7 @@ Example ${program}.conf file entries:
   login=service-userid         \\
   password=service-password    \\
   fully.qualified.host
-                        
+
 EoEXAMPLE
 }
 ######################################################################
@@ -4724,21 +4724,17 @@ sub nic_dnsexit_update {
 
     ## update each configured host
     foreach my $h (@_) {
-	my $ip = delete $config{$h}{'wantip'};
+    my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 		
         # Set the URL that we're going to update
         my $url;
         $url  = "http://$config{$h}{'server'}$config{$h}{'script'}";
-        $url .= "?login=";
-        $url .= $config{$h}{'login'};
-        $url .= "&password=";
-        $url .= $config{$h}{'password'};
-        $url .= "&host=";
-        $url .= $h;
-		$url .= "&myip=";
-		$url .= $ip;
+        $url .= "?login=$config{$h}{'login'}";
+        $url .= "&password=$config{$h}{'password'}";
+        $url .= "&host=$h";
+        $url .= "&myip=$ip";
 
         # Try to get URL
         my $reply = geturl(opt('proxy'), $url);
@@ -4757,9 +4753,7 @@ sub nic_dnsexit_update {
             $config{$h}{'mtime'}  = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
-         }
-         else
-         {
+         } else {
             my @reply = split /\n/, $reply;
             my $returned = pop(@reply);
             $config{$h}{'status'} = 'failed';
