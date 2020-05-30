@@ -1963,8 +1963,6 @@ sub geturl {
     my ($peer, $server, $port, $default_port, $use_ssl);
     my ($sd, $rq, $request, $reply);
 
-    debug("proxy  = $proxy");
-    debug("url    = %s", $url);
     ## canonify proxy and url
     my $force_ssl;
     $force_ssl = 1 if ($url =~ /^https:/);
@@ -1975,7 +1973,6 @@ sub geturl {
     $url    = "/" unless $url =~ m%/%;
     $url    =~ s%^[^/]*/%%;
 
-    debug("server = $server");
     opt('fw') && debug("opt(fw = ", opt('fw'),")");
     $globals{'fw'} && debug("glo fw = $globals{'fw'}");
     ## always omit SSL for connections to local router
@@ -1987,6 +1984,10 @@ sub geturl {
         $use_ssl      = 0;
         $default_port = 80;
     }
+    debug("proxy    = $proxy");
+    debug("protocol = " . ($use_ssl ? "https" : "http"));
+    debug("server   = $server");
+    debug("url      = %s", $url);
 
     ## determine peer and port to use.
     $peer = $proxy || $server;
