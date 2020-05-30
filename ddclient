@@ -691,15 +691,15 @@ my %services = (
             $variables{'woima-service-common-defaults'},
         ),
     },
-	'dnsexit' => {
-	'updateable' => undef,
-	'update'     => \&nic_dnsexit_update,
-	'examples'   => \&nic_dnsexit_examples,
-	'variables'  => merge(
-			$variables{'dnsexit-common-defaults'},
-			$variables{'service-common-defaults'},
-		),
-	},
+    'dnsexit' => {
+        'updateable' => undef,
+        'update'     => \&nic_dnsexit_update,
+        'examples'   => \&nic_dnsexit_examples,
+        'variables'  => merge(
+            $variables{'dnsexit-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
 );
 $variables{'merged'} = merge($variables{'global-defaults'},
 			     $variables{'service-common-defaults'},
