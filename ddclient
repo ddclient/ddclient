@@ -4689,7 +4689,7 @@ sub nic_woima_update {
 ## nic_dnsexit_examples
 ######################################################################
 sub nic_dnsexit_examples {
-    return <<EoEXAMPLE; 
+    return <<"EoEXAMPLE";
 o 'dnsexit'
                           
 The 'dnsexit' protocol is the protocol used by the dynamic hostname services
