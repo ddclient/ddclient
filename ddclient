@@ -1120,6 +1120,37 @@ sub read_config {
     _read_config($config, $globals, '', $file);
 }
 sub _read_config {
+    # Configuration line format after comment and continuation
+    # removal:
+    #
+    #   [opt=value, ...] [host[, ...] [login [password]]]
+    #
+    # Details:
+    #   - No whitespace is allowed around the '=' in opt=value.
+    #   - An option name may only contain lowercase letters, numbers,
+    #     underscore, and hyphen-minus, and must start with a letter.
+    #   - A value or hostname is terminated by unquoted whitespace
+    #     (including newline) or an unquoted comma followed by
+    #     optional whitespace.
+    #   - Values (but not hosts, login, or password) may contain
+    #     quoted parts:
+    #       - A backslash that itself is not quoted by another
+    #         backslash quotes the next character.
+    #       - An unquoted single quote quotes the subsequent
+    #         non-backslash, non-newline characters until the next
+    #         single quote.
+    #       - An unquoted double quote quotes the subsequent
+    #         non-backslash, non-newline characters until the next
+    #         double quote.
+    #   - login and password must not contain whitespace.
+    #   - login must not start or end with a comma.
+    #   - password must not start with a comma.
+    #   - If no host is specified (either via a 'host=' option or
+    #     after the options), the options are stored in %{$2}.
+    #     Otherwise, the options are combined with the global values
+    #     accumulated thus far and stored in $1->{$host} for each
+    #     referenced host.
+
     my $config  = shift;
     my $globals = shift;
     my $stamp   = shift;
@@ -1186,8 +1217,6 @@ sub _read_config {
         s/\s+/ /g;    # canonify
         next if /^$/;
 
-        ## expected configuration line is:
-        ##   [opt=value,opt=..] [host [login [password]]]
         my %locals;
         ($_, %locals) = parse_assignments($_);
         s/\s*,\s*/,/g;
