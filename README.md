@@ -13,7 +13,6 @@ Dynamic DNS services currently supported include:
     Zoneedit    - See http://www.zoneedit.com for details.
     EasyDNS     - See http://www.easydns.com for details.
     NameCheap   - See http://www.namecheap.com for details
-    ConCont     - See http://www.dyndns.za.net for details
     DslReports  - See http://www.dslreports.com for details
     Sitelutions - See http://www.sitelutions.com for details
     Loopia      - See http://www.loopia.se for details
