@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 DDCLIENT=/usr/sbin/ddclient
-CONF=/etc/ddclient/ddclient.conf
+CONF=/etc/ddclient.conf
 PIDFILE=/var/run/ddclient.pid
 
 test -x $DDCLIENT || exit 0
