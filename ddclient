@@ -50,24 +50,24 @@ local $lineno = '';
 
 $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin:/usr/bin:/etc:/usr/lib:";
 
-sub T_ANY    { 'any' };
-sub T_STRING { 'string' };
-sub T_EMAIL  { 'e-mail address' };
-sub T_NUMBER { 'number' };
-sub T_DELAY  { 'time delay (ie. 1d, 1hour, 1m)' };
-sub T_LOGIN  { 'login' };
-sub T_PASSWD { 'password' };
-sub T_BOOL   { 'boolean value' };
-sub T_FQDN   { 'fully qualified host name' };
-sub T_OFQDN  { 'optional fully qualified host name' };
-sub T_FILE   { 'file name' };
-sub T_FQDNP  { 'fully qualified host name and optional port number' };
+sub T_ANY    { 'any' }
+sub T_STRING { 'string' }
+sub T_EMAIL  { 'e-mail address' }
+sub T_NUMBER { 'number' }
+sub T_DELAY  { 'time delay (ie. 1d, 1hour, 1m)' }
+sub T_LOGIN  { 'login' }
+sub T_PASSWD { 'password' }
+sub T_BOOL   { 'boolean value' }
+sub T_FQDN   { 'fully qualified host name' }
+sub T_OFQDN  { 'optional fully qualified host name' }
+sub T_FILE   { 'file name' }
+sub T_FQDNP  { 'fully qualified host name and optional port number' }
 sub T_PROTO  { 'protocol' }
 sub T_USE    { 'ip strategy' }
 sub T_IF     { 'interface' }
 sub T_PROG   { 'program name' }
 sub T_IP     { 'ip' }
-sub T_POSTS  { 'postscript' };
+sub T_POSTS  { 'postscript' }
 
 ## strategies for obtaining an ip address.
 my %builtinweb = (
@@ -317,7 +317,7 @@ sub setv {
         'default'  => shift,
         'minimum'  => shift,
     };
-};
+}
 my %variables = (
     'global-defaults' => {
         'daemon'              => setv(T_DELAY, 0, 0, 1, $daemon_default,      $daemon_min),
@@ -1514,7 +1514,7 @@ sub test_geturl {
     my $url = shift;
 
     my $reply = geturl(opt('proxy'), $url, opt('login'), opt('password'));
-    print "URL $url\n";;
+    print "URL $url\n";
     print defined($reply) ? $reply : "<undefined>\n";
     exit;
 }
@@ -3844,7 +3844,7 @@ sub nic_freedns_update {
     }
     ## update each configured host
     foreach my $h (@_) {
-        if (!$h) { next };
+        if (!$h) { next }
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
