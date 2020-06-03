@@ -41,8 +41,7 @@ my $last_msgs = '';
 
 ## If run as *d (e.g., ddclientd) then daemonize by default (but allow
 ## flags and options to override).
-my $daemon_min = interval('60s');
-my $daemon_default = ($programd =~ /d$/) ? $daemon_min : 0;
+my $daemon_default = ($programd =~ /d$/) ? interval('5m') : 0;
 
 use vars qw($file $lineno);
 local $file   = '';
@@ -320,7 +319,7 @@ sub setv {
 }
 my %variables = (
     'global-defaults' => {
-        'daemon'              => setv(T_DELAY, 0, 0, 1, $daemon_default,      $daemon_min),
+        'daemon'              => setv(T_DELAY, 0, 0, 1, $daemon_default,      interval('60s')),
         'foreground'          => setv(T_BOOL,  0, 0, 1, 0,                    undef),
         'file'                => setv(T_FILE,  0, 0, 1, "$etc$program.conf",  undef),
         'cache'               => setv(T_FILE,  0, 0, 1, "$cachedir$program.cache", undef),
