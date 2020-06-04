@@ -2006,7 +2006,7 @@ sub geturl {
     $url    = "/" unless $url =~ m%/%;
     $url    =~ s%^[^/]*/%%;
 
-    opt('fw') && debug("opt(fw = ", opt('fw'),")");
+    opt('fw') && debug("opt(fw = ", opt('fw'), ")");
     $globals{'fw'} && debug("glo fw = $globals{'fw'}");
     ## always omit SSL for connections to local router
     if ($force_ssl || ($globals{'ssl'} and (caller(1))[3] ne 'main::get_ip')) {
@@ -2232,7 +2232,7 @@ sub get_ip {
         $queryif =~ s%\/%\\\/%g;
 
         # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
+        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
 
         $url   = "http://" . opt('fw', $h) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
         $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
@@ -2249,7 +2249,7 @@ sub get_ip {
         $queryif =~ s%\/%\\\/%g;
 
         # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x",ord($1))/ge;
+        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
 
         $url   = "https://" . opt('fw', $h) . "/exec/show%20interface%20${queryif}";
         $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
@@ -3628,8 +3628,7 @@ sub nic_nfsn_update {
             $name = '';
         } elsif ($h !~ /$zone$/) {
             $config{$h}{'status'} = 'failed';
-            failed("updating %s: %s is outside zone %s", $h, $h,
-                   $zone);
+            failed("updating %s: %s is outside zone %s", $h, $h, $zone);
             next;
         } else {
             $name = $h;
