@@ -1291,9 +1291,11 @@ sub init_config {
     $opt{'quiet'} = 0 if opt('verbose');
 
     ## infer the IP strategy if possible
-    $opt{'use'} = 'ip'  if !define($opt{'use'}) && defined($opt{'ip'});
-    $opt{'use'} = 'if'  if !define($opt{'use'}) && defined($opt{'if'});
-    $opt{'use'} = 'web' if !define($opt{'use'}) && defined($opt{'web'});
+    if (!defined($opt{'use'})) {
+        $opt{'use'} = 'ip'  if defined($opt{'ip'});
+        $opt{'use'} = 'if'  if defined($opt{'if'});
+        $opt{'use'} = 'web' if defined($opt{'web'});
+    }
 
     ## sanity check
     $opt{'max-interval'}       = min(interval(opt('max-interval')), interval(default('max-interval')));
