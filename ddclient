@@ -1292,9 +1292,9 @@ sub init_config {
 
     ## infer the IP strategy if possible
     if (!defined($opt{'use'})) {
-        $opt{'use'} = 'ip'  if defined($opt{'ip'});
-        $opt{'use'} = 'if'  if defined($opt{'if'});
         $opt{'use'} = 'web' if defined($opt{'web'});
+        $opt{'use'} = 'if'  if defined($opt{'if'});
+        $opt{'use'} = 'ip'  if defined($opt{'ip'});
     }
 
     ## sanity check
