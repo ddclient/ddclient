@@ -1514,7 +1514,12 @@ sub test_possible_ip {
 sub test_geturl {
     my $url = shift;
 
-    my $reply = geturl(opt('proxy'), $url, opt('login'), opt('password'));
+    my $reply = geturl({
+        proxy => opt('proxy'),
+        url => $url,
+        login => opt('login'),
+        password => opt('password'),
+    });
     print "URL $url\n";
     print defined($reply) ? $reply : "<undefined>\n";
     exit;
@@ -1988,25 +1993,26 @@ EOM
 ## geturl
 ######################################################################
 sub geturl {
-    my $proxy    = shift || '';
-    my $url      = shift || '';
-    my $login    = shift || '';
-    my $password = shift || '';
-    my $headers  = shift || '';
-    my $method   = shift || 'GET';
-    my $data     = shift || '';
+    my ($p) = @_;
+    $p->{proxy} ||= '';
+    $p->{url} ||= '';
+    $p->{login} ||= '';
+    $p->{password} ||= '';
+    $p->{headers} ||= '';
+    $p->{method} ||= 'GET';
+    $p->{data} ||= '';
     my ($peer, $server, $port, $default_port, $use_ssl);
     my ($sd, $rq, $request, $reply);
 
     ## canonify proxy and url
     my $force_ssl;
-    $force_ssl = 1 if ($url =~ /^https:/);
-    $proxy  =~ s%^https?://%%i;
-    $url    =~ s%^https?://%%i;
-    $server = $url;
+    $force_ssl = 1 if ($p->{url} =~ /^https:/);
+    $p->{proxy} =~ s%^https?://%%i;
+    $p->{url} =~ s%^https?://%%i;
+    $server = $p->{url};
     $server =~ s%/.*%%;
-    $url    = "/" unless $url =~ m%/%;
-    $url    =~ s%^[^/]*/%%;
+    $p->{url} = "/" unless $p->{url} =~ m%/%;
+    $p->{url} =~ s%^[^/]*/%%;
 
     opt('fw') && debug("opt(fw = %s)", opt('fw'));
     $globals{'fw'} && debug("glo fw = %s", $globals{'fw'});
@@ -2019,43 +2025,43 @@ sub geturl {
         $use_ssl      = 0;
         $default_port = 80;
     }
-    debug("proxy    = %s", $proxy);
+    debug("proxy    = %s", $p->{proxy});
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
-    debug("url      = %s", $url);
+    debug("url      = %s", $p->{url});
 
     ## determine peer and port to use.
-    $peer = $proxy || $server;
+    $peer = $p->{proxy} || $server;
     $peer =~ s%/.*%%;
     $port = $peer;
     $port =~ s%^.*:%%;
     $port = $default_port unless $port =~ /^\d+$/;
     $peer =~ s%:.*$%%;
 
-    my $to = sprintf "%s%s", $server, $proxy ? " via proxy $peer:$port" : "";
+    my $to = sprintf "%s%s", $server, $p->{proxy} ? " via proxy $peer:$port" : "";
     verbose("CONNECT:", "%s", $to);
 
-    $request = "$method ";
+    $request = "$p->{method} ";
     if (!$use_ssl) {
-        $request .= "http://$server" if $proxy;
+        $request .= "http://$server" if $p->{proxy};
     } else {
-        $request .= "https://$server" if $proxy;
+        $request .= "https://$server" if $p->{proxy};
     }
-    $request .= "/$url HTTP/1.0\n";
+    $request .= "/$p->{url} HTTP/1.0\n";
     $request .= "Host: $server\n";
 
-    my $auth = encode_base64("${login}:${password}", "");
-    $request .= "Authorization: Basic $auth\n" if $login || $password;
+    my $auth = encode_base64("$p->{login}:$p->{password}", "");
+    $request .= "Authorization: Basic $auth\n" if $p->{login} || $p->{password};
     $request .= "User-Agent: ${program}/${version}\n";
-    if ($data) {
-        $request .= "Content-Type: application/x-www-form-urlencoded\n" if $headers !~ /^Content-Type:/mi;
-        $request .= "Content-Length: " . length($data) . "\n";
+    if ($p->{data}) {
+        $request .= "Content-Type: application/x-www-form-urlencoded\n" if $p->{headers} !~ /^Content-Type:/mi;
+        $request .= "Content-Length: " . length($p->{data}) . "\n";
     }
     $request .= "Connection: close\n";
     $headers .= "\n" if $headers ne '' && substr($headers, -1) ne "\n";
-    $request .= $headers;
+    $request .= $p->{headers};
     $request .= "\n";
-    $request .= $data;
+    $request .= $p->{data};
 
     ## make sure newlines are <cr><lf> for some pedantic proxy servers
     ($rq = $request) =~ s/\n/\r\n/g;
@@ -2130,7 +2136,7 @@ sub geturl {
 
     ## during testing simulate reading the URL
     if (opt('test')) {
-        my $filename = "$server/$url";
+        my $filename = "$server/$p->{url}";
         $filename =~ s|/|%2F|g;
         if (opt('exec')) {
             $reply = save_file("${savedir}$filename", $reply, 'unique');
@@ -2221,7 +2227,7 @@ sub get_ip {
         $arg = $url;
 
         if ($url) {
-            $reply = geturl(opt('proxy', $h), $url) || '';
+            $reply = geturl({ proxy => opt('proxy', $h), url => $url }) || '';
         }
 
     } elsif (($use eq 'cisco')) {
@@ -2237,9 +2243,13 @@ sub get_ip {
         # Protect special HTML characters (like '?')
         $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
 
-        $url   = "http://" . opt('fw', $h) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
-        $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
-        $arg   = $url;
+        $url = "http://" . opt('fw', $h) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
+        $reply = geturl({
+            url => $url,
+            login => opt('fw-login', $h),
+            password => opt('fw-password', $h),
+        }) || '';
+        $arg = $url;
 
     } elsif (($use eq 'cisco-asa')) {
         # Stuff added to support Cisco ASA ip https daemon
@@ -2254,9 +2264,13 @@ sub get_ip {
         # Protect special HTML characters (like '?')
         $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
 
-        $url   = "https://" . opt('fw', $h) . "/exec/show%20interface%20${queryif}";
-        $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
-        $arg   = $url;
+        $url = "https://" . opt('fw', $h) . "/exec/show%20interface%20${queryif}";
+        $reply = geturl({
+            url => $url,
+            login => opt('fw-login', $h),
+            password => opt('fw-password', $h),
+        }) || '';
+        $arg = $url;
 
     } else {
         $url  = opt('fw',      $h) || '';
@@ -2269,7 +2283,11 @@ sub get_ip {
         $arg = $url;
 
         if ($url) {
-            $reply = geturl('', $url, opt('fw-login', $h), opt('fw-password', $h)) || '';
+            $reply = geturl({
+                url => $url,
+                login => opt('fw-login', $h),
+                password => opt('fw-password', $h),
+            }) || '';
         }
     }
     if (!defined $reply) {
@@ -2621,7 +2639,12 @@ sub nic_dyndns1_update {
             $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
         }
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
@@ -2784,7 +2807,12 @@ sub nic_dyndns2_update {
             $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
         }
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
@@ -2889,7 +2917,12 @@ sub nic_noip_update {
         $url .= "&myip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
@@ -3024,7 +3057,12 @@ sub nic_dslreports1_update {
         $url .= "&myip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
@@ -3099,7 +3137,12 @@ sub nic_hammernode1_update {
         $url .= "&ip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
@@ -3189,7 +3232,12 @@ sub nic_zoneedit1_update {
         $url .= "&dnsto=$ip"   if $ip;
         $url .= "&zone=$config{$h}{'zone'}" if defined $config{$h}{'zone'};
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
@@ -3339,7 +3387,12 @@ sub nic_easydns_update {
             $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
         }
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
@@ -3453,7 +3506,7 @@ sub nic_namecheap_update {
         $url .= "&ip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
@@ -3584,7 +3637,13 @@ sub nic_nfsn_make_request {
         $header .= "Content-Type: application/x-www-form-urlencoded\n";
     }
 
-    return geturl(opt('proxy'), $url, '', '', $header, $method, $body);
+    return geturl({
+        proxy => opt('proxy'),
+        url => $url,
+        headers => $header,
+        method => $method,
+        data => $body,
+    });
 }
 
 ######################################################################
@@ -3757,7 +3816,7 @@ sub nic_sitelutions_update {
         $url .= "&ip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
@@ -3828,7 +3887,7 @@ sub nic_freedns_update {
     ## First get the list of updatable hosts
     my $url;
     $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=" . &sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
-    my $reply = geturl(opt('proxy'), $url);
+    my $reply = geturl({ proxy => opt('proxy'), url => $url });
     if (!defined($reply) || !$reply || !header_ok($_[0], $reply)) {
         failed("updating %s: Could not connect to %s for site list.", $_[0], $url);
         return;
@@ -3856,7 +3915,7 @@ sub nic_freedns_update {
             $config{$h}{'status'} = 'good';
             success("update not necessary %s: good: IP address already set to %s", $h, $ip);
         } else {
-            my $reply = geturl(opt('proxy'), $freedns_hosts{$h}->[2]);
+            my $reply = geturl({proxy => opt('proxy'), url => $freedns_hosts{$h}->[2] });
             if (!defined($reply) || !$reply) {
                 failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
                 last;
@@ -3933,7 +3992,12 @@ sub nic_changeip_update {
         $url .= "&ip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
@@ -4009,7 +4073,7 @@ sub nic_dtdns_update {
         $url .= $config{$h}{'client'};
 
         # Try to get URL
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
 
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
@@ -4094,7 +4158,12 @@ sub nic_googledomains_update {
             $url .= "&myip=";
             $url .= $ip if $ip;
 
-            my $reply = geturl(opt('proxy'), $url, $config{$host}{'login'}, $config{$host}{'password'});
+            my $reply = geturl({
+                proxy => opt('proxy'),
+                url => $url,
+                login => $config{$host}{'login'},
+                password => $config{$host}{'password'},
+            });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
                 last;
@@ -4303,7 +4372,7 @@ sub nic_cloudflare_update {
             my $url = "https://$config{$key}{'server'}/zones?";
             $url .= "name=".$config{$key}{'zone'};
 
-            my $reply = geturl(opt('proxy'), $url, undef, undef, $headers);
+            my $reply = geturl({ proxy => opt('proxy'), url => $url, headers => $headers });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
                 last;
@@ -4334,7 +4403,7 @@ sub nic_cloudflare_update {
                 $url .= "type=A&name=$domain";
             }
 
-            $reply = geturl(opt('proxy'), $url, undef, undef, $headers);
+            $reply = geturl({ proxy => opt('proxy'), url => $url, headers => $headers });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
                 last;
@@ -4360,7 +4429,13 @@ sub nic_cloudflare_update {
             # Set domain
             $url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
             my $data = "{\"content\":\"$ip\"}";
-            $reply = geturl(opt('proxy'), $url, undef, undef, $headers, "PATCH", $data);
+            $reply = geturl({
+                proxy => opt('proxy'),
+                url => $url,
+                headers => $headers,
+                method => "PATCH",
+                data => $data,
+            });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 last;
@@ -4444,7 +4519,7 @@ sub nic_yandex_update {
             my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
             $url .= "domain=";
             $url .= $config{$key}{'login'};
-            my $reply = geturl(opt('proxy'), $url, '', '', $headers);
+            my $reply = geturl({ proxy => opt('proxy'), url => $url, headers => $headers });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $host, $config{$key}{'server'});
                 last;
@@ -4475,7 +4550,13 @@ sub nic_yandex_update {
             $data .= "&content=";
             $data .= $ip if $ip;
 
-            $reply = geturl(opt('proxy'), $url, '', '', $headers, 'POST', $data);
+            $reply = geturl({
+                proxy => opt('proxy'),
+                url => $url,
+                headers => $headers,
+                method => 'POST',
+                data => $data,
+            });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
                 last;
@@ -4553,7 +4634,7 @@ sub nic_duckdns_update {
 
 
         # Try to get URL
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
 
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
@@ -4624,7 +4705,7 @@ sub nic_freemyip_update {
         $url .= $h;
 
         # Try to get URL
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
 
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
@@ -4752,7 +4833,12 @@ sub nic_woima_update {
             $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
         }
 
-        my $reply = geturl(opt('proxy'), $url, $config{$h}{'login'}, $config{$h}{'password'});
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
@@ -4868,7 +4954,7 @@ sub nic_dondominio_update {
 
 
         # Try to get URL
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
 
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
@@ -4954,7 +5040,7 @@ sub nic_dnsmadeeasy_update {
         $url .= "&id=$h";
 
         # Try to get URL
-        my $reply = geturl(opt('proxy'), $url);
+        my $reply = geturl({ proxy => opt('proxy'), url => $url });
 
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
@@ -5025,7 +5111,12 @@ sub nic_ovh_update {
         $url .= "&myip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(opt('proxy'), $url, "$config{$h}{'login'}", "$config{$h}{'password'}");
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        });
 
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
