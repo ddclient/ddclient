@@ -5,7 +5,22 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## Not yet released
 
-  * added support for OVH DynHost
+### New features
+
+  * Added support for OVH DynHost.
+
+### Compatibility changes
+
+  * Perl v5.8 or later is now required.
+  * Removed the `concont` protocol. If you still use this protocol, please
+    [file a bug report](https://github.com/ddclient/ddclient/issues) and we
+    will restore it.
+  * The `force` option no longer prevents daemonization.
+  * If installed as `ddclientd` (or any other name ending in `d`), the default
+    value for the `daemon` option is now 5 minutes instead of the previous 1
+    minute.
+  * The `pid` option is now ignored when ddclient is not daemonized.
+  * ddclient now gracefully exits when interrupted by Ctrl-C.
 
 ## 2020-01-08 v3.9.1
 
