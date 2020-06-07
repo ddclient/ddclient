@@ -1769,7 +1769,7 @@ sub _msg {
     }
     if ($prefix) {
         $buffer = "$prefix$buffer";
-        $buffer =~ s/\n/\n$prefix /g;
+        $buffer =~ s/\n/\n$prefix/g;
     }
     $buffer .= "\n";
     print $fh $buffer;
