@@ -21,6 +21,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## 2018-08-09 v3.9.0
 
+  * new dependency: Data::Validate::IP
   * added IPv6 support for cloudfare
   * added suppport for freemyip
   * added configurable TTL to Cloudflare
