@@ -12,7 +12,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added a build system to make it easier for distributions to package
     ddclient:
 
-        ./autogen && ./configure && make && make install
+        ./autogen && ./configure && make && make check && make install
 
 ### Bug fixes
 

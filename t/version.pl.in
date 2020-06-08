@@ -1,0 +1,8 @@
+use Test::More;
+use version;
+
+eval { require 'ddclient'; ddclient->import(); 1; } or die($@);
+
+is(ddclient->VERSION(), version->parse('v@PACKAGE_VERSION@'), "version matches Autoconf config");
+
+done_testing();

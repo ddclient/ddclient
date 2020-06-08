@@ -15,3 +15,7 @@ release
 /ddclient
 /ddclient-*.tar.gz
 /ddclient.conf
+/t/*.log
+/t/*.trs
+/t/version.pl
+/test-suite.log

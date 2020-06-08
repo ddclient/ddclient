@@ -56,3 +56,17 @@ sysconf_DATA = ddclient.conf
 
 install-data-local:
 	$(MKDIR_P) '$(DESTDIR)$(localstatedir)'/cache/ddclient
+
+LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+	$(top_srcdir)/build-aux/tap-driver.sh
+TEST_EXTENSIONS = .pl
+PL_LOG_DRIVER = $(LOG_DRIVER)
+PL_LOG_COMPILER = $(PERL)
+AM_PL_LOG_FLAGS = -Mstrict -w \
+	-I'$(abs_top_builddir)' \
+	-I'$(abs_top_srcdir)'/t/lib
+handwritten_tests =
+generated_tests = \
+	t/version.pl
+TESTS = $(handwritten_tests) $(generated_tests)
+EXTRA_DIST += $(handwritten_tests)

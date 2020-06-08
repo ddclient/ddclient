@@ -46,6 +46,44 @@ If you are not very comfortable with Git, we encourage you to read
 [Pro Git](https://git-scm.com/book) by Scott Chacon and Ben Straub
 (freely available online).
 
+## Unit tests
+
+Always add tests for your changes when feasible.
+
+To run the ddclient test suite:
+
+  1. Install GNU Autoconf and Automake
+  2. Run: `./autogen && ./configure && make check`
+
+To add a new test script:
+
+  1. Create a new `t/*.pl` file with contents like this:
+
+     ```perl
+     use Test::More;
+     eval { require 'ddclient'; ddclient->import(); 1; } or die($@);
+
+     # Your tests go here.
+
+     done_testing();
+     ```
+
+     See the documentation for
+     [Test::More](https://perldoc.perl.org/Test/More.html) for
+     details.
+
+  2. Add your script to the `handwritten_tests` variable in
+     `Makefile.am`.
+
+  3. If your test script requires 3rd party modules, add the modules
+     to the list of test modules in `configure.ac` and re-run
+     `./autogen && ./configure`. Be sure to skip the tests if the
+     module is not available. For example:
+
+     ```perl
+     eval { require Foo::Bar; Foo::Bar->import(); 1 } or plan(skip_all => $@);
+     ```
+
 ## Compatibility
 
 We strive to make ddclient usable on a wide variety of platforms.
@@ -64,9 +102,14 @@ on the following platforms:
 
 See https://pkgs.org for available modules and versions.
 
-Exception: You may depend on modern language features or modules for
-new functionality when no feasible alternative exists, as long as the
-new dependency does not break existing functionality on old plaforms.
+Exceptions:
+  * You may depend on modern language features or modules for new
+    functionality when no feasible alternative exists, as long as the
+    new dependency does not break existing functionality on old
+    plaforms.
+  * Test scripts may depend on arbitrary modules as long as the tests
+    are skipped if the modules are not available. Effort should be
+    taken to only use modules that are broadly available.
 
 All shell scripts should conform with [POSIX Issue 7 (2018
 edition)](https://pubs.opengroup.org/onlinepubs/9699919799/) or later.
