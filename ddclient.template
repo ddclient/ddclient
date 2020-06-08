@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!@PERL@
 ######################################################################
 #
 # DDCLIENT - a Perl client for updating DynDNS information
@@ -30,11 +30,27 @@ my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
 $program =~ s/d$//;
-my $now       = time;
-my $hostname  = hostname();
-my $etc       = ($program =~ /test/i) ? './'   : '/etc/ddclient/';
-my $cachedir  = ($program =~ /test/i) ? './'   : '/var/cache/ddclient/';
-my $savedir   = ($program =~ /test/i) ? 'URL/' : '/tmp/';
+my $now = time;
+my $hostname = hostname();
+
+# subst_var(subst, default) returns subst unless it looks like @foo@ in which case it returns
+# default. The @foo@ strings are expected to be replaced by make; this function makes it possible
+# to run this file as a Perl script before those substitutions are made.
+sub subst_var {
+    my ($subst, $default) = @_;
+    return $default if $subst =~ /^@\w+@$/a;
+    return $subst;
+}
+
+my $etc = subst_var('@sysconfdir@', '/etc/ddclient');
+my $cachedir = subst_var('@localstatedir@', '/var') . '/cache/ddclient';
+my $savedir = '/tmp';
+if ($program =~ /test/i) {
+    $etc = '.';
+    $cachedir = '.';
+    $savedir = 'URL';
+}
+
 my $msgs      = '';
 my $last_msgs = '';
 
@@ -321,8 +337,8 @@ my %variables = (
     'global-defaults' => {
         'daemon'              => setv(T_DELAY, 0, 0, $daemon_default,      interval('60s')),
         'foreground'          => setv(T_BOOL,  0, 0, 0,                    undef),
-        'file'                => setv(T_FILE,  0, 0, "$etc$program.conf",  undef),
-        'cache'               => setv(T_FILE,  0, 0, "$cachedir$program.cache", undef),
+        'file'                => setv(T_FILE,  0, 0, "$etc/$program.conf", undef),
+        'cache'               => setv(T_FILE,  0, 0, "$cachedir/$program.cache", undef),
         'pid'                 => setv(T_FILE,  0, 0, "",                   undef),
         'proxy'               => setv(T_FQDNP, 0, 0, '',                   undef),
         'protocol'            => setv(T_PROTO, 0, 0, 'dyndns2',            undef),
@@ -2157,9 +2173,9 @@ sub geturl {
         my $filename = "$server/$url";
         $filename =~ s|/|%2F|g;
         if (opt('exec')) {
-            $reply = save_file("${savedir}$filename", $reply, 'unique');
+            $reply = save_file("$savedir/$filename", $reply, 'unique');
         } else {
-            $reply = load_file("${savedir}$filename");
+            $reply = load_file("$savedir/$filename");
         }
     }
 

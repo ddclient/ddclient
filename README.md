@@ -44,25 +44,47 @@ through github.com. Please check out http://ddclient.net
 
 ## REQUIREMENTS
 
-- one or more accounts from one of the dynamic DNS services
+  * An account from a supported dynamic DNS service provider
+  * Perl v5.10.1 or later
+      * `IO::Socket::SSL` perl library for ssl-support
+      * `JSON::PP` perl library for JSON support
+      * `IO::Socket:INET6` perl library for ipv6-support
+  * Linux, macOS, or any other Unix-ish system
+  * An implementation of `make` (such as [GNU
+    Make](https://www.gnu.org/software/make/))
+  * If you are installing from a clone of the Git repository, you will
+    also need [GNU Autoconf](https://www.gnu.org/software/autoconf/)
+    and [GNU Automake](https://www.gnu.org/software/automake/).
 
-- Perl v5.10.1 or later
-  - `IO::Socket::SSL` perl library for ssl-support
-  - `JSON::PP` perl library for JSON support
-  - `IO::Socket:INET6` perl library for ipv6-support
+## DOWNLOAD
 
-- Linux or probably any common Unix system
-
--------------------------------------------------------------------------------
+See https://github.com/ddclient/ddclient/releases
 
 ## INSTALLATION
 
-    cp ddclient /usr/sbin/
-    mkdir /etc/ddclient /var/cache/ddclient
-    cp sample-etc_ddclient.conf /etc/ddclient/ddclient.conf
-    vi /etc/ddclient/ddclient.conf
+  1. Extract the distribution tarball (`.tar.gz` file) and `cd` into
+     the directory:
 
-and change hostnames, logins, and passwords appropriately
+     ```shell
+     tar xvfa ddclient-3.9.1.tar.gz
+     cd ddclient-3.9.1
+     ```
+
+     (If you are installing from a clone of the Git repository, you
+     must run `./autogen` before continuing to the next step.)
+
+  2. Run the following commands to build and install:
+
+     ```shell
+     ./configure \
+         --prefix=/usr \
+         --sysconfdir=/etc/ddclient \
+         --localstatedir=/var
+     make
+     sudo make install
+     ```
+
+  3. Edit `/etc/ddclient/ddclient.conf`.
 
 ### systemd
 

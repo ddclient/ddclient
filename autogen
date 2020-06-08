@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cd "${0%/*}" || exit 1
+mkdir -p m4 build-aux || exit 1
+exec autoreconf -fviW all
