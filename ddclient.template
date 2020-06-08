@@ -18,6 +18,7 @@
 #
 #
 ######################################################################
+package ddclient;
 require v5.10.1;
 use strict;
 use warnings;
@@ -25,7 +26,8 @@ use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
 
-my $version  = "3.9.1";
+use version 0.77; our $VERSION = version->declare('v3.9.1');
+(my $version = $VERSION->stringify()) =~ s/^v//;
 my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
@@ -63,6 +65,11 @@ local $file   = '';
 local $lineno = '';
 
 $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin:/usr/bin:/etc:/usr/lib:";
+
+my ($result, %config, %globals, %cache);
+my $saved_cache;
+my %saved_opt;
+my $daemon;
 
 sub T_ANY    { 'any' }
 sub T_STRING { 'string' }
@@ -829,105 +836,105 @@ my @opt = (
     "  project now maintained on https://github.com/ddclient/ddclient"
 );
 
-## process args
-my $opt_usage = process_args(@opt);
-my ($result, %config, %globals, %cache);
-my $saved_cache = '';
-my %saved_opt   = %opt;
-$result = 'OK';
+sub main {
+    ## process args
+    my $opt_usage = process_args(@opt);
+    $saved_cache = '';
+    %saved_opt = %opt;
+    $result = 'OK';
 
-test_geturl(opt('geturl')) if opt('geturl');
+    test_geturl(opt('geturl')) if opt('geturl');
 
-if (opt('help')) {
-    printf "%s\n", $opt_usage;
-    exit 0;
-}
-
-## read config file because 'daemon' mode may be defined there.
-read_config($opt{'file'} // default('file'), \%config, \%globals);
-init_config();
-test_possible_ip() if opt('query');
-
-my $caught_hup  = 0;
-my $caught_term = 0;
-my $caught_int  = 0;
-$SIG{'HUP'}  = sub { $caught_hup  = 1; };
-$SIG{'TERM'} = sub { $caught_term = 1; };
-$SIG{'INT'}  = sub { $caught_int  = 1; };
-# don't fork() if foreground
-if (opt('foreground')) {
-    ;
-} elsif (opt('daemon')) {
-    $SIG{'CHLD'} = 'IGNORE';
-    my $pid = fork;
-    if ($pid < 0) {
-        print STDERR "${program}: can not fork ($!)\n";
-        exit -1;
-    } elsif ($pid) {
+    if (opt('help')) {
+        printf "%s\n", $opt_usage;
         exit 0;
     }
-    $SIG{'CHLD'} = 'DEFAULT';
-    open(STDOUT, ">/dev/null");
-    open(STDERR, ">/dev/null");
-    open(STDIN,  "</dev/null");
-    write_pid();
-}
 
-umask 077;
-my $daemon;
-do {
-    $now    = time;
-    $result = 'OK';
-    %opt    = %saved_opt;
-    if (opt('help')) {
-        *STDERR = *STDOUT;
-        printf("Help found");
-    }
-
+    ## read config file because 'daemon' mode may be defined there.
     read_config($opt{'file'} // default('file'), \%config, \%globals);
     init_config();
-    read_cache(opt('cache'), \%cache);
-    print_info() if opt('debug') && opt('verbose');
+    test_possible_ip() if opt('query');
 
-    fatal("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
-        unless exists $ip_strategies{lc opt('use')};
-
-    $daemon = opt('daemon');
-
-    update_nics();
-
-    if ($daemon) {
-        debug("sleep %s", $daemon);
-        sendmail();
-
-        my $left = $daemon;
-        while (($left > 0) && !$caught_hup && !$caught_term && !$caught_int) {
-            my $delay = $left > 10 ? 10 : $left;
-
-            $0 = sprintf("%s - sleeping for %s seconds", $program, $left);
-            $left -= sleep $delay;
-            # preventing deep sleep - see [bugs:#46]
-            if ($left > $daemon) {
-                $left = $daemon;
-            }
+    my $caught_hup  = 0;
+    my $caught_term = 0;
+    my $caught_int  = 0;
+    $SIG{'HUP'}  = sub { $caught_hup  = 1; };
+    $SIG{'TERM'} = sub { $caught_term = 1; };
+    $SIG{'INT'}  = sub { $caught_int  = 1; };
+    # don't fork() if foreground
+    if (opt('foreground')) {
+        ;
+    } elsif (opt('daemon')) {
+        $SIG{'CHLD'} = 'IGNORE';
+        my $pid = fork;
+        if ($pid < 0) {
+            print STDERR "${program}: can not fork ($!)\n";
+            exit -1;
+        } elsif ($pid) {
+            exit 0;
         }
-        $caught_hup = 0;
-        $result     = 0;
-
-    } elsif (!scalar(%config)) {
-        warning("no hosts to update.") unless !opt('quiet') || opt('verbose') || !$daemon;
-        $result = 1;
-
-    } else {
-        $result = $result eq 'OK' ? 0 : 1;
+        $SIG{'CHLD'} = 'DEFAULT';
+        open(STDOUT, ">/dev/null");
+        open(STDERR, ">/dev/null");
+        open(STDIN,  "</dev/null");
+        write_pid();
     }
-} while ($daemon && !$result && !$caught_term && !$caught_int);
 
-warning("caught SIGINT; exiting") if $caught_int;
-unlink_pid();
-sendmail();
+    umask 077;
+    do {
+        $now    = time;
+        $result = 'OK';
+        %opt    = %saved_opt;
+        if (opt('help')) {
+            *STDERR = *STDOUT;
+            printf("Help found");
+        }
 
-exit($result);
+        read_config($opt{'file'} // default('file'), \%config, \%globals);
+        init_config();
+        read_cache(opt('cache'), \%cache);
+        print_info() if opt('debug') && opt('verbose');
+
+        fatal("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
+            unless exists $ip_strategies{lc opt('use')};
+
+        $daemon = opt('daemon');
+
+        update_nics();
+
+        if ($daemon) {
+            debug("sleep %s", $daemon);
+            sendmail();
+
+            my $left = $daemon;
+            while (($left > 0) && !$caught_hup && !$caught_term && !$caught_int) {
+                my $delay = $left > 10 ? 10 : $left;
+
+                $0 = sprintf("%s - sleeping for %s seconds", $program, $left);
+                $left -= sleep $delay;
+                # preventing deep sleep - see [bugs:#46]
+                if ($left > $daemon) {
+                    $left = $daemon;
+                }
+            }
+            $caught_hup = 0;
+            $result     = 0;
+
+        } elsif (!scalar(%config)) {
+            warning("no hosts to update.") unless !opt('quiet') || opt('verbose') || !$daemon;
+            $result = 1;
+
+        } else {
+            $result = $result eq 'OK' ? 0 : 1;
+        }
+    } while ($daemon && !$result && !$caught_term && !$caught_int);
+
+    warning("caught SIGINT; exiting") if $caught_int;
+    unlink_pid();
+    sendmail();
+
+    exit($result);
+}
 
 ######################################################################
 ## runpostscript
@@ -5239,6 +5246,12 @@ sub nic_cloudns_update {
         success("updating %s: IP address set to %s", $hosts, $ip);
     }
 }
+
+# Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
+# otherwise do nothing. This "modulino" pattern makes it possible to import this file as a module
+# and test its functions directly; there's no need for test-only command-line arguments or stdout
+# parsing.
+__PACKAGE__->main() unless caller() && caller() ne 'PAR';
 
 ######################################################################
 # vim: ai et ts=4 sw=4 tw=78:
