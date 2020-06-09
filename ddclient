@@ -2050,7 +2050,8 @@ sub geturl {
         $request .= "Content-Length: " . length($data) . "\n";
     }
     $request .= "Connection: close\n";
-    $request .= "$headers\n";
+    $headers .= "\n" if $headers ne '' && substr($headers, -1) ne "\n";
+    $request .= $headers;
     $request .= "\n";
     $request .= $data;
 
@@ -3561,6 +3562,7 @@ sub nic_nfsn_gen_auth_header {
 
     my $hash = sha1_hex($hash_string);
     $auth_header .= $hash;
+    $auth_header .= "\n";
 
     return $auth_header;
 }
@@ -3578,7 +3580,7 @@ sub nic_nfsn_make_request {
     my $url      = $base_url . $path;
     my $header   = nic_nfsn_gen_auth_header($h, $path, $body);
     if ($method eq 'POST' && $body ne '') {
-        $header .= "\nContent-Type: application/x-www-form-urlencoded";
+        $header .= "Content-Type: application/x-www-form-urlencoded\n";
     }
 
     return geturl(opt('proxy'), $url, '', '', $header, $method, $body);
@@ -4282,10 +4284,10 @@ sub nic_cloudflare_update {
 
         my $headers = "Content-Type: application/json\n";
         if ($config{$key}{'login'} eq 'token') {
-            $headers .= "Authorization: Bearer $config{$key}{'password'}";
+            $headers .= "Authorization: Bearer $config{$key}{'password'}\n";
         } else {
             $headers .= "X-Auth-Email: $config{$key}{'login'}\n";
-            $headers .= "X-Auth-Key: $config{$key}{'password'}";
+            $headers .= "X-Auth-Key: $config{$key}{'password'}\n";
         }
 
         # FQDNs
@@ -4428,7 +4430,7 @@ sub nic_yandex_update {
         my @hosts   = @{$groups{$sig}};
         my $key     = $hosts[0];
         my $ip      = $config{$key}{'wantip'};
-        my $headers = 'PddToken: ' . $config{$key}{'password'};
+        my $headers = "PddToken: $config{$key}{'password'}\n";
 
         # FQDNs
         for my $host (@hosts) {
