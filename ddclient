@@ -293,6 +293,7 @@ my %builtinfw = (
         'skip' => 'Internet IP Address',
     },
 );
+
 my %ip_strategies = (
     'ip'        => ": obtain IP from -ip {address}",
     'web'       => ": obtain IP from an IP discovery page on the web",
@@ -303,6 +304,7 @@ my %ip_strategies = (
     'cisco-asa' => ": obtain IP from Cisco ASA at the -fw {address}",
     map { $_ => sprintf ": obtain IP from %s at the -fw {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
 );
+
 sub ip_strategies_usage {
     return map { sprintf("    -use=%-22s %s.", $_, $ip_strategies{$_}) } sort keys %ip_strategies;
 }
@@ -363,10 +365,10 @@ my %variables = (
         'postscript'          => setv(T_POSTS, 0, 0, 1, '',                   undef),
     },
     'service-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'members.dyndns.org', undef),
-        'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
-        'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
-        'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'members.dyndns.org', undef),
+        'login'               => setv(T_LOGIN, 1, 0, 1, '',                   undef),
+        'password'            => setv(T_PASSWD,1, 0, 1, '',                   undef),
+        'host'                => setv(T_STRING,1, 1, 1, '',                   undef),
 
         'use'                 => setv(T_USE,   0, 0, 1, 'ip',                 undef),
         'if'                  => setv(T_IF,    0, 0, 1, 'ppp0',               undef),
@@ -381,119 +383,119 @@ my %variables = (
         'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
         'cmd-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
         'ipv6'                => setv(T_BOOL,  0, 0, 0, 0,                    undef),
-        'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
-        'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
-        'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
-        'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
-        'status'              => setv(T_ANY,    0, 1, 0, '',                  undef),
-        'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),     0),
-        'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('25d'),     0),
-        'min-error-interval'  => setv(T_DELAY,  0, 0, 1, interval('5m'),      0),
+        'ip'                  => setv(T_IP,    0, 1, 0, undef,                undef),
+        'wtime'               => setv(T_DELAY, 0, 1, 1, 0,                    interval('30s')),
+        'mtime'               => setv(T_NUMBER,0, 1, 0, 0,                    undef),
+        'atime'               => setv(T_NUMBER,0, 1, 0, 0,                    undef),
+        'status'              => setv(T_ANY,   0, 1, 0, '',                   undef),
+        'min-interval'        => setv(T_DELAY, 0, 0, 1, interval('30s'),      0),
+        'max-interval'        => setv(T_DELAY, 0, 0, 1, interval('25d'),      0),
+        'min-error-interval'  => setv(T_DELAY, 0, 0, 1, interval('5m'),       0),
 
-        'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
-        'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
+        'warned-min-interval'       => setv(T_ANY, 0, 1, 0, 0,                undef),
+        'warned-min-error-interval' => setv(T_ANY, 0, 1, 0, 0,                undef),
     },
     'dyndns-common-defaults' => {
-        'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'mx'                  => setv(T_OFQDN,  0, 1, 1, '',                  undef),
-        'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'static'              => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'wildcard'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'mx'                  => setv(T_OFQDN, 0, 1, 1, '',                   undef),
+        'backupmx'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
     },
     'easydns-common-defaults' => {
-        'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'mx'                  => setv(T_OFQDN,  0, 1, 1, '',                  undef),
-        'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'wildcard'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'mx'                  => setv(T_OFQDN, 0, 1, 1, '',                   undef),
+        'backupmx'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
     },
     'noip-common-defaults' => {
-        'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'static'              => setv(T_BOOL,  0, 1, 1, 0,                    undef),
     },
     'noip-service-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'dynupdate.no-ip.com', undef),
-        'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
-        'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
-        'host'                => setv(T_STRING, 1, 1, 1, '',                  undef),
-        'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
-        'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
-        'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
-        'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
-        'status'              => setv(T_ANY,    0, 1, 0, '',                  undef),
-        'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),     0),
-        'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('25d'),     0),
-        'min-error-interval'  => setv(T_DELAY,  0, 0, 1, interval('5m'),      0),
-        'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
-        'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'dynupdate.no-ip.com',undef),
+        'login'               => setv(T_LOGIN, 1, 0, 1, '',                   undef),
+        'password'            => setv(T_PASSWD,1, 0, 1, '',                   undef),
+        'host'                => setv(T_STRING,1, 1, 1, '',                   undef),
+        'ip'                  => setv(T_IP,    0, 1, 0, undef,                undef),
+        'wtime'               => setv(T_DELAY, 0, 1, 1, 0,                    interval('30s')),
+        'mtime'               => setv(T_NUMBER,0, 1, 0, 0,                    undef),
+        'atime'               => setv(T_NUMBER,0, 1, 0, 0,                    undef),
+        'status'              => setv(T_ANY,   0, 1, 0, '',                   undef),
+        'min-interval'        => setv(T_DELAY, 0, 0, 1, interval('30s'),      0),
+        'max-interval'        => setv(T_DELAY, 0, 0, 1, interval('25d'),      0),
+        'min-error-interval'  => setv(T_DELAY, 0, 0, 1, interval('5m'),       0),
+        'warned-min-interval'       => setv(T_ANY, 0, 1, 0, 0,                undef),
+        'warned-min-error-interval' => setv(T_ANY, 0, 1, 0, 0,                undef),
     },
     'zoneedit-service-common-defaults' => {
-        'zone'                => setv(T_OFQDN,  0, 0, 1, undef,               undef),
+        'zone'                => setv(T_OFQDN, 0, 0, 1, undef,                undef),
     },
     'dtdns-common-defaults' => {
-        'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
-        'client'              => setv(T_STRING, 0, 1, 1, $program,            undef),
+        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',             undef),
+        'client'              => setv(T_STRING,0, 1, 1, $program,             undef),
     },
     'nsupdate-common-defaults' => {
-        'ttl'                 => setv(T_NUMBER, 0, 1, 0, 600,                 undef),
-        'zone'                => setv(T_STRING, 1, 1, 1, '',                  undef),
-        'tcp'                 => setv(T_BOOL,   0, 1, 1, 0,                   undef),
+        'ttl'                 => setv(T_NUMBER,0, 1, 0, 600,                  undef),
+        'zone'                => setv(T_STRING,1, 1, 1, '',                   undef),
+        'tcp'                 => setv(T_BOOL,  0, 1, 1, 0,                    undef),
     },
     'cloudflare-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'api.cloudflare.com/client/v4', undef),
-        'zone'                => setv(T_FQDN,   1, 0, 1, '',                  undef),
-        'login'               => setv(T_LOGIN,  0, 0, 1, 'token',             undef),
-        'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'mx'                  => setv(T_OFQDN,  0, 1, 1, '',                  undef),
-        'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'ttl'                 => setv(T_NUMBER, 1, 0, 1, 1,                   undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'api.cloudflare.com/client/v4', undef),
+        'zone'                => setv(T_FQDN,  1, 0, 1, '',                   undef),
+        'login'               => setv(T_LOGIN, 0, 0, 1, 'token',              undef),
+        'static'              => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'wildcard'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'mx'                  => setv(T_OFQDN, 0, 1, 1, '',                   undef),
+        'backupmx'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'ttl'                 => setv(T_NUMBER,1, 0, 1, 1,                    undef),
     },
     'googledomains-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'domains.google.com', undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'domains.google.com', undef),
     },
     'duckdns-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'www.duckdns.org',   undef),
-        'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'www.duckdns.org',    undef),
+        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',             undef),
     },
     'freemyip-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'freemyip.com',      undef),
-        'login'               => setv(T_LOGIN,  0, 0, 0, 'unused',            undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'freemyip.com',       undef),
+        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',             undef),
     },
     'woima-common-defaults' => {
-        'static'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'wildcard'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'mx'                  => setv(T_OFQDN,  0, 1, 1, '',                  undef),
-        'backupmx'            => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'custom'              => setv(T_BOOL,   0, 1, 1, 0,                   undef),
-        'script'              => setv(T_STRING, 1, 1, 1, '/nic/update',       undef),
+        'static'              => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'wildcard'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'mx'                  => setv(T_OFQDN, 0, 1, 1, '',                   undef),
+        'backupmx'            => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'custom'              => setv(T_BOOL,  0, 1, 1, 0,                    undef),
+        'script'              => setv(T_STRING,1, 1, 1, '/nic/update',        undef),
     },
     'woima-service-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'dyn.woima.fi',      undef),
-        'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
-        'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
-        'ip'                  => setv(T_IP,     0, 1, 0, undef,               undef),
-        'wtime'               => setv(T_DELAY,  0, 1, 1, 0,                   interval('30s')),
-        'mtime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
-        'atime'               => setv(T_NUMBER, 0, 1, 0, 0,                   undef),
-        'status'              => setv(T_ANY,    0, 1, 0, '',                  undef),
-        'min-interval'        => setv(T_DELAY,  0, 0, 1, interval('30s'),     0),
-        'max-interval'        => setv(T_DELAY,  0, 0, 1, interval('25d'),     0),
-        'min-error-interval'  => setv(T_DELAY,  0, 0, 1, interval('5m'),      0),
-        'warned-min-interval'       => setv(T_ANY,    0, 1, 0, 0,             undef),
-        'warned-min-error-interval' => setv(T_ANY,    0, 1, 0, 0,             undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'dyn.woima.fi',       undef),
+        'login'               => setv(T_LOGIN, 1, 0, 1, '',                   undef),
+        'password'            => setv(T_PASSWD,1, 0, 1, '',                   undef),
+        'ip'                  => setv(T_IP,    0, 1, 0, undef,                undef),
+        'wtime'               => setv(T_DELAY, 0, 1, 1, 0,                    interval('30s')),
+        'mtime'               => setv(T_NUMBER,0, 1, 0, 0,                    undef),
+        'atime'               => setv(T_NUMBER,0, 1, 0, 0,                    undef),
+        'status'              => setv(T_ANY,   0, 1, 0, '',                   undef),
+        'min-interval'        => setv(T_DELAY, 0, 0, 1, interval('30s'),      0),
+        'max-interval'        => setv(T_DELAY, 0, 0, 1, interval('25d'),      0),
+        'min-error-interval'  => setv(T_DELAY, 0, 0, 1, interval('5m'),       0),
+        'warned-min-interval'       => setv(T_ANY, 0, 1, 0, 0,                undef),
+        'warned-min-error-interval' => setv(T_ANY, 0, 1, 0, 0,                undef),
     },
     'yandex-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'pddimp.yandex.ru',  undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'pddimp.yandex.ru',   undef),
     },
     'dnsmadeeasy-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'cp.dnsmadeeasy.com', undef),
-        'script'              => setv(T_STRING, 1, 1, 1, '/servlet/updateip', undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'cp.dnsmadeeasy.com', undef),
+        'script'              => setv(T_STRING,1, 1, 1, '/servlet/updateip',  undef),
     },
     'dondominio-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'dondns.dondominio.com', undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'dondns.dondominio.com', undef),
     },
     'ovh-common-defaults' => {
-        'server'              => setv(T_FQDNP,  1, 0, 1, 'www.ovh.com',       undef),
-        'script'              => setv(T_STRING, 1, 1, 1, '/nic/update',       undef),
-        'login'               => setv(T_LOGIN,  1, 0, 1, '',                  undef),
-        'password'            => setv(T_PASSWD, 1, 0, 1, '',                  undef),
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'www.ovh.com',        undef),
+        'script'              => setv(T_STRING,1, 1, 1, '/nic/update',        undef),
+        'login'               => setv(T_LOGIN, 1, 0, 1, '',                   undef),
+        'password'            => setv(T_PASSWD,1, 0, 1, '',                   undef),
     },
 );
 my %services = (
@@ -932,10 +934,10 @@ sub update_nics {
             next if $config{$h}{'protocol'} ne lc($s);
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
-            my $use     = opt('use', $h);
-            my $arg_ip  = opt('ip',  $h) || '';
-            my $arg_fw  = opt('fw',  $h) || '';
-            my $arg_if  = opt('if',  $h) || '';
+            my $use = opt('use', $h);
+            my $arg_ip = opt('ip', $h) || '';
+            my $arg_fw = opt('fw', $h) || '';
+            my $arg_if = opt('if', $h) || '';
             my $arg_web = opt('web', $h) || '';
             my $arg_cmd = opt('cmd', $h) || '';
             my $ip = "";
