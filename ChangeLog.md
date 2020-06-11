@@ -12,6 +12,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ### Compatibility changes
 
   * Perl v5.10.1 or later is now required.
+  * When `use=if`, iproute2's `ip` command is now attempted before falling back
+    to `ifconfig` (it used to be the other way around). If you set `if-skip`,
+    please check that your configuration still works as expected.
   * Removed the `concont` protocol. If you still use this protocol, please
     [file a bug report](https://github.com/ddclient/ddclient/issues) and we
     will restore it.
