@@ -21,6 +21,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     minute.
   * The `pid` option is now ignored when ddclient is not daemonized.
   * ddclient now gracefully exits when interrupted by Ctrl-C.
+  * The way ddclient chooses the default for the `use` option has changed.
+    Rather than rely on the default, users should explicitly set the `use`
+    option.
 
 ## 2020-01-08 v3.9.1
 
