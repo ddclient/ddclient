@@ -11,7 +11,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Compatibility changes
 
-  * Perl v5.8 or later is now required.
+  * Perl v5.10.1 or later is now required.
   * Removed the `concont` protocol. If you still use this protocol, please
     [file a bug report](https://github.com/ddclient/ddclient/issues) and we
     will restore it.

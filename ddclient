@@ -18,7 +18,7 @@
 #
 #
 ######################################################################
-require v5.8.0;
+require v5.10.1;
 use strict;
 use warnings;
 use Getopt::Long;
