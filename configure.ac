@@ -30,8 +30,17 @@ m4_foreach_w([_m], [
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_ERROR([missing required Perl module _m])])])
 
-# Perl modules required for tests. Only prints a warning if not
-# installed.
+# Perl modules required for tests. If these modules are not installed
+# then some tests will fail. Only prints a warning if not installed.
+m4_foreach_w([_m], [
+    Data::Dumper
+    Test::More
+  ], [AX_PROG_PERL_MODULES([_m], [],
+         [AC_MSG_WARN([some tests will fail due to missing module _m])])])
+
+# Optional Perl modules for tests. If these modules are not installed
+# then some tests will be skipped, but no tests should fail. Only
+# prints a warning if not installed.
 m4_foreach_w([_m], [
     Test::Warnings
   ], [AX_PROG_PERL_MODULES([_m], [],
