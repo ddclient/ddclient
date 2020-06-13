@@ -972,8 +972,7 @@ sub update_nics {
     foreach my $h (sort keys %config) {
         if (!exists $examined{$h}) {
             failed("%s was not updated because protocol %s is not supported.",
-                   $h, define($config{$h}{'protocol'}, '<undefined>')
-            );
+                   $h, define($config{$h}{'protocol'}, '<undefined>'));
         }
     }
     write_cache(opt('cache'));
@@ -2214,7 +2213,7 @@ sub get_ip {
 
     } elsif ($use eq 'cmd') {
         if ($arg) {
-            $skip  = opt('cmd-skip', $h)  || '';
+            $skip = opt('cmd-skip', $h) || '';
             $reply = `$arg`;
             $reply = '' if $?;
         }
@@ -2237,8 +2236,8 @@ sub get_ip {
         # Stuff added to support Cisco router ip http daemon
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
-        my $queryif  = opt('if', $h);
-        $skip = opt('fw-skip', $h)  || '';
+        my $queryif = opt('if', $h);
+        $skip = opt('fw-skip', $h) || '';
 
         # Convert slashes to protected value "\/"
         $queryif =~ s%\/%\\\/%g;
@@ -3581,10 +3580,10 @@ sub nic_nfsn_gen_auth_header {
 ## nic_nfsn_make_request
 ######################################################################
 sub nic_nfsn_make_request {
-    my $h      = shift;
-    my $path   = shift;
+    my $h = shift;
+    my $path = shift;
     my $method = shift || 'GET';
-    my $body   = shift || '';
+    my $body = shift || '';
 
     my $base_url = "https://$config{$h}{'server'}";
     my $url      = $base_url . $path;
