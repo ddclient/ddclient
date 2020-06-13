@@ -754,7 +754,7 @@ my @opt = (
     [ "ip",          "=s", "-ip address           : set the IP address to 'address'" ],
     "",
     [ "if",          "=s", "-if interface         : obtain IP address from 'interface'" ],
-    [ "if-skip",     "=s", "-if-skip pattern      : skip any IP addresses before 'pattern' in the output of ifconfig {if}" ],
+    [ "if-skip",     "=s", "-if-skip pattern      : skip any IP addresses before 'pattern' in the output of 'ip address show dev {if}' (or 'ifconfig {if}')" ],
     "",
     [ "web",         "=s", "-web provider|url     : obtain IP address from provider's IP checking page" ],
     [ "web-skip",    "=s", "-web-skip pattern     : skip any IP addresses before 'pattern' on the web provider|url" ],
@@ -1477,8 +1477,15 @@ sub test_possible_ip {
 
     {
         local $opt{'use'} = 'if';
-        foreach my $if (grep {/^[a-zA-Z]/} `ifconfig -a`) {
-            $if =~ s/:?\s.*//is;
+        # Note: The `ip` command adds a `@eth0` suffix to the names of VLAN
+        # interfaces. That `@eth0` suffix is NOT part of the interface name.
+        my @ifs = map({ /^[^\s:]*:\s*([^\s:@]+)/ ? $1 : () }
+                      `command -v ip >/dev/null && ip -o link show`);
+        @ifs = map({ /^([a-zA-Z].*?)(?::?\s.*)?$/ ? $1 : () }
+                   `command -v ifconfig >/dev/null && ifconfig -a`) if $? || !@ifs;
+        @ifs = () if $?;
+        warning("failed to get list of interfaces") if !@ifs;
+        foreach my $if (@ifs) {
             local $opt{'if'} = $if;
             printf "use=if, if=%s address is %s\n", opt('if'), define(get_ip('if'), 'NOT FOUND');
         }
@@ -2201,8 +2208,8 @@ sub get_ip {
 
     } elsif ($use eq 'if') {
         $skip  = opt('if-skip', $h) || '';
-        $reply = `ifconfig $arg 2> /dev/null`;
-        $reply = `ip addr list dev $arg 2> /dev/null` if $?;
+        $reply = `command -v ip >/dev/null && ip address show dev $arg`;
+        $reply = `command -v ifconfig >/dev/null && ifconfig $arg` if $?;
         $reply = '' if $?;
 
     } elsif ($use eq 'cmd') {
