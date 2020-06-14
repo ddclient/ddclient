@@ -2004,7 +2004,7 @@ sub geturl {
     my $method   = shift || 'GET';
     my $data     = shift || '';
     my ($peer, $server, $port, $default_port, $use_ssl);
-    my ($sd, $rq, $request, $reply);
+    my ($sd, $request, $reply);
 
     ## canonify proxy and url
     my $force_ssl;
@@ -2063,10 +2063,11 @@ sub geturl {
     $headers .= "\n" if $headers ne '' && substr($headers, -1) ne "\n";
     $request .= $headers;
     $request .= "\n";
+    # RFC 7230 says that all lines before the body must end with <cr><lf>.
+    (my $rq = $request) =~ s/(?<!\r)\n/\r\n/g;
     $request .= $data;
+    $rq .= $data;
 
-    ## make sure newlines are <cr><lf> for some pedantic proxy servers
-    ($rq = $request) =~ s/\n/\r\n/g;
 
     $0 = sprintf("%s - connecting to %s port %s", $program, $peer, $port);
     if (!opt('exec')) {
