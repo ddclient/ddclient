@@ -1708,7 +1708,7 @@ sub minimum {
 sub opt {
     my $v = shift;
     my $h = shift;
-    return $config{$h}{$v} if defined($h && $config{$h}{$v});
+    return $config{$h}{$v} if defined($h) && defined($config{$h}{$v});
     return $opt{$v}        if defined $opt{$v};
     return $globals{$v}    if defined $globals{$v};
     return default($v)     if defined default($v);
