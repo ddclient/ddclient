@@ -2000,9 +2000,8 @@ sub geturl {
     $proxy  =~ s%^https?://%%i;
     $url    =~ s%^https?://%%i;
     $server = $url;
-    $server =~ s%/.*%%;
-    $url    = "/" unless $url =~ m%/%;
-    $url    =~ s%^[^/]*/%%;
+    $server =~ s%[?/].*%%;
+    $url    =~ s%^[^?/]*/?%%;
 
     opt('fw') && debug("opt(fw = %s)", opt('fw'));
     $globals{'fw'} && debug("glo fw = %s", $globals{'fw'});
@@ -2022,11 +2021,14 @@ sub geturl {
 
     ## determine peer and port to use.
     $peer = $proxy || $server;
-    $peer =~ s%/.*%%;
-    $port = $peer;
-    $port =~ s%^.*:%%;
-    $port = $default_port unless $port =~ /^\d+$/;
-    $peer =~ s%:.*$%%;
+    $peer =~ s%[?/].*%%;
+    if ($peer =~ /^\[([^]]+)\](?::(\d+))?$/ || $peer =~ /^([^:]+)(?::(\d+))?/) {
+        $peer = $1;
+        $port = $2 // $default_port;
+    } else {
+        failed("unable to extract host and port from %s", $peer);
+        return undef;
+    }
 
     $request = "$method ";
     if (!$use_ssl) {
