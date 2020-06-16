@@ -8,11 +8,11 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ### New features
 
   * Added support for OVH DynHost.
-  * Removed dependency on Data::Validate::IP.
 
-### Compatibility changes
+### Compatibility and dependency changes
 
   * Perl v5.10.1 or later is now required.
+  * Removed dependency on Data::Validate::IP.
   * When `use=if`, iproute2's `ip` command is now attempted before falling back
     to `ifconfig` (it used to be the other way around). If you set `if-skip`,
     please check that your configuration still works as expected.
