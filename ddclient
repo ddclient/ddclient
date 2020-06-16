@@ -24,7 +24,6 @@ use warnings;
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
-use Data::Validate::IP;
 
 my $version  = "3.9.1";
 my $programd = $0;
@@ -2304,6 +2303,15 @@ sub get_ip {
 
     debug("get_ip: using %s, %s reports %s", $use, $arg, define($ip, "<undefined>"));
     return $ip;
+}
+
+######################################################################
+## is_ipv6() validates if string is valid IPv6 address
+######################################################################
+sub is_ipv6 {
+    my ($value) = @_;
+    # This little gem from http://home.deds.nl/~aeron/regex/
+    return $value =~ /^(((?=.*(::))(?!.*\3.+\3))\3?|([\dA-F]{1,4}(\3|:\b|$)|\2))(?4){5}((?4){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\z/ai;
 }
 
 ######################################################################

@@ -8,6 +8,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ### New features
 
   * Added support for OVH DynHost.
+  * Removed dependency on Data::Validate::IP.
 
 ### Compatibility changes
 
