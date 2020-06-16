@@ -9,6 +9,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
   * Added support for OVH DynHost.
 
+### Bug fixes
+
+  * Fixed freedns.afraid.org for passwords longer than 16 characters.
+
 ### Compatibility and dependency changes
 
   * Perl v5.10.1 or later is now required.

@@ -3844,7 +3844,11 @@ sub nic_freedns_update {
 
     ## First get the list of updatable hosts
     my $url;
-    $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=" . &sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
+    # https://freedns.afraid.org/api/ says, "Password is maximum length of 16 characters."
+    # Experimentation has shown that this means that longer passwords must be truncated.
+    my $truncated_password = substr($config{$_[0]}{'password'}, 0, 16);
+    my $hashed_creds = sha1_hex("$config{$_[0]}{'login'}|$truncated_password");
+    $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=" . $hashed_creds;
     my $reply = geturl(opt('proxy'), $url);
     if (!defined($reply) || !$reply || !header_ok($_[0], $reply)) {
         failed("updating %s: Could not connect to %s for site list.", $_[0], $url);
