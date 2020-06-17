@@ -11,6 +11,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Bug fixes
 
+  * Fixed a regression introduced in v3.9.0 that caused
+    `use=ip,ip=<ipv4-address>` to fail.
   * "true" is now accepted as a boolean value.
 
 ### Compatibility and dependency changes
