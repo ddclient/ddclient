@@ -9,6 +9,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
   * Added support for OVH DynHost.
 
+### Bug fixes
+
+  * "true" is now accepted as a boolean value.
+
 ### Compatibility and dependency changes
 
   * Perl v5.10.1 or later is now required.
