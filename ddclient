@@ -949,7 +949,7 @@ sub update_nics {
                         if !$daemon || opt('verbose');
                     next;
                 }
-                if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) {
+                if (!is_ipv4($ip)) {
                     if (!ipv6_match($ip)) {
                         warning("malformed IP address (%s)", $ip);
                         next;
@@ -1901,7 +1901,7 @@ sub check_value {
 
     } elsif ($type eq T_IP) {
         if (!ipv6_match($value)) {
-            return undef if $value !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+            return undef if !is_ipv4($value);
         }
     }
     return $value;
@@ -2289,8 +2289,7 @@ sub get_ip {
     }
     if (defined($ip)) {
         # no need to parse $reply
-    } elsif ($reply =~ /^.*?\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b.*/is) {
-        $ip = $1;
+    } elsif ($ip = ipv4_match($reply)) {
         $ip = un_zero_pad($ip);
         $ip = filter_local($ip) if opt('fw-banlocal', $h);
     } elsif ($ip = ipv6_match($reply)) {
@@ -2305,6 +2304,23 @@ sub get_ip {
 
     debug("get_ip: using %s, %s reports %s", $use, $arg, define($ip, "<undefined>"));
     return $ip;
+}
+
+######################################################################
+## is_ipv4() validates if string is valid IPv4 address and only
+## a valid IPv4 address (no preceding or trailing spaces/characters)
+######################################################################
+sub is_ipv4 {
+    my ($value) = @_;
+    return (length($value // '') != 0) && ($value eq (ipv4_match($value) // ''));
+}
+
+######################################################################
+## ipv4_match() extracts the first valid IPv4 address from given string
+######################################################################
+sub ipv4_match {
+    (shift // '') =~ /\b((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))\b/ai;
+    return $1;
 }
 
 ######################################################################
