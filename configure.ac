@@ -53,7 +53,17 @@ m4_foreach_w([_m], [
 # then some tests will be skipped, but no tests should fail. Only
 # prints a warning if not installed.
 m4_foreach_w([_m], [
+    Carp
+    Exporter
+    HTTP::Daemon=6.12
+    HTTP::Daemon::SSL
+    HTTP::Message::PSGI
+    IO::Socket::IP
+    Scalar::Util
+    Test::TCP
     Test::Warnings
+    Time::HiRes
+    URI
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_WARN([some tests may be skipped due to missing module _m])])])
 

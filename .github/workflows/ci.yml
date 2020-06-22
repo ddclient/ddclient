@@ -29,7 +29,14 @@ jobs:
               automake \
               ca-certificates \
               git \
+              libhttp-daemon-perl \
+              libhttp-daemon-ssl-perl \
+              libio-socket-inet6-perl \
+              libio-socket-ip-perl \
+              libplack-perl \
+              libtest-tcp-perl \
               libtest-warnings-perl \
+              liburi-perl \
               make \
               ;
       - uses: actions/checkout@v2

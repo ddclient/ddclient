@@ -58,6 +58,8 @@ sysconf_DATA = ddclient.conf
 install-data-local:
 	$(MKDIR_P) '$(DESTDIR)$(localstatedir)'/cache/ddclient
 
+AM_TESTS_ENVIRONMENT = \
+	abs_top_srcdir='$(abs_top_srcdir)'; export abs_top_srcdir;
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 	$(top_srcdir)/build-aux/tap-driver.sh
 TEST_EXTENSIONS = .pl
@@ -67,8 +69,13 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-I'$(abs_top_builddir)' \
 	-I'$(abs_top_srcdir)'/t/lib
 handwritten_tests = \
+	t/geturl_connectivity.pl \
 	t/parse_assignments.pl
 generated_tests = \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
-EXTRA_DIST += $(handwritten_tests)
+EXTRA_DIST += $(handwritten_tests) \
+	t/lib/ddclient/Test/Fake/HTTPD.pm \
+	t/lib/ddclient/Test/Fake/HTTPD/dummy-ca-cert.pem \
+	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-cert.pem \
+	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-key.pem
