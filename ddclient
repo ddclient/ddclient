@@ -816,7 +816,7 @@ if (opt('help')) {
 }
 
 ## read config file because 'daemon' mode may be defined there.
-read_config(define($opt{'file'}, default('file')), \%config, \%globals);
+read_config($opt{'file'} // default('file'), \%config, \%globals);
 init_config();
 test_possible_ip() if opt('query');
 
@@ -856,7 +856,7 @@ do {
         printf("Help found");
     }
 
-    read_config(define($opt{'file'}, default('file')), \%config, \%globals);
+    read_config($opt{'file'} // default('file'), \%config, \%globals);
     init_config();
     read_cache(opt('cache'), \%cache);
     print_info() if opt('debug') && opt('verbose');
@@ -943,8 +943,8 @@ sub update_nics {
             if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
                 $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
             } else {
-                $ip = get_ip($use, $h);
-                if (!defined $ip || !$ip) {
+                $ip = get_ip($use, $h) // '';
+                if (!$ip) {
                     warning("unable to determine IP address")
                         if !$daemon || opt('verbose');
                     next;
@@ -971,7 +971,7 @@ sub update_nics {
     foreach my $h (sort keys %config) {
         if (!exists $examined{$h}) {
             failed("%s was not updated because protocol %s is not supported.",
-                   $h, define($config{$h}{'protocol'}, '<undefined>'));
+                   $h, $config{$h}{'protocol'} // '<undefined>');
         }
     }
     write_cache(opt('cache'));
@@ -1022,7 +1022,7 @@ sub write_cache {
     ## construct the cache file.
     my $cache = "";
     foreach my $h (sort keys %cache) {
-        my $opt = join(',', map { "$_=" . define($cache{$h}{$_},'') } sort keys %{$cache{$h}});
+        my $opt = join(',', map { "$_=" . ($cache{$h}{$_} // '') } sort keys %{$cache{$h}});
 
         $cache .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
     }
@@ -1375,7 +1375,7 @@ sub init_config {
     ## first the globals...
     foreach my $k (keys %globals) {
         my $def    = $variables{'merged'}{$k};
-        my $ovalue = define($globals{$k}, $def->{'default'});
+        my $ovalue = $globals{$k} // $def->{'default'};
         my $value  = check_value($ovalue, $def);
         if ($def->{'required'} && !defined $value) {
             $value = default($k);
@@ -1404,7 +1404,7 @@ sub init_config {
 
             foreach my $k (keys %$svars) {
                 my $def    = $svars->{$k};
-                my $ovalue = define($config{$h}{$k}, $def->{'default'});
+                my $ovalue = $config{$h}{$k} // $def->{'default'};
                 my $value  = check_value($ovalue, $def);
                 if ($def->{'required'} && !defined $value) {
                     warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
@@ -1470,7 +1470,7 @@ sub process_args {
 sub test_possible_ip {
     local $opt{'debug'} = 0;
 
-    printf "use=ip, ip=%s address is %s\n", opt('ip'), define(get_ip('ip'), 'NOT FOUND')
+    printf "use=ip, ip=%s address is %s\n", opt('ip'), get_ip('ip') // 'NOT FOUND'
         if defined opt('ip');
 
     {
@@ -1485,18 +1485,18 @@ sub test_possible_ip {
         warning("failed to get list of interfaces") if !@ifs;
         foreach my $if (@ifs) {
             local $opt{'if'} = $if;
-            printf "use=if, if=%s address is %s\n", opt('if'), define(get_ip('if'), 'NOT FOUND');
+            printf "use=if, if=%s address is %s\n", opt('if'), get_ip('if') // 'NOT FOUND';
         }
     }
     if (opt('fw')) {
         if (opt('fw') !~ m%/%) {
             foreach my $fw (sort keys %builtinfw) {
                 local $opt{'use'} = $fw;
-                printf "use=%s address is %s\n", $fw, define(get_ip($fw), 'NOT FOUND');
+                printf "use=%s address is %s\n", $fw, get_ip($fw) // 'NOT FOUND';
             }
         }
         local $opt{'use'} = 'fw';
-        printf "use=fw, fw=%s address is %s\n", opt('fw'), define(get_ip(opt('fw')), 'NOT FOUND')
+        printf "use=fw, fw=%s address is %s\n", opt('fw'), get_ip(opt('fw')) // 'NOT FOUND'
             if !exists $builtinfw{opt('fw')};
 
     }
@@ -1504,14 +1504,14 @@ sub test_possible_ip {
         local $opt{'use'} = 'web';
         foreach my $web (sort keys %builtinweb) {
             local $opt{'web'} = $web;
-            printf "use=web, web=%s address is %s\n", $web, define(get_ip('web'), 'NOT FOUND');
+            printf "use=web, web=%s address is %s\n", $web, get_ip('web') // 'NOT FOUND';
         }
-        printf "use=web, web=%s address is %s\n", opt('web'), define(get_ip('web'), 'NOT FOUND')
+        printf "use=web, web=%s address is %s\n", opt('web'), get_ip('web') // 'NOT FOUND'
             if !exists $builtinweb{opt('web')};
     }
     if (opt('cmd')) {
         local $opt{'use'} = 'cmd';
-        printf "use=cmd, cmd=%s address is %s\n", opt('cmd'), define(get_ip('cmd'), 'NOT FOUND');
+        printf "use=cmd, cmd=%s address is %s\n", opt('cmd'), get_ip('cmd') // 'NOT FOUND';
     }
     exit 0 unless opt('debug');
 }
@@ -1528,7 +1528,7 @@ sub test_geturl {
         password => opt('password'),
     });
     print "URL $url\n";
-    print defined($reply) ? $reply : "<undefined>\n";
+    print $reply // "<undefined>\n";
     exit;
 }
 ######################################################################
@@ -1713,10 +1713,7 @@ sub opt {
     my $v = shift;
     my $h = shift;
     return $config{$h}{$v} if defined($h) && defined($config{$h}{$v});
-    return $opt{$v}        if defined $opt{$v};
-    return $globals{$v}    if defined $globals{$v};
-    return default($v)     if defined default($v);
-    return undef;
+    return $opt{$v} // $globals{$v} // default($v);
 }
 sub min {
     my $min = shift;
@@ -1733,21 +1730,12 @@ sub max {
     return $max;
 }
 ######################################################################
-## define
-######################################################################
-sub define {
-    foreach (@_) {
-        return $_ if defined $_;
-    }
-    return undef;
-}
-######################################################################
 ## ynu
 ######################################################################
 sub ynu {
     my ($value, $yes, $no, $undef) = @_;
 
-    return $no if !defined($value) || !$value;
+    return $no if !($value // '');
     return $yes if $value eq '1';
     foreach (qw(yes true)) {
         return $yes if $_ =~ /^$value/i;
@@ -2126,8 +2114,8 @@ sub geturl {
                 alarm(opt('timeout')) if opt('timeout') > 0;
                 while ($_ = <$sd>) {
                     $0 = sprintf("%s - read from %s", $program, $peer_port_ipv);
-                    verbose("RECEIVE:", "%s", define($_, "<undefined>"));
-                    $reply .= $_ if defined $_;
+                    verbose("RECEIVE:", "%s", $_ // "<undefined>");
+                    $reply .= $_ // '';
                 }
                 if (opt('timeout') > 0) {
                     alarm(0);
@@ -2139,7 +2127,7 @@ sub geturl {
                 warning("TIMEOUT: %s after %s seconds", $to, opt('timeout'));
                 $reply = '';
             }
-            $reply = '' if !defined $reply;
+            $reply //= '';
         }
     }
     $0 = sprintf("%s - closed %s", $program, $peer_port_ipv);
@@ -2318,11 +2306,11 @@ sub get_ip {
     } else {
         warning("found neither ipv4 nor ipv6 address");
     }
-    if (($use ne 'ip') && (define($ip, '') eq '0.0.0.0')) {
+    if ($use ne 'ip' && ($ip // '') eq '0.0.0.0') {
         $ip = undef;
     }
 
-    debug("get_ip: using %s, %s reports %s", $use, $arg, define($ip, "<undefined>"));
+    debug("get_ip: using %s, %s reports %s", $use, $arg, $ip // "<undefined>");
     return $ip;
 }
 
@@ -2540,7 +2528,7 @@ sub nic_updateable {
                     ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !define($cache{$host}{'warned-min-interval'}, 0);
+                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
 
             $cache{$host}{'warned-min-interval'} = $now;
 
@@ -2554,7 +2542,7 @@ sub nic_updateable {
                     ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-error-interval'})
             )
-                if opt('verbose') || !define($cache{$host}{'warned-min-error-interval'}, 0);
+                if opt('verbose') || !($cache{$host}{'warned-min-error-interval'} // 0);
 
             $cache{$host}{'warned-min-error-interval'} = $now;
 
@@ -2579,7 +2567,7 @@ sub nic_updateable {
         success("%s: skipped: IP address was already set to %s.", $host, $ip)
             if opt('verbose');
     }
-    $config{$host}{'status'} = define($cache{$host}{'status'}, '');
+    $config{$host}{'status'} = $cache{$host}{'status'} // '';
     $config{$host}{'update'} = $update;
     if ($update) {
         $config{$host}{'status'}                    = 'noconnect';
@@ -2681,8 +2669,8 @@ sub nic_dyndns1_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
@@ -2849,8 +2837,8 @@ sub nic_dyndns2_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -2959,8 +2947,8 @@ sub nic_noip_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -3099,8 +3087,8 @@ sub nic_dslreports1_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
@@ -3179,8 +3167,8 @@ sub nic_hammernode1_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
         }
@@ -3274,8 +3262,8 @@ sub nic_zoneedit1_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -3429,8 +3417,8 @@ sub nic_easydns_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        });
-        if (!defined($reply) || !$reply) {
+        }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -3543,8 +3531,8 @@ sub nic_namecheap_update {
         $url .= "&ip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl({ proxy => opt('proxy'), url => $url });
-        if (!defined($reply) || !$reply) {
+        my $reply = geturl({ proxy => opt('proxy'), url => $url }) // '';
+        if (!$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
         }
