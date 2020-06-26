@@ -76,35 +76,60 @@ my %builtinweb = (
     'myonlineportal' => { 'url' => 'https://myonlineportal.net/checkip', },
 );
 my %builtinfw = (
-    'watchguard-soho' => {
-        'name' => 'Watchguard SOHO FW',
-        'url'  => '/pubnet.htm',
-        'skip' => 'NAME=IPAddress VALUE=',
+    '2wire' => {
+        'name' => '2Wire 1701HG Gateway',
+        'url'  => '/xslt?PAGE=B01',
+        'skip' => 'Internet Address:',
     },
-    'netopia-r910' => {
-        'name' => 'Netopia R910 FW',
-        'url'  => '/WanEvtLog',
-        'skip' => 'local:',
+    '3com-3c886a' => {
+        'name' => '3com 3c886a 56k Lan Modem',
+        'url'  => '/stat3.htm',
+        'skip' => 'IP address in use',
     },
-    'smc-barricade' => {
-        'name' => 'SMC Barricade FW',
-        'url'  => '/status.htm',
-        'skip' => 'IP Address',
+    '3com-oc-remote812' => {
+        'name' => '3com OfficeConnect Remote 812',
+        'url'  => '/callEvent',
+        'skip' => '.*LOCAL',
     },
-    'smc-barricade-alt' => {
-        'name' => 'SMC Barricade FW (alternate config)',
-        'url'  => '/status.HTM',
-        'skip' => 'WAN IP',
+    'alcatel-510' => {
+        'name' => 'Alcatel Speed Touch 510',
+        'url'  => '/cgi/ip/',
+        'skip' => 'ppp',
     },
-    'smc-barricade-7401bra' => {
-        'name' => 'SMC Barricade 7401BRA FW',
-        'url'  => '/admin/wan1.htm',
-        'skip' => 'IP Address',
+    'alcatel-stp' => {
+        'name' => 'Alcatel Speed Touch Pro',
+        'url'  => '/cgi/router/',
+        'skip' => 'Brt',
     },
-    'netgear-rt3xx' => {
-        'name' => 'Netgear FW',
-        'url'  => '/mtenSysStatus.html',
-        'skip' => 'IP Address',
+    'allnet-1298' => {
+        'name' => 'Allnet 1298',
+        'url'  => '/cgi/router/',
+        'skip' => 'WAN',
+    },
+    'cayman-3220h' => {
+        'name' => 'Cayman 3220-H DSL',
+        'url'  => '/shell/show+ip+interfaces',
+        'skip' => '.*inet',
+    },
+    'dlink-524' => {
+        'name' => 'D-Link DI-524',
+        'url'  => '/st_device.html',
+        'skip' => 'WAN.*?Addres',
+    },
+    'dlink-604' => {
+        'name' => 'D-Link DI-604',
+        'url'  => '/st_devic.html',
+        'skip' => 'WAN.*?IP.*Address',
+    },
+    'dlink-614' => {
+        'name' => 'D-Link DI-614+',
+        'url'  => '/st_devic.html',
+        'skip' => 'WAN',
+    },
+    'e-tech' => {
+        'name' => 'E-tech Router',
+        'url'  => '/Status.htm',
+        'skip' => 'Public IP Address',
     },
     'elsa-lancom-dsl10' => {
         'name' => 'ELSA LanCom DSL/10 DSL FW',
@@ -126,6 +151,16 @@ my %builtinfw = (
         'url'  => '/Status.htm',
         'skip' => 'WAN.*?Address',
     },
+    'linksys-rv042-wan1' => {
+        'name' => 'Linksys RV042 Dual Homed Router WAN Port 2',
+        'url'  => '/home.htm',
+        'skip' => 'WAN1 IP',
+    },
+    'linksys-rv042-wan2' => {
+        'name' => 'Linksys RV042 Dual Homed Router WAN Port 2',
+        'url'  => '/home.htm',
+        'skip' => 'WAN2 IP',
+    },
     'linksys-ver2' => {
         'name' => 'Linksys FW version 2',
         'url'  => '/RouterStatus.htm',
@@ -135,6 +170,11 @@ my %builtinfw = (
         'name' => 'Linksys FW version 3',
         'url'  => '/Status_Router.htm',
         'skip' => 'WAN.*?Address',
+    },
+    'linksys-wcg200' => {
+        'name' => 'Linksys WCG200 FW',
+        'url'  => '/RgStatus.asp',
+        'skip' => 'WAN.IP.*?Address',
     },
     'linksys-wrt854g' => {
         'name' => 'Linksys WRT854G FW',
@@ -151,145 +191,105 @@ my %builtinfw = (
         'url'  => '/MainPage?id=6',
         'skip' => 'ppp-0',
     },
-    '3com-3c886a' => {
-        'name' => '3com 3c886a 56k Lan Modem',
-        'url'  => '/stat3.htm',
-        'skip' => 'IP address in use',
-    },
-    'sohoware-nbg800' => {
-        'name' => 'SOHOWare BroadGuard NBG800',
-        'url'  => '/status.htm',
-        'skip' => 'Internet IP',
-    },
-    'xsense-aero' => {
-        'name' => 'Xsense Aero',
-        'url'  => '/A_SysInfo.htm',
-        'skip' => 'WAN.*?IP Address',
-    },
-    'alcatel-stp' => {
-        'name' => 'Alcatel Speed Touch Pro',
-        'url'  => '/cgi/router/',
-        'skip' => 'Brt',
-    },
-    'alcatel-510' => {
-        'name' => 'Alcatel Speed Touch 510',
-        'url'  => '/cgi/ip/',
-        'skip' => 'ppp',
-    },
-    'allnet-1298' => {
-        'name' => 'Allnet 1298',
-        'url'  => '/cgi/router/',
-        'skip' => 'WAN',
-    },
-    '3com-oc-remote812' => {
-        'name' => '3com OfficeConnect Remote 812',
-        'url'  => '/callEvent',
-        'skip' => '.*LOCAL',
-    },
-    'e-tech' => {
-        'name' => 'E-tech Router',
-        'url'  => '/Status.htm',
-        'skip' => 'Public IP Address',
-    },
-    'cayman-3220h' => {
-        'name' => 'Cayman 3220-H DSL',
-        'url'  => '/shell/show+ip+interfaces',
-        'skip' => '.*inet',
-    },
-    'vigor-2200usb' => {
-        'name' => 'Vigor 2200 USB',
-        'url'  => '/doc/online.sht',
-        'skip' => 'PPPoA',
-    },
-    'dlink-614' => {
-        'name' => 'D-Link DI-614+',
-        'url'  => '/st_devic.html',
-        'skip' => 'WAN',
-    },
-    'dlink-604' => {
-        'name' => 'D-Link DI-604',
-        'url'  => '/st_devic.html',
-        'skip' => 'WAN.*?IP.*Address',
-    },
-    'olitec-SX200' => {
-        'name' => 'olitec-SX200',
-        'url'  => '/doc/wan.htm',
-        'skip' => 'st_wan_ip[0] = "',
-    },
-    'westell-6100' => {
-        'name' => 'Westell C90-610015-06 DSL Router',
-        'url'  => '/advstat.htm',
-        'skip' => 'IP.+?Address',
-    },
-    '2wire' => {
-        'name' => '2Wire 1701HG Gateway',
-        'url'  => '/xslt?PAGE=B01',
-        'skip' => 'Internet Address:',
-    },
-    'linksys-rv042-wan1' => {
-        'name' => 'Linksys RV042 Dual Homed Router WAN Port 2',
-        'url'  => '/home.htm',
-        'skip' => 'WAN1 IP',
-    },
-    'linksys-rv042-wan2' => {
-        'name' => 'Linksys RV042 Dual Homed Router WAN Port 2',
-        'url'  => '/home.htm',
-        'skip' => 'WAN2 IP',
+    'netgear-dg834g' => {
+        'name' => 'netgear-dg834g',
+        'url'  => '/setup.cgi?next_file=s_status.htm&todo=cfg_init',
+        'skip' => '',
     },
     'netgear-rp614' => {
         'name' => 'Netgear RP614 FW',
         'url'  => '/sysstatus.html',
         'skip' => 'IP Address',
     },
-    'watchguard-edge-x' => {
-        'name' => 'Watchguard Edge X FW',
-        'url'  => '/netstat.htm',
-        'skip' => 'inet addr:',
-    },
-    'dlink-524' => {
-        'name' => 'D-Link DI-524',
-        'url'  => '/st_device.html',
-        'skip' => 'WAN.*?Addres',
-    },
-    'rtp300' => {
-        'name' => 'Linksys RTP300',
-        'url'  => '/cgi-bin/webcm?getpage=%2Fusr%2Fwww_safe%2Fhtml%2Fstatus%2FRouter.html',
-        'skip' => 'Internet.*?IP Address',
-    },
-    'netgear-wpn824' => {
-        'name' => 'Netgear WPN824 FW',
-        'url'  => '/RST_status.htm',
+    'netgear-rt3xx' => {
+        'name' => 'Netgear FW',
+        'url'  => '/mtenSysStatus.html',
         'skip' => 'IP Address',
-    },
-    'linksys-wcg200' => {
-        'name' => 'Linksys WCG200 FW',
-        'url'  => '/RgStatus.asp',
-        'skip' => 'WAN.IP.*?Address',
-    },
-    'netgear-dg834g' => {
-        'name' => 'netgear-dg834g',
-        'url'  => '/setup.cgi?next_file=s_status.htm&todo=cfg_init',
-        'skip' => '',
     },
     'netgear-wgt624' => {
         'name' => 'Netgear WGT624',
         'url'  => '/RST_st_dhcp.htm',
         'skip' => 'IP Address</B></td><TD NOWRAP width="50%">',
     },
-    'sveasoft' => {
-        'name' => 'Sveasoft WRT54G/WRT54GS',
-        'url'  => '/Status_Router.asp',
-        'skip' => 'var wan_ip',
+    'netgear-wpn824' => {
+        'name' => 'Netgear WPN824 FW',
+        'url'  => '/RST_status.htm',
+        'skip' => 'IP Address',
+    },
+    'netopia-r910' => {
+        'name' => 'Netopia R910 FW',
+        'url'  => '/WanEvtLog',
+        'skip' => 'local:',
+    },
+    'olitec-SX200' => {
+        'name' => 'olitec-SX200',
+        'url'  => '/doc/wan.htm',
+        'skip' => 'st_wan_ip[0] = "',
+    },
+    'rtp300' => {
+        'name' => 'Linksys RTP300',
+        'url'  => '/cgi-bin/webcm?getpage=%2Fusr%2Fwww_safe%2Fhtml%2Fstatus%2FRouter.html',
+        'skip' => 'Internet.*?IP Address',
+    },
+    'sitecom-dc202' => {
+        'name' => 'Sitecom DC-202 FW',
+        'url'  => '/status.htm',
+        'skip' => 'Internet IP Address',
+    },
+    'smc-barricade' => {
+        'name' => 'SMC Barricade FW',
+        'url'  => '/status.htm',
+        'skip' => 'IP Address',
     },
     'smc-barricade-7004vbr' => {
         'name' => 'SMC Barricade FW (7004VBR model config)',
         'url'  => '/status_main.stm',
         'skip' => 'var wan_ip=',
     },
-    'sitecom-dc202' => {
-        'name' => 'Sitecom DC-202 FW',
+    'smc-barricade-7401bra' => {
+        'name' => 'SMC Barricade 7401BRA FW',
+        'url'  => '/admin/wan1.htm',
+        'skip' => 'IP Address',
+    },
+    'smc-barricade-alt' => {
+        'name' => 'SMC Barricade FW (alternate config)',
+        'url'  => '/status.HTM',
+        'skip' => 'WAN IP',
+    },
+    'sohoware-nbg800' => {
+        'name' => 'SOHOWare BroadGuard NBG800',
         'url'  => '/status.htm',
-        'skip' => 'Internet IP Address',
+        'skip' => 'Internet IP',
+    },
+    'sveasoft' => {
+        'name' => 'Sveasoft WRT54G/WRT54GS',
+        'url'  => '/Status_Router.asp',
+        'skip' => 'var wan_ip',
+    },
+    'vigor-2200usb' => {
+        'name' => 'Vigor 2200 USB',
+        'url'  => '/doc/online.sht',
+        'skip' => 'PPPoA',
+    },
+    'watchguard-edge-x' => {
+        'name' => 'Watchguard Edge X FW',
+        'url'  => '/netstat.htm',
+        'skip' => 'inet addr:',
+    },
+    'watchguard-soho' => {
+        'name' => 'Watchguard SOHO FW',
+        'url'  => '/pubnet.htm',
+        'skip' => 'NAME=IPAddress VALUE=',
+    },
+    'westell-6100' => {
+        'name' => 'Westell C90-610015-06 DSL Router',
+        'url'  => '/advstat.htm',
+        'skip' => 'IP.+?Address',
+    },
+    'xsense-aero' => {
+        'name' => 'Xsense Aero',
+        'url'  => '/A_SysInfo.htm',
+        'skip' => 'WAN.*?IP Address',
     },
 );
 
