@@ -495,6 +495,72 @@ my %variables = (
     },
 );
 my %services = (
+    'changeip' => {
+        'updateable' => undef,
+        'update'     => \&nic_changeip_update,
+        'examples'   => \&nic_changeip_examples,
+        'variables'  => merge(
+            { 'server'       => setv(T_FQDNP, 1, 0, 'nic.changeip.com', undef) },
+            { 'min-interval' => setv(T_DELAY, 0, 0, 0,                  interval('5m')), },
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'cloudflare' => {
+        'updateable' => undef,
+        'update'     => \&nic_cloudflare_update,
+        'examples'   => \&nic_cloudflare_examples,
+        'variables'  => merge(
+            { 'server'       => setv(T_FQDNP, 1, 0, 'api.cloudflare.com/client/v4', undef) },
+            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0), },
+            $variables{'cloudflare-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'dnsmadeeasy' => {
+        'updateable' => undef,
+        'update'     => \&nic_dnsmadeeasy_update,
+        'examples'   => \&nic_dnsmadeeasy_examples,
+        'variables'  => merge(
+            $variables{'dnsmadeeasy-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'dondominio' => {
+        'updateable' => undef,
+        'update'     => \&nic_dondominio_update,
+        'examples'   => \&nic_dondominio_examples,
+        'variables'  => merge(
+            $variables{'dondominio-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'dslreports1' => {
+        'updateable' => undef,
+        'update'     => \&nic_dslreports1_update,
+        'examples'   => \&nic_dslreports1_examples,
+        'variables'  => merge(
+            { 'host' => setv(T_NUMBER, 1, 1, 0, undef) },
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'dtdns' => {
+        'updateable' => undef,
+        'update'     => \&nic_dtdns_update,
+        'examples'   => \&nic_dtdns_examples,
+        'variables'  => merge(
+            $variables{'dtdns-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'duckdns' => {
+        'updateable' => undef,
+        'update'     => \&nic_duckdns_update,
+        'examples'   => \&nic_duckdns_examples,
+        'variables'  => merge(
+            $variables{'duckdns-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
     'dyndns1' => {
         'updateable' => \&nic_dyndns2_updateable,
         'update'     => \&nic_dyndns1_update,
@@ -515,22 +581,43 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
-    'noip' => {
+    'easydns' => {
         'updateable' => undef,
-        'update'     => \&nic_noip_update,
-        'examples'   => \&nic_noip_examples,
+        'update'     => \&nic_easydns_update,
+        'examples'   => \&nic_easydns_examples,
         'variables'  => merge(
-            { 'custom' => setv(T_BOOL, 0, 1, 0, undef), },
-            $variables{'noip-common-defaults'},
-            $variables{'noip-service-common-defaults'},
+            { 'server'       => setv(T_FQDNP, 1, 0, 'members.easydns.com', undef) },
+            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),        0), },
+            $variables{'easydns-common-defaults'},
+            $variables{'service-common-defaults'},
         ),
     },
-    'dslreports1' => {
+    'freedns' => {
         'updateable' => undef,
-        'update'     => \&nic_dslreports1_update,
-        'examples'   => \&nic_dslreports1_examples,
+        'update'     => \&nic_freedns_update,
+        'examples'   => \&nic_freedns_examples,
         'variables'  => merge(
-            { 'host' => setv(T_NUMBER, 1, 1, 0, undef) },
+            { 'server'       => setv(T_FQDNP, 1, 0, 'freedns.afraid.org', undef) },
+            { 'min-interval' => setv(T_DELAY, 0, 0, 0,                    interval('5m')), },
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'freemyip' => {
+        'updateable' => undef,
+        'update'     => \&nic_freemyip_update,
+        'examples'   => \&nic_freemyip_examples,
+        'variables'  => merge(
+            $variables{'freemyip-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'googledomains' => {
+        'updateable' => undef,
+        'update'     => \&nic_googledomains_update,
+        'examples'   => \&nic_googledomains_examples,
+        'variables'  => merge(
+            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0), },
+            $variables{'googledomains-common-defaults'},
             $variables{'service-common-defaults'},
         ),
     },
@@ -541,28 +628,6 @@ my %services = (
         'variables'  => merge(
             { 'server'       => setv(T_FQDNP, 1, 0, 'dup.hn.org',   undef) },
             { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0), },
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'zoneedit1' => {
-        'updateable' => undef,
-        'update'     => \&nic_zoneedit1_update,
-        'examples'   => \&nic_zoneedit1_examples,
-        'variables'  => merge(
-            { 'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef) },
-            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),         0), },
-            $variables{'service-common-defaults'},
-            $variables{'zoneedit-service-common-defaults'},
-        ),
-    },
-    'easydns' => {
-        'updateable' => undef,
-        'update'     => \&nic_easydns_update,
-        'examples'   => \&nic_easydns_examples,
-        'variables'  => merge(
-            { 'server'       => setv(T_FQDNP, 1, 0, 'members.easydns.com', undef) },
-            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),        0), },
-            $variables{'easydns-common-defaults'},
             $variables{'service-common-defaults'},
         ),
     },
@@ -588,43 +653,14 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
-    'sitelutions' => {
+    'noip' => {
         'updateable' => undef,
-        'update'     => \&nic_sitelutions_update,
-        'examples'   => \&nic_sitelutions_examples,
+        'update'     => \&nic_noip_update,
+        'examples'   => \&nic_noip_examples,
         'variables'  => merge(
-            { 'server'       => setv(T_FQDNP, 1, 0, 'www.sitelutions.com', undef) },
-            { 'min-interval' => setv(T_DELAY, 0, 0, 0,                     interval('5m')), },
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'freedns' => {
-        'updateable' => undef,
-        'update'     => \&nic_freedns_update,
-        'examples'   => \&nic_freedns_examples,
-        'variables'  => merge(
-            { 'server'       => setv(T_FQDNP, 1, 0, 'freedns.afraid.org', undef) },
-            { 'min-interval' => setv(T_DELAY, 0, 0, 0,                    interval('5m')), },
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'changeip' => {
-        'updateable' => undef,
-        'update'     => \&nic_changeip_update,
-        'examples'   => \&nic_changeip_examples,
-        'variables'  => merge(
-            { 'server'       => setv(T_FQDNP, 1, 0, 'nic.changeip.com', undef) },
-            { 'min-interval' => setv(T_DELAY, 0, 0, 0,                  interval('5m')), },
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'dtdns' => {
-        'updateable' => undef,
-        'update'     => \&nic_dtdns_update,
-        'examples'   => \&nic_dtdns_examples,
-        'variables'  => merge(
-            $variables{'dtdns-common-defaults'},
-            $variables{'service-common-defaults'},
+            { 'custom' => setv(T_BOOL, 0, 1, 0, undef), },
+            $variables{'noip-common-defaults'},
+            $variables{'noip-service-common-defaults'},
         ),
     },
     'nsupdate' => {
@@ -637,42 +673,22 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
-    'cloudflare' => {
+    'ovh' => {
         'updateable' => undef,
-        'update'     => \&nic_cloudflare_update,
-        'examples'   => \&nic_cloudflare_examples,
+        'update'     => \&nic_ovh_update,
+        'examples'   => \&nic_ovh_examples,
         'variables'  => merge(
-            { 'server'       => setv(T_FQDNP, 1, 0, 'api.cloudflare.com/client/v4', undef) },
-            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0), },
-            $variables{'cloudflare-common-defaults'},
+            $variables{'ovh-common-defaults'},
             $variables{'service-common-defaults'},
         ),
     },
-    'googledomains' => {
+    'sitelutions' => {
         'updateable' => undef,
-        'update'     => \&nic_googledomains_update,
-        'examples'   => \&nic_googledomains_examples,
+        'update'     => \&nic_sitelutions_update,
+        'examples'   => \&nic_sitelutions_examples,
         'variables'  => merge(
-            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0), },
-            $variables{'googledomains-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'duckdns' => {
-        'updateable' => undef,
-        'update'     => \&nic_duckdns_update,
-        'examples'   => \&nic_duckdns_examples,
-        'variables'  => merge(
-            $variables{'duckdns-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'freemyip' => {
-        'updateable' => undef,
-        'update'     => \&nic_freemyip_update,
-        'examples'   => \&nic_freemyip_examples,
-        'variables'  => merge(
-            $variables{'freemyip-common-defaults'},
+            { 'server'       => setv(T_FQDNP, 1, 0, 'www.sitelutions.com', undef) },
+            { 'min-interval' => setv(T_DELAY, 0, 0, 0,                     interval('5m')), },
             $variables{'service-common-defaults'},
         ),
     },
@@ -695,31 +711,15 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
-    'dnsmadeeasy' => {
+    'zoneedit1' => {
         'updateable' => undef,
-        'update'     => \&nic_dnsmadeeasy_update,
-        'examples'   => \&nic_dnsmadeeasy_examples,
+        'update'     => \&nic_zoneedit1_update,
+        'examples'   => \&nic_zoneedit1_examples,
         'variables'  => merge(
-            $variables{'dnsmadeeasy-common-defaults'},
+            { 'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef) },
+            { 'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),         0), },
             $variables{'service-common-defaults'},
-        ),
-    },
-    'dondominio' => {
-        'updateable' => undef,
-        'update'     => \&nic_dondominio_update,
-        'examples'   => \&nic_dondominio_examples,
-        'variables'  => merge(
-            $variables{'dondominio-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
-    },
-    'ovh' => {
-        'updateable' => undef,
-        'update'     => \&nic_ovh_update,
-        'examples'   => \&nic_ovh_examples,
-        'variables'  => merge(
-            $variables{'ovh-common-defaults'},
-            $variables{'service-common-defaults'},
+            $variables{'zoneedit-service-common-defaults'},
         ),
     },
 );
