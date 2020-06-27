@@ -336,7 +336,6 @@ my %variables = (
         'web-skip'            => setv(T_STRING,1, 0, 1, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, 1, '',                   undef),
         'fw-skip'             => setv(T_STRING,1, 0, 1, '',                   undef),
-        'fw-banlocal'         => setv(T_BOOL,  0, 0, 1, 0,                    undef),
         'fw-login'            => setv(T_LOGIN, 1, 0, 1, '',                   undef),
         'fw-password'         => setv(T_PASSWD,1, 0, 1, '',                   undef),
         'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
@@ -376,7 +375,6 @@ my %variables = (
         'web-skip'            => setv(T_STRING,0, 0, 1, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, 1, '',                   undef),
         'fw-skip'             => setv(T_STRING,0, 0, 1, '',                   undef),
-        'fw-banlocal'         => setv(T_BOOL,  0, 0, 1, 0,                    undef),
         'fw-login'            => setv(T_LOGIN, 0, 0, 1, '',                   undef),
         'fw-password'         => setv(T_PASSWD,0, 0, 1, '',                   undef),
         'cmd'                 => setv(T_PROG,  0, 0, 1, '',                   undef),
@@ -734,6 +732,7 @@ $variables{'merged'} = merge($variables{'global-defaults'},
 
 # This will hold the processed args.
 my %opt = ();
+$opt{'fw-banlocal'} = sub { warning("'-fw-banlocal' is deprecated and does nothing") };
 
 my @opt = (
     "usage: ${program} [options]",
@@ -760,7 +759,6 @@ my @opt = (
     "",
     [ "fw",          "=s", "-fw address|url       : obtain IP address from firewall at 'address'" ],
     [ "fw-skip",     "=s", "-fw-skip pattern      : skip any IP addresses before 'pattern' on the firewall address|url" ],
-    [ "fw-banlocal", "!",  "-fw-banlocal          : ignore local IP addresses on the firewall address|url" ],
     [ "fw-login",    "=s", "-fw-login login       :   use 'login' when getting IP from fw" ],
     [ "fw-password", "=s", "-fw-password secret   :   use password 'secret' when getting IP from fw" ],
     "",
@@ -792,6 +790,7 @@ my @opt = (
     [ "postscript",  "",   "-postscript           : script to run after updating ddclient, has new IP as param" ],
 
     [ "query",       "!",  "-{no}query            : print {no} ip addresses and exit" ],
+    [ "fw-banlocal", "!",  "" ], ## deprecated
     [ "test",        "!",  "" ], ## hidden
     [ "geturl",      "=s", "" ], ## hidden
     "",
@@ -1080,6 +1079,10 @@ sub parse_assignments {
         $rest =~ s/^\s+//;
         ($name, $value, $rest) = parse_assignment($rest);
         if (defined $name) {
+            if ($name eq 'fw-banlocal') {
+                warning("'fw-banlocal' is deprecated and does nothing");
+                next;
+            }
             $variables{$name} = $value;
         } else {
             last;
@@ -1308,6 +1311,10 @@ sub init_config {
         my %options = ();
         foreach my $opt (split_by_comma($opt{'options'})) {
             my ($name, $var) = split /\s*=\s*/, $opt;
+            if ($name eq 'fw-banlocal') {
+                warning("'fw-banlocal' is deprecated and does nothing");
+                next;
+            }
             $options{$name} = $var;
         }
         ## determine hosts specified with -host
@@ -1436,7 +1443,7 @@ sub process_args {
             push @spec, $key . $specifier;
 
             ## define the default value which can be overwritten later
-            $opt{$key} = undef;
+            $opt{$key} = undef unless exists($opt{$key});
 
             next unless $arg_usage;
 
@@ -2150,28 +2157,6 @@ sub geturl {
 }
 
 ######################################################################
-## filter_local
-######################################################################
-sub filter_local {
-    my $in_ip = shift(@_);
-
-    if ($in_ip eq '0.0.0.0') {
-        return $in_ip;
-    }
-
-    my @guess_local = (
-        '^10\.',
-        '^172\.(?:1[6-9]|2[0-9]|3[01])\.',
-        '^192\.168'
-    );
-    foreach my $block (@guess_local) {
-        if ($in_ip =~ /$block/) {
-            return '0.0.0.0';
-        }
-    }
-    return $in_ip;
-}
-######################################################################
 ## get_ip
 ######################################################################
 sub get_ip {
@@ -2281,9 +2266,9 @@ sub get_ip {
     if (defined($ip)) {
         # no need to parse $reply
     } elsif ($ip = ipv4_match($reply)) {
-        $ip = filter_local($ip) if opt('fw-banlocal', $h);
+        # got an IPv4 address
     } elsif ($ip = ipv6_match($reply)) {
-        $ip = filter_local($ip) if opt('fw-banlocal', $h);
+        # got a IPv6 address
     } else {
         warning("found neither ipv4 nor ipv6 address");
     }

@@ -34,6 +34,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The way ddclient chooses the default for the `use` option has changed.
     Rather than rely on the default, users should explicitly set the `use`
     option.
+  * The `fw-banlocal` option is deprecated and no longer does anything.
 
 ## 2020-01-08 v3.9.1
 
