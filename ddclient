@@ -949,7 +949,7 @@ sub update_nics {
                     next;
                 }
                 if (!is_ipv4($ip)) {
-                    if (!ipv6_match($ip)) {
+                    if (!extract_ipv6($ip)) {
                         warning("malformed IP address (%s)", $ip);
                         next;
                     }
@@ -1900,7 +1900,7 @@ sub check_value {
         return undef if $value eq "";
 
     } elsif ($type eq T_IP) {
-        if (!ipv6_match($value)) {
+        if (!extract_ipv6($value)) {
             return undef if !is_ipv4($value);
         }
     }
@@ -2282,9 +2282,9 @@ sub get_ip {
     }
     if (defined($ip)) {
         # no need to parse $reply
-    } elsif ($ip = ipv4_match($reply)) {
+    } elsif ($ip = extract_ipv4($reply)) {
         $ip = un_zero_pad($ip);
-    } elsif ($ip = ipv6_match($reply)) {
+    } elsif ($ip = extract_ipv6($reply)) {
         $ip = un_zero_pad($ip);
     } else {
         warning("found neither ipv4 nor ipv6 address");
@@ -2303,13 +2303,13 @@ sub get_ip {
 ######################################################################
 sub is_ipv4 {
     my ($value) = @_;
-    return (length($value // '') != 0) && ($value eq (ipv4_match($value) // ''));
+    return (length($value // '') != 0) && ($value eq (extract_ipv4($value) // ''));
 }
 
 ######################################################################
-## ipv4_match() extracts the first valid IPv4 address from given string
+## extract_ipv4() extracts the first valid IPv4 address from the given string
 ######################################################################
-sub ipv4_match {
+sub extract_ipv4 {
     (shift // '') =~ /\b((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))\b/ai;
     return $1;
 }
@@ -2324,9 +2324,9 @@ sub is_ipv6 {
 }
 
 ######################################################################
-## ipv6_match determine ipv6 address from given string and return them
+## extract_ipv6() extracts the first valid IPv6 address from the given string
 ######################################################################
-sub ipv6_match {
+sub extract_ipv6 {
     my $content = shift;
     my $omits;
     my $ip          = "";
