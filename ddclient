@@ -942,7 +942,7 @@ sub update_nics {
             if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
                 $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
             } else {
-                my $ip = get_ip($use, $h) // '';
+                $ip = get_ip($use, $h) // '';
                 if (!$ip) {
                     warning("unable to determine IP address")
                         if !$daemon || opt('verbose');
