@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: install test dependencies
+        run: sudo apt-get install libtest-warnings-perl
       - name: autogen
         run: ./autogen
       - name: configure
@@ -24,6 +26,8 @@ jobs:
     runs-on: ubuntu-16.04
     steps:
       - uses: actions/checkout@v2
+      - name: install test dependencies
+        run: sudo apt-get install libtest-warnings-perl
       - name: autogen
         run: ./autogen
       - name: configure

@@ -63,6 +63,7 @@ To add a new test script:
      use Test::More;
      # Your test dependencies go here.
 
+     SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
      eval { require 'ddclient'; } or BAIL_OUT($@);
 
      # Your tests go here.
