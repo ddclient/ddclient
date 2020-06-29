@@ -9,6 +9,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
   * Added support for OVH DynHost.
   * Added support for ClouDNS.
+  * Added a build system to make it easier for distributions to package
+    ddclient:
+
+        ./autogen && ./configure && make && make check && make install
 
 ### Bug fixes
 
