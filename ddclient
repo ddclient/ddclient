@@ -2355,13 +2355,11 @@ sub extract_ipv6 {
 ######################################################################
 sub group_hosts_by {
     my ($hosts, $attributes) = @_;
-
+    my %attrs = (map({ ($_ => 1) } @$attributes), 'wantip' => 1);
+    my @attrs = sort(keys(%attrs));
     my %groups = ();
     foreach my $h (@$hosts) {
-        my @keys = (@$attributes, 'wantip');
-        map { $config{$h}{$_} = '' unless exists $config{$h}{$_} } @keys;
-        my $sig = join(',', map { "$_=$config{$h}{$_}" } @keys);
-
+        my $sig = join(',', map({ sprintf("%s=%s", $_, $config{$h}{$_} // '') } @attrs));
         push @{$groups{$sig}}, $h;
     }
     return %groups;
