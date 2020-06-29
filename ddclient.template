@@ -40,7 +40,7 @@ my $hostname = hostname();
 # to run this file as a Perl script before those substitutions are made.
 sub subst_var {
     my ($subst, $default) = @_;
-    return $default if $subst =~ /^@\w+@$/a;
+    return $default if $subst =~ qr'^@\w+@$'a;
     return $subst;
 }
 
