@@ -8,6 +8,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ### New features
 
   * Added support for OVH DynHost.
+  * Added support for ClouDNS.
 
 ### Bug fixes
 

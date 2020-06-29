@@ -516,6 +516,20 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
+    'cloudns' => {
+        'updateable' => undef,
+        'update' => \&nic_cloudns_update,
+        'examples' => \&nic_cloudns_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'dynurl' => setv(T_STRING, 1, 0, undef, undef),
+            # nic_updateable() assumes that every service uses a username and password but that is
+            # not true for CloudNS. Silence warnings by redefining the username and password
+            # variables as non-required with a non-empty default.
+            'login'    => setv(T_STRING, 0, 0, 'unused', undef),
+            'password' => setv(T_STRING, 0, 0, 'unused', undef),
+        },
+    },
     'dnsmadeeasy' => {
         'updateable' => undef,
         'update'     => \&nic_dnsmadeeasy_update,
@@ -5148,6 +5162,69 @@ sub nic_ovh_update {
     }
 }
 
+sub nic_cloudns_examples {
+    return <<"EoEXAMPLE";
+o 'cloudns'
+
+The 'cloudns' protocol is used for ClouDNS (https://www.cloudns.net).  Details
+about dynamic DNS updates can be found at https://www.cloudns.net/dynamic-dns/.
+
+Available configuration variables:
+  * dynurl: The DynURL associated with the A or AAAA record you wish to update.
+
+Limitations:
+  * $program cannot tell if the DynURL you provide belongs to the hostname you
+    specify.
+  * ClouDNS does not document how to tell whether an update suceeded or failed,
+    so there is no way for $program to reliably handle failures.
+  * The ClouDNS API does not provide a reliable way to set the desired IP
+    address. It might save the IP address you want, or it might save the IP
+    address that connects to CloudDNS. It is more likely to work if you do not
+    use a proxy.
+
+Example ${program}.conf file entry:
+  protocol=cloudns,                                                        \\
+  dynurl=https://ipv4.cloudns.net/api/dynamicURL/?q=Njc1OTE2OjY3Njk0ND..., \\
+  myhost.example.com
+EoEXAMPLE
+}
+
+sub nic_cloudns_update {
+    my %groups = group_hosts_by([ @_ ], [ qw(dynurl) ]);
+    for my $hr (values(%groups)) {
+        my @hosts = @$hr;
+        my $hosts = join(',', @hosts);
+        my $ip = $config{$hosts[0]}{'wantip'};
+        my $dynurl = $config{$hosts[0]}{'dynurl'};
+        delete $config{$_}{'wantip'} for @hosts;
+        # https://www.cloudns.net/wiki/article/36/ says, "If you are behind a proxy and your real
+        # IP is set in the header X-Forwarded-For you need to add &proxy=1 at the end of the
+        # DynamicURL." We abuse this to pass the desired IP address to ClouDNS, which might not be
+        # the same as the client IP address seen by ClouDNS.
+        my $reply = geturl({
+            proxy => opt('proxy'),
+            url => $dynurl . '&proxy=1',
+            headers => "X-Forwarded-For: $ip\n",
+        });
+        if (($reply // '') eq '' || !header_ok($hosts, $reply)) {
+            $config{$_}{'status'} = 'failed' for @hosts;
+            failed("updating %s: failed to visit DynURL", $hosts);
+            next;
+        }
+        $reply =~ s/^.*?\n\n//s;  # Strip the headers.
+        chomp($reply);
+        if ($reply eq "The record's key is wrong!" || $reply eq "Invalid request.") {
+            $config{$_}{'status'} = 'failed' for @hosts;
+            failed("updating %s: %s", $hosts, $reply);
+            next;
+        }
+        # There's no documentation explaining possible return values, so we assume success.
+        $config{$_}{'ip'} = $ip for @hosts;
+        $config{$_}{'mtime'} = $now for @hosts;
+        $config{$_}{'status'} = 'good' for @hosts;
+        success("updating %s: IP address set to %s", $hosts, $ip);
+    }
+}
 
 ######################################################################
 # vim: ai et ts=4 sw=4 tw=78:
