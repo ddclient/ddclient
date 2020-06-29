@@ -3911,62 +3911,96 @@ EoEXAMPLE
 ######################################################################
 ## nic_freedns_update
 ##
-## written by John Haney
+## API v1 documented at http://freedns.afraid.org/api/
 ##
-## based on http://freedns.afraid.org/api/
-## needs this url to update:
-## http://freedns.afraid.org/api/?action=getdyndns&sha=<sha1sum of login|password>
-## This returns a list of host|currentIP|updateURL lines.
-## Pick the line that matches myhost, and fetch the URL.
-## word 'Updated' for success, 'fail' for failure.
+## An update requires two steps. The first is to get a list of records from:
+##   http://freedns.afraid.org/api/?action=getdyndns&v=2&sha=<sha1sum of login|password>
+## The returned list looks like:
 ##
+##   hostname1.example.com|1.2.3.4|http://example/update/url1
+##   hostname1.example.com|dead::beef|http://example/update/url2
+##   hostname2.example.com|5.6.7.8|http://example/update/url3
+##   hostname2.example.com|9.10.11.12|http://example/update/url4
+##   hostname3.example.com|cafe::f00d|http://example/update/url5
+##
+## The record's columns are separated by '|'. The first is the hostname, the second is the current
+## address, and the third is the record-specific update URL. There can be multiple records for the
+## same host, and they can even have the same address type. Any record can be updated to hold
+## either type of address (e.g., if given an IPv6 address the record will automatically become an
+## AAAA record).
+##
+## The second step is to visit the appropriate record's update URL with
+## ?address=<ipv4-or-ipv6-address> appended. "Updated" in the result means success, "fail" means
+## failure.
 ######################################################################
 sub nic_freedns_update {
-
-
     debug("\nnic_freedns_update -------------------");
-
-    ## First get the list of updatable hosts
-    my $url;
-    $url = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&sha=" . &sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
+    # Separate the records that are currently holding IPv4 addresses from the records that are
+    # currently holding IPv6 addresses so that we can avoid switching a record to a different
+    # address type.
+    my %recs_ipv4;
+    my %recs_ipv6;
+    my $url_tmpl = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&v=2&sha=<credentials>";
+    my $creds = sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
+    (my $url = $url_tmpl) =~ s/<credentials>/$creds/;
     my $reply = geturl({ proxy => opt('proxy'), url => $url });
-    if (!defined($reply) || !$reply || !header_ok($_[0], $reply)) {
-        failed("updating %s: Could not connect to %s for site list.", $_[0], $url);
-        return;
+    my $record_list_error = '';
+    if ($reply && header_ok($_[0], $reply)) {
+        $reply =~ s/^.*?\n\n//s;  # Strip the headers.
+        for (split("\n", $reply)) {
+            my @rec = split(/\|/);
+            next if ($#rec < 2);
+            my $recs = is_ipv6($rec[1]) ? \%recs_ipv6 : \%recs_ipv4;
+            $recs->{$rec[0]} = \@rec;
+            debug("host: %s, current address: %s, update URL: %s", @rec);
+        }
+        if (keys(%recs_ipv4) + keys(%recs_ipv6) == 0) {
+            chomp($reply);
+            $record_list_error = "failed to get record list from $url_tmpl: $reply";
+        }
+    } else {
+        $record_list_error = "failed to get record list from $url_tmpl";
     }
-    my @lines = split("\n", $reply);
-    my %freedns_hosts;
-    grep {
-        my @rec = split(/\|/, $_);
-        $freedns_hosts{$rec[0]} = \@rec if ($#rec > 0);
-    } @lines;
-    if (!keys %freedns_hosts) {
-        failed("Could not get freedns update URLs from %s", $config{$_[0]}{'server'});
-        return;
-    }
-    ## update each configured host
+
     foreach my $h (@_) {
         if (!$h) { next }
         my $ip = delete $config{$h}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
 
-        if ($ip eq $freedns_hosts{$h}->[1]) {
+        info("%s: setting IP address to %s", $h, $ip);
+
+        if ($record_list_error ne '') {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: %s", $h, $record_list_error);
+            next;
+        }
+        # If there is a record with matching type then update it, otherwise let
+        # freedns convert the record to the desired type.
+        my $rec = is_ipv6($ip)
+            ? ($recs_ipv6{$h} // $recs_ipv4{$h})
+            : ($recs_ipv4{$h} // $recs_ipv6{$h});
+        if (!defined($rec)) {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: host record does not exist", $h);
+            next;
+        }
+
+        if ($ip eq $rec->[1]) {
             $config{$h}{'ip'}     = $ip;
             $config{$h}{'mtime'}  = $now;
             $config{$h}{'status'} = 'good';
-            success("update not necessary %s: good: IP address already set to %s", $h, $ip);
+            success("update not necessary %s: good: IP address already set to %s", $h, $ip)
+                if (!$daemon || opt('verbose'));
         } else {
-            my $reply = geturl({proxy => opt('proxy'), url => $freedns_hosts{$h}->[2] });
-            if (!defined($reply) || !$reply) {
-                failed("updating %s: Could not connect to %s.", $h, $freedns_hosts{$h}->[2]);
-                last;
-            }
-            if (!header_ok($h, $reply)) {
+            my $url = $rec->[2] . "&address=" . $ip;
+            debug("Update: %s", $url);
+            my $reply = geturl({proxy => opt('proxy'), url => $url });
+            if (!defined($reply) || !$reply || !header_ok($h, $reply)) {
                 $config{$h}{'status'} = 'failed';
-                last;
+                failed("updating %s: Could not connect to %s.", $h, $url);
+                next;
             }
 
+            $reply =~ s/^.*?\n\n//s;  # Strip the headers.
             if ($reply =~ /Updated.*$h.*to.*$ip/) {
                 $config{$h}{'ip'}     = $ip;
                 $config{$h}{'mtime'}  = $now;
@@ -3974,7 +4008,7 @@ sub nic_freedns_update {
                 success("updating %s: good: IP address set to %s", $h, $ip);
             } else {
                 $config{$h}{'status'} = 'failed';
-                warning("SENT: %s", $freedns_hosts{$h}->[2]) unless opt('verbose');
+                warning("SENT: %s", $url) unless opt('verbose');
                 warning("REPLIED: %s", $reply);
                 failed("updating %s: Invalid reply.", $h);
             }
