@@ -2157,7 +2157,7 @@ sub get_ip {
     if ($use eq 'ip') {
         $ip  = opt('ip', $h);
         if (!is_ipv4($ip) && !is_ipv6($ip)) {
-            warning("'%s' is not a valid IPv4 or IPv6 address, ignoring value.",$ip);
+            warning("'%s' is not a valid IPv4 or IPv6 address", $ip);
             $ip = undef;
         }
         $arg = 'ip';
