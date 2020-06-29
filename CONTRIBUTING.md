@@ -61,7 +61,9 @@ To add a new test script:
 
      ```perl
      use Test::More;
-     eval { require 'ddclient'; ddclient->import(); 1; } or die($@);
+     # Your test dependencies go here.
+
+     eval { require 'ddclient'; } or BAIL_OUT($@);
 
      # Your tests go here.
 
@@ -81,7 +83,7 @@ To add a new test script:
      module is not available. For example:
 
      ```perl
-     eval { require Foo::Bar; Foo::Bar->import(); 1 } or plan(skip_all => $@);
+     eval { require Foo::Bar; } or plan(skip_all => $@);
      ```
 
 ## Compatibility
