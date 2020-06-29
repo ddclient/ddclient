@@ -71,6 +71,7 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-MDevel::Autoflush
 handwritten_tests = \
 	t/is-and-extract-ipv4.pl \
+	t/is-and-extract-ipv6.pl \
 	t/geturl_connectivity.pl \
 	t/geturl_ssl.pl \
 	t/parse_assignments.pl \
