@@ -37,7 +37,7 @@ perltidy -l=99 -conv -ci=4 -ola -ce -nbbc -kis -pt=2 -b ddclient
   * Please keep your pull request commits rebased on top of master.
   * Please use `git rebase -i` to make your commits easy to review:
     - Put unrelated changes in separate commits
-    - Squash you fixup commits
+    - Squash your fixup commits
   * Write your commit message in imperative mood, and explain *why*
     the change is made (unless obvious) in addition to *what* is
     changed.
