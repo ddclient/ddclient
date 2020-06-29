@@ -1,0 +1,34 @@
+---
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  test-ubuntu-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make check
+      - name: distcheck
+        run: make distcheck
+  test-ubuntu-oldest:
+    runs-on: ubuntu-16.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make check
+      - name: distcheck
+        run: make distcheck
