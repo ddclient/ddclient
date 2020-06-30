@@ -7,32 +7,72 @@ on:
   pull_request:
     branches:
       - master
+
 jobs:
-  test-ubuntu-latest:
+  test-ubuntu:
+    strategy:
+      matrix:
+        ubuntu:
+          - 16.04
+          - latest
+    runs-on: ubuntu-${{ matrix.ubuntu }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: install test dependencies
+        run: sudo apt-get install libtest-warnings-perl
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make VERBOSE=1 check
+      - name: distcheck
+        run: make VERBOSE=1 distcheck
+
+  test-centos6:
     runs-on: ubuntu-latest
+    container: centos:6
     steps:
-      - uses: actions/checkout@v2
-      - name: install test dependencies
-        run: sudo apt-get install libtest-warnings-perl
+      - uses: actions/checkout@v1
+      - name: install dependencies
+        run: yum install -y automake perl-Test-Simple
       - name: autogen
         run: ./autogen
       - name: configure
         run: ./configure
       - name: check
-        run: make check
+        run: make VERBOSE=1 check
       - name: distcheck
-        run: make distcheck
-  test-ubuntu-oldest:
-    runs-on: ubuntu-16.04
+        run: make VERBOSE=1 distcheck
+
+  test-centos8:
+    runs-on: ubuntu-latest
+    container: centos:8
     steps:
       - uses: actions/checkout@v2
-      - name: install test dependencies
-        run: sudo apt-get install libtest-warnings-perl
+      - name: install dependencies
+        run: dnf --enablerepo=PowerTools install -y perl-version automake make perl-Test-Warnings
       - name: autogen
         run: ./autogen
       - name: configure
         run: ./configure
       - name: check
-        run: make check
+        run: make VERBOSE=1 check
       - name: distcheck
-        run: make distcheck
+        run: make VERBOSE=1 distcheck
+
+  test-fedora:
+    runs-on: ubuntu-latest
+    container: fedora
+    steps:
+      - uses: actions/checkout@v2
+      - name: install dependencies
+        run: dnf install -y perl-version automake make perl-Test-Warnings
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make VERBOSE=1 check
+      - name: distcheck
+        run: make VERBOSE=1 distcheck
