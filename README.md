@@ -81,7 +81,7 @@ See https://github.com/ddclient/ddclient/releases
          --sysconfdir=/etc/ddclient \
          --localstatedir=/var
      make
-     make check
+     make VERBOSE=1 check
      sudo make install
      ```
 

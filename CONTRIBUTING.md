@@ -53,7 +53,7 @@ Always add tests for your changes when feasible.
 To run the ddclient test suite:
 
   1. Install GNU Autoconf and Automake
-  2. Run: `./autogen && ./configure && make check`
+  2. Run: `./autogen && ./configure && make VERBOSE=1 check`
 
 To add a new test script:
 
