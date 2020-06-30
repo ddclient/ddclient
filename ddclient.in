@@ -984,12 +984,6 @@ sub update_nics {
                         if !$daemon || opt('verbose');
                     next;
                 }
-                if (!is_ipv4($ip)) {
-                    if (!extract_ipv6($ip)) {
-                        warning("malformed IP address (%s)", $ip);
-                        next;
-                    }
-                }
                 $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
             }
             $config{$h}{'wantip'} = $ip;
