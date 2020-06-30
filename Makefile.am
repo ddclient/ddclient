@@ -27,7 +27,7 @@ CLEANFILES =
 # Command that replaces substitution variables with their values.
 subst = sed \
 	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
-	-e 's|@PERL[@]|$(PERL)|g' \
+	-e '1 s|^\#\!.*perl$$|\#\!$(PERL)|g' \
 	-e 's|@localstatedir[@]|$(localstatedir)|g' \
 	-e 's|@runstatedir[@]|$(runstatedir)|g' \
 	-e 's|@sysconfdir[@]|$(sysconfdir)|g'

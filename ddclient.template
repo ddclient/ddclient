@@ -1,4 +1,4 @@
-#!@PERL@
+#!/usr/bin/perl
 ######################################################################
 #
 # DDCLIENT - a Perl client for updating DynDNS information
