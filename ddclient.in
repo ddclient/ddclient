@@ -984,12 +984,6 @@ sub update_nics {
                         if !$daemon || opt('verbose');
                     next;
                 }
-                if (!is_ipv4($ip)) {
-                    if (!extract_ipv6($ip)) {
-                        warning("malformed IP address (%s)", $ip);
-                        next;
-                    }
-                }
                 $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
             }
             $config{$h}{'wantip'} = $ip;
@@ -1936,9 +1930,7 @@ sub check_value {
         return undef if $value eq "";
 
     } elsif ($type eq T_IP) {
-        if (!extract_ipv6($value)) {
-            return undef if !is_ipv4($value);
-        }
+        return undef if !is_ipv4($value) && !is_ipv6($value);
     }
     return $value;
 }
@@ -2189,26 +2181,7 @@ sub geturl {
     $reply =~ s/\r//g if defined $reply;
     return $reply;
 }
-######################################################################
-## un_zero_pad
-######################################################################
-sub un_zero_pad {
-    my $in_str  = shift(@_);
-    my @out_str = ();
 
-    if ($in_str eq '0.0.0.0') {
-        return $in_str;
-    }
-
-    foreach my $block (split /\./, $in_str) {
-        $block =~ s/^0+//;
-        if ($block eq '') {
-            $block = '0';
-        }
-        push @out_str, $block;
-    }
-    return join('.', @out_str);
-}
 ######################################################################
 ## get_ip
 ######################################################################
@@ -2220,6 +2193,10 @@ sub get_ip {
 
     if ($use eq 'ip') {
         $ip  = opt('ip', $h);
+        if (!is_ipv4($ip) && !is_ipv6($ip)) {
+            warning("'%s' is not a valid IPv4 or IPv6 address", $ip);
+            $ip = undef;
+        }
         $arg = 'ip';
 
     } elsif ($use eq 'if') {
@@ -2316,15 +2293,8 @@ sub get_ip {
         $skip  =~ s/ /\\s/is;
         $reply =~ s/^.*?${skip}//is;
     }
-    if (defined($ip)) {
-        # no need to parse $reply
-    } elsif ($ip = extract_ipv4($reply)) {
-        $ip = un_zero_pad($ip);
-    } elsif ($ip = extract_ipv6($reply)) {
-        $ip = un_zero_pad($ip);
-    } else {
-        warning("found neither ipv4 nor ipv6 address");
-    }
+    $ip //= extract_ipv4($reply) // extract_ipv6($reply);
+    warning("found neither IPv4 nor IPv6 address") if !defined($ip);
     if ($use ne 'ip' && ($ip // '') eq '0.0.0.0') {
         $ip = undef;
     }
@@ -2334,8 +2304,9 @@ sub get_ip {
 }
 
 ######################################################################
-## is_ipv4() validates if string is valid IPv4 address and only
-## a valid IPv4 address (no preceding or trailing spaces/characters)
+## is_ipv4() validates if string is valid IPv4 address and only a
+## valid address with no preceding or trailing spaces/characters
+## and no embedded leading zeros.
 ######################################################################
 sub is_ipv4 {
     my ($value) = @_;
@@ -2343,24 +2314,29 @@ sub is_ipv4 {
 }
 
 ######################################################################
-## extract_ipv4() extracts the first valid IPv4 address from the given string
+## extract_ipv4() extracts the first valid IPv4 address from given string.
+## Accepts leading zeros in the address but removes them in returned value
 ######################################################################
 sub extract_ipv4 {
-    (shift // '') =~ /\b((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))\b/ai;
-    return $1;
+    (shift // '') =~ /\b((?:(?<octet>25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?&octet))\b/a
+        or return undef;
+    (my $ip = $1) =~ s/\b0+\B//g; ## remove embedded leading zeros
+    return $ip;
 }
 
 ######################################################################
-## is_ipv6() validates if string is valid IPv6 address
+## is_ipv6() validates if string is valid IPv6 address with no preceding
+## or trailing spaces/characters.
 ######################################################################
 sub is_ipv6 {
     my ($value) = @_;
-    # This little gem from http://home.deds.nl/~aeron/regex/
-    return $value =~ /^(((?=.*(::))(?!.*\3.+\3))\3?|([\dA-F]{1,4}(\3|:\b|$)|\2))(?4){5}((?4){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\z/ai;
+    return (length($value // '') != 0) &&
+        ((extract_ipv6($value) // '') eq (($value =~ s/\b0+\B//g) ? $value : $value));
 }
 
 ######################################################################
-## extract_ipv6() extracts the first valid IPv6 address from the given string
+## extract_ipv6() extracts the first valid IPv6 address from the given string.
+## Accepts leading zeros in the address but removes them in returned value.
 ######################################################################
 sub extract_ipv6 {
     my $content = shift;
@@ -2382,6 +2358,7 @@ sub extract_ipv6 {
                 next
             }
         }
+        $parsed =~ s/\b0+\B//g; ## remove embedded leading zeros
         return $parsed;
     }
     return;
