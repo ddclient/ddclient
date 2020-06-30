@@ -4852,9 +4852,7 @@ sub nic_woima_update {
         'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
 
-    my @hosts = @_;
-    foreach my $key (keys @hosts) {
-        my $h  = $hosts[$key];
+    for my $h (@_) {
         my $ip = $config{$h}{'wantip'};
         delete $config{$h}{'wantip'};
 
