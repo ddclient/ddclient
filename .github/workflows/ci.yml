@@ -29,6 +29,22 @@ jobs:
       - name: distcheck
         run: make VERBOSE=1 distcheck
 
+  test-centos6:
+    runs-on: ubuntu-latest
+    container: centos:6
+    steps:
+      - uses: actions/checkout@v1
+      - name: install dependencies
+        run: yum install -y automake perl-Test-Simple
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make VERBOSE=1 check
+      - name: distcheck
+        run: make VERBOSE=1 distcheck
+
   test-centos8:
     runs-on: ubuntu-latest
     container: centos:8
