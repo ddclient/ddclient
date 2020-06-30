@@ -28,3 +28,19 @@ jobs:
         run: make VERBOSE=1 check
       - name: distcheck
         run: make VERBOSE=1 distcheck
+
+  test-centos8:
+    runs-on: ubuntu-latest
+    container: centos:8
+    steps:
+      - uses: actions/checkout@v2
+      - name: install dependencies
+        run: dnf --enablerepo=PowerTools install -y perl-version automake make perl-Test-Warnings
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make VERBOSE=1 check
+      - name: distcheck
+        run: make VERBOSE=1 distcheck
