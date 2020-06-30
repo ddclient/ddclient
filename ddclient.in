@@ -40,7 +40,7 @@ my $hostname = hostname();
 # to run this file as a Perl script before those substitutions are made.
 sub subst_var {
     my ($subst, $default) = @_;
-    return $default if $subst =~ qr'^@\w+@$'a;
+    return $default if $subst =~ qr'^@\w+@$';
     return $subst;
 }
 
@@ -2318,7 +2318,7 @@ sub is_ipv4 {
 ## Accepts leading zeros in the address but removes them in returned value
 ######################################################################
 sub extract_ipv4 {
-    (shift // '') =~ /\b((?:(?<octet>25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?&octet))\b/a
+    (shift // '') =~ /\b((?:(?<octet>25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?&octet))\b/
         or return undef;
     (my $ip = $1) =~ s/\b0+\B//g; ## remove embedded leading zeros
     return $ip;
@@ -2346,7 +2346,7 @@ sub extract_ipv6 {
 
     my @values = split('\n', $content);
     foreach my $val (@values) {
-        next unless $val =~ /((:{0,2}[A-F0-9]{1,4}){0,7}:{1,2}[A-F0-9]{1,4})/ai; # invalid char
+        next unless $val =~ /((:{0,2}[A-F0-9]{1,4}){0,7}:{1,2}[A-F0-9]{1,4})/i; # invalid char
         my $parsed = $1;
 
         # check for at least 7 colons
