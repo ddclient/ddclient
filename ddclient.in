@@ -1930,9 +1930,7 @@ sub check_value {
         return undef if $value eq "";
 
     } elsif ($type eq T_IP) {
-        if (!extract_ipv6($value)) {
-            return undef if !is_ipv4($value);
-        }
+        return undef if !is_ipv4($value) && !is_ipv6($value);
     }
     return $value;
 }
