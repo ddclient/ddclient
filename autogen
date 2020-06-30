@@ -1,5 +1,24 @@
 #!/bin/sh
 
-cd "${0%/*}" || exit 1
-mkdir -p m4 build-aux || exit 1
-exec autoreconf -fviW all
+pecho() { printf %s\\n "$*"; }
+log() { pecho "$@"; }
+error() { log "ERROR: $@" >&2; }
+fatal() { error "$@"; exit 1; }
+try() { "$@" || fatal "'$@' failed"; }
+
+try cd "${0%/*}"
+try mkdir -p m4 build-aux
+try autoreconf -fviW all
+
+# Ignore changes to build-aux/tap-driver, but only if we're in a clone
+# of the ddclient Git repository. Once CentOS 6 and RHEL 6 reach
+# end-of-life we can delete build-aux/tap-driver.sh and this block of
+# code. (tap-driver.sh is checked in to this Git repository only
+# because we want to support all currently maintained CentOS and RHEL
+# releases, and CentoOS 6 and RHEL 6 ship with Automake 1.11 which
+# does not come with tap-driver.sh.)
+command -v git >/dev/null || exit 0
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+cdup=$(try git rev-parse --show-cdup) || exit 1
+[ -z "${cdup}" ] || exit 0
+try git update-index --assume-unchanged -- build-aux/tap-driver.sh
