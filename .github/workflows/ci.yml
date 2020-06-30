@@ -25,6 +25,6 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make check
+        run: make VERBOSE=1 check
       - name: distcheck
-        run: make distcheck
+        run: make VERBOSE=1 distcheck
