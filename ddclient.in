@@ -2342,7 +2342,7 @@ sub is_ipv4 {
 ## extract_ipv4() extracts the first valid IPv4 address from the given string
 ######################################################################
 sub extract_ipv4 {
-    (shift // '') =~ /\b((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))\b/ai;
+    (shift // '') =~ /\b((?:(?<octet>25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?&octet))\b/a;
     return $1;
 }
 
