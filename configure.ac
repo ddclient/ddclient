@@ -1,6 +1,6 @@
 AC_PREREQ([2.63])
 AC_INIT([ddclient], [3.9.1])
-AC_CONFIG_SRCDIR([ddclient.template])
+AC_CONFIG_SRCDIR([ddclient.in])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
