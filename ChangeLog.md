@@ -12,7 +12,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added a build system to make it easier for distributions to package
     ddclient:
 
-        ./autogen && ./configure && make && make check && make install
+        ./autogen && ./configure && make && make VERBOSE=1 check && make install
 
   * The `freedns` protocol (for https://freedns.afraid.org) now supports IPv6
     addresses.
