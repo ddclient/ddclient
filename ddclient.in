@@ -2347,12 +2347,12 @@ sub extract_ipv4 {
 }
 
 ######################################################################
-## is_ipv6() validates if string is valid IPv6 address
+## is_ipv6() validates if string is valid IPv6 address with no preceding
+## or trailing spaces/characters.
 ######################################################################
 sub is_ipv6 {
     my ($value) = @_;
-    # This little gem from http://home.deds.nl/~aeron/regex/
-    return $value =~ /^(((?=.*(::))(?!.*\3.+\3))\3?|([\dA-F]{1,4}(\3|:\b|$)|\2))(?4){5}((?4){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})\z/ai;
+    return (length($value // '') != 0) && ((extract_ipv6($value) // '') eq $value);
 }
 
 ######################################################################
