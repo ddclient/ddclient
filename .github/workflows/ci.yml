@@ -7,23 +7,15 @@ on:
   pull_request:
     branches:
       - master
+
 jobs:
-  test-ubuntu-latest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: install test dependencies
-        run: sudo apt-get install libtest-warnings-perl
-      - name: autogen
-        run: ./autogen
-      - name: configure
-        run: ./configure
-      - name: check
-        run: make check
-      - name: distcheck
-        run: make distcheck
-  test-ubuntu-oldest:
-    runs-on: ubuntu-16.04
+  test-ubuntu:
+    strategy:
+      matrix:
+        ubuntu:
+          - 16.04
+          - latest
+    runs-on: ubuntu-${{ matrix.ubuntu }}
     steps:
       - uses: actions/checkout@v2
       - name: install test dependencies
