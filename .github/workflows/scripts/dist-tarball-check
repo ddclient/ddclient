@@ -1,0 +1,67 @@
+#!/bin/sh
+
+pecho() { printf %s\\n "$*"; }
+log() { pecho "$@"; }
+warning() { log "::warning::$@"; }
+error() { log "::error::$@"; }
+fatal() { error "$@"; exit 1; }
+try() { "$@" || fatal "'$@' failed"; }
+
+# actions/checkout@v2 only makes a clone if Git is v2.18 or later, and this
+# test requires a clone.
+git_ver=$(try dpkg-query -f '${Version}' -W git) || exit 1
+dpkg --compare-versions "${git_ver}" ge '1:2.18~' || {
+    warning "This test requires Git v2.18 or later"
+    exit 0
+}
+
+dist_tarball=$(ls ddclient-*.tar.gz) \
+    || fatal "'make dist' must be run before this test"
+
+tmpdir=$(try mktemp -d) || exit 1
+
+log "Copying contents of Git repository..."
+try git archive --format=tar --prefix=git-repo/ HEAD \
+    | try tar -C "${tmpdir}" -xv || exit 1
+(
+    try cd "${tmpdir}"/git-repo
+    # Delete files checked into Git that shouldn't be in the distribution
+    # tarball.
+    try rm -rf \
+        .github \
+        .gitignore \
+        docs/ipv6-design-doc.md \
+        ;
+    # TODO: Delete this next line once support for Automake 1.11 is dropped and
+    # tap-driver.sh is removed from the Git repository. It is deleted here to
+    # avoid a spurious diff.
+    try rm -f build-aux/tap-driver.sh
+) || exit 1
+
+log "Extracting distribution tarball..."
+try tar -C "${tmpdir}" -xvzf "${dist_tarball}"
+try mv "${tmpdir}/${dist_tarball%.tar.gz}" "${tmpdir}"/dist-tarball
+(
+    try cd "${tmpdir}"/dist-tarball
+    # Delete generated files
+    try rm -rf \
+        Makefile.in \
+        aclocal.m4 \
+        build-aux/install-sh \
+        build-aux/missing \
+        build-aux/tap-driver.sh \
+        configure \
+        ;
+) || exit 1
+
+log "Comparing Git repository with distribution tarball..."
+cd "${tmpdir}"
+diff -qNr git-repo dist-tarball >/dev/null || {
+    error "Unexpected diff between the repo and the distribution tarball."
+    error "You may need to add a file to EXTRA_DIST in Makefile.am."
+    error "Diff output:"
+    diff -uNr git-repo dist-tarball \
+        | while IFS= read -r line; do error "${line}"; done
+    exit 1
+}
+log "No difference"

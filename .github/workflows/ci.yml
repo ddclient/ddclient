@@ -27,6 +27,8 @@ jobs:
           apt-get update &&
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
               automake \
+              ca-certificates \
+              git \
               libtest-warnings-perl \
               make \
               ;
@@ -39,6 +41,8 @@ jobs:
         run: make VERBOSE=1 check
       - name: distcheck
         run: make VERBOSE=1 distcheck
+      - name: distribution tarball is complete
+        run: ./.github/workflows/scripts/dist-tarball-check
 
   test-centos6:
     runs-on: ubuntu-latest
