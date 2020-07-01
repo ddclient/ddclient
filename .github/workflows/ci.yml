@@ -76,3 +76,21 @@ jobs:
         run: make VERBOSE=1 check
       - name: distcheck
         run: make VERBOSE=1 distcheck
+
+  test-redhat:
+    runs-on: ubuntu-latest
+    # we use redhats univeral base image which is not available on docker hub
+    # https://catalog.redhat.com/software/containers/ubi7/ubi/5c3592dcd70cc534b3a37814
+    container: registry.access.redhat.com/ubi7/ubi
+    steps:
+      - uses: actions/checkout@v2
+      - name: install dependencies
+        run: yum install -y perl-version automake make perl-Test-Simple
+      - name: autogen
+        run: ./autogen
+      - name: configure
+        run: ./configure
+      - name: check
+        run: make VERBOSE=1 check
+      - name: distcheck
+        run: make VERBOSE=1 distcheck
