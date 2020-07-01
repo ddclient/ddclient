@@ -21,9 +21,12 @@ AX_PROG_PERL_VERSION([5.10.1], [],
   [AC_MSG_ERROR([Perl 5.10.1 or newer not found])])
 AC_SUBST([PERL])
 
-# Perl modules required to run ddclient. Core modules may be omitted;
-# they are assumed to always exist.
+# Perl modules required to run ddclient. Note: CentOS, RHEL, and
+# Fedora put some core modules in separate packages, and the perl
+# package doesn't depend on all of them, so their availability can't
+# be assumed.
 m4_foreach_w([_m], [
+    version=0.77
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_ERROR([missing required Perl module _m])])])
 
