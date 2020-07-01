@@ -141,7 +141,7 @@ make sure you have perl and the required modules installed
 
 if you plan to use cloudflare or feedns you need the perl json module
 
-    apt-get install libjson-any-perl
+    apt-get install libjson-pp-perl
 
 for IPv6 you also need to instal the perl io-socker-inet6 module
 
@@ -150,6 +150,28 @@ for IPv6 you also need to instal the perl io-socker-inet6 module
 start the first time by hand
 
     service ddclient start
+
+### FreeBSD style rc files and daemon mode
+
+    mkdir -p /usr/local/etc/rc.d
+    cp sample-etc_rc.d_ddclient.freebsd /usr/local/etc/rc.d/ddclient
+
+enable automatic startup when booting
+
+    sysrc ddclient_enable=YES
+
+make sure you have perl and the required modules installed
+
+    pkg install perl5 p5-Data-Validate-IP p5-IO-Socket-SSL
+
+if you plan to use cloudflare or feedns you need the perl json module
+
+    pkg install p5-JSON-PP
+
+start the service manually for the first time
+
+    service ddclient start
+
 
 If you are not using daemon-mode, configure cron and dhcp or ppp as described below.
 

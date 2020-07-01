@@ -15,6 +15,7 @@ EXTRA_DIST = \
 	sample-etc_dhclient-exit-hooks \
 	sample-etc_dhcpc_dhcpcd-eth0.exe \
 	sample-etc_ppp_ip-up.local \
+	sample-etc_rc.d_ddclient.freebsd \
 	sample-etc_rc.d_init.d_ddclient \
 	sample-etc_rc.d_init.d_ddclient.alpine \
 	sample-etc_rc.d_init.d_ddclient.lsb \
