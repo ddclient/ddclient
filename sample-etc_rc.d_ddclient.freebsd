@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# PROVIDE: ddclient
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# ddclient_enable (bool):       Set to NO by default.
+#                               Set it to YES to enable ddclient.
+
+. /etc/rc.subr
+
+name=ddclient
+rcvar=ddclient_enable
+ddclient_conf="/etc/ddclient/ddclient.conf"
+
+command="/usr/local/sbin/${name}"
+load_rc_config $name
+
+delay=$(grep -v '^\s*#' "${ddclient_conf}" | grep -i -m 1 "daemon" | awk -F '=' '{print $2}')
+
+if [ -z "${delay}" ]
+then
+   ddclient_flags="-daemon 300"
+else
+   ddclient_flags=""
+fi
+
+run_rc_command "$1"
