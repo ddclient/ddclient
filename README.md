@@ -30,6 +30,7 @@ Dynamic DNS services currently supported include:
     NearlyFreeSpeech.net - See https://www.nearlyfreespeech.net/services/dns for details
     OVH         - See https://www.ovh.com for details
     ClouDNS     - See https://www.cloudns.net
+    dinahosting - See https://dinahosting.com
 
 DDclient now supports many of cable/dsl broadband routers.
 
