@@ -5215,7 +5215,16 @@ sub nic_cloudns_update {
 __PACKAGE__->main() unless caller() && caller() ne 'PAR';
 
 ######################################################################
-# vim: ai et ts=4 sw=4 tw=78:
+## Emacs and Vim settings
 
+# Local Variables:
+# mode: perl
+# fill-column: 99
+# indent-tabs-mode: nil
+# perl-indent-level: 4
+# tab-width: 8
+# End:
+
+# vim: ai et ts=8 sw=4 tw=99 cc=+1 filetype=perl
 
 __END__
