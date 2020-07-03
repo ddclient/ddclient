@@ -18,7 +18,6 @@ Dynamic DNS services currently supported include:
     Noip        - See http://www.noip.com/ for details
     Freedns     - See http://freedns.afraid.org/ for details
     ChangeIP    - See http://www.changeip.com/ for details
-    dtdns       - See http://www.dtdns.com/ for details
     nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
     CloudFlare  - See https://www.cloudflare.com/ for details
     Google      - See http://www.google.com/domains for details

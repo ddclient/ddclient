@@ -187,15 +187,6 @@ ssl=yes					# use ssl-support.  Works with
 # myhost.changeip.org
 
 ##
-## DtDNS (www.dtdns.com)
-##
-# protocol=dtdns,
-# server=www.dtdns.com,
-# client=ddclient,
-# password=my-dtdns.com-password
-# myhost.dtdns.net, otherhost.dtdns.net
-
-##
 ## CloudFlare (www.cloudflare.com)
 ##
 #protocol=cloudflare,        \
