@@ -961,6 +961,7 @@ sub update_nics {
     }
     write_cache(opt('cache'));
 }
+
 ######################################################################
 ## unlink_pid()
 ######################################################################
@@ -1090,7 +1091,7 @@ sub parse_assignment {
             } elsif ($c eq "\\") {
                 $escape = 1;
             } elsif ($quote && $c eq $quote) {
-                $quote = ''
+                $quote = '';
             } elsif (!$quote && $c =~ /[\'\"]/) {
                 $quote = $c;
             } elsif (!$quote && $c =~ /^[\n\s,]/) {
@@ -1458,6 +1459,7 @@ sub process_args {
     }
     return $usage;
 }
+
 ######################################################################
 ## test_possible_ip - print possible IPs
 ######################################################################
@@ -1545,7 +1547,7 @@ sub load_file {
     } else {
         debug("Load failed from %s (%s)", $file, $!);
     }
-    return $buffer
+    return $buffer;
 }
 ######################################################################
 ## save_file
@@ -2337,6 +2339,7 @@ sub group_hosts_by {
     }
     return %groups;
 }
+
 ######################################################################
 ## encode_www_form_urlencoded
 ######################################################################
@@ -2535,6 +2538,7 @@ sub nic_updateable {
 
     return $update;
 }
+
 ######################################################################
 ## header_ok
 ######################################################################
@@ -4941,7 +4945,7 @@ EoEXAMPLE
 ######################################################################
 
 sub nic_dondominio_update {
-    debug("\nnic_duckdns_update -------------------");
+    debug("\nnic_dondominio_update -------------------");
 
     ## update each configured host
     ## should improve to update in one pass
