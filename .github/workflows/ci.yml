@@ -78,7 +78,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: dnf install -y perl-version automake make perl-Test-Warnings
+        run: dnf install -y automake findutils make perl-Test-Warnings perl-version
       - name: autogen
         run: ./autogen
       - name: configure
