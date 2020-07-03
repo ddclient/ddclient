@@ -16,6 +16,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
   * The `freedns` protocol (for https://freedns.afraid.org) now supports IPv6
     addresses.
+  * New `ssl_ca_dir` and `ssl_ca_file` options to specify the location of CA
+    certificates.
 
 ### Bug fixes
 

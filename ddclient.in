@@ -383,6 +383,8 @@ my %variables = (
         'geturl'              => setv(T_STRING,0, 0, '',                   undef),
 
         'postscript'          => setv(T_POSTS, 0, 0, '',                   undef),
+        'ssl_ca_dir'          => setv(T_FILE,  0, 0, undef,                undef),
+        'ssl_ca_file'         => setv(T_FILE,  0, 0, undef,                undef),
     },
     'service-common-defaults' => {
         'server'              => setv(T_FQDNP, 1, 0, 'members.dyndns.org', undef),
@@ -760,6 +762,8 @@ my @opt = (
     [ "options",     "=s",  "-options opt,opt     : optional per-service arguments (see below)" ],
     "",
     [ "ssl",         "!",  "-{no}ssl              : do updates over encrypted SSL connection" ],
+    [ "ssl_ca_dir",  "=s", "-ssl_ca_dir           : directory containing certificates of trusted certificate authorities (default: auto-detect)" ],
+    [ "ssl_ca_file", "=s", "-ssl_ca_file          : file containing certificates of trusted certificate authorities (default: auto-detect)" ],
     [ "retry",       "!",  "-{no}retry            : retry failed updates." ],
     [ "force",       "!",  "-{no}force            : force an update even if the update may be unnecessary" ],
     [ "timeout",     "=i", "-timeout max          : wait at most 'max' seconds for the host to respond" ],
@@ -2046,15 +2050,6 @@ sub geturl {
     $request .= $data;
     $rq .= $data;
 
-    my $socket_class = 'IO::Socket::INET';
-    if ($use_ssl) {
-        # IO::Socket::SSL will load IPv6 support if available on the system.
-        load_ssl_support;
-        $socket_class = 'IO::Socket::SSL';
-    } elsif ($globals{'ipv6'} || $ipversion eq '6') {
-        load_ipv6_support;
-        $socket_class = 'IO::Socket::INET6';
-    }
     my %socket_args = (
         PeerAddr => $peer,
         PeerPort => $port,
@@ -2062,6 +2057,17 @@ sub geturl {
         MultiHomed => 1,
         Timeout => opt('timeout'),
     );
+    my $socket_class = 'IO::Socket::INET';
+    if ($use_ssl) {
+        # IO::Socket::SSL will load IPv6 support if available on the system.
+        load_ssl_support;
+        $socket_class = 'IO::Socket::SSL';
+        $socket_args{SSL_ca_file} = opt('ssl_ca_file') if defined(opt('ssl_ca_file'));
+        $socket_args{SSL_ca_path} = opt('ssl_ca_dir') if defined(opt('ssl_ca_dir'));
+    } elsif ($globals{'ipv6'} || $ipversion eq '6') {
+        load_ipv6_support;
+        $socket_class = 'IO::Socket::INET6';
+    }
     if ($ipversion eq '4') {
         $socket_args{Domain} = PF_INET;
         $socket_args{Family} = AF_INET;
