@@ -66,7 +66,8 @@ PL_LOG_COMPILER = $(PERL)
 AM_PL_LOG_FLAGS = -Mstrict -w \
 	-I'$(abs_top_builddir)' \
 	-I'$(abs_top_srcdir)'/t/lib
-handwritten_tests =
+handwritten_tests = \
+	t/parse_assignments.pl
 generated_tests = \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)

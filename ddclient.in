@@ -1059,11 +1059,10 @@ sub read_cache {
 sub parse_assignments {
     my ($rest) = @_;
     my %variables = ();
-    my ($name, $value);
 
     while (1) {
-        $rest =~ s/^\s+//;
-        ($name, $value, $rest) = parse_assignment($rest);
+        (my $name, my $value, $rest) = parse_assignment($rest);
+        $rest =~ s/^[,\s]+//;
         if (defined $name) {
             if ($name eq 'fw-banlocal') {
                 warning("'fw-banlocal' is deprecated and does nothing");
@@ -1078,14 +1077,13 @@ sub parse_assignments {
 }
 sub parse_assignment {
     my ($rest) = @_;
-    my ($c, $name, $value);
+    my ($name, $value);
     my ($escape, $quote) = (0, '');
 
-    if ($rest =~ /^\s*([a-z][0-9a-z_-]*)=(.*)/i) {
+    if ($rest =~ /^[,\s]*([a-z][0-9a-z_-]*)=(.*)/i) {
         ($name, $rest, $value) = ($1, $2, '');
 
-        while (length($c = substr($rest, 0, 1))) {
-            $rest = substr($rest,1);
+        while (length(my $c = substr($rest, 0, 1))) {
             if ($escape) {
                 $value .= $c;
                 $escape = 0;
@@ -1096,13 +1094,16 @@ sub parse_assignment {
             } elsif (!$quote && $c =~ /[\'\"]/) {
                 $quote = $c;
             } elsif (!$quote && $c =~ /^[\n\s,]/) {
+                # The terminating character is not consumed.
                 last;
             } else {
                 $value .= $c;
             }
+            $rest = substr($rest,1);
         }
     }
-    warning("assignment ended with an open quote") if $quote;
+    warning("assignment to '%s' ended with the escape character (\\)", $name) if $escape;
+    warning("assignment to '%s' ended with an unterminated quote (%s)", $name, $quote) if $quote;
     return ($name, $value, $rest);
 }
 ######################################################################
