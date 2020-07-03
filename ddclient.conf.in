@@ -118,15 +118,6 @@ ssl=yes					# use ssl-support.  Works with
 # your.any.domain,your-2nd.any.domain
 
 ##
-## Hammernode (hn.org) dynamic addresses
-##
-# server=dup.hn.org,             	\
-# protocol=hammernode1,         	\
-# login=your-hn-login,           	\
-# password=your-hn-password      	\
-# your-hn-host.hn.org,your-2nd-hn-host.hn.org
-
-##
 ## dslreports.com dynamic-host monitoring
 ##
 # server=members.dslreports.com		\
