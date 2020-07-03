@@ -9,17 +9,28 @@ on:
       - master
 
 jobs:
-  test-ubuntu:
+  test-debian-like:
     strategy:
       matrix:
-        ubuntu:
-          - 16.04
-          - latest
-    runs-on: ubuntu-${{ matrix.ubuntu }}
+        image:
+          - ubuntu:latest
+          - ubuntu:16.04
+          - debian:testing
+          - debian:stable
+          - debian:oldstable
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
     steps:
+      - name: install dependencies
+        run: |
+          apt-get update &&
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              automake \
+              libtest-warnings-perl \
+              make \
+              ;
       - uses: actions/checkout@v2
-      - name: install test dependencies
-        run: sudo apt-get install libtest-warnings-perl
       - name: autogen
         run: ./autogen
       - name: configure
