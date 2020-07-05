@@ -2073,6 +2073,10 @@ sub geturl {
         load_ipv6_support;
         $socket_class = 'IO::Socket::INET6';
     }
+    if (defined($params->{_testonly_socket_class})) {
+        $socket_args{original_socket_class} = $socket_class;
+        $socket_class = $params->{_testonly_socket_class};
+    }
     if ($ipversion eq '4') {
         $socket_args{Domain} = PF_INET;
         $socket_args{Family} = AF_INET;
