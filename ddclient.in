@@ -1011,8 +1011,9 @@ sub write_cache {
 
         $saved_cache = undef;
         local *FD;
-        if (!open(FD, "> $file")) {
-            fatal("Cannot create file '%s'. (%s)", $file, $!);
+        if (!open(FD, ">", $file)) {
+            warning("Failed to create cache file %s: %s", $file, $!);
+            return;
         }
         printf FD "## %s-%s\n", $program, $version;
         printf FD "## last updated at %s (%d)\n", prettytime($now), $now;
