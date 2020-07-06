@@ -45,9 +45,9 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
       - name: distribution tarball is complete
         run: ./.github/workflows/scripts/dist-tarball-check
 
@@ -57,15 +57,21 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: install dependencies
-        run: yum install -y automake perl-Test-Simple
+        run: |
+          yum install -y \
+              automake \
+              perl-IO-Socket-INET6 \
+              perl-core \
+              perl-libwww-perl \
+              ;
       - name: autogen
         run: ./autogen
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   test-centos8:
     runs-on: ubuntu-latest
@@ -73,15 +79,23 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: dnf --enablerepo=PowerTools install -y perl-version automake make perl-Test-Warnings
+        run: |
+          dnf --refresh --enablerepo=PowerTools install -y \
+              automake \
+              make \
+              perl-HTTP-Daemon \
+              perl-IO-Socket-INET6 \
+              perl-Test-Warnings \
+              perl-core \
+              ;
       - name: autogen
         run: ./autogen
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   test-fedora:
     runs-on: ubuntu-latest
@@ -89,17 +103,29 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: dnf install -y automake findutils make perl-Test-Warnings perl-version
+        run: |
+          dnf --refresh install -y \
+              automake \
+              findutils \
+              make \
+              perl \
+              perl-HTTP-Daemon \
+              perl-HTTP-Daemon-SSL \
+              perl-IO-Socket-INET6 \
+              perl-Plack \
+              perl-Test-TCP \
+              perl-Test-Warnings \
+              ;
       - name: autogen
         run: ./autogen
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
-  test-redhat:
+  test-redhat-ubi7:
     runs-on: ubuntu-latest
     # we use redhats univeral base image which is not available on docker hub
     # https://catalog.redhat.com/software/containers/ubi7/ubi/5c3592dcd70cc534b3a37814
@@ -107,12 +133,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: yum install -y perl-version automake make perl-Test-Simple
+        run: |
+          yum install -y \
+              automake \
+              make \
+              perl-HTTP-Daemon \
+              perl-IO-Socket-INET6 \
+              perl-core \
+              ;
       - name: autogen
         run: ./autogen
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
