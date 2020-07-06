@@ -45,9 +45,9 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
       - name: distribution tarball is complete
         run: ./.github/workflows/scripts/dist-tarball-check
 
@@ -63,9 +63,9 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   test-centos8:
     runs-on: ubuntu-latest
@@ -79,9 +79,9 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   test-fedora:
     runs-on: ubuntu-latest
@@ -95,9 +95,9 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   test-redhat-ubi7:
     runs-on: ubuntu-latest
@@ -113,6 +113,6 @@ jobs:
       - name: configure
         run: ./configure
       - name: check
-        run: make VERBOSE=1 check
+        run: make VERBOSE=1 AM_COLOR_TESTS=always check
       - name: distcheck
-        run: make VERBOSE=1 distcheck
+        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
