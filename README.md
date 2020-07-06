@@ -9,7 +9,6 @@ on many dynamic DNS services.
 Dynamic DNS services currently supported include:
 
     DynDNS.com  - See http://www.dyndns.com for details on obtaining a free account.
-    Hammernode  - See http://www.hn.org for details on obtaining a free account.
     Zoneedit    - See http://www.zoneedit.com for details.
     EasyDNS     - See http://www.easydns.com for details.
     NameCheap   - See http://www.namecheap.com for details
@@ -19,7 +18,6 @@ Dynamic DNS services currently supported include:
     Noip        - See http://www.noip.com/ for details
     Freedns     - See http://freedns.afraid.org/ for details
     ChangeIP    - See http://www.changeip.com/ for details
-    dtdns       - See http://www.dtdns.com/ for details
     nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
     CloudFlare  - See https://www.cloudflare.com/ for details
     Google      - See http://www.google.com/domains for details

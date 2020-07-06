@@ -494,16 +494,6 @@ my %services = (
             'host' => setv(T_NUMBER, 1, 1, 0, undef),
         },
     },
-    'dtdns' => {
-        'updateable' => undef,
-        'update'     => \&nic_dtdns_update,
-        'examples'   => \&nic_dtdns_examples,
-        'variables' => {
-            %{$variables{'service-common-defaults'}},
-            'client' => setv(T_STRING, 0, 1, $program, undef),
-            'login'  => setv(T_LOGIN,  0, 0, 'unused', undef),
-        },
-    },
     'duckdns' => {
         'updateable' => undef,
         'update'     => \&nic_duckdns_update,
@@ -575,16 +565,6 @@ my %services = (
             %{$variables{'service-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 1, 0, 'domains.google.com', undef),
-        },
-    },
-    'hammernode1' => {
-        'updateable' => undef,
-        'update'     => \&nic_hammernode1_update,
-        'examples'   => \&nic_hammernode1_examples,
-        'variables' => {
-            %{$variables{'service-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0),
-            'server'       => setv(T_FQDNP, 1, 0, 'dup.hn.org',   undef),
         },
     },
     'namecheap' => {
@@ -2414,15 +2394,15 @@ Host definitions look like:
   [name=value [,name=value]*]* a.host.domain [,b.host.domain] [login] [password]
 
 For example:
-  protocol=hammernode1, \\
-  login=my-hn-login, password=my-hn-password  myhost.hn.org
-  login=my-login, password=my-password  myhost.dyndns.org,my2nd.dyndns.org
+  protocol=noip, \\
+  login=your-username, password=your-password  myhost.noip.com
+  login=your-username, password=your-password  myhost.noip.com,myhost2.noip.com
 
 specifies two host definitions.
 
-The first definition will use the hammernode1 protocol,
-my-hn-login and my-hn-password to update the ip-address of
-myhost.hn.org and my2ndhost.hn.org.
+The first definition will use the noip protocol,
+your-username and your-password to update the ip-address of
+myhost.noip.com and my2ndhost.noip.com.
 
 The second host definition will use the current default protocol
 ('dyndns2'), my-login and my-password to update the ip-address of
@@ -3073,81 +3053,7 @@ sub nic_dslreports1_update {
         }
     }
 }
-######################################################################
-## nic_hammernode1_examples
-######################################################################
-sub nic_hammernode1_examples {
-    return <<"EoEXAMPLE";
-o 'hammernode1'
 
-The 'hammernode1' protocol is the protocol used by the free dynamic
-DNS service offered by Hammernode at www.hn.org
-
-Configuration variables applicable to the 'hammernode1' protocol are:
-  protocol=hammernode1         ##
-  server=fqdn.of.service       ## defaults to members.dyndns.org
-  login=service-login          ## login name and password  registered with the service
-  password=service-password    ##
-  fully.qualified.host         ## the host registered with the service.
-
-Example ${program}.conf file entries:
-  ## single host update
-  protocol=hammernode1,                                 \\
-  login=my-hn.org-login,                                \\
-  password=my-hn.org-password                           \\
-  myhost.hn.org
-
-  ## multiple host update
-  protocol=hammernode1,                                 \\
-  login=my-hn.org-login,                                \\
-  password=my-hn.org-password,                          \\
-  myhost.hn.org,my2ndhost.hn.org
-EoEXAMPLE
-}
-######################################################################
-## nic_hammernode1_update
-######################################################################
-sub nic_hammernode1_update {
-    debug("\nnic_hammernode1_update -------------------");
-
-    ## update each configured host
-    foreach my $h (@_) {
-        my $ip = delete $config{$h}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
-
-        my $url;
-        $url  = "http://$config{$h}{'server'}/vanity/update";
-        $url .= "?ver=1";
-        $url .= "&ip=";
-        $url .= $ip if $ip;
-
-        my $reply = geturl({
-            proxy => opt('proxy'),
-            url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
-        }) // '';
-        if (!$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
-        }
-        last if !header_ok($h, $reply);
-
-        my @reply = split /\n/, $reply;
-        if (grep /<!--\s+DDNS_Response_Code=101\s+-->/i, @reply) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
-            $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
-        } else {
-            $config{$h}{'status'} = 'failed';
-            warning("SENT:    %s", $url) unless opt('verbose');
-            warning("REPLIED: %s", $reply);
-            failed("updating %s: Invalid reply.", $h);
-        }
-    }
-}
 ######################################################################
 ## nic_zoneedit1_examples
 ######################################################################
@@ -4037,85 +3943,6 @@ sub nic_changeip_update {
         }
     }
 }
-
-######################################################################
-## nic_dtdns_examples
-######################################################################
-sub nic_dtdns_examples {
-    return <<"EoEXAMPLE";
-o 'dtdns'
-
-The 'dtdns' protocol is the protocol used by the dynamic hostname services
-of the 'DtDNS' dns services. This is currently used by the free
-dynamic DNS service offered by www.dtdns.com.
-
-Configuration variables applicable to the 'dtdns' protocol are:
-  protocol=dtdns               ##
-  server=www.fqdn.of.service   ## defaults to www.dtdns.com
-  password=service-password    ## password registered with the service
-  client=name_of_updater       ## defaults to $program (10 chars max, no spaces)
-  fully.qualified.host         ## the host registered with the service.
-
-Example ${program}.conf file entries:
-  ## single host update
-  protocol=dtdns,                                       \\
-  password=my_password,                                 \\
-  client=ddclient                                       \\
-  myhost.dtdns.net
-
-EoEXAMPLE
-}
-
-######################################################################
-## nic_dtdns_update
-## by Achim Franke
-######################################################################
-sub nic_dtdns_update {
-    debug("\nnic_dtdns_update -------------------");
-
-    ## update each configured host
-    foreach my $h (@_) {
-        my $ip = delete $config{$h}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
-
-        # Set the URL that we're going to to update
-        my $url;
-        $url  = "http://$config{$h}{'server'}/api/autodns.cfm";
-        $url .= "?id=";
-        $url .= $h;
-        $url .= "&pw=";
-        $url .= $config{$h}{'password'};
-        $url .= "&ip=";
-        $url .= $ip;
-        $url .= "&client=";
-        $url .= $config{$h}{'client'};
-
-        # Try to get URL
-        my $reply = geturl({ proxy => opt('proxy'), url => $url });
-
-        # No response, declare as failed
-        if (!defined($reply) || !$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
-        }
-        last if !header_ok($h, $reply);
-
-        # Response found, just declare as success (this is ugly, we need more error checking)
-        if ($reply =~ /now\spoints\sto/) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
-            $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
-        } else {
-            my @reply = split /\n/, $reply;
-            my $returned = pop(@reply);
-            $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s'", $h, $returned);
-        }
-    }
-}
-######################################################################
 
 ######################################################################
 ## nic_googledomains_examples

@@ -49,6 +49,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     Rather than rely on the default, users should explicitly set the `use`
     option.
   * The `fw-banlocal` option is deprecated and no longer does anything.
+  * Removed support for defunct dtdns service
+  * Removed support for defunct Hammernode service
 
 ## 2020-01-08 v3.9.1
 
