@@ -22,6 +22,8 @@ package ddclient;
 require v5.10.1;
 use strict;
 use warnings;
+use File::Basename;
+use File::Path qw(make_path);
 use Getopt::Long;
 use Sys::Hostname;
 use IO::Socket;
@@ -997,6 +999,16 @@ sub write_cache {
 
     ## write the updates and other entries to the cache file.
     if ($file) {
+        (undef, my $dir) = fileparse($file);
+        make_path($dir, { error => \my $err }) if !-d $dir;
+        if ($err && @$err) {
+            for my $diag (@$err) {
+                my ($f, $msg) = %$diag;
+                warning("Failed to create cache file directory: %s: %s", $f, $msg);
+            }
+            return;
+        }
+
         $saved_cache = undef;
         local *FD;
         if (!open(FD, "> $file")) {
