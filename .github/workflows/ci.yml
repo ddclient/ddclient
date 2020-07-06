@@ -57,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: install dependencies
-        run: yum install -y automake perl-Test-Simple
+        run: yum install -y automake perl-core
       - name: autogen
         run: ./autogen
       - name: configure
@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: dnf --enablerepo=PowerTools install -y perl-version automake make perl-Test-Warnings
+        run: dnf --enablerepo=PowerTools install -y automake make perl-Test-Warnings perl-core
       - name: autogen
         run: ./autogen
       - name: configure
@@ -89,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: dnf install -y automake findutils make perl-Test-Warnings perl-version
+        run: dnf install -y automake findutils make perl perl-Test-Warnings
       - name: autogen
         run: ./autogen
       - name: configure
@@ -107,7 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: yum install -y perl-version automake make perl-Test-Simple
+        run: yum install -y automake make perl-core
       - name: autogen
         run: ./autogen
       - name: configure
