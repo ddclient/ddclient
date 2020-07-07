@@ -37,6 +37,8 @@ AC_SUBST([PERL])
 # package doesn't depend on all of them, so their availability can't
 # be assumed.
 m4_foreach_w([_m], [
+    File::Basename
+    File::Path
     version=0.77
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_ERROR([missing required Perl module _m])])])
@@ -45,6 +47,8 @@ m4_foreach_w([_m], [
 # then some tests will fail. Only prints a warning if not installed.
 m4_foreach_w([_m], [
     Data::Dumper
+    File::Spec::Functions
+    File::Temp
     Test::More
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_WARN([some tests will fail due to missing module _m])])])
