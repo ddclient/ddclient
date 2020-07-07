@@ -76,7 +76,73 @@ generated_tests = \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
 EXTRA_DIST += $(handwritten_tests) \
+	t/lib/Test/Builder.pm \
+	t/lib/Test/Builder/Formatter.pm \
+	t/lib/Test/Builder/IO/Scalar.pm \
+	t/lib/Test/Builder/Module.pm \
+	t/lib/Test/Builder/Tester.pm \
+	t/lib/Test/Builder/Tester/Color.pm \
+	t/lib/Test/Builder/TodoDiag.pm \
+	t/lib/Test/More.pm \
+	t/lib/Test/Simple.pm \
+	t/lib/Test/Tester.pm \
+	t/lib/Test/Tester/Capture.pm \
+	t/lib/Test/Tester/CaptureRunner.pm \
+	t/lib/Test/Tester/Delegate.pm \
+	t/lib/Test/use/ok.pm \
+	t/lib/Test2.pm \
+	t/lib/Test2/API.pm \
+	t/lib/Test2/API/Breakage.pm \
+	t/lib/Test2/API/Context.pm \
+	t/lib/Test2/API/Instance.pm \
+	t/lib/Test2/API/Stack.pm \
+	t/lib/Test2/Event.pm \
+	t/lib/Test2/Event/Bail.pm \
+	t/lib/Test2/Event/Diag.pm \
+	t/lib/Test2/Event/Encoding.pm \
+	t/lib/Test2/Event/Exception.pm \
+	t/lib/Test2/Event/Fail.pm \
+	t/lib/Test2/Event/Generic.pm \
+	t/lib/Test2/Event/Note.pm \
+	t/lib/Test2/Event/Ok.pm \
+	t/lib/Test2/Event/Pass.pm \
+	t/lib/Test2/Event/Plan.pm \
+	t/lib/Test2/Event/Skip.pm \
+	t/lib/Test2/Event/Subtest.pm \
+	t/lib/Test2/Event/TAP/Version.pm \
+	t/lib/Test2/Event/V2.pm \
+	t/lib/Test2/Event/Waiting.pm \
+	t/lib/Test2/EventFacet.pm \
+	t/lib/Test2/EventFacet/About.pm \
+	t/lib/Test2/EventFacet/Amnesty.pm \
+	t/lib/Test2/EventFacet/Assert.pm \
+	t/lib/Test2/EventFacet/Control.pm \
+	t/lib/Test2/EventFacet/Error.pm \
+	t/lib/Test2/EventFacet/Hub.pm \
+	t/lib/Test2/EventFacet/Info.pm \
+	t/lib/Test2/EventFacet/Info/Table.pm \
+	t/lib/Test2/EventFacet/Meta.pm \
+	t/lib/Test2/EventFacet/Parent.pm \
+	t/lib/Test2/EventFacet/Plan.pm \
+	t/lib/Test2/EventFacet/Render.pm \
+	t/lib/Test2/EventFacet/Trace.pm \
+	t/lib/Test2/Formatter.pm \
+	t/lib/Test2/Formatter/TAP.pm \
+	t/lib/Test2/Hub.pm \
+	t/lib/Test2/Hub/Interceptor.pm \
+	t/lib/Test2/Hub/Interceptor/Terminator.pm \
+	t/lib/Test2/Hub/Subtest.pm \
+	t/lib/Test2/IPC.pm \
+	t/lib/Test2/IPC/Driver.pm \
+	t/lib/Test2/IPC/Driver/Files.pm \
+	t/lib/Test2/Tools/Tiny.pm \
+	t/lib/Test2/Util.pm \
+	t/lib/Test2/Util/ExternalMeta.pm \
+	t/lib/Test2/Util/Facets2Legacy.pm \
+	t/lib/Test2/Util/HashBase.pm \
+	t/lib/Test2/Util/Trace.pm \
 	t/lib/ddclient/Test/Fake/HTTPD.pm \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-ca-cert.pem \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-cert.pem \
-	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-key.pem
+	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-key.pem \
+	t/lib/ok.pm

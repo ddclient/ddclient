@@ -48,8 +48,10 @@ my @test_cases = (
 
 for my $tc (@test_cases) {
     my ($got_rest, %got_vars) = ddclient::parse_assignments($tc->{input});
-    is(Dumper(\%got_vars), Dumper($tc->{want_vars}), "$tc->{name}: vars");
-    is($got_rest, $tc->{want_rest}, "$tc->{name}: rest");
+    subtest $tc->{name} => sub {
+        is(Dumper(\%got_vars), Dumper($tc->{want_vars}), "vars");
+        is($got_rest, $tc->{want_rest}, "rest");
+    }
 }
 
 done_testing();
