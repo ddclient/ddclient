@@ -348,7 +348,7 @@ my %variables = (
         'file'                => setv(T_FILE,  0, 0, "$etc/$program.conf", undef),
         'cache'               => setv(T_FILE,  0, 0, "$cachedir/$program.cache", undef),
         'pid'                 => setv(T_FILE,  0, 0, "",                   undef),
-        'proxy'               => setv(T_FQDNP, 0, 0, '',                   undef),
+        'proxy'               => setv(T_FQDNP, 0, 0, undef,                undef),
         'protocol'            => setv(T_PROTO, 0, 0, 'dyndns2',            undef),
 
         'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
@@ -906,17 +906,17 @@ sub update_nics {
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
             my $use = opt('use', $h);
-            my $arg_ip = opt('ip', $h) || '';
-            my $arg_fw = opt('fw', $h) || '';
-            my $arg_if = opt('if', $h) || '';
-            my $arg_web = opt('web', $h) || '';
-            my $arg_cmd = opt('cmd', $h) || '';
+            my $arg_ip = opt('ip', $h) // '';
+            my $arg_fw = opt('fw', $h) // '';
+            my $arg_if = opt('if', $h) // '';
+            my $arg_web = opt('web', $h) // '';
+            my $arg_cmd = opt('cmd', $h) // '';
             my $ip = "";
             if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
                 $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
             } else {
-                $ip = get_ip($use, $h) // '';
-                if (!$ip) {
+                $ip = get_ip($use, $h);
+                if (!defined($ip)) {
                     warning("unable to determine IP address")
                         if !$daemon || opt('verbose');
                     next;
@@ -1170,7 +1170,7 @@ sub _read_config {
 
         ## parsing passwords is special
         if (/^([^#]*\s)?([^#]*?password\S*?)\s*=\s*('.*'|[^']\S*)(.*)/) {
-            my ($head, $key, $value, $tail) = ($1 || '', $2, $3, $4);
+            my ($head, $key, $value, $tail) = ($1 // '', $2, $3, $4);
             $value = $1 if $value =~ /^'(.*)'$/;
             $passwords{$key} = $value;
             $_ = "${head}${key}=dummy${tail}";
@@ -1964,10 +1964,10 @@ EOM
 ######################################################################
 sub geturl {
     my ($params) = @_;
-    my $proxy = $params->{proxy} // '';
-    my $url = $params->{url} // '';
-    my $login = $params->{login} // '';
-    my $password = $params->{password} // '';
+    my $proxy = $params->{proxy};
+    my $url = $params->{url};
+    my $login = $params->{login};
+    my $password = $params->{password};
     my $ipversion = $params->{ipversion} // '';
     my $headers = $params->{headers} // '';
     my $method = $params->{method} // 'GET';
@@ -1978,7 +1978,7 @@ sub geturl {
     ## canonify proxy and url
     my $force_ssl;
     $force_ssl = 1 if ($url =~ /^https:/);
-    $proxy  =~ s%^https?://%%i;
+    $proxy  =~ s%^https?://%%i if defined($proxy);
     $url    =~ s%^https?://%%i;
     $server = $url;
     $server =~ s%[?/].*%%;
@@ -1993,14 +1993,14 @@ sub geturl {
         $use_ssl      = 0;
         $default_port = '80';
     }
-    debug("proxy    = %s", $proxy);
+    debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
     debug("url      = %s", $url);
     debug("ip ver   = %s", $ipversion);
 
     ## determine peer and port to use.
-    $peer = $proxy || $server;
+    $peer = $proxy // $server;
     $peer =~ s%[?/].*%%;
     if ($peer =~ /^\[([^]]+)\](?::(\d+))?$/ || $peer =~ /^([^:]+)(?::(\d+))?/) {
         $peer = $1;
@@ -2012,15 +2012,17 @@ sub geturl {
 
     $request = "$method ";
     if (!$use_ssl) {
-        $request .= "http://$server" if $proxy;
+        $request .= "http://$server" if defined($proxy);
     } else {
-        $request .= "https://$server" if $proxy;
+        $request .= "https://$server" if defined($proxy);
     }
     $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
 
-    my $auth = encode_base64("${login}:${password}", "");
-    $request .= "Authorization: Basic $auth\n" if $login || $password;
+    if (defined($login) || defined($password)) {
+        my $auth = encode_base64(($login // '') . ':' . ($password // ''), '');
+        $request .= "Authorization: Basic $auth\n";
+    }
     $request .= "User-Agent: ${program}/${version}\n";
     if ($data) {
         $request .= "Content-Type: application/x-www-form-urlencoded\n" if $headers !~ /^Content-Type:/mi;
@@ -2065,7 +2067,7 @@ sub geturl {
 
     my $ipv = $ipversion eq '' ? '' : sprintf(" (IPv%s)", $ipversion);
     my $peer_port_ipv = sprintf("%s:%s%s", $peer, $port, $ipv);
-    my $to = sprintf("%s%s%s", $server, $proxy ? " via proxy $peer:$port" : "", $ipv);
+    my $to = sprintf("%s%s%s", $server, defined($proxy) ? " via proxy $peer:$port" : "", $ipv);
     verbose("CONNECT:", "%s", $to);
     $0 = sprintf("%s - connecting to %s", $program, $peer_port_ipv);
     if (opt('exec')) {
@@ -2143,21 +2145,21 @@ sub get_ip {
         $arg = 'ip';
 
     } elsif ($use eq 'if') {
-        $skip  = opt('if-skip', $h) || '';
+        $skip = opt('if-skip', $h) // '';
         $reply = `command -v ip >/dev/null && ip address show dev $arg`;
         $reply = `command -v ifconfig >/dev/null && ifconfig $arg` if $?;
         $reply = '' if $?;
 
     } elsif ($use eq 'cmd') {
         if ($arg) {
-            $skip = opt('cmd-skip', $h) || '';
+            $skip = opt('cmd-skip', $h) // '';
             $reply = `$arg`;
             $reply = '' if $?;
         }
 
     } elsif ($use eq 'web') {
-        $url  = opt('web',      $h) || '';
-        $skip = opt('web-skip', $h) || '';
+        $url = opt('web', $h) // '';
+        $skip = opt('web-skip', $h) // '';
 
         if (exists $builtinweb{$url}) {
             $skip = $builtinweb{$url}->{'skip'} unless $skip;
@@ -2166,7 +2168,7 @@ sub get_ip {
         $arg = $url;
 
         if ($url) {
-            $reply = geturl({ proxy => opt('proxy', $h), url => $url }) || '';
+            $reply = geturl({ proxy => opt('proxy', $h), url => $url }) // '';
         }
 
     } elsif (($use eq 'cisco')) {
@@ -2174,7 +2176,7 @@ sub get_ip {
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
         my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h) || '';
+        $skip = opt('fw-skip', $h) // '';
 
         # Convert slashes to protected value "\/"
         $queryif =~ s%\/%\\\/%g;
@@ -2188,7 +2190,7 @@ sub get_ip {
             login => opt('fw-login', $h),
             password => opt('fw-password', $h),
             ignore_ssl_option => 1,
-        }) || '';
+        }) // '';
         $arg = $url;
 
     } elsif (($use eq 'cisco-asa')) {
@@ -2196,7 +2198,7 @@ sub get_ip {
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
         my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h) || '';
+        $skip = opt('fw-skip', $h) // '';
 
         # Convert slashes to protected value "\/"
         $queryif =~ s%\/%\\\/%g;
@@ -2210,12 +2212,12 @@ sub get_ip {
             login => opt('fw-login', $h),
             password => opt('fw-password', $h),
             ignore_ssl_option => 1,
-        }) || '';
+        }) // '';
         $arg = $url;
 
     } else {
-        $url  = opt('fw',      $h) || '';
-        $skip = opt('fw-skip', $h) || '';
+        $url = opt('fw', $h) // '';
+        $skip = opt('fw-skip', $h) // '';
 
         if (exists $builtinfw{$use}) {
             $skip = $builtinfw{$use}->{'skip'} unless $skip;
@@ -2229,7 +2231,7 @@ sub get_ip {
                 login => opt('fw-login', $h),
                 password => opt('fw-password', $h),
                 ignore_ssl_option => 1,
-            }) || '';
+            }) // '';
         }
     }
     if (!defined $reply) {
@@ -2612,7 +2614,7 @@ sub nic_dyndns1_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
@@ -2780,7 +2782,7 @@ sub nic_dyndns2_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -2890,7 +2892,7 @@ sub nic_noip_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -3030,7 +3032,7 @@ sub nic_dslreports1_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
@@ -3131,7 +3133,7 @@ sub nic_zoneedit1_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -3286,7 +3288,7 @@ sub nic_easydns_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
             last;
         }
@@ -3400,7 +3402,7 @@ sub nic_namecheap_update {
         $url .= $ip if $ip;
 
         my $reply = geturl({ proxy => opt('proxy'), url => $url }) // '';
-        if (!$reply) {
+        if ($reply eq '') {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             last;
         }
@@ -3464,7 +3466,7 @@ EoEXAMPLE
 sub nic_nfsn_gen_auth_header {
     my $h    = shift;
     my $path = shift;
-    my $body = shift || '';
+    my $body = shift // '';
 
     ## API requests must include a custom HTTP header in the
     ## following format:
@@ -3520,8 +3522,8 @@ sub nic_nfsn_gen_auth_header {
 sub nic_nfsn_make_request {
     my $h = shift;
     my $path = shift;
-    my $method = shift || 'GET';
-    my $body = shift || '';
+    my $method = shift // 'GET';
+    my $body = shift // '';
 
     my $base_url = "https://$config{$h}{'server'}";
     my $url      = $base_url . $path;
