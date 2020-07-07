@@ -2166,11 +2166,7 @@ sub get_ip {
         $arg = $url;
 
         if ($url) {
-            $reply = geturl({
-                proxy => opt('proxy', $h),
-                url => $url,
-                ignore_ssl_option => 1,
-            }) || '';
+            $reply = geturl({ proxy => opt('proxy', $h), url => $url }) || '';
         }
 
     } elsif (($use eq 'cisco')) {
