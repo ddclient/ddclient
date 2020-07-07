@@ -1045,17 +1045,13 @@ sub parse_assignments {
     while (1) {
         (my $name, my $value, $rest) = parse_assignment($rest);
         $rest =~ s/^[,\s]+//;
-        if (defined $name) {
-            if ($name eq 'fw-banlocal') {
-                warning("'fw-banlocal' is deprecated and does nothing");
-                next;
-            }
-            $variables{$name} = $value;
-        } else {
-            last;
+        return ($rest, %variables) if !defined($name);
+        if ($name eq 'fw-banlocal') {
+            warning("'fw-banlocal' is deprecated and does nothing");
+            next;
         }
+        $variables{$name} = $value;
     }
-    return ($rest, %variables);
 }
 sub parse_assignment {
     my ($rest) = @_;
