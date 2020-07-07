@@ -3595,10 +3595,8 @@ sub nic_nfsn_update {
         verbose("UPDATE", "updating %s", $h);
 
         my $list_path = "/dns/$zone/listRRs";
-        my $list_body = encode_www_form_urlencoded({name => $name,
-                                                    type => 'A'});
-        my $list_resp = nic_nfsn_make_request($h, $list_path, 'POST',
-                                              $list_body);
+        my $list_body = encode_www_form_urlencoded({name => $name, type => 'A'});
+        my $list_resp = nic_nfsn_make_request($h, $list_path, 'POST', $list_body);
         if (!header_ok($h, $list_resp)) {
             $config{$h}{'status'} = 'failed';
             nic_nfsn_handle_error($list_resp, $h);
