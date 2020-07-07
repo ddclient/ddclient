@@ -2616,7 +2616,7 @@ sub nic_dyndns1_update {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my ($title, $return_code, $error_code) = ('', '', '');
@@ -2782,9 +2782,9 @@ sub nic_dyndns2_update {
         }) // '';
         if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($hosts, $reply);
+        next if !header_ok($hosts, $reply);
 
         my @reply      = split /\n/, $reply;
         my $state      = 'header';
@@ -2892,9 +2892,9 @@ sub nic_noip_update {
         }) // '';
         if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($hosts, $reply);
+        next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
         my $state = 'header';
@@ -3133,9 +3133,9 @@ sub nic_zoneedit1_update {
         }) // '';
         if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($hosts, $reply);
+        next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
         foreach my $line (@reply) {
@@ -3288,9 +3288,9 @@ sub nic_easydns_update {
         }) // '';
         if (!$reply) {
             failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($hosts, $reply);
+        next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
         my $state = 'header';
@@ -3402,9 +3402,9 @@ sub nic_namecheap_update {
         my $reply = geturl({ proxy => opt('proxy'), url => $url }) // '';
         if (!$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         if (grep /<ErrCount>0/i, @reply) {
@@ -3712,9 +3712,9 @@ sub nic_sitelutions_update {
         my $reply = geturl({ proxy => opt('proxy'), url => $url });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         if (grep /success/i, @reply) {
@@ -3927,9 +3927,9 @@ sub nic_changeip_update {
         });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         if (grep /success/i, @reply) {
@@ -4014,9 +4014,9 @@ sub nic_googledomains_update {
             });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-                last;
+                next;
             }
-            last if !header_ok($host, $reply);
+            next if !header_ok($host, $reply);
 
             # Cache
             $config{$host}{'ip'}     = $ip;
@@ -4223,9 +4223,9 @@ sub nic_cloudflare_update {
             my $reply = geturl({ proxy => opt('proxy'), url => $url, headers => $headers });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
-                last;
+                next;
             }
-            last if !header_ok($domain, $reply);
+            next if !header_ok($domain, $reply);
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
@@ -4254,9 +4254,9 @@ sub nic_cloudflare_update {
             $reply = geturl({ proxy => opt('proxy'), url => $url, headers => $headers });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
-                last;
+                next;
             }
-            last if !header_ok($domain, $reply);
+            next if !header_ok($domain, $reply);
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
@@ -4286,9 +4286,9 @@ sub nic_cloudflare_update {
             });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
-                last;
+                next;
             }
-            last if !header_ok($domain, $reply);
+            next if !header_ok($domain, $reply);
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
@@ -4370,9 +4370,9 @@ sub nic_yandex_update {
             my $reply = geturl({ proxy => opt('proxy'), url => $url, headers => $headers });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $host, $config{$key}{'server'});
-                last;
+                next;
             }
-            last if !header_ok($host, $reply);
+            next if !header_ok($host, $reply);
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
@@ -4407,9 +4407,9 @@ sub nic_yandex_update {
             });
             unless ($reply) {
                 failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-                last;
+                next;
             }
-            last if !header_ok($host, $reply);
+            next if !header_ok($host, $reply);
 
             # Strip header
             $reply =~ s/^.*?\n\n//s;
@@ -4487,9 +4487,9 @@ sub nic_duckdns_update {
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
@@ -4558,9 +4558,9 @@ sub nic_freemyip_update {
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
@@ -4687,9 +4687,9 @@ sub nic_woima_update {
         });
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply      = split /\n/, $reply;
         my $state      = 'header';
@@ -4805,9 +4805,9 @@ sub nic_dondominio_update {
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
@@ -4891,9 +4891,9 @@ sub nic_dnsmadeeasy_update {
         # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
+            next;
         }
-        last if !header_ok($h, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);

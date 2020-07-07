@@ -21,10 +21,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Bug fixes
 
-  * Minor `freedns` protocol fixes, including:
-      * You can now update an address that differs from the system's own.
-      * If multiple hosts are defined and one fails, ddclient will no longer
-        skip the remaining hosts.
+  * If multiple hosts are defined and one fails, ddclient will no longer skip
+    the remaining hosts.
+  * Minor `freedns` protocol fixes. In particular, you can now update an
+    address that differs from the system's own.
   * Fixed a regression introduced in v3.9.0 that caused
     `use=ip,ip=<ipv4-address>` to fail.
   * "true" is now accepted as a boolean value.
