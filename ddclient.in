@@ -1984,8 +1984,6 @@ sub geturl {
     $server =~ s%[?/].*%%;
     $url    =~ s%^[^?/]*/?%%;
 
-    opt('fw') && debug("opt(fw = %s)", opt('fw'));
-    $globals{'fw'} && debug("glo fw = %s", $globals{'fw'});
     if ($force_ssl || ($globals{'ssl'} && !($params->{ignore_ssl_option} // 0))) {
         $use_ssl      = 1;
         $default_port = '443';
