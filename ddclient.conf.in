@@ -283,3 +283,11 @@ ssl=yes					# use ssl-support.  Works with
 # protocol=cloudns, \
 # dynurl=https://ipv4.cloudns.net/api/dynamicURL/?q=Njc1OTE2OjY3Njk0NDM6YTk2, \
 # myhost.example.com
+
+##
+## dinahosting (https://dinahosting.com)
+##
+# protocol=dinahosting, \
+# login=myusername,     \
+# password=mypassword   \
+# myhost.mydomain.com
