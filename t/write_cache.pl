@@ -8,7 +8,9 @@ eval { require 'ddclient'; } or BAIL_OUT($@);
 my $warning;
 
 my $module = Test::MockModule->new('ddclient');
-$module->redefine('warning', sub {
+# Note: 'mock' is used instead of 'redefine' because 'redefine' is not available in the versions of
+# Test::MockModule distributed with old Debian and Ubuntu releases.
+$module->mock('warning', sub {
     BAIL_OUT("warning already logged") if defined($warning);
     $warning = sprintf(shift, @_);
 });
