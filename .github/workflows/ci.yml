@@ -34,6 +34,7 @@ jobs:
               libio-socket-inet6-perl \
               libio-socket-ip-perl \
               libplack-perl \
+              libtest-mockmodule-perl \
               libtest-tcp-perl \
               libtest-warnings-perl \
               liburi-perl \
@@ -113,6 +114,7 @@ jobs:
               perl-HTTP-Daemon-SSL \
               perl-IO-Socket-INET6 \
               perl-Plack \
+              perl-Test-MockModule \
               perl-Test-TCP \
               perl-Test-Warnings \
               ;
