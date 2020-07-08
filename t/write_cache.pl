@@ -15,10 +15,6 @@ $module->redefine('warning', sub {
 my $tmpdir = File::Temp->newdir();
 my $dir = $tmpdir->dirname();
 diag("temporary directory: $dir");
-my $ro_tmpdir = File::Temp->newdir();
-my $ro_dir = $ro_tmpdir->dirname();
-chmod(0500, $ro_dir) or BAIL_OUT($!);
-diag("temporary read-only directory: $ro_dir");
 
 sub tc {
     return {
@@ -32,7 +28,7 @@ my @test_cases = (
     tc("create cache file",    catfile($dir, 'a', 'b', 'cachefile'),        undef),
     tc("overwrite cache file", catfile($dir, 'a', 'b', 'cachefile'),        undef),
     tc("bad directory",        catfile($dir, 'a', 'b', 'cachefile', 'bad'), qr/Failed to create/i),
-    tc("read-only directory",  catfile($ro_dir, 'cachefile'),               qr/Failed to create/i),
+    tc("bad file",             catfile($dir, 'a', 'b'),                     qr/Failed to create/i),
 );
 
 for my $tc (@test_cases) {
