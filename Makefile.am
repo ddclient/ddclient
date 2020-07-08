@@ -70,6 +70,7 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-I'$(abs_top_srcdir)'/t/lib
 handwritten_tests = \
 	t/geturl_connectivity.pl \
+	t/geturl_ssl.pl \
 	t/parse_assignments.pl \
 	t/write_cache.pl
 generated_tests = \

@@ -64,6 +64,8 @@ m4_foreach_w([_m], [
     HTTP::Daemon=6.12
     HTTP::Daemon::SSL
     HTTP::Message::PSGI
+    HTTP::Request
+    HTTP::Response
     IO::Socket::IP
     Scalar::Util
     Test::TCP
