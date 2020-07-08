@@ -25,8 +25,8 @@ use warnings;
 use File::Basename;
 use File::Path qw(make_path);
 use Getopt::Long;
+use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
-use IO::Socket;
 
 use version 0.77; our $VERSION = version->declare('v3.9.1');
 (my $version = $VERSION->stringify()) =~ s/^v//;
