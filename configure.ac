@@ -40,7 +40,7 @@ m4_foreach_w([_m], [
     File::Basename
     File::Path
     Getopt::Long
-    IO::Socket
+    Socket
     Sys::Hostname
     version=0.77
   ], [AX_PROG_PERL_MODULES([_m], [],
