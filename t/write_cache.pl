@@ -31,8 +31,8 @@ sub tc {
 my @test_cases = (
     tc("create cache file",    catfile($dir, 'a', 'b', 'cachefile'),        undef),
     tc("overwrite cache file", catfile($dir, 'a', 'b', 'cachefile'),        undef),
-    tc("bad directory",        catfile($dir, 'a', 'b', 'cachefile', 'bad'), qr/File exists/),
-    tc("read-only directory",  catfile($ro_dir, 'cachefile'),               qr/Permission denied/),
+    tc("bad directory",        catfile($dir, 'a', 'b', 'cachefile', 'bad'), qr/Failed to create/i),
+    tc("read-only directory",  catfile($ro_dir, 'cachefile'),               qr/Failed to create/i),
 );
 
 for my $tc (@test_cases) {
