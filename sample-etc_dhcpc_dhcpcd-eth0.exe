@@ -1,6 +1,6 @@
 #!/bin/sh
 ######################################################################
-PATH=/usr/sbin:${PATH}
+PATH=/usr/bin:${PATH}
 
 ## update the DNS server unless the IP address is a private address
 ## that may be used as an internal LAN address. This may be true if

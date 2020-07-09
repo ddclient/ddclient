@@ -28,7 +28,7 @@ else
     PID=`ps -aef | grep "$program - sleep" | grep -v grep | awk '{print $2}'`
 fi
 
-PATH=/usr/sbin:/usr/local/sbin:${PATH}
+PATH=/usr/bin:/usr/local/bin:${PATH}
 export PATH
 
 # See how we were called.

@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 description="ddclient Daemon for Alpine"
-command="/usr/sbin/ddclient"
+command="/usr/bin/ddclient"
 config_file="/etc/ddclient/ddclient.conf"
 command_args=""
 pidfile=$(grep -v '^\s*#' "${config_file}" | grep -i -m 1 pid= | awk -F '=' '{print $2}')

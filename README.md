@@ -265,7 +265,7 @@ In my case, it is named dhcpcd-eth0.exe and contains the lines:
 
 ```shell
 #!/bin/sh
-PATH=/usr/sbin:/root/bin:${PATH}
+PATH=/usr/bin:/root/bin:${PATH}
 logger -t dhcpcd IP address changed to $1
 ddclient -proxy fasthttp.sympatico.ca -wildcard -ip $1 | logger -t ddclient
 exit 0
