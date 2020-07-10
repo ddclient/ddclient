@@ -61,6 +61,17 @@ See https://github.com/ddclient/ddclient/releases
 
 ## INSTALLATION
 
+### Distribution Package
+
+<a href="https://repology.org/project/ddclient/versions">
+  <img src="https://repology.org/badge/vertical-allrepos/ddclient.svg" alt="Packaging status" align="right">
+</a>
+The easiest way to install ddclient is to install a package offered by your
+operating system. See the image to the right for a list of distributions with a
+ddclient package.
+
+### Manual Installation
+
   1. Extract the distribution tarball (`.tar.gz` file) and `cd` into
      the directory:
 
@@ -86,7 +97,7 @@ See https://github.com/ddclient/ddclient/releases
 
   3. Edit `/etc/ddclient/ddclient.conf`.
 
-### systemd
+#### systemd
 
     cp sample-etc_systemd.service /etc/systemd/system/ddclient.service
 
@@ -98,7 +109,7 @@ start the first time by hand
 
     systemctl start ddclient.service
 
-### Redhat style rc files and daemon-mode
+#### Redhat style rc files and daemon-mode
 
     cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
 
@@ -110,7 +121,7 @@ start the first time by hand
 
     /etc/rc.d/init.d/ddclient start
 
-### Alpine style rc files and daemon-mode
+#### Alpine style rc files and daemon-mode
 
     cp sample-etc_rc.d_init.d_ddclient.alpine /etc/init.d/ddclient
 
@@ -126,7 +137,7 @@ start the first time by hand
 
     rc-service ddclient start
 
-### Ubuntu style rc files and daemon-mode
+#### Ubuntu style rc files and daemon-mode
 
     cp sample-etc_rc.d_init.d_ddclient.ubuntu /etc/init.d/ddclient
 
@@ -150,7 +161,7 @@ start the first time by hand
 
     service ddclient start
 
-### FreeBSD style rc files and daemon mode
+#### FreeBSD style rc files and daemon mode
 
     mkdir -p /usr/local/etc/rc.d
     cp sample-etc_rc.d_ddclient.freebsd /usr/local/etc/rc.d/ddclient
