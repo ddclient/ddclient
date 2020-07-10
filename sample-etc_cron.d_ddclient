@@ -9,8 +9,8 @@
 ######################################################################
 ## force an update twice a month (only if you are not using daemon-mode)
 ##
-## 30 23 1,15 * *	root    /usr/sbin/ddclient -daemon=0 -syslog -quiet -force
+## 30 23 1,15 * *	root    /usr/bin/ddclient -daemon=0 -syslog -quiet -force
 ######################################################################
 ## retry failed updates every hour (only if you are not using daemon-mode)
 ##
-## 0 * * * *	root    /usr/sbin/ddclient -daemon=0 -syslog -quiet retry
+## 0 * * * *	root    /usr/bin/ddclient -daemon=0 -syslog -quiet retry

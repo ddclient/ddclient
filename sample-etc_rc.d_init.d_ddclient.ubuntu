@@ -9,7 +9,7 @@
 # Description:       Start ddclient that provides support for updating dynamic DNS services.  Originally submitted by paolo martinelli, updated by joe passavanti
 ### END INIT INFO
 
-DDCLIENT=/usr/sbin/ddclient
+DDCLIENT=/usr/bin/ddclient
 CONF=/etc/ddclient/ddclient.conf
 PIDFILE=/var/run/ddclient.pid
 

@@ -25,7 +25,7 @@
 
 [ -f /etc/ddclient/ddclient.conf ] || exit 0
 
-DDCLIENT_BIN=/usr/sbin/ddclient
+DDCLIENT_BIN=/usr/bin/ddclient
 
 #
 # LSB Standard (SuSE,RedHat,...)

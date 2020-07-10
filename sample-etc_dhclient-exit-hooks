@@ -3,7 +3,7 @@
 # The /etc/dhclient-enter-hooks script is run by the ISC DHCP client's standard
 # update script whenever dhclient obtains or renews an address. 
 
-PATH=/usr/sbin:${PATH}
+PATH=/usr/bin:${PATH}
 case "$new_ip_address" in
 10.*)   	;;
 172.1[6-9].* | 172.2[0-9].* | 172.3[0-1].*)	;;

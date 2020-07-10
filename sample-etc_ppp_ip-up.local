@@ -14,7 +14,7 @@
 ## in the environment as either PPP_LOCAL or IPLOCAL.
 ##
 ######################################################################
-PATH=/usr/sbin:${PATH}
+PATH=/usr/bin:${PATH}
 IP=
 IP=${IP:-$PPP_LOCAL}
 IP=${IP:-$IPLOCAL}
