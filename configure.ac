@@ -68,6 +68,7 @@ m4_foreach_w([_m], [
     HTTP::Response
     IO::Socket::IP
     Scalar::Util
+    Test::MockModule
     Test::TCP
     Test::Warnings
     Time::HiRes

@@ -8,17 +8,15 @@ eval { require 'ddclient'; } or BAIL_OUT($@);
 my $warning;
 
 my $module = Test::MockModule->new('ddclient');
-$module->redefine('warning', sub {
+# Note: 'mock' is used instead of 'redefine' because 'redefine' is not available in the versions of
+# Test::MockModule distributed with old Debian and Ubuntu releases.
+$module->mock('warning', sub {
     BAIL_OUT("warning already logged") if defined($warning);
     $warning = sprintf(shift, @_);
 });
 my $tmpdir = File::Temp->newdir();
 my $dir = $tmpdir->dirname();
 diag("temporary directory: $dir");
-my $ro_tmpdir = File::Temp->newdir();
-my $ro_dir = $ro_tmpdir->dirname();
-chmod(0500, $ro_dir) or BAIL_OUT($!);
-diag("temporary read-only directory: $ro_dir");
 
 sub tc {
     return {
@@ -31,8 +29,8 @@ sub tc {
 my @test_cases = (
     tc("create cache file",    catfile($dir, 'a', 'b', 'cachefile'),        undef),
     tc("overwrite cache file", catfile($dir, 'a', 'b', 'cachefile'),        undef),
-    tc("bad directory",        catfile($dir, 'a', 'b', 'cachefile', 'bad'), qr/File exists/),
-    tc("read-only directory",  catfile($ro_dir, 'cachefile'),               qr/Permission denied/),
+    tc("bad directory",        catfile($dir, 'a', 'b', 'cachefile', 'bad'), qr/Failed to create/i),
+    tc("bad file",             catfile($dir, 'a', 'b'),                     qr/Failed to create/i),
 );
 
 for my $tc (@test_cases) {
