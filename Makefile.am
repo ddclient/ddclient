@@ -74,6 +74,7 @@ handwritten_tests = \
 	t/geturl_ssl.pl \
 	t/is-and-extract-ipv4.pl \
 	t/is-and-extract-ipv6.pl \
+	t/is-and-extract-ipv6-global.pl \
 	t/parse_assignments.pl \
 	t/write_cache.pl
 generated_tests = \
@@ -150,4 +151,5 @@ EXTRA_DIST += $(handwritten_tests) \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-ca-cert.pem \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-cert.pem \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-key.pem \
+	t/lib/ddclient/t.pm \
 	t/lib/ok.pm
