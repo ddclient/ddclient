@@ -3,6 +3,7 @@ eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
 my $has_http_daemon_ssl = eval { require HTTP::Daemon::SSL; };
+my $has_io_socket_inet6 = eval { require IO::Socket::INET6; };
 my $ipv6_supported = eval {
     require IO::Socket::IP;
     my $ipv6_socket = IO::Socket::IP->new(
@@ -72,6 +73,8 @@ my @test_cases = (
 
 for my $tc (@test_cases) {
     SKIP: {
+        skip("IO::Socket::INET6 not available", 1)
+            if ($tc->{ipv6_opt} || $tc->{client_ipv} eq '6') && !$has_io_socket_inet6;
         skip("IPv6 not supported on this system", 1)
             if $tc->{server_ipv} eq '6' && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1)

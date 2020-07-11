@@ -66,6 +66,7 @@ m4_foreach_w([_m], [
     HTTP::Message::PSGI
     HTTP::Request
     HTTP::Response
+    IO::Socket::INET6
     IO::Socket::IP
     Scalar::Util
     Test::MockModule
