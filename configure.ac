@@ -49,6 +49,7 @@ m4_foreach_w([_m], [
 # Perl modules required for tests. If these modules are not installed
 # then some tests will fail. Only prints a warning if not installed.
 m4_foreach_w([_m], [
+    B
     Data::Dumper
     File::Spec::Functions
     File::Temp
