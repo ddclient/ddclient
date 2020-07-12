@@ -228,8 +228,7 @@ for my $tc (@test_cases) {
     $ddclient::globals{'ssl'} = $tc->{opt_ssl} // 0;
     $ddclient::globals{'ssl_ca_dir'} = $tc->{opt_ssl_ca_dir};
     $ddclient::globals{'ssl_ca_file'} = $tc->{opt_ssl_ca_file};
-    my $resp_str = ddclient::geturl({ _testonly_socket_class => 'InterceptSocket',
-                                      %{$tc->{params}} });
+    my $resp_str = ddclient::geturl(_testonly_socket_class => 'InterceptSocket', %{$tc->{params}});
     TODO: {
         local $TODO = $tc->{todo};
         subtest $tc->{name} => sub {
