@@ -40,6 +40,7 @@ m4_foreach_w([_m], [
     File::Basename
     File::Path
     Getopt::Long
+    IO::Socket::INET
     Socket
     Sys::Hostname
     version=0.77
