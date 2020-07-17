@@ -36,6 +36,13 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
       - `siemens-ss4200`: Siemens SpeedStream 4200
       - `thomson-st536v6`: Thomson SpeedTouch 536v6
       - `thomson-tg782`: Thomson/Technicolor TG782
+  * Added option `-curl` to access network with system Curl command instead
+    of the Perl built-in IO::Socket classes.
+  * Added option `-{no}web-ssl-validate` and `-{no}fw-ssl-validate`to provide
+    option to disable SSL certificate validation.  Note that these only apply for
+    network access when obtaining an IP address with `use=web` or `use=fw`
+    (any firewall).  Network access to Dynamic DNS servers to set or retrieve
+    IP address will always require certificate validation.
 
 ### Bug fixes
 

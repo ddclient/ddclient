@@ -17,5 +17,6 @@ release
 /ddclient.conf
 /t/*.log
 /t/*.trs
+/t/geturl_connectivity.pl
 /t/version.pl
 /test-suite.log
