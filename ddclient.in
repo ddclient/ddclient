@@ -571,6 +571,21 @@ my %services = (
             'server' => setv(T_FQDNP, 1, 0, 'freemyip.com', undef),
         },
     },
+    'gandi' => {
+        'updateable' => undef,
+        'update'     => \&nic_gandi_update,
+        'examples'   => \&nic_gandi_examples,
+        'variables'  => {
+            %{$variables{'service-common-defaults'}},
+            'min-interval' => setv(T_DELAY,  0, 0, 0,               interval('5m')),
+            'server'       => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
+            'script'       => setv(T_STRING, 1, 1, '/v5',           undef),
+            'ttl'          => setv(T_DELAY,  0, 0, undef,           interval('5m')),
+            'zone'         => setv(T_FQDN,   1, 0, undef,           undef),
+            # Unused variables.
+            'login'        => setv(T_STRING, 0, 0, 'unused', undef),
+        }
+    },
     'googledomains' => {
         'updateable' => undef,
         'update'     => \&nic_googledomains_update,
@@ -1394,7 +1409,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("cloudflare","yandex", "nfsn")));
+        load_json_support($proto) if (grep (/^$proto$/, ("cloudflare", "gandi", "yandex", "nfsn")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -1983,7 +1998,7 @@ sub load_json_support {
 Error loading the Perl module JSON::PP needed for $why update.
 EOM
     }
-    import JSON::PP (qw/decode_json/);
+    import JSON::PP (qw/decode_json encode_json/);
 }
 ######################################################################
 ## geturl
@@ -2594,7 +2609,7 @@ sub header_ok {
     if ($line =~ m%^s*HTTP/1.*\s+(\d+)%i) {
         my $result = $1;
 
-        if ($result eq '200') {
+        if ($result =~ m/^2\d\d$/) {
             $ok = 1;
 
         } elsif ($result eq '401') {
@@ -5173,6 +5188,115 @@ sub nic_dinahosting_update {
         $config{$h}{'mtime'}  = $now;
         $config{$h}{'status'} = 'good';
         success("updating %s: IP address set to %s", $h, $ip);
+    }
+}
+
+######################################################################
+## nic_gandi_examples
+## by Jimmy Thrasibule <dev@jimmy.lt>
+######################################################################
+sub nic_gandi_examples {
+    return <<"EoEXAMPLE";
+o 'gandi'
+
+The 'gandi' protocol is used by the LiveDNS service offered by gandi.net.
+Description of Gandi's LiveDNS API can be found at:
+
+    https://api.gandi.net/docs/livedns/
+
+Available configuration variables:
+  * password: The Gandi API key. If you don’t have one yet, you can generate
+    your production API key from the API Key Page (in the Security section).
+    Required.
+  * zone: The DNS zone to be updated. Required.
+  * ttl: The time-to-live value associated with the updated DNS record.
+    Optional; uses Gandi's default (3h) if unset.
+
+Example ${program}.conf file entries:
+  ## Single host update.
+  protocol=gandi,                           \\
+  zone=example.com,                         \\
+  password=my-gandi-api-key,                \\
+  host.example.com
+
+  ## Multiple host update.
+  protocol=gandi,                           \\
+  zone=example.com,                         \\
+  password=my-gandi-api-key,                \\
+  ttl=1h                                    \\
+  hosta.example.com,hostb.sub.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_gandi_update
+######################################################################
+sub nic_gandi_update {
+    debug("\nnic_gandi_update -------------------");
+
+    # Update each set configured host.
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
+
+        info("%s -- Setting IP address to %s.", $h, $ip);
+        verbose("UPDATE:", "updating %s", $h);
+
+        my $headers;
+        $headers  = "Content-Type: application/json\n";
+        $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
+
+        my $data = encode_json({
+            defined($config{$h}{'ttl'}) ? (rrset_ttl => $config{$h}{'ttl'}) : (),
+            rrset_values => [$ip],
+        });
+
+        my $rrset_type = is_ipv6($ip) ? "AAAA" : "A";
+        my $url;
+        $url  = "https://$config{$h}{'server'}$config{$h}{'script'}";
+        $url .= "/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
+
+        my $reply = geturl({
+            proxy   => opt('proxy'),
+            url     => $url,
+            headers => $headers,
+            method  => 'PUT',
+            data    => $data,
+        });
+        unless ($reply) {
+            failed("%s -- Could not connect to %s.", $h, $config{$h}{'server'});
+            next;
+        }
+        my $ok = header_ok($h, $reply);
+
+        $reply =~ s/^.*?\n\n//s;
+        my $response = eval { decode_json($reply) };
+        if (!defined($response)) {
+            $config{$h}{'status'} = "bad";
+
+            failed("%s -- Unexpected service response.", $h);
+            next;
+        }
+
+        if ($ok) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = "good";
+
+            success("%s -- Updated successfully to %s.", $h, $ip);
+        } else {
+            $config{$h}{'status'} = "bad";
+
+            if (defined($response->{status}) && $response->{status} eq "error") {
+                my @errors;
+                for my $err (@{$response->{errors}}) {
+                    push(@errors, $err->{description});
+                }
+                failed("%s -- %s.", $h, join(", ", @errors));
+            } else {
+                failed("%s -- Unexpected service response.", $h);
+            }
+        }
     }
 }
 

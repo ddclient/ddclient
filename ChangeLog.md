@@ -10,6 +10,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added support for OVH DynHost.
   * Added support for ClouDNS.
   * Added support for dinahosting.
+  * Added support for Gandi LiveDNS.
   * Added a build system to make it easier for distributions to package
     ddclient:
 

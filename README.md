@@ -31,6 +31,7 @@ Dynamic DNS services currently supported include:
     OVH         - See https://www.ovh.com for details
     ClouDNS     - See https://www.cloudns.net
     dinahosting - See https://dinahosting.com
+    Gandi       - See https://gandi.net
 
 DDclient now supports many of cable/dsl broadband routers.
 

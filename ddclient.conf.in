@@ -197,6 +197,16 @@ ssl=yes					# use ssl-support.  Works with
 #domain.tld,my.domain.tld
 
 ##
+## Gandi (gandi.net)
+##
+## Single host update
+# protocol=gandi,                      \
+# zone=example.com,                    \
+# password=my-gandi-api-key,           \
+# ttl=3h                               \
+# myhost.example.com
+
+##
 ## Google Domains (www.google.com/domains)
 ##
 # protocol=googledomains,
