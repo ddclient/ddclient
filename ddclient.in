@@ -580,7 +580,7 @@ my %services = (
             'min-interval' => setv(T_DELAY,  0, 0, 0,               interval('5m')),
             'server'       => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
             'script'       => setv(T_STRING, 1, 1, '/v5',           undef),
-            'ttl'          => setv(T_DELAY,  1, 0, interval('3h'),  interval('5m')),
+            'ttl'          => setv(T_DELAY,  0, 0, undef,           interval('5m')),
             'zone'         => setv(T_FQDN,   1, 0, undef,           undef),
             # Unused variables.
             'login'        => setv(T_STRING, 0, 0, 'unused', undef),
@@ -5200,11 +5200,9 @@ sub nic_gandi_examples {
 o 'gandi'
 
 The 'gandi' protocol is used by the LiveDNS service offered by gandi.net.
-
 Description of Gandi's LiveDNS API can be found at:
 
     https://api.gandi.net/docs/livedns/
-
 
 Available configuration variables:
   * password: The Gandi API key. If you don’t have one yet, you can generate
@@ -5212,7 +5210,7 @@ Available configuration variables:
     Required.
   * zone: The DNS zone to be updated. Required.
   * ttl: The time-to-live value associated with the updated DNS record.
-    Optional; defaults to 3h.
+    Optional; uses Gandi's default (3h) if unset.
 
 Example ${program}.conf file entries:
   ## Single host update.
