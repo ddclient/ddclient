@@ -135,9 +135,10 @@ To add a new test script:
 
 ## Compatibility
 
-We strive to make ddclient usable on a wide variety of platforms.
-Please limit yourself to Perl language features and modules available
-on the following platforms:
+We strive to find the right balance between features, code
+maintainability, and broad platform support. To that end, please limit
+yourself to Perl language features and modules available on the
+following platforms:
 
   * Debian oldstable and newer
   * Ubuntu, [all maintained
@@ -159,6 +160,12 @@ Exceptions:
   * Test scripts may depend on arbitrary modules as long as the tests
     are skipped if the modules are not available. Effort should be
     taken to only use modules that are broadly available.
+
+You may use any core Perl module as long as it is available in all
+versions of Perl we support. (Though please make sure it is listed in
+the appropriate `configure.ac` check.) Stated another way: We are not
+interested in supporting platforms that lack some core Perl modules,
+unless doing so is trivial.
 
 All shell scripts should conform with [POSIX Issue 7 (2018
 edition)](https://pubs.opengroup.org/onlinepubs/9699919799/) or later.
