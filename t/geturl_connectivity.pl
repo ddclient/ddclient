@@ -81,8 +81,8 @@ for my $tc (@test_cases) {
             if $tc->{server_ipv} eq '6' && !$http_daemon_supports_ipv6;
         skip("HTTP::Daemon::SSL not available", 1) if $tc->{ssl} && !$has_http_daemon_ssl;
         my $uri = $httpd{$tc->{server_ipv}}{$tc->{ssl} ? 'https' : 'http'}->endpoint();
-        my $name = sprintf("IPv%s client to %s (-%sipv6)",
-                           $tc->{client_ipv} || '*', $uri, $tc->{ipv6_opt} ? '' : 'no');
+        my $name = sprintf("IPv%s client to %s%s",
+                           $tc->{client_ipv} || '*', $uri, $tc->{ipv6_opt} ? ' (-ipv6)' : '');
         $ddclient::globals{'ipv6'} = $tc->{ipv6_opt};
         my $got = ddclient::geturl(url => $uri, ipversion => $tc->{client_ipv});
         isnt($got // '', '', $name);
