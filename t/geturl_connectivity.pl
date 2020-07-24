@@ -41,7 +41,7 @@ sub run_httpd {
     );
     $httpd->run(sub {
         # Echo back the full request.
-        return [ 200, [ 'Content-Type' => 'application/octet-stream' ], [ $_[0]->as_string() ] ];
+        return [200, ['Content-Type' => 'application/octet-stream'], [$_[0]->as_string()]];
     });
     diag(sprintf("started IPv%s%s server running at %s",
                  $ipv6 ? '6' : '4', $ssl ? ' SSL' : '', $httpd->endpoint()));
@@ -49,26 +49,26 @@ sub run_httpd {
 }
 
 my %httpd = (
-    '4' => { 'http' => run_httpd(0, 0), 'https' => run_httpd(0, 1) },
-    '6' => { 'http' => run_httpd(1, 0), 'https' => run_httpd(1, 1) },
+    '4' => {'http' => run_httpd(0, 0), 'https' => run_httpd(0, 1)},
+    '6' => {'http' => run_httpd(1, 0), 'https' => run_httpd(1, 1)},
 );
 
 # Note: IPv* client to IPv6 server is not expected to work unless $globals{'ipv6'} is true.
 my @test_cases = (
-    { ipv6_opt => 0, client_ipv => '',  server_ipv => '4', ssl => 0 },
-    { ipv6_opt => 0, client_ipv => '',  server_ipv => '4', ssl => 1 },
-    { ipv6_opt => 0, client_ipv => '4', server_ipv => '4', ssl => 0 },
-    { ipv6_opt => 0, client_ipv => '4', server_ipv => '4', ssl => 1 },
-    { ipv6_opt => 0, client_ipv => '6', server_ipv => '6', ssl => 0 },
-    { ipv6_opt => 0, client_ipv => '6', server_ipv => '6', ssl => 1 },
-    { ipv6_opt => 1, client_ipv => '',  server_ipv => '4', ssl => 0 },
-    { ipv6_opt => 1, client_ipv => '',  server_ipv => '4', ssl => 1 },
-    { ipv6_opt => 1, client_ipv => '',  server_ipv => '6', ssl => 0 },
-    { ipv6_opt => 1, client_ipv => '',  server_ipv => '6', ssl => 1 },
-    { ipv6_opt => 1, client_ipv => '4', server_ipv => '4', ssl => 0 },
-    { ipv6_opt => 1, client_ipv => '4', server_ipv => '4', ssl => 1 },
-    { ipv6_opt => 1, client_ipv => '6', server_ipv => '6', ssl => 0 },
-    { ipv6_opt => 1, client_ipv => '6', server_ipv => '6', ssl => 1 },
+    {ipv6_opt => 0, client_ipv => '',  server_ipv => '4', ssl => 0},
+    {ipv6_opt => 0, client_ipv => '',  server_ipv => '4', ssl => 1},
+    {ipv6_opt => 0, client_ipv => '4', server_ipv => '4', ssl => 0},
+    {ipv6_opt => 0, client_ipv => '4', server_ipv => '4', ssl => 1},
+    {ipv6_opt => 0, client_ipv => '6', server_ipv => '6', ssl => 0},
+    {ipv6_opt => 0, client_ipv => '6', server_ipv => '6', ssl => 1},
+    {ipv6_opt => 1, client_ipv => '',  server_ipv => '4', ssl => 0},
+    {ipv6_opt => 1, client_ipv => '',  server_ipv => '4', ssl => 1},
+    {ipv6_opt => 1, client_ipv => '',  server_ipv => '6', ssl => 0},
+    {ipv6_opt => 1, client_ipv => '',  server_ipv => '6', ssl => 1},
+    {ipv6_opt => 1, client_ipv => '4', server_ipv => '4', ssl => 0},
+    {ipv6_opt => 1, client_ipv => '4', server_ipv => '4', ssl => 1},
+    {ipv6_opt => 1, client_ipv => '6', server_ipv => '6', ssl => 0},
+    {ipv6_opt => 1, client_ipv => '6', server_ipv => '6', ssl => 1},
 );
 
 for my $tc (@test_cases) {
