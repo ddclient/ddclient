@@ -53,25 +53,29 @@ my %httpd = (
     '6' => {'http' => run_httpd(1, 0), 'https' => run_httpd(1, 1)},
 );
 
-# Note: IPv* client to IPv6 server is not expected to work unless $globals{'ipv6'} is true.
 my @test_cases = (
-    {ipv6_opt => 0, client_ipv => '',  server_ipv => '4', ssl => 0},
-    {ipv6_opt => 0, client_ipv => '',  server_ipv => '4', ssl => 1},
-    {ipv6_opt => 0, client_ipv => '4', server_ipv => '4', ssl => 0},
-    {ipv6_opt => 0, client_ipv => '4', server_ipv => '4', ssl => 1},
-    {ipv6_opt => 0, client_ipv => '6', server_ipv => '6', ssl => 0},
-    {ipv6_opt => 0, client_ipv => '6', server_ipv => '6', ssl => 1},
-    {ipv6_opt => 1, client_ipv => '',  server_ipv => '4', ssl => 0},
-    {ipv6_opt => 1, client_ipv => '',  server_ipv => '4', ssl => 1},
-    {ipv6_opt => 1, client_ipv => '',  server_ipv => '6', ssl => 0},
-    {ipv6_opt => 1, client_ipv => '',  server_ipv => '6', ssl => 1},
-    {ipv6_opt => 1, client_ipv => '4', server_ipv => '4', ssl => 0},
-    {ipv6_opt => 1, client_ipv => '4', server_ipv => '4', ssl => 1},
-    {ipv6_opt => 1, client_ipv => '6', server_ipv => '6', ssl => 0},
-    {ipv6_opt => 1, client_ipv => '6', server_ipv => '6', ssl => 1},
+    # Fetch via IO::Socket::INET
+    {ipv6_opt => 0, server_ipv => '4', client_ipv => ''},
+    {ipv6_opt => 0, server_ipv => '4', client_ipv => '4'},
+    # IPv* client to a non-SSL IPv6 server is not expected to work unless opt('ipv6') is true
+    {ipv6_opt => 0, server_ipv => '6', client_ipv => '6'},
+
+    # Fetch via IO::Socket::INET6
+    {ipv6_opt => 1, server_ipv => '4', client_ipv => ''},
+    {ipv6_opt => 1, server_ipv => '4', client_ipv => '4'},
+    {ipv6_opt => 1, server_ipv => '6', client_ipv => ''},
+    {ipv6_opt => 1, server_ipv => '6', client_ipv => '6'},
+
+    # Fetch via IO::Socket::SSL
+    {ssl => 1, server_ipv => '4', client_ipv => ''},
+    {ssl => 1, server_ipv => '4', client_ipv => '4'},
+    {ssl => 1, server_ipv => '6', client_ipv => ''},
+    {ssl => 1, server_ipv => '6', client_ipv => '6'},
 );
 
 for my $tc (@test_cases) {
+    $tc->{ipv6_opt} //= 0;
+    $tc->{ssl} //= 0;
     SKIP: {
         skip("IO::Socket::INET6 not available", 1)
             if ($tc->{ipv6_opt} || $tc->{client_ipv} eq '6') && !$has_io_socket_inet6;
