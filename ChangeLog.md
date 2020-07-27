@@ -13,9 +13,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added support for Gandi LiveDNS.
   * Added a build system to make it easier for distributions to package
     ddclient:
-
-        ./autogen && ./configure && make && make VERBOSE=1 check && make install
-
+    ```
+    ./autogen && ./configure && make && make VERBOSE=1 check && make install
+    ```
   * The `freedns` protocol (for https://freedns.afraid.org) now supports IPv6
     addresses.
   * New `ssl_ca_dir` and `ssl_ca_file` options to specify the location of CA
