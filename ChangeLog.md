@@ -20,6 +20,12 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     addresses.
   * New `ssl_ca_dir` and `ssl_ca_file` options to specify the location of CA
     certificates.
+  * New built-in shorthands for obtaining the IP address from the following
+    devices ([thanks to Geoff Simmons](https://bugs.debian.org/589980)):
+      - `alcatel-530`: Alcatel/Thomson SpeedTouch 530
+      - `siemens-ss4200`: Siemens SpeedStream 4200
+      - `thomson-st536v6`: Thomson SpeedTouch 536v6
+      - `thomson-tg782`: Thomson/Technicolor TG782
 
 ### Bug fixes
 

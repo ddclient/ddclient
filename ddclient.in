@@ -123,6 +123,11 @@ my %builtinfw = (
         'url'  => '/cgi/ip/',
         'skip' => 'ppp',
     },
+    'alcatel-530' => {
+        'name' => 'Alcatel/Thomson SpeedTouch 530',
+        'url'  => '/cgi/status/',
+        'skip' => 'IP Address',
+    },
     'alcatel-stp' => {
         'name' => 'Alcatel Speed Touch Pro',
         'url'  => '/cgi/router/',
@@ -258,6 +263,11 @@ my %builtinfw = (
         'url'  => '/cgi-bin/webcm?getpage=%2Fusr%2Fwww_safe%2Fhtml%2Fstatus%2FRouter.html',
         'skip' => 'Internet.*?IP Address',
     },
+    'siemens-ss4200' => {
+        'name' => 'Siemens SpeedStream 4200',
+        'url'  => '/summary.htm',
+        'skip' => '',
+    },
     'sitecom-dc202' => {
         'name' => 'Sitecom DC-202 FW',
         'url'  => '/status.htm',
@@ -292,6 +302,16 @@ my %builtinfw = (
         'name' => 'Sveasoft WRT54G/WRT54GS',
         'url'  => '/Status_Router.asp',
         'skip' => 'var wan_ip',
+    },
+    'thomson-st536v6' => {
+        'name' => 'Thomson SpeedTouch 536v6',
+        'url'  => '/cgi/b/is/',
+        'skip' => 'IP Address',
+    },
+    'thomson-tg782' => {
+        'name' => 'Thomson/Technicolor TG782',
+        'url'  => '/cgi/b/is/',
+        'skip' => 'IP Address',
     },
     'vigor-2200usb' => {
         'name' => 'Vigor 2200 USB',
