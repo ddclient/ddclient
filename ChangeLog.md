@@ -23,6 +23,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * New built-in IP discovery service shorthands:
       - `ipify-ipv4` and `ipify-ipv6` from https://www.ipify.org
       - `myonlineportal` from https://myonlineportal.net
+      - `noip-ipv4` and `noip-ipv6` from https://www.noip.com
   * New built-in shorthands for obtaining the IP address from the following
     devices ([thanks to Geoff Simmons](https://bugs.debian.org/589980)):
       - `alcatel-530`: Alcatel/Thomson SpeedTouch 530

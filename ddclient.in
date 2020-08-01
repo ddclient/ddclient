@@ -101,6 +101,8 @@ my %builtinweb = (
     'ipify-ipv6' => {'url' => 'https://api6.ipify.org/'},
     'loopia' => {'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:'},
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
+    'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
+    'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
 );
 my %builtinfw = (
     '2wire' => {
