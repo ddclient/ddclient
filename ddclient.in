@@ -525,6 +525,7 @@ my %services = (
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
+            'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
             'host' => setv(T_NUMBER, 1, 1, 0, undef),
         },
     },
@@ -3092,7 +3093,6 @@ Configuration variables applicable to the 'dslreports1' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=dslreports1,                                     \\
-  server=www.dslreports.com,                                \\
   login=my-dslreports-login,                                \\
   password=my-dslreports-password                           \\
   123456
