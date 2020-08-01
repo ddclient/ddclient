@@ -97,6 +97,7 @@ sub T_POSTS  { 'postscript' }
 ## strategies for obtaining an ip address.
 my %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
+    'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
     'googledomains' => {'url' => 'https://domains.google.com/checkip'},
     'ipify-ipv4' => {'url' => 'https://api.ipify.org/'},
     'ipify-ipv6' => {'url' => 'https://api6.ipify.org/'},
