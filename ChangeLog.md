@@ -21,6 +21,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * New `ssl_ca_dir` and `ssl_ca_file` options to specify the location of CA
     certificates.
   * New built-in IP discovery service shorthands:
+      - `googledomains` from https://domains.google
       - `ipify-ipv4` and `ipify-ipv6` from https://www.ipify.org
       - `myonlineportal` from https://myonlineportal.net
       - `noip-ipv4` and `noip-ipv6` from https://www.noip.com
