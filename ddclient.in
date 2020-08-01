@@ -96,11 +96,11 @@ sub T_POSTS  { 'postscript' }
 
 ## strategies for obtaining an ip address.
 my %builtinweb = (
-    'dyndns'    => { 'url' => 'http://checkip.dyndns.org/',               'skip' => 'Current IP Address:', },
-    'ipifyipv4' => { 'url' => 'https://api.ipify.org/', },
-    'ipifyipv6' => { 'url' => 'https://api6.ipify.org/', },
-    'loopia'    => { 'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:', },
-    'myonlineportal' => { 'url' => 'https://myonlineportal.net/checkip', },
+    'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:',},
+    'ipifyipv4' => {'url' => 'https://api.ipify.org/',},
+    'ipifyipv6' => {'url' => 'https://api6.ipify.org/',},
+    'loopia' => {'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:',},
+    'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip',},
 );
 my %builtinfw = (
     '2wire' => {
