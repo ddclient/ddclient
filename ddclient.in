@@ -2336,31 +2336,86 @@ sub fetch_via_curl {
         debug("skipped network connection");
         verbose("SENDING:", "%s", "${server}/${url}");
     } else {
-        push(@curlopt, "silent");
-        push(@curlopt, "include");  ## Include HTTP response for compatibility
-        push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
-        push(@curlopt, "cacert=\"".escape_curl_param(opt('ssl_ca_file')).'"') if defined(opt('ssl_ca_file'));
-        push(@curlopt, "capath=\"".escape_curl_param(opt('ssl_ca_dir')).'"') if defined(opt('ssl_ca_dir'));
-        push(@curlopt, "ipv4") if ($ipversion == 4);
-        push(@curlopt, "ipv6") if ($ipversion == 6);
-        push(@curlopt, "user-agent=\"".escape_curl_param("${program}/${version}").'"');
-        push(@curlopt, "connect-timeout=$timeout");
-        push(@curlopt, "max-time=$timeout");
-        push(@curlopt, "request=$method");
-        push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
-        push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
-        push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
-        @header_lines = split('\n', $headers);
-        $_ = "header=\"".escape_curl_param($_).'"' foreach (@header_lines);
-        push(@curlopt, @header_lines);
-        push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data ne '');
+        my $curl_loaded = eval { require WWW::Curl::Easy };
+        if ($curl_loaded) {
+            # System has the WWW::Curl::Easy module so use that
+            import WWW::Curl::Easy;
+            my $curl = WWW::Curl::Easy->new;
 
-        # don't include ${url} as that might expose login credentials
-        $0 = sprintf("%s - curl sending to %s", $program, "${protocol}://${server}");
-        verbose("SENDING:", "curl to %s", "${protocol}://${server}");
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_HEADER, 1);   ## Include HTTP response for compatibility
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_SSL_VERIFYPEER, ($params{ssl_validate} // 1) ? 1 : 0 );
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_SSL_VERIFYHOST, ($params{ssl_validate} // 1) ? 1 : 0 );
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CAINFO, opt('ssl_ca_file')) if defined(opt('ssl_ca_file'));
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CAPATH, opt('ssl_ca_dir')) if defined(opt('ssl_ca_dir'));
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_IPRESOLVE,
+                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 : 
+                                            ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
+                                                                WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CONNECTTIMEOUT, $timeout);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_TIMEOUT, $timeout);
 
-        $reply = curl_cmd(@curlopt);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_POST, 1) if ($method eq 'POST');
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_PUT, 1) if ($method eq 'PUT');
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CUSTOMREQUEST, $method) if ($method ne 'GET'); ## for PATCH
 
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_USERPWD, "${login}:${password}") if (defined($login) && defined($password));
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_PROXY, "${protocol}://${proxy}") if defined($proxy);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_URL, "${protocol}://${server}/${url}");
+
+            # Each header line is added individually
+            @header_lines = split('\n', $headers);
+            $curl->pushopt(WWW::Curl::Easy->CURLOPT_HTTPHEADER, $_) foreach (@header_lines);
+
+            # Add in the data if any was provided (for POST/PATCH)
+            if (my $datalen = length($data)) {
+                $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDS, ${data});
+                $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDSIZE, $datalen);
+            }
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_WRITEDATA,\$reply);
+
+            # don't include ${url} as that might expose login credentials
+            $0 = sprintf("%s - WWW::Curl::Easy sending to %s", $program, "${protocol}://${server}");
+            verbose("SENDING:", "WWW::Curl::Easy to %s", "${protocol}://${server}");
+
+            my $rc = $curl->perform;
+
+            if ($rc != 0) {
+                warning("CURL error (%d) %s", $rc, $curl->strerror($rc));
+                debug($curl->errbuf);
+            }
+        } else {
+            # System does not have the WWW::Curl::Easy module so attempt with system Curl command
+
+            push(@curlopt, "silent");
+            push(@curlopt, "include");  ## Include HTTP response for compatibility
+            push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
+            push(@curlopt, "cacert=\"".escape_curl_param(opt('ssl_ca_file')).'"') if defined(opt('ssl_ca_file'));
+            push(@curlopt, "capath=\"".escape_curl_param(opt('ssl_ca_dir')).'"') if defined(opt('ssl_ca_dir'));
+            push(@curlopt, "ipv4") if ($ipversion == 4);
+            push(@curlopt, "ipv6") if ($ipversion == 6);
+            push(@curlopt, "user-agent=\"".escape_curl_param("${program}/${version}").'"');
+            push(@curlopt, "connect-timeout=$timeout");
+            push(@curlopt, "max-time=$timeout");
+            push(@curlopt, "request=$method");
+            push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
+            push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
+            push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
+
+            # Each header line is added individually
+            @header_lines = split('\n', $headers);
+            $_ = "header=\"".escape_curl_param($_).'"' foreach (@header_lines);
+            push(@curlopt, @header_lines);
+
+            # Add in the data if any was provided (for POST/PATCH)
+            push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data ne '');
+
+            # don't include ${url} as that might expose login credentials
+            $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
+            verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
+
+            $reply = curl_cmd(@curlopt);
+        }
         if (!$reply) {
             # don't include ${url} as that might expose login credentials
             warning("curl cannot connect to %s://%s using IPv%s",${protocol},${server},$ipversion);
