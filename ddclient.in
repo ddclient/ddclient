@@ -105,6 +105,7 @@ my %builtinweb = (
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
     'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
+    'zoneedit' => {'url' => 'http://dynamic.zoneedit.com/checkip.html'},
 );
 my %builtinfw = (
     '2wire' => {
