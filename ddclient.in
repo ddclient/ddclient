@@ -884,6 +884,10 @@ my %opt = ();
 my $deprecated_handler = sub { warning("'-$_[0]' is deprecated and does nothing"); };
 $opt{'fw-banlocal'} = $deprecated_handler;
 $opt{'if-skip'} = $deprecated_handler;
+$opt{'list-devices'} = sub {
+    printf("%s %s\n", $_, $builtinfw{$_}{name}) for sort(keys(%builtinfw));
+    exit(0);
+};
 $opt{'list-protocols'} = sub {
     printf("%s\n", $_) for sort(keys(%services));
     exit(0);
@@ -941,6 +945,7 @@ my @opt = (
     ["fwv6-skip",         "=s", "-fwv6-skip <pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
     ["fw-login",          "=s", "-fw-login <login>     : use <login> when getting the IP from the device"],
     ["fw-password",       "=s", "-fw-password <secret> : use password <secret> when getting the IP from the device"],
+    ["list-devices",      "",   "-list-devices         : print a machine-readable list of supported firewall/router devices and exit. Format: one device per line, each line has the form '<device> <description>'"],
     "",
     "  Options that apply to 'use=cmd':",
     ["cmd",               "=s", "-cmd <command>        : deprecated, use 'cmdv4' or 'cmdv6'"],
