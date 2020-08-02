@@ -816,6 +816,10 @@ my %opt = ();
 my $deprecated_handler = sub { warning("'-$_[0]' is deprecated and does nothing"); };
 $opt{'fw-banlocal'} = $deprecated_handler;
 $opt{'if-skip'} = $deprecated_handler;
+$opt{'list-protocols'} = sub {
+    printf("%s\n", $_) for sort(keys(%services));
+    exit(0);
+};
 $opt{'list-web-services'} = sub {
     printf("%s %s\n", $_, $builtinweb{$_}{url}) for sort(keys(%builtinweb));
     exit(0);
@@ -829,6 +833,7 @@ my @opt = (
     ["proxy",             "=s", "-proxy <host>         : use <host> as the HTTP proxy"],
     ["server",            "=s", "-server <host>        : update DNS information on <host>"],
     ["protocol",          "=s", "-protocol <type>      : update protocol used"],
+    ["list-protocols",    "",   "-list-protocols       : print a machine-readable list of supported update protocols and exit. Format: one per line"],
     ["file",              "=s", "-file <path>          : load configuration information from <path>"],
     ["cache",             "=s", "-cache <path>         : record address used in <path>"],
     ["pid",               "=s", "-pid <path>           : record process id in <path> if daemonized"],
