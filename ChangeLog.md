@@ -21,7 +21,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * New `ssl_ca_dir` and `ssl_ca_file` options to specify the location of CA
     certificates.
   * New built-in IP discovery service shorthands:
-      - `ipifyipv4` and `ipifyipv6` from https://www.ipify.org
+      - `ipify-ipv4` and `ipify-ipv6` from https://www.ipify.org
       - `myonlineportal` from https://myonlineportal.net
   * New built-in shorthands for obtaining the IP address from the following
     devices ([thanks to Geoff Simmons](https://bugs.debian.org/589980)):
