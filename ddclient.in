@@ -112,7 +112,7 @@ my %builtinweb = (
     'nsupdate.info-ipv6' => {'url' => 'http://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'http://dynamic.zoneedit.com/checkip.html'},
 );
-my %builtinfw = (
+our %builtinfw = (
     '2wire' => {
         'name' => '2Wire 1701HG Gateway',
         'url'  => '/xslt?PAGE=B01',
@@ -152,6 +152,57 @@ my %builtinfw = (
         'name' => 'Cayman 3220-H DSL',
         'url'  => '/shell/show+ip+interfaces',
         'skip' => '.*inet',
+    },
+    'cisco' => {
+        'name' => 'Cisco FW',
+        'query' => sub {
+            my ($h) = @_;
+            # Stuff added to support Cisco router ip http daemon
+            # User fw-login should only have level 1 access to prevent
+            # password theft.  This is pretty harmless.
+            my $queryif = opt('if', $h);
+
+            # Convert slashes to protected value "\/"
+            $queryif =~ s%\/%\\\/%g;
+
+            # Protect special HTML characters (like '?')
+            $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
+
+            my $url = sprintf("http://%s/level/1/exec/show/ip/interface/brief/%s/CR",
+                              opt('fw', $h), $queryif);
+            my $reply = geturl(
+                url => $url,
+                login => opt('fw-login', $h),
+                password => opt('fw-password', $h),
+                ignore_ssl_option => 1,
+            ) // '';
+            return ($url, $reply);
+        },
+    },
+    'cisco-asa' => {
+        'name' => 'Cisco ASA',
+        'query' => sub {
+            my ($h) = @_;
+            # Stuff added to support Cisco ASA ip https daemon
+            # User fw-login should only have level 1 access to prevent
+            # password theft.  This is pretty harmless.
+            my $queryif = opt('if', $h);
+
+            # Convert slashes to protected value "\/"
+            $queryif =~ s%\/%\\\/%g;
+
+            # Protect special HTML characters (like '?')
+            $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
+
+            my $url = sprintf("https://%s/exec/show%20interface%20%s", opt('fw', $h), $queryif);
+            my $reply = geturl(
+                url => $url,
+                login => opt('fw-login', $h),
+                password => opt('fw-password', $h),
+                ignore_ssl_option => 1,
+            ) // '';
+            return ($url, $reply);
+        },
     },
     'dlink-524' => {
         'name' => 'D-Link DI-524',
@@ -356,8 +407,6 @@ my %ip_strategies = (
     'fw'        => ": obtain IP from a firewall/router device by visiting the URL given by '-fw <url>'",
     'if'        => ": obtain IP from the interface given by '-if <interface>'",
     'cmd'       => ": obtain IP by running the command given by '-cmd <command>'",
-    'cisco'     => ": obtain IP from Cisco FW device at the address given by '-fw <address>'",
-    'cisco-asa' => ": obtain IP from Cisco ASA device at the address given by '-fw <address>'",
     map({ $_ => sprintf(": obtain IP from %s device at the address given by '-fw <address>'",
                         $builtinfw{$_}->{'name'}) }
         keys(%builtinfw)),
@@ -365,7 +414,7 @@ my %ip_strategies = (
 
 sub ip_strategies_usage {
     return map({ sprintf("    -use=%-22s %s.", $_, $ip_strategies{$_}) }
-               ('ip', 'web', 'if', 'cmd', 'fw', sort('cisco', 'cisco-asa', keys(%builtinfw))));
+               ('ip', 'web', 'if', 'cmd', 'fw', sort(keys(%builtinfw))));
 }
 
 sub setv {
@@ -2250,49 +2299,9 @@ sub get_ip {
             $reply = geturl(proxy => opt('proxy', $h), url => $url) // '';
         }
 
-    } elsif (($use eq 'cisco')) {
-        # Stuff added to support Cisco router ip http daemon
-        # User fw-login should only have level 1 access to prevent
-        # password theft.  This is pretty harmless.
-        my $queryif = opt('if', $h);
+    } elsif (defined(my $query = $builtinfw{$use}{query})) {
         $skip = opt('fw-skip', $h) // '';
-
-        # Convert slashes to protected value "\/"
-        $queryif =~ s%\/%\\\/%g;
-
-        # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
-
-        $url = "http://" . opt('fw', $h) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
-        $reply = geturl(
-            url => $url,
-            login => opt('fw-login', $h),
-            password => opt('fw-password', $h),
-            ignore_ssl_option => 1,
-        ) // '';
-        $arg = $url;
-
-    } elsif (($use eq 'cisco-asa')) {
-        # Stuff added to support Cisco ASA ip https daemon
-        # User fw-login should only have level 1 access to prevent
-        # password theft.  This is pretty harmless.
-        my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h) // '';
-
-        # Convert slashes to protected value "\/"
-        $queryif =~ s%\/%\\\/%g;
-
-        # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
-
-        $url = "https://" . opt('fw', $h) . "/exec/show%20interface%20${queryif}";
-        $reply = geturl(
-            url => $url,
-            login => opt('fw-login', $h),
-            password => opt('fw-password', $h),
-            ignore_ssl_option => 1,
-        ) // '';
-        $arg = $url;
+        ($arg, $reply) = &$query($h);
 
     } else {
         $url = opt('fw', $h) // '';
