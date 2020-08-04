@@ -27,6 +27,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
       - `ipify-ipv4` and `ipify-ipv6` from https://www.ipify.org
       - `myonlineportal` from https://myonlineportal.net
       - `noip-ipv4` and `noip-ipv6` from https://www.noip.com
+      - `nsupdate.info-ipv4` and `nsupdate.info-ipv6` from
+        https://www.nsupdate.info
       - `zoneedit` from https://www.zoneedit.com
   * New built-in shorthands for obtaining the IP address from the following
     devices ([thanks to Geoff Simmons](https://bugs.debian.org/589980)):
