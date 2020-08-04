@@ -58,6 +58,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     Rather than rely on the default, users should explicitly set the `use`
     option.
   * The `fw-banlocal` option is deprecated and no longer does anything.
+  * The `if-skip` option is deprecated and no longer does anything.
   * The default server for the `dslreports1` protocol changed from
     `members.dyndns.org` to `www.dslreports.com`.
   * Removed support for defunct dtdns service

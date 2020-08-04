@@ -380,7 +380,6 @@ my %variables = (
         'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
         'ip'                  => setv(T_IP,    0, 0, undef,                undef),
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
-        'if-skip'             => setv(T_STRING,1, 0, '',                   undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,1, 0, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
@@ -421,7 +420,6 @@ my %variables = (
 
         'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
-        'if-skip'             => setv(T_STRING,0, 0, '',                   undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,0, 0, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
@@ -756,7 +754,9 @@ $variables{'merged'} = {
 
 # This will hold the processed args.
 my %opt = ();
-$opt{'fw-banlocal'} = sub { warning("'-fw-banlocal' is deprecated and does nothing") };
+my $deprecated_handler = sub { warning("'-$_[0]' is deprecated and does nothing"); };
+$opt{'fw-banlocal'} = $deprecated_handler;
+$opt{'if-skip'} = $deprecated_handler;
 
 my @opt = (
     "usage: ${program} [options]",
@@ -778,7 +778,6 @@ my @opt = (
     "",
     "  Options that apply to 'use=if':",
     ["if",           "=s", "-if <interface>       : obtain IP address from <interface>"],
-    ["if-skip",      "=s", "-if-skip <pattern>    : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
     "",
     "  Options that apply to 'use=web':",
     ["web",          "=s", "-web <service>|<url>  : obtain IP address from a web-based IP discovery service, either a known <service> or a custom <url>"],
@@ -820,6 +819,7 @@ my @opt = (
     ["postscript",   "",   "-postscript           : script to run after updating ddclient, has new IP as param"],
     ["query",        "!",  "-{no}query            : print {no} ip addresses and exit"],
     ["fw-banlocal",  "!",  ""], ## deprecated
+    ["if-skip",      "=s", ""], ## deprecated
     ["test",         "!",  ""], ## hidden
     ["geturl",       "=s", ""], ## hidden
     "",
@@ -1113,8 +1113,8 @@ sub parse_assignments {
         (my $name, my $value, $rest) = parse_assignment($rest);
         $rest =~ s/^[,\s]+//;
         return ($rest, %variables) if !defined($name);
-        if ($name eq 'fw-banlocal') {
-            warning("'fw-banlocal' is deprecated and does nothing");
+        if ($name eq 'fw-banlocal' || $name eq 'if-skip') {
+            warning("'$name' is deprecated and does nothing");
             next;
         }
         $variables{$name} = $value;
@@ -1348,8 +1348,8 @@ sub init_config {
         my %options = ();
         foreach my $opt (split_by_comma($opt{'options'})) {
             my ($name, $var) = split /\s*=\s*/, $opt;
-            if ($name eq 'fw-banlocal') {
-                warning("'fw-banlocal' is deprecated and does nothing");
+            if ($name eq 'fw-banlocal' || $name eq 'if-skip') {
+                warning("'$name' is deprecated and does nothing");
                 next;
             }
             $options{$name} = $var;
@@ -2215,7 +2215,6 @@ sub get_ip {
         $arg = 'ip';
 
     } elsif ($use eq 'if') {
-        $skip = opt('if-skip', $h) // '';
         $reply = `command -v ip >/dev/null && ip address show dev $arg`;
         $reply = `command -v ifconfig >/dev/null && ifconfig $arg` if $?;
         $reply = '' if $?;
@@ -2307,7 +2306,7 @@ sub get_ip {
     if (!defined $reply) {
         $reply = '';
     }
-    if ($skip) {
+    if (($skip // '') ne '') {
         $skip  =~ s/ /\\s/is;
         $reply =~ s/^.*?${skip}//is;
     }
