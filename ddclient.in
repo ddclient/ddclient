@@ -2706,11 +2706,68 @@ my $regex_ipv6_ula = qr{
 }xi;
 
 ######################################################################
+## get_default_interface finds the default network interface based on
+## the IP routing table on the system.  We validate that the interface
+## found is likely to have global routing (e.g. is not LOOPBACK).
+## Returns undef if no global scope interface can be found for IP version.
+######################################################################
+sub get_default_interface {
+    my $ipver = int(shift // 4);    ## Defaults to IPv4 if not specified
+    my $ipstr = ($ipver == 6) ? 'inet6' : 'inet';
+    my $reply = shift // '';  ## Pass in data for unit testing purposes only
+    my $cmd = "test";
+
+    return undef if (($ipver != 4) && ($ipver != 6));
+
+    if (!$reply) { ## skip if test data passed in.
+        ## Best option is the ip command from iproute2 package
+        $cmd = "ip -$ipver -o route list match default"; $reply = qx{ $cmd 2>/dev/null };
+        ## Fallback is the netstat command. This is only option on MacOS.
+        if ($?) { $cmd = "netstat -rn -$ipver";     $reply = qx{ $cmd 2>/dev/null }; } # Linux, FreeBSD
+        if ($?) { $cmd = "netstat -rn -f $ipstr";   $reply = qx{ $cmd 2>/dev/null }; } # MacOS
+        if ($?) { $cmd = "netstat -rn";             $reply = qx{ $cmd 2>/dev/null }; } # Busybox
+        if ($?) { $cmd = "missing ip or netstat command";
+            failed("Unable to obtain default route information -- %s", $cmd)
+        }
+    }
+    debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
+
+    # Check we have IPv6 address in case we got routing table from non-specific cmd above
+    return undef if (($ipver == 6) && !extract_ipv6($reply));
+    # Filter down to just the default interfaces
+    my @list = split(/\n/, $reply);
+    @list = grep(/^default|^(?:0\.){3}0|^::\/0/, @list); # Select 'default' or '0.0.0.0' or '::/0'
+    return undef if (scalar(@list) == 0);
+    debug("Default routes found for IPv%s :\n%s", $ipver, join("\n",@list));
+
+    # now check each interface to make sure it is global (not loopback).
+    foreach my $line (@list) {
+        ## Interface will be after "dev" or the last word in the line. Must accept blank spaces
+        ## at the end.  Interface name may not have any whitespace or forward slash.
+        $line =~ /\bdev\b\s*\K[^\s\/]+|\b[^\s\/]+(?=[\s\/]*$)/;
+        my $interface = $&;
+        ## If test data was passed in skip following tests
+        if ($cmd ne "test") {
+            ## We do not want the loopback interface or anything interface without global scope
+            $cmd = "ip -$ipver -o addr show dev $interface scope global"; $reply = qx{$cmd 2>/dev/null};
+            if ($?) { $cmd = "ifconfig $interface";                       $reply = qx{$cmd 2>/dev/null}; }
+            if ($?) { $cmd = "missing ip or ifconfig command";
+                failed("Unable to obtain information for '%s' -- %s", $interface, $cmd);
+            }
+            debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
+        }
+        ## Has global scope, is not LOOPBACK
+        return($interface) if (($reply) && ($reply !~ /\bLOOPBACK\b/));
+    }
+    return undef;
+}
+
+######################################################################
 ## get_ip_from_interface() finds an IPv4 or IPv6 address from a network
 ## interface. Defaults to IPv4 unless '6' passed as 2nd parameter.
 ######################################################################
 sub get_ip_from_interface {
-    my $interface = shift;
+    my $interface = shift // "default";
     my $ipver = int(shift // 4);    ## Defaults to IPv4 if not specified
     my $scope = lc(shift // "gua"); ## "gua" or "ula"
     my $reply = shift // '';  ## Pass in data for unit testing purposes only
@@ -2723,7 +2780,8 @@ sub get_ip_from_interface {
         return undef;
     }
 
-    if ($reply eq '') { ## skip if test data passed in.
+    if ((lc($interface) eq "default") && (!$reply)) { ## skip if test data passed in.
+        $interface = get_default_interface($ipver);
         return undef if !defined($interface);
     }
 
