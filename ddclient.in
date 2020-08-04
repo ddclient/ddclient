@@ -2662,6 +2662,10 @@ sub extract_ipv6 {
     return $ip;
 }
 
+######################################################################
+## Regex that matches an IPv6 address that is probably globally routable.
+## Accepts embedded leading zeros.
+######################################################################
 my $regex_ipv6_global = qr{
     (?!  # Is not one of the following addresses:
         0{0,4}:             # ::/16 is assumed to never contain globaly routable addresses
