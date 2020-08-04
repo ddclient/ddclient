@@ -22,6 +22,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     certificates.
   * New built-in IP discovery service shorthands:
       - `googledomains` from https://domains.google
+      - `he` from https://he.net
       - `ipify-ipv4` and `ipify-ipv6` from https://www.ipify.org
       - `myonlineportal` from https://myonlineportal.net
       - `noip-ipv4` and `noip-ipv6` from https://www.noip.com

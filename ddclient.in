@@ -99,6 +99,7 @@ my %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
     'googledomains' => {'url' => 'https://domains.google.com/checkip'},
+    'he' => {'url' => 'http://checkip.dns.he.net/'},
     'ipify-ipv4' => {'url' => 'https://api.ipify.org/'},
     'ipify-ipv6' => {'url' => 'https://api6.ipify.org/'},
     'loopia' => {'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:'},
