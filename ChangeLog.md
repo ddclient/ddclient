@@ -20,6 +20,16 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     addresses.
   * New `ssl_ca_dir` and `ssl_ca_file` options to specify the location of CA
     certificates.
+  * New built-in IP discovery service shorthands:
+      - `googledomains` from https://domains.google
+      - `he` from https://he.net
+      - `ip4only.me`, `ip6only.me` from http://whatismyv6.com
+      - `ipify-ipv4` and `ipify-ipv6` from https://www.ipify.org
+      - `myonlineportal` from https://myonlineportal.net
+      - `noip-ipv4` and `noip-ipv6` from https://www.noip.com
+      - `nsupdate.info-ipv4` and `nsupdate.info-ipv6` from
+        https://www.nsupdate.info
+      - `zoneedit` from https://www.zoneedit.com
   * New built-in shorthands for obtaining the IP address from the following
     devices ([thanks to Geoff Simmons](https://bugs.debian.org/589980)):
       - `alcatel-530`: Alcatel/Thomson SpeedTouch 530
