@@ -1649,7 +1649,12 @@ sub _print_hash {
         $value = "<undefined>";
     } elsif (ref $ptr eq 'HASH') {
         foreach my $key (sort keys %$ptr) {
-            _print_hash("${string}\{$key\}", $ptr->{$key});
+            if (($key eq "login") || ($key eq "password")) {
+               $value = "<redacted>";
+            } else {
+                $value = $ptr->{$key};
+            }
+            _print_hash("${string}\{$key\}", $value);
         }
         return;
     }
