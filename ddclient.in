@@ -2084,7 +2084,8 @@ sub fetch_via_socket_io {
     debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
-    debug("url      = %s", $url);
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
 
     ## determine peer and port to use.
@@ -2329,7 +2330,8 @@ sub fetch_via_curl {
     debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $protocol);
     debug("server   = %s", $server);
-    debug("url      = %s", $url);
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
 
     if (!opt('exec')) {
