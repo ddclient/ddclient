@@ -2077,7 +2077,8 @@ sub geturl {
     debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
-    debug("url      = %s", $url);
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
 
     ## determine peer and port to use.
