@@ -2913,7 +2913,7 @@ sub header_ok {
     my ($host, $line) = @_;
     my $ok = 0;
 
-    if ($line =~ m%^s*HTTP/1.*\s+(\d+)%i) {
+    if ($line =~ m%^s*HTTP/.*\s+(\d+)%i) {
         my $result = $1;
 
         if ($result =~ m/^2\d\d$/) {
