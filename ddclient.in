@@ -2365,10 +2365,11 @@ sub fetch_via_curl {
             $curl->setopt(WWW::Curl::Easy->CURLOPT_PROXY, "${protocol}://${proxy}") if defined($proxy);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_URL, "${protocol}://${server}/${url}");
 
-            # Each header line is added individually
-            @header_lines = split('\n', $headers);
-            $curl->pushopt(WWW::Curl::Easy->CURLOPT_HTTPHEADER, $_) foreach (@header_lines);
-
+            # Add header lines if any was provided
+            if ($headers) {
+                @header_lines = split('\n', $headers);
+                $curl->setopt(WWW::Curl::Easy->CURLOPT_HTTPHEADER, \@header_lines);
+            }
             # Add in the data if any was provided (for POST/PATCH)
             if (my $datalen = length($data)) {
                 $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDS, ${data});
@@ -2390,7 +2391,6 @@ sub fetch_via_curl {
             }
         } else {
             # System does not have the WWW::Curl::Easy module so attempt with system Curl command
-
             push(@curlopt, "silent");
             push(@curlopt, "include");  ## Include HTTP response for compatibility
             push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
