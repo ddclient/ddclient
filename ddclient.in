@@ -2379,6 +2379,8 @@ sub fetch_via_curl {
             # don't include ${url} as that might expose login credentials
             $0 = sprintf("%s - WWW::Curl::Easy sending to %s", $program, "${protocol}://${server}");
             verbose("SENDING:", "WWW::Curl::Easy to %s", "${protocol}://${server}");
+            verbose("SENDING:", "%s", $headers) if ($headers);
+            verbose("SENDING:", "%s", $data) if ($data);
 
             my $rc = $curl->perform;
 
@@ -2410,14 +2412,16 @@ sub fetch_via_curl {
             push(@curlopt, @header_lines);
 
             # Add in the data if any was provided (for POST/PATCH)
-            push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data ne '');
+            push(@curlopt, "data=${data}") if ($data);
 
             # don't include ${url} as that might expose login credentials
             $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
             verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
+            verbose("SENDING:", "%s", $_) foreach (@curlopt);
 
             $reply = curl_cmd(@curlopt);
         }
+        verbose("RECEIVE:", "%s", $reply // "<undefined>");
         if (!$reply) {
             # don't include ${url} as that might expose login credentials
             warning("curl cannot connect to %s://%s using IPv%s",${protocol},${server},$ipversion);
