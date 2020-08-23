@@ -2283,8 +2283,8 @@ sub escape_curl_param {
     my $str = shift // '';
 
     return '' if ($str eq '');
-    $str =~ s/"/\\"/g;  ## Escape double-quotes
     $str =~ s/\\/\\\\/g;## Escape backslashes
+    $str =~ s/"/\\"/g;  ## Escape double-quotes
     $str =~ s/\n/\\n/g; ## Escape newline
     $str =~ s/\r/\\r/g; ## Escape carrage return
     $str =~ s/\t/\\t/g; ## Escape tabs
@@ -2412,7 +2412,7 @@ sub fetch_via_curl {
             push(@curlopt, @header_lines);
 
             # Add in the data if any was provided (for POST/PATCH)
-            push(@curlopt, "data=${data}") if ($data);
+            push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data);
 
             # don't include ${url} as that might expose login credentials
             $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
