@@ -24,6 +24,7 @@ use strict;
 use warnings;
 use File::Basename;
 use File::Path qw(make_path);
+use File::Temp;
 use Getopt::Long;
 use IO::Socket::INET;
 use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
@@ -403,6 +404,7 @@ my %variables = (
         'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'ssl'                 => setv(T_BOOL,  0, 0, 0,                    undef),
+        'curl'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'ipv6'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
         'facility'            => setv(T_STRING,0, 0, 'daemon',             undef),
@@ -432,10 +434,12 @@ my %variables = (
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,0, 0, '',                   undef),
+        'web-ssl-validate'    => setv(T_BOOL,  0, 0, 1,                    undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
         'fw-skip'             => setv(T_STRING,0, 0, '',                   undef),
         'fw-login'            => setv(T_LOGIN, 0, 0, '',                   undef),
         'fw-password'         => setv(T_PASSWD,0, 0, '',                   undef),
+        'fw-ssl-validate'     => setv(T_BOOL,  0, 0, 1,                    undef),
         'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
         'cmd-skip'            => setv(T_STRING,0, 0, '',                   undef),
         'ipv6'                => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -812,6 +816,9 @@ my @opt = (
     ["ssl",          "!",  "-{no}ssl              : do updates over encrypted SSL connection"],
     ["ssl_ca_dir",   "=s", "-ssl_ca_dir <dir>     : look in <dir> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["ssl_ca_file",  "=s", "-ssl_ca_file <file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
+    ["fw-ssl-validate","!", "-{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
+    ["web-ssl-validate","!","-{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
+    ["curl",         "!",  "-{no}curl             : use curl for network connections"],
     ["retry",        "!",  "-{no}retry            : retry failed updates"],
     ["force",        "!",  "-{no}force            : force an update even if the update may be unnecessary"],
     ["timeout",      "=i", "-timeout <max>        : when fetching a URL, wait at most <max> seconds for a response"],
@@ -2037,10 +2044,15 @@ EOM
     }
     import JSON::PP (qw/decode_json encode_json/);
 }
+
 ######################################################################
 ## geturl
 ######################################################################
 sub geturl {
+    return opt('curl') ? fetch_via_curl(@_) : fetch_via_socket_io(@_);
+}
+
+sub fetch_via_socket_io {
     my %params = @_;
     my $proxy = $params{proxy};
     my $url = $params{url};
@@ -2072,7 +2084,8 @@ sub geturl {
     debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
-    debug("url      = %s", $url);
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
 
     ## determine peer and port to use.
@@ -2127,6 +2140,9 @@ sub geturl {
         $socket_class = 'IO::Socket::SSL';
         $socket_args{SSL_ca_file} = opt('ssl_ca_file') if defined(opt('ssl_ca_file'));
         $socket_args{SSL_ca_path} = opt('ssl_ca_dir') if defined(opt('ssl_ca_dir'));
+        $socket_args{SSL_verify_mode} = ($params{ssl_validate} // 1)
+                                        ? IO::Socket::SSL->SSL_VERIFY_PEER
+                                        : IO::Socket::SSL->SSL_VERIFY_NONE;
     } elsif ($globals{'ipv6'} || $ipversion eq '6') {
         load_ipv6_support;
         $socket_class = 'IO::Socket::INET6';
@@ -2208,6 +2224,226 @@ sub geturl {
 }
 
 ######################################################################
+## curl_cmd() function to execute system curl command
+######################################################################
+sub curl_cmd {
+    my @params = @_;
+    my $tmpfile;
+    my $tfh;
+    my $system_curl = quotemeta(subst_var('@CURL@', 'curl'));
+    my %curl_codes = (  ## Subset of error codes from https://curl.haxx.se/docs/manpage.html
+         2 => "Failed to initialize. (Most likely a bug in ddclient, please open issue at https://github.com/ddclient/ddclient)",
+         3 => "URL malformed. The syntax was not correct",
+         5 => "Couldn't resolve proxy. The given proxy host could not be resolved.",
+         6 => "Couldn't resolve host. The given remote host was not resolved.",
+         7 => "Failed to connect to host.",
+        22 => "HTTP page not retrieved. The requested url was not found or returned another error.",
+        28 => "Operation timeout. The specified time-out period was reached according to the conditions.",
+        35 => "SSL connect error. The SSL handshaking failed.",
+        47 => "Too many redirects. When following redirects, curl hit the maximum amount.",
+        52 => "The server didn't reply anything, which here is considered an error.",
+        51 => "The peer's SSL certificate or SSH MD5 fingerprint was not OK.",
+        58 => "Problem with the local certificate.",
+        60 => "Peer certificate cannot be authenticated with known CA certificates.",
+        67 => "The user name, password, or similar was not accepted and curl failed to log in.",
+        77 => "Problem with reading the SSL CA cert (path? access rights?).",
+        78 => "The resource referenced in the URL does not exist.",
+       127 => "You requested network access with curl but $system_curl was not found",
+    );
+
+    debug("CURL: %s", $system_curl);
+    fatal("curl not found") if ($system_curl eq '');
+    return '' if (scalar(@params) == 0); ## no parameters provided
+
+    # Hard code to /tmp rather than use system TMPDIR to protect from malicious
+    # shell instructions in TMPDIR environment variable.  All systems should have /tmp.
+    $tfh = File::Temp->new(DIR => '/tmp',
+                           TEMPLATE => 'ddclient_XXXXXXXXXX');
+    $tmpfile = $tfh->filename;
+
+    debug("CURL Tempfile: %s", $tmpfile);
+    {
+        local $\ = "\n";  ## Terminate the file,
+        local $, = "\n";  ## and each parameter, with a newline.
+        print($tfh @params);
+    }
+    close($tfh);
+    my $reply = qx{ $system_curl --config $tmpfile 2>/dev/null; };
+    if ((my $rc = $?>>8) != 0) {
+        warning("CURL error (%d) %s", $rc, $curl_codes{$rc} // "Unknown return code. Check $system_curl is installed and its manpage.");
+    }
+    return $reply;
+}
+
+######################################################################
+## escape_curl_param() makes sure any special characters within a
+## curl parameter is properly escaped.
+######################################################################
+sub escape_curl_param {
+    my $str = shift // '';
+
+    return '' if ($str eq '');
+    $str =~ s/\\/\\\\/g;## Escape backslashes
+    $str =~ s/"/\\"/g;  ## Escape double-quotes
+    $str =~ s/\n/\\n/g; ## Escape newline
+    $str =~ s/\r/\\r/g; ## Escape carrage return
+    $str =~ s/\t/\\t/g; ## Escape tabs
+    $str =~ s/\v/\\v/g; ## Escape vertical whitespace
+    return $str;
+}
+
+######################################################################
+## fetch_via_curl() is used for geturl() when global curl option set
+######################################################################
+sub fetch_via_curl {
+    my %params = @_;
+    my $proxy = $params{proxy};
+    my $url = $params{url};
+    my $login = $params{login};
+    my $password = $params{password};
+    my $ipversion = ($params{ipversion}) ? int($params{ipversion}) : 0;
+    my $headers = $params{headers} // '';
+    my $method = $params{method} // 'GET';
+    my $data = $params{data} // '';
+
+    my $reply;
+    my $server;
+    my $use_ssl = 0;
+    my $force_ssl = 0;
+    my $protocol;
+    my $timeout  = opt('timeout');
+    my @curlopt = ();
+    my @header_lines = ();
+
+    ## canonify proxy and url
+    $force_ssl = 1 if ($url =~ /^https:/);
+    $proxy  =~ s%^https?://%%i if defined($proxy);
+    $url    =~ s%^https?://%%i;
+    $server = $url;
+    $server =~ s%[?/].*%%;
+    $url    =~ s%^[^?/]*/?%%;
+
+    $use_ssl = 1 if ($force_ssl || ($globals{'ssl'} && !($params{ignore_ssl_option} // 0)));
+
+    $protocol = ($use_ssl ? "https" : "http");
+
+    debug("proxy    = %s", $proxy // '<undefined>');
+    debug("protocol = %s", $protocol);
+    debug("server   = %s", $server);
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    debug("url      = %s", $_url);
+    debug("ip ver   = %s", $ipversion);
+
+    if (!opt('exec')) {
+        debug("skipped network connection");
+        verbose("SENDING:", "%s", "${server}/${url}");
+    } else {
+        my $curl_loaded = eval { require WWW::Curl::Easy };
+        if ($curl_loaded) {
+            # System has the WWW::Curl::Easy module so use that
+            import WWW::Curl::Easy;
+            my $curl = WWW::Curl::Easy->new;
+
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_HEADER, 1);   ## Include HTTP response for compatibility
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_SSL_VERIFYPEER, ($params{ssl_validate} // 1) ? 1 : 0 );
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_SSL_VERIFYHOST, ($params{ssl_validate} // 1) ? 1 : 0 );
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CAINFO, opt('ssl_ca_file')) if defined(opt('ssl_ca_file'));
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CAPATH, opt('ssl_ca_dir')) if defined(opt('ssl_ca_dir'));
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_IPRESOLVE,
+                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 : 
+                                            ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
+                                                                WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CONNECTTIMEOUT, $timeout);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_TIMEOUT, $timeout);
+
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_POST, 1) if ($method eq 'POST');
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_PUT, 1) if ($method eq 'PUT');
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_CUSTOMREQUEST, $method) if ($method ne 'GET'); ## for PATCH
+
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_USERPWD, "${login}:${password}") if (defined($login) && defined($password));
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_PROXY, "${protocol}://${proxy}") if defined($proxy);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_URL, "${protocol}://${server}/${url}");
+
+            # Add header lines if any was provided
+            if ($headers) {
+                @header_lines = split('\n', $headers);
+                $curl->setopt(WWW::Curl::Easy->CURLOPT_HTTPHEADER, \@header_lines);
+            }
+            # Add in the data if any was provided (for POST/PATCH)
+            if (my $datalen = length($data)) {
+                $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDS, ${data});
+                $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDSIZE, $datalen);
+            }
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_WRITEDATA,\$reply);
+
+            # don't include ${url} as that might expose login credentials
+            $0 = sprintf("%s - WWW::Curl::Easy sending to %s", $program, "${protocol}://${server}");
+            verbose("SENDING:", "WWW::Curl::Easy to %s", "${protocol}://${server}");
+            verbose("SENDING:", "%s", $headers) if ($headers);
+            verbose("SENDING:", "%s", $data) if ($data);
+
+            my $rc = $curl->perform;
+
+            if ($rc != 0) {
+                warning("CURL error (%d) %s", $rc, $curl->strerror($rc));
+                debug($curl->errbuf);
+            }
+        } else {
+            # System does not have the WWW::Curl::Easy module so attempt with system Curl command
+            push(@curlopt, "silent");
+            push(@curlopt, "include");  ## Include HTTP response for compatibility
+            push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
+            push(@curlopt, "cacert=\"".escape_curl_param(opt('ssl_ca_file')).'"') if defined(opt('ssl_ca_file'));
+            push(@curlopt, "capath=\"".escape_curl_param(opt('ssl_ca_dir')).'"') if defined(opt('ssl_ca_dir'));
+            push(@curlopt, "ipv4") if ($ipversion == 4);
+            push(@curlopt, "ipv6") if ($ipversion == 6);
+            push(@curlopt, "user-agent=\"".escape_curl_param("${program}/${version}").'"');
+            push(@curlopt, "connect-timeout=$timeout");
+            push(@curlopt, "max-time=$timeout");
+            push(@curlopt, "request=$method");
+            push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
+            push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
+            push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
+
+            # Each header line is added individually
+            @header_lines = split('\n', $headers);
+            $_ = "header=\"".escape_curl_param($_).'"' foreach (@header_lines);
+            push(@curlopt, @header_lines);
+
+            # Add in the data if any was provided (for POST/PATCH)
+            push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data);
+
+            # don't include ${url} as that might expose login credentials
+            $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
+            verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
+            verbose("SENDING:", "%s", $_) foreach (@curlopt);
+
+            $reply = curl_cmd(@curlopt);
+        }
+        verbose("RECEIVE:", "%s", $reply // "<undefined>");
+        if (!$reply) {
+            # don't include ${url} as that might expose login credentials
+            warning("curl cannot connect to %s://%s using IPv%s",${protocol},${server},$ipversion);
+        }
+    }
+
+    ## during testing simulate reading the URL
+    if (opt('test')) {
+        my $filename = "$server/$url";
+        $filename =~ s|/|%2F|g;
+        if (opt('exec')) {
+            $reply = save_file("$savedir/$filename", $reply, 'unique');
+        } else {
+            $reply = load_file("$savedir/$filename");
+        }
+    }
+
+    $reply =~ s/\r//g if defined $reply;
+    return $reply;
+}
+
+######################################################################
 ## get_ip
 ######################################################################
 sub get_ip {
@@ -2247,7 +2483,11 @@ sub get_ip {
         $arg = $url;
 
         if ($url) {
-            $reply = geturl(proxy => opt('proxy', $h), url => $url) // '';
+            $reply = geturl(
+                proxy => opt('proxy', $h),
+                url => $url,
+                ssl_validate => opt('web-ssl-validate', $h),
+            ) // '';
         }
 
     } elsif (($use eq 'cisco')) {
@@ -2269,6 +2509,7 @@ sub get_ip {
             login => opt('fw-login', $h),
             password => opt('fw-password', $h),
             ignore_ssl_option => 1,
+            ssl_validate => opt('fw-ssl-validate', $h),
         ) // '';
         $arg = $url;
 
@@ -2291,6 +2532,7 @@ sub get_ip {
             login => opt('fw-login', $h),
             password => opt('fw-password', $h),
             ignore_ssl_option => 1,
+            ssl_validate => opt('fw-ssl-validate', $h),
         ) // '';
         $arg = $url;
 
@@ -2310,6 +2552,7 @@ sub get_ip {
                 login => opt('fw-login', $h),
                 password => opt('fw-password', $h),
                 ignore_ssl_option => 1,
+                ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
         }
     }
@@ -2674,7 +2917,7 @@ sub header_ok {
     my ($host, $line) = @_;
     my $ok = 0;
 
-    if ($line =~ m%^s*HTTP/1.*\s+(\d+)%i) {
+    if ($line =~ m%^s*HTTP/.*\s+(\d+)%i) {
         my $result = $1;
 
         if ($result =~ m/^2\d\d$/) {

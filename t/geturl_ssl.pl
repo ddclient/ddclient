@@ -4,6 +4,7 @@ eval {
     require HTTP::Request;
     require HTTP::Response;
     require IO::Socket::IP;
+    require IO::Socket::SSL;
     require ddclient::Test::Fake::HTTPD;
 } or plan(skip_all => $@);
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
@@ -57,6 +58,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'hostname',
             PeerPort => '443',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
@@ -69,6 +71,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'hostname',
             PeerPort => '443',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
@@ -80,6 +83,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'hostname',
             PeerPort => '123',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
@@ -92,6 +96,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'hostname',
             PeerPort => '123',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
@@ -104,6 +109,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'proxy',
             PeerPort => '443',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => 'http://hostname/',
         todo => "broken",
@@ -132,6 +138,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'proxy',
             PeerPort => '443',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_method => 'CONNECT',
         want_req_uri => 'hostname:443',
@@ -147,6 +154,7 @@ my @test_cases = (
         want_args => {
             PeerAddr => 'proxy',
             PeerPort => '443',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_method => 'CONNECT',
         want_req_uri => 'hostname:443',
@@ -190,6 +198,7 @@ my @test_cases = (
             PeerAddr => 'hostname',
             PeerPort => '443',
             SSL_ca_path => '/ca/dir',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
@@ -203,6 +212,7 @@ my @test_cases = (
             PeerAddr => 'hostname',
             PeerPort => '443',
             SSL_ca_file => '/ca/file',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
@@ -218,6 +228,7 @@ my @test_cases = (
             PeerPort => '443',
             SSL_ca_file => '/ca/file',
             SSL_ca_path => '/ca/dir',
+            SSL_verify_mode => IO::Socket::SSL->SSL_VERIFY_PEER,
         },
         want_req_uri => '/',
     },
