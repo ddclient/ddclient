@@ -38,6 +38,7 @@ jobs:
               libtest-tcp-perl \
               libtest-warnings-perl \
               liburi-perl \
+              net-tools \
               make \
               ;
       - uses: actions/checkout@v2
@@ -117,6 +118,7 @@ jobs:
               perl-Test-MockModule \
               perl-Test-TCP \
               perl-Test-Warnings \
+              net-tools \
               ;
       - name: autogen
         run: ./autogen
@@ -142,6 +144,7 @@ jobs:
               perl-HTTP-Daemon \
               perl-IO-Socket-INET6 \
               perl-core \
+              iproute \
               ;
       - name: autogen
         run: ./autogen

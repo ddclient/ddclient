@@ -422,13 +422,17 @@ subtest "extract_ipv6() of valid addr with adjacent non-word char" => sub {
 
 subtest "interface config samples" => sub {
     for my $sample (@ddclient::t::interface_samples) {
-        subtest $sample->{name} => sub {
-            my $ip = ddclient::extract_ipv6($sample->{text});
-            ok(ddclient::is_ipv6($ip), "extract_ipv6() returns an IPv6 address");
+        if (defined($sample->{want_extract_ipv6_global})) {
+            subtest $sample->{name} => sub {
+                my $ip = ddclient::extract_ipv6($sample->{text});
+                ok(ddclient::is_ipv6($ip), "extract_ipv6() returns an IPv6 address");
+            };
             foreach my $line (split(/\n/, $sample->{text})) {
                 my $ip = ddclient::extract_ipv6($line);
-                ok(ddclient::is_ipv6($ip),
-                   sprintf("extract_ipv6(%s) returns an IPv6 address", perlstring($line)));
+                if ($ip) {  ## Test cases may have lines that do not contain IPv6 address.
+                    ok(ddclient::is_ipv6($ip),
+                       sprintf("extract_ipv6(%s) returns an IPv6 address", perlstring($line)));
+                }
             }
         }
     }

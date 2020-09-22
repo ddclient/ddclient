@@ -2461,9 +2461,7 @@ sub get_ip {
         $arg = 'ip';
 
     } elsif ($use eq 'if') {
-        $reply = `command -v ip >/dev/null && ip address show dev $arg`;
-        $reply = `command -v ifconfig >/dev/null && ifconfig $arg` if $?;
-        $reply = '' if $?;
+        $ip = get_ip_from_interface($arg);
 
     } elsif ($use eq 'cmd') {
         if ($arg) {
@@ -2664,6 +2662,10 @@ sub extract_ipv6 {
     return $ip;
 }
 
+######################################################################
+## Regex that matches an IPv6 address that is probably globally routable.
+## Accepts embedded leading zeros.
+######################################################################
 my $regex_ipv6_global = qr{
     (?!  # Is not one of the following addresses:
         0{0,4}:             # ::/16 is assumed to never contain globaly routable addresses
@@ -2694,6 +2696,181 @@ sub extract_ipv6_global {
     (shift // '') =~ /($regex_ipv6_global)/ or return undef;
     (my $ip = $1) =~ s/\b0+\B//g; ## remove embedded leading zeros
     return $ip;
+}
+
+######################################################################
+## Regex that matches an IPv6 address that is unique local (ULA).
+## Accepts embedded leading zeros.
+######################################################################
+my $regex_ipv6_ula = qr{
+    (?=  # Address starts with
+      f[cd][0-9a-f]{2}:     # fc00::/7 RFC4193 ULA
+    )
+    $regex_ipv6             # And is a valid IPv6 address
+}xi;
+
+######################################################################
+## get_default_interface finds the default network interface based on
+## the IP routing table on the system.  We validate that the interface
+## found is likely to have global routing (e.g. is not LOOPBACK).
+## Returns undef if no global scope interface can be found for IP version.
+######################################################################
+sub get_default_interface {
+    my $ipver = int(shift // 4);    ## Defaults to IPv4 if not specified
+    my $ipstr = ($ipver == 6) ? 'inet6' : 'inet';
+    my $reply = shift // '';  ## Pass in data for unit testing purposes only
+    my $cmd = "test";
+
+    return undef if (($ipver != 4) && ($ipver != 6));
+
+    if (!$reply) { ## skip if test data passed in.
+        ## Best option is the ip command from iproute2 package
+        $cmd = "ip -$ipver -o route list match default"; $reply = qx{ $cmd 2>/dev/null };
+        ## Fallback is the netstat command. This is only option on MacOS.
+        if ($?) { $cmd = "netstat -rn -$ipver";     $reply = qx{ $cmd 2>/dev/null }; } # Linux, FreeBSD
+        if ($?) { $cmd = "netstat -rn -f $ipstr";   $reply = qx{ $cmd 2>/dev/null }; } # MacOS
+        if ($?) { $cmd = "netstat -rn";             $reply = qx{ $cmd 2>/dev/null }; } # Busybox
+        if ($?) { $cmd = "missing ip or netstat command";
+            failed("Unable to obtain default route information -- %s", $cmd)
+        }
+    }
+    debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
+
+    # Check we have IPv6 address in case we got routing table from non-specific cmd above
+    return undef if (($ipver == 6) && !extract_ipv6($reply));
+    # Filter down to just the default interfaces
+    my @list = split(/\n/, $reply);
+    @list = grep(/^default|^(?:0\.){3}0|^::\/0/, @list); # Select 'default' or '0.0.0.0' or '::/0'
+    return undef if (scalar(@list) == 0);
+    debug("Default routes found for IPv%s :\n%s", $ipver, join("\n",@list));
+
+    # now check each interface to make sure it is global (not loopback).
+    foreach my $line (@list) {
+        ## Interface will be after "dev" or the last word in the line. Must accept blank spaces
+        ## at the end.  Interface name may not have any whitespace or forward slash.
+        $line =~ /\bdev\b\s*\K[^\s\/]+|\b[^\s\/]+(?=[\s\/]*$)/;
+        my $interface = $&;
+        ## If test data was passed in skip following tests
+        if ($cmd ne "test") {
+            ## We do not want the loopback interface or anything interface without global scope
+            $cmd = "ip -$ipver -o addr show dev $interface scope global"; $reply = qx{$cmd 2>/dev/null};
+            if ($?) { $cmd = "ifconfig $interface";                       $reply = qx{$cmd 2>/dev/null}; }
+            if ($?) { $cmd = "missing ip or ifconfig command";
+                failed("Unable to obtain information for '%s' -- %s", $interface, $cmd);
+            }
+            debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
+        }
+        ## Has global scope, is not LOOPBACK
+        return($interface) if (($reply) && ($reply !~ /\bLOOPBACK\b/));
+    }
+    return undef;
+}
+
+######################################################################
+## get_ip_from_interface() finds an IPv4 or IPv6 address from a network
+## interface. Defaults to IPv4 unless '6' passed as 2nd parameter.
+######################################################################
+sub get_ip_from_interface {
+    my $interface = shift // "default";
+    my $ipver = int(shift // 4);    ## Defaults to IPv4 if not specified
+    my $scope = lc(shift // "gua"); ## "gua" or "ula"
+    my $reply = shift // '';  ## Pass in data for unit testing purposes only
+    my $MacOS = shift // 0;   ## For testing can set to 1 if input data is MacOS/FreeBSD format
+    my $count = 0;
+    my $cmd = "test";
+
+    if (($ipver != 4) && ($ipver != 6)) {
+        warning("get_ip_from_interface() invalid IP version: %s", $ipver);
+        return undef;
+    }
+
+    if ((lc($interface) eq "default") && (!$reply)) { ## skip if test data passed in.
+        $interface = get_default_interface($ipver);
+        return undef if !defined($interface);
+    }
+
+    if ($ipver == 4) {
+        if (!$reply) { ## skip if test data passed in.
+            ## Try ip first, then ifconfig.
+            $cmd = "ip -4 -o addr show dev $interface scope global"; $reply = qx{$cmd 2>/dev/null};
+            if ($?) { $cmd = "ifconfig $interface";                  $reply = qx{$cmd 2>/dev/null}; }
+            if ($?) { $cmd = "missing ip or ifconfig command";
+                failed("Unable to obtain information for '%s' -- %s", $interface, $cmd);
+            }
+        }
+        debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
+
+        ## IPv4 is simple, we just need to find the first IPv4 address returned in the list.
+        my @reply = split(/\n/, $reply);
+        @reply = grep(/\binet\b/, @reply);  # Select only IPv4 entries
+        return extract_ipv4($reply[0]);
+    }
+
+    ## From this point on we only looking for IPv6 address.
+    if (($scope ne "gua") && ($scope ne "ula")) {
+        warning("get_ip_from_interface() invalid IPv6 scope: %s, using type GUA", $scope);
+        $scope = "gua";
+    }
+
+    $cmd = "test data";
+    if (!$reply) { ## skip if test data passed in.
+        ## Try ip first, then ifconfig with -L for MacOS/FreeBSD then finally ifconfig for everything else
+        $cmd = "ip -6 -o addr show dev $interface scope global"; $reply = qx{$cmd 2>/dev/null};   # Linux
+        if ($?) { $cmd = "ifconfig -L $interface"; $MacOS = 1;   $reply = qx{$cmd 2>/dev/null}; } # MacOS/FreeBSD
+        if ($?) { $cmd = "ifconfig $interface";                  $reply = qx{$cmd 2>/dev/null}; } # Anything without iproute2 or -L
+        if ($?) { $cmd = "missing ip or ifconfig command";
+            failed("Unable to obtain information for '%s' -- %s", $interface, $cmd);
+        }
+    }
+    debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
+
+    ## IPv6 is more complex than IPv4.  Start by filtering on only "inet6" addresses
+    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses 
+    my @reply = split(/\n/, $reply);
+    @reply = grep(/\binet6\b/, @reply);                             # Select only IPv6 entries
+    @reply = grep(!/\bdeprecated\b|\btemporary\b/, @reply);         # Remove deprecated and temporary
+    @reply = ($scope eq "gua") ? grep(/$regex_ipv6_global/, @reply) # Select only global addresses
+                               : grep(/$regex_ipv6_ula/, @reply);   #   or only ULA addresses
+    debug("Raw IPv6 after filtering for %s addresses %s: (%s)\r\n%s", uc($scope), $interface, scalar(@reply), join("\n", @reply));
+
+    ## If we filter down to zero or one result then we are done...
+    return undef if (($count = scalar(@reply)) == 0);
+    return extract_ipv6($reply[0]) if ($count == 1);
+
+    ## If there are more than one we need to select the "best".
+    ## First choice would be a static address.
+    my @static = ($MacOS == 1) ? grep(!/^.*\bvltime\b.*$/i, @reply)              # MacOS/FreeBSD, no 'vltime'
+                               : grep(/^.*\bvalid_lft.\bforever\b.*$/i, @reply); # Everything else 'forever' life
+    $count = scalar(@static);
+    debug("Possible Static IP addresses %s: (%s)\r\n%s", $interface, $count, join("\n", @static));
+
+    ## If only one result then we are done.  If there are more than one static addresses
+    ## then we will replace our original list with the list of statics and sort on them.
+    ## If zero static addresses we fall through with our original list.
+    return extract_ipv6($static[0]) if ($count == 1);
+    @reply = @static if ($count > 1);
+
+    ## Sort what we have by the prefix length, IP address "length" and finally valid life.
+    my @sorted = sort {
+        ## We give preference to IP addressess with the longest prefix... so we prefer a /128 over a /64
+        ## this is a decimal (\d+) either after the word "prefixlen" or after a forward slash.
+        (($b =~ /(?:\bprefixlen\b\s*|\/)(\d+)/i)[0] // 0) <=> (($a =~ /(?:\bprefixlen\b\s*|\/)(\d+)/i)[0] // 0)
+
+        ## If there are multiple the same then we prefer "shorter" IP addresses in the
+        ## theory that a shorter address is more likely assigned by DHCPv6 than SLAAC.
+        ## E.g. 2001:db8:4341:0781::8214/64 is preferable to 2001:db8:4341:0781:34a6:c329:c52e:8ba6/64
+        ## So we count the number () of groups of [0-9a-f] blocks in the IP address.
+     || (()= (extract_ipv6($a) // '') =~ /[0-9A-F]+/gi) <=> (()= (extract_ipv6($b) // '') =~ /[0-9A-F]+/gi)
+
+        ## Finally we check remaining valid lifetime and prefer longer remaining life.
+        ## This is a desimal (\d+) after the word "valid_lft" or "vltime". Only available
+        ## from iproute2 or MacOS/FreeBSD version of ifconfig (-L parameter).
+     || (($b =~ /(?:\bvalid_lft\b\s*|\bvltime\b\s*)(\d+)/i)[0] // 0) <=> (($a =~ /(?:\bvalid_lft\b\s*|\bvltime\b\s*)(\d+)/i)[0] // 0)
+    } @reply;
+    debug("Sorted list of IP addresss for %s: (%s)\r\n%s", $interface, scalar(@sorted), join("\n", @sorted));
+
+    ## Whatever sorted to the top is the best choice for IPv6 address
+    return extract_ipv6($sorted[0]);
 }
 
 ######################################################################
