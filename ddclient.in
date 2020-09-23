@@ -4960,12 +4960,14 @@ EoEXAMPLE
 ##   hostname2.example.com|5.6.7.8|http://example/update/url3
 ##   hostname2.example.com|9.10.11.12|http://example/update/url4
 ##   hostname3.example.com|cafe::f00d|http://example/update/url5
+##   hostname4.example.com|NULL|http://example/update/url6
 ##
 ## The record's columns are separated by '|'. The first is the hostname, the second is the current
 ## address, and the third is the record-specific update URL. There can be multiple records for the
-## same host, and they can even have the same address type. Any record can be updated to hold
-## either type of address (e.g., if given an IPv6 address the record will automatically become an
-## AAAA record).
+## same host, and they can even have the same address type. To update an IP address the record
+## must already exist of the type we want to update... We will not change a record type from
+## an IPv4 to IPv6 or viz versa.  Records may exist with a NULL address which we will allow to be
+## updated with an IPv4 address, not an IPv6.
 ##
 ## The second step is to visit the appropriate record's update URL with
 ## ?address=<ipv4-or-ipv6-address> appended. "Updated" in the result means success, "fail" means
@@ -4981,7 +4983,10 @@ sub nic_freedns_update {
     my $url_tmpl = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&v=2&sha=<credentials>";
     my $creds = sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
     (my $url = $url_tmpl) =~ s/<credentials>/$creds/;
-    my $reply = geturl(proxy => opt('proxy'), url => $url);
+
+    my $reply = geturl(proxy => opt('proxy'),
+                       url => $url
+                      );
     my $record_list_error = '';
     if ($reply && header_ok($_[0], $reply)) {
         $reply =~ s/^.*?\n\n//s;  # Strip the headers.
@@ -4990,7 +4995,8 @@ sub nic_freedns_update {
             next if ($#rec < 2);
             my $recs = is_ipv6($rec[1]) ? \%recs_ipv6 : \%recs_ipv4;
             $recs->{$rec[0]} = \@rec;
-            debug("host: %s, current address: %s, update URL: %s", @rec);
+            # Update URL contains credentials that don't require login to use, so best to hide.
+            debug("host: %s, current address: %s, update URL: <redacted>", $rec[0], $rec[1]);
         }
         if (keys(%recs_ipv4) + keys(%recs_ipv6) == 0) {
             chomp($reply);
@@ -5001,54 +5007,61 @@ sub nic_freedns_update {
     }
 
     foreach my $h (@_) {
-        if (!$h) { next }
-        my $ip = delete $config{$h}{'wantip'};
-
-        info("%s: setting IP address to %s", $h, $ip);
+        next if (!$h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
 
         if ($record_list_error ne '') {
-            $config{$h}{'status'} = 'failed';
+            $config{$h}{'status-ipv4'} = 'failed' if ($ipv4);
+            $config{$h}{'status-ipv6'} = 'failed' if ($ipv6);
             failed("updating %s: %s", $h, $record_list_error);
             next;
         }
-        # If there is a record with matching type then update it, otherwise let
-        # freedns convert the record to the desired type.
-        my $rec = is_ipv6($ip)
-            ? ($recs_ipv6{$h} // $recs_ipv4{$h})
-            : ($recs_ipv4{$h} // $recs_ipv6{$h});
-        if (!defined($rec)) {
-            $config{$h}{'status'} = 'failed';
-            failed("updating %s: host record does not exist", $h);
-            next;
-        }
 
-        if ($ip eq $rec->[1]) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
-            $config{$h}{'status'} = 'good';
-            success("update not necessary %s: good: IP address already set to %s", $h, $ip)
-                if (!$daemon || opt('verbose'));
-        } else {
-            my $url = $rec->[2] . "&address=" . $ip;
-            debug("Update: %s", $url);
-            my $reply = geturl(proxy => opt('proxy'), url => $url);
-            if (!defined($reply) || !$reply || !header_ok($h, $reply)) {
-                $config{$h}{'status'} = 'failed';
-                failed("updating %s: Could not connect to %s.", $h, $url);
+        # IPv4 and IPv6 handling are similar enough to do in a loop...
+        foreach my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+            my $rec  = ($ip eq ($ipv6 // '')) ? $recs_ipv6{$h}
+                                              : $recs_ipv4{$h};
+            if (!$rec) {
+                failed("updating %s: Cannot set IPv$ipv to %s No '$type' record at FreeDNS", $h, $ip);
                 next;
             }
 
-            $reply =~ s/^.*?\n\n//s;  # Strip the headers.
-            if ($reply =~ /Updated.*$h.*to.*$ip/) {
-                $config{$h}{'ip'}     = $ip;
-                $config{$h}{'mtime'}  = $now;
-                $config{$h}{'status'} = 'good';
-                success("updating %s: good: IP address set to %s", $h, $ip);
+            info("updating %s: setting IP address to %s", $h, $ip);
+            $config{$h}{"status-ipv$ipv"} = 'failed';
+
+            if ($ip eq $rec->[1]) {
+                $config{$h}{"ipv$ipv"} = $ip;
+                $config{$h}{'mtime'} = $now;
+                $config{$h}{"status-ipv$ipv"} = 'good';
+                success("updating %s: update not necessary, '$type' record already set to %s", $h, $ip)
+                    if (!$daemon || opt('verbose'));
             } else {
-                $config{$h}{'status'} = 'failed';
-                warning("SENT: %s", $url) unless opt('verbose');
-                warning("REPLIED: %s", $reply);
-                failed("updating %s: Invalid reply.", $h);
+                my $url = $rec->[2] . "&address=" . $ip;
+                ($url_tmpl = $url) =~ s/\?.*\&/?<redacted>&/; # redact unique update token
+                debug("updating: %s", $url_tmpl);
+
+                my $reply = geturl(proxy => opt('proxy'),
+                                   url => $url
+                                  );
+                if ($reply && header_ok($h, $reply)) {
+                    $reply =~ s/^.*?\n\n//s;  # Strip the headers.
+                    if ($reply =~ /Updated.*$h.*to.*$ip/) {
+                        $config{$h}{"ipv$ipv"} = $ip;
+                        $config{$h}{'mtime'} = $now;
+                        $config{$h}{"status-ipv$ipv"} = 'good';
+                        success("updating %s: good: IPv$ipv address set to %s", $h, $ip);
+                    } else {
+                        warning("SENT: %s", $url_tmpl) unless opt('verbose');
+                        warning("REPLIED: %s", $reply);
+                        failed("updating %s: Invalid reply.", $h);
+                    }
+                } else {
+                    failed("updating %s: Could not connect to %s.", $h, $url_tmpl);
+                }
             }
         }
     }
