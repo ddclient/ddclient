@@ -75,6 +75,9 @@ my ($result, %config, %cache);
 my $saved_cache;
 my %saved_opt;
 my $daemon;
+# Control how many times warning message logged for invalid IP addresses
+my (%warned_ip, %warned_ipv4, %warned_ipv6);
+my $inv_ip_warn_count = opt('max-warn') // 1;
 
 sub T_ANY    { 'any' }
 sub T_STRING { 'string' }
@@ -90,9 +93,13 @@ sub T_FILE   { 'file name' }
 sub T_FQDNP  { 'fully qualified host name and optional port number' }
 sub T_PROTO  { 'protocol' }
 sub T_USE    { 'ip strategy' }
+sub T_USEV4  { 'ipv4 strategy' }
+sub T_USEV6  { 'ipv6 strategy' }
 sub T_IF     { 'interface' }
 sub T_PROG   { 'program name' }
 sub T_IP     { 'ip' }
+sub T_IPV4   { 'ipv4' }
+sub T_IPV6   { 'ipv6' }
 sub T_POSTS  { 'postscript' }
 
 ## strategies for obtaining an ip address.
@@ -352,14 +359,15 @@ my %builtinfw = (
 );
 
 my %ip_strategies = (
-    'ip'        => ": use IP given by '-ip <address>'",
-    'web'       => ": obtain IP from the web-based IP discovery service given by '-web <service>|<url>'",
-    'fw'        => ": obtain IP from a firewall/router device by visiting the URL given by '-fw <url>'",
-    'if'        => ": obtain IP from the interface given by '-if <interface>'",
-    'cmd'       => ": obtain IP by running the command given by '-cmd <command>'",
-    'cisco'     => ": obtain IP from Cisco FW device at the address given by '-fw <address>'",
-    'cisco-asa' => ": obtain IP from Cisco ASA device at the address given by '-fw <address>'",
-    map({ $_ => sprintf(": obtain IP from %s device at the address given by '-fw <address>'",
+    'no'        => ": deprecated, see 'usev4' and 'usev6'",
+    'ip'        => ": deprecated, see 'usev4' and 'usev6'",
+    'web'       => ": deprecated, see 'usev4' and 'usev6'",
+    'fw'        => ": deprecated, see 'usev4' and 'usev6'",
+    'if'        => ": deprecated, see 'usev4' and 'usev6'",
+    'cmd'       => ": deprecated, see 'usev4' and 'usev6'",
+    'cisco'     => ": deprecated, see 'usev4' and 'usev6'",
+    'cisco-asa' => ": deprecated, see 'usev4' and 'usev6'",
+    map({ $_ => sprintf(": Built-in firewall %s deprecated, see 'usev4' and 'usev6'",
                         $builtinfw{$_}->{'name'}) }
         keys(%builtinfw)),
 );
@@ -367,6 +375,41 @@ my %ip_strategies = (
 sub ip_strategies_usage {
     return map({ sprintf("    -use=%-22s %s.", $_, $ip_strategies{$_}) }
                ('ip', 'web', 'if', 'cmd', 'fw', sort('cisco', 'cisco-asa', keys(%builtinfw))));
+}
+
+my %ipv4_strategies = (
+    'disabled'    => ": do not obtain an IPv4 address for this host",
+    'ipv4'        => ": obtain IPv4 from -ipv4 {address}",
+    'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
+    'ifv4'        => ": obtain IPv4 from the -ifv4 {interface}",
+    'cmdv4'       => ": obtain IPv4 from the -cmdv4 {external-command}",
+    'fwv4'        => ": obtain IPv4 from the firewall specified by -fwv4 {type|address}",
+    'ciscov4'     => ": obtain IPv4 from Cisco FW at the -fwv4 {address}",
+    'cisco-asav4' => ": obtain IPv4 from Cisco ASA at the -fwv4 {address}",
+    map { $_ => sprintf ": obtain IPv4 from %s at the -fwv4 {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
+);
+sub ipv4_strategies_usage {
+    return map { sprintf("    -usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
+}
+
+my %ipv6_strategies = (
+    'no'          => ": deprecated, use 'disabled'",
+    'disabled'    => ": do not obtain an IPv6 address for this host",
+    'ip'          => ": deprecated, use 'ipv6'",
+    'ipv6'        => ": obtain IPv6 from -ipv6 {address}",
+    'web'         => ": deprecated, use 'webv6'",
+    'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
+    'if'          => ": deprecated, use 'ifv6'",
+    'ifv6'        => ": obtain IPv6 from the -if {interface}",
+    'cmd'         => ": deprecated, use 'cmdv6'",
+    'cmdv6'       => ": obtain IPv6 from the -cmdv6 {external-command}",
+    'fwv6'        => ": obtain IPv6 from the firewall specified by -fwv6 {type|address}",
+    'ciscov6'     => ": obtain IPv6 from Cisco FW at the -fwv6 {address}",
+    'cisco-asav6' => ": obtain IPv6 from Cisco ASA at the -fwv6 {address}",
+    map { $_ => sprintf ": obtain IPv6 from %s at the -fwv6 {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
+);
+sub ipv6_strategies_usage {
+    return map { sprintf("    -usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
 }
 
 sub setv {
@@ -389,28 +432,44 @@ my %variables = (
         'protocol'            => setv(T_PROTO, 0, 0, 'dyndns2',            undef),
 
         'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
+        'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
+        'usev6'               => setv(T_USEV6, 0, 0, 'disabled',           undef),
         'ip'                  => setv(T_IP,    0, 0, undef,                undef),
+        'ipv4'                => setv(T_IPV4,  0, 0, undef,                undef),
+        'ipv6'                => setv(T_IPV6,  0, 0, undef,                undef),
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
+        'ifv4'                => setv(T_IF,    0, 0, 'default',            undef),
+        'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,1, 0, '',                   undef),
+        'webv4'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webv6'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
         'fw-skip'             => setv(T_STRING,1, 0, '',                   undef),
+        'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv4-skip'           => setv(T_STRING,1, 0, '',                   undef),
+        'fwv6'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv6-skip'           => setv(T_STRING,1, 0, '',                   undef),
         'fw-login'            => setv(T_LOGIN, 1, 0, '',                   undef),
         'fw-password'         => setv(T_PASSWD,1, 0, '',                   undef),
         'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
         'cmd-skip'            => setv(T_STRING,1, 0, '',                   undef),
+        'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
+        'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
 
         'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
         'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'ssl'                 => setv(T_BOOL,  0, 0, 0,                    undef),
         'curl'                => setv(T_BOOL,  0, 0, 0,                    undef),
-        'ipv6'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
         'facility'            => setv(T_STRING,0, 0, 'daemon',             undef),
         'priority'            => setv(T_STRING,0, 0, 'notice',             undef),
         'mail'                => setv(T_EMAIL, 0, 0, '',                   undef),
         'mail-failure'        => setv(T_EMAIL, 0, 0, '',                   undef),
+        'max-warn'            => setv(T_NUMBER,0, 0, 1,                    undef),
 
         'exec'                => setv(T_BOOL,  0, 0, 1,                    undef),
         'debug'               => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -442,12 +501,15 @@ my %variables = (
         'fw-ssl-validate'     => setv(T_BOOL,  0, 0, 1,                    undef),
         'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
         'cmd-skip'            => setv(T_STRING,0, 0, '',                   undef),
-        'ipv6'                => setv(T_BOOL,  0, 0, 0,                    undef),
-        'ip'                  => setv(T_IP,    0, 1, undef,                undef),
+        'ip'                  => setv(T_IP,    0, 1, undef,                undef),  #TODO remove from cache?
+        'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
+        'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
         'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
         'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
         'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        'status'              => setv(T_ANY,   0, 1, '',                   undef),
+        'status'              => setv(T_ANY,   0, 1, '',                   undef),  #TODO remove from cache?
+        'status-ipv4'         => setv(T_ANY,   0, 1, '',                   undef),
+        'status-ipv6'         => setv(T_ANY,   0, 1, '',                   undef),
         'min-interval'        => setv(T_DELAY, 0, 0, interval('30s'),      0),
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
@@ -784,28 +846,46 @@ my @opt = (
     ["cache",        "=s", "-cache <path>         : record address used in <path>"],
     ["pid",          "=s", "-pid <path>           : record process id in <path> if daemonized"],
     "",
-    ["use",          "=s", "-use <which>          : how the IP address should be obtained"],
+    ["use",          "=s", "-use <which>          : deprecated, see 'usev4' and 'usev6'"],
     &ip_strategies_usage(),
+    [ "usev4",       "=s", "-usev4 <which>        : how the should IPv4 address be obtained."],
+    &ipv4_strategies_usage(),
+    [ "usev6",       "=s", "-usev6 <which>        : how the should IPv6 address be obtained."],
+    &ipv6_strategies_usage(),
     "",
     "  Options that apply to 'use=ip':",
-    ["ip",           "=s", "-ip <address>         : set the IP address to <address>"],
+    ["ip",           "=s", "-ip <address>         : deprecated, use 'ipv4' or 'ipv6'"],
+    ["ipv4",         "=s", "-ipv4 <address>       : set the IPv4 address to <address>"],
+    ["ipv6",         "=s", "-ipv6 <address>       : set the IPv6 address to <address>"],
     "",
     "  Options that apply to 'use=if':",
-    ["if",           "=s", "-if <interface>       : obtain IP address from <interface>"],
+    ["if",           "=s", "-if <interface>       : deprecated, use 'ifv4' or 'ifv6'"],
+    ["ifv4",         "=s", "-ifv4 <interface>     : obtain IPv4 address from <interface>"],
+    ["ifv6",         "=s", "-ifv6 <interface>     : obtain IPv6 address from <interface>"],
     "",
     "  Options that apply to 'use=web':",
-    ["web",          "=s", "-web <service>|<url>  : obtain IP address from a web-based IP discovery service, either a known <service> or a custom <url>"],
-    ["web-skip",     "=s", "-web-skip <pattern>   : skip any IP addresses before <pattern> in the text returned from the web-based IP discovery service"],
+    ["web",          "=s", "-web <service>|<url>  : deprecated, use 'webv4' or 'webv6'"],
+    ["web-skip",     "=s", "-web-skip <pattern>   : deprecated, use 'webv4-skip' or 'webv6-skip'"],
+    ["webv4",        "=s", "-webv4 <service>|<url>: obtain IPv4 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
+    ["webv4-skip",   "=s", "-webv4-skip <pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
+    ["webv6",        "=s", "-webv6 <service>|<url>: obtain IPv6 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
+    ["webv6-skip",   "=s", "-webv6-skip <pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
     "",
     "  Options that apply to 'use=fw' and 'use=<device>':",
-    ["fw",           "=s", "-fw <address>|<url>   : obtain IP address from device with IP address <address> or URL <url>"],
-    ["fw-skip",      "=s", "-fw-skip <pattern>    : skip any IP addresses before <pattern> in the text returned from the device"],
+    ["fw",           "=s", "-fw <address>|<url>   : deprecated, use 'fwv4' or 'fwv6'"],
+    ["fw-skip",      "=s", "-fw-skip <pattern>    : deprecated, use 'fwv4-skip' or 'fwv6-skip'"],
+    ["fwv4",         "=s", "-fwv4 <address>|<url> : obtain IPv4 address from device with IP address <address> or URL <url>"],
+    ["fwv4-skip",    "=s", "-fwv4-skip <pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
+    ["fwv6",         "=s", "-fwv6 <address>|<url> : obtain IPv6 address from device with IP address <address> or URL <url>"],
+    ["fwv6-skip",    "=s", "-fwv6-skip <pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
     ["fw-login",     "=s", "-fw-login <login>     : use <login> when getting the IP from the device"],
     ["fw-password",  "=s", "-fw-password <secret> : use password <secret> when getting the IP from the device"],
     "",
     "  Options that apply to 'use=cmd':",
-    ["cmd",          "=s", "-cmd <command>        : obtain IP address from the output of <command>"],
-    ["cmd-skip",     "=s", "-cmd-skip <pattern>   : skip any IP addresses before <pattern> in the command's output"],
+    ["cmd",          "=s", "-cmd <command>        : deprecated, use 'cmdv4' or 'cmdv6'"],
+    ["cmd-skip",     "=s", "-cmd-skip <pattern>   : deprecated, filter in program wrapper script"],
+    ["cmdv4",        "=s", "-cmdv4 <command>      : obtain IPv4 address from the output of <command>"],
+    ["cmdv6",        "=s", "-cmdv6 <command>      : obtain IPv6 address from the output of <command>"],
     "",
     ["login",        "=s", "-login <user>         : log in to the dynamic DNS service as <user>"],
     ["password",     "=s", "-password <secret>    : log in to the dynamic DNS service with password <secret>"],
@@ -825,13 +905,13 @@ my @opt = (
     ["syslog",       "!",  "-{no}syslog           : log messages to syslog"],
     ["facility",     "=s", "-facility <type>      : log messages to syslog to facility <type>"],
     ["priority",     "=s", "-priority <pri>       : log messages to syslog with priority <pri>"],
+    ["max-warn",     "=i", "-max-warn <max>       : log at most <max> warning messages for undefined IP address"],
     ["mail",         "=s", "-mail <address>       : e-mail messages to <address>"],
     ["mail-failure", "=s", "-mail-failure <addr>  : e-mail messages for failed updates to <addr>"],
     ["exec",         "!",  "-{no}exec             : do {not} execute; just show what would be done"],
     ["debug",        "!",  "-{no}debug            : print {no} debugging information"],
     ["verbose",      "!",  "-{no}verbose          : print {no} verbose information"],
     ["quiet",        "!",  "-{no}quiet            : print {no} messages for unnecessary updates"],
-    ["ipv6",         "!",  "-{no}ipv6             : use ipv6"],
     ["help",         "",   "-help                 : display this message and exit"],
     ["postscript",   "",   "-postscript           : script to run after updating ddclient, has new IP as param"],
     ["query",        "!",  "-{no}query            : print {no} ip addresses and exit"],
@@ -907,6 +987,10 @@ sub main {
 
         fatal("invalid argument '-use %s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
             unless exists $ip_strategies{lc opt('use')};
+        if (defined($opt{'usev6'})) {
+            usage("invalid argument '-usev6 %s'; possible values are:\n%s", $opt{'usev6'}, join("\n",ipv6_strategies_usage()))
+                unless exists $ipv6_strategies{lc opt('usev6')};
+        }
 
         $daemon = opt('daemon');
 
@@ -968,9 +1052,11 @@ sub runpostscript {
 sub update_nics {
     my %examined = ();
     my %iplist   = ();
+    my %ipv4list = ();
+    my %ipv6list = ();
 
     foreach my $s (sort keys %services) {
-        my (@hosts, %ips) = ();
+        my (@hosts, %ipsv4, %ipsv6) = ();
         my $updateable = $services{$s}{'updateable'};
         my $update     = $services{$s}{'update'};
 
@@ -978,33 +1064,103 @@ sub update_nics {
             next if $config{$h}{'protocol'} ne lc($s);
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
-            my $use = opt('use', $h);
-            my $arg_ip = opt('ip', $h) // '';
-            my $arg_fw = opt('fw', $h) // '';
-            my $arg_if = opt('if', $h) // '';
-            my $arg_web = opt('web', $h) // '';
-            my $arg_cmd = opt('cmd', $h) // '';
-            my $ip = "";
-            if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
-                $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
-            } else {
-                $ip = get_ip($use, $h);
-                if (!defined($ip)) {
-                    warning("unable to determine IP address")
-                        if !$daemon || opt('verbose');
-                    next;
+            my $use       = opt('use',   $h) // 'disabled';
+            my $usev4     = opt('usev4', $h) // 'disabled';
+            my $usev6     = opt('usev6', $h) // 'disabled';
+            $use          = 'disabled' if ($use eq 'no'); # backward compatibility
+            $usev6        = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+            my $arg_ip    = opt('ip',    $h) // '';
+            my $arg_ipv4  = opt('ipv4',  $h) // '';
+            my $arg_ipv6  = opt('ipv6',  $h) // '';
+            my $arg_fw    = opt('fw',    $h) // '';
+            my $arg_fwv4  = opt('fwv4',  $h) // '';
+            my $arg_fwv6  = opt('fwv6',  $h) // '';
+            my $arg_if    = opt('if',    $h) // '';
+            my $arg_ifv4  = opt('ifv4',  $h) // '';
+            my $arg_ifv6  = opt('ifv6',  $h) // '';
+            my $arg_web   = opt('web',   $h) // '';
+            my $arg_webv4 = opt('webv4', $h) // '';
+            my $arg_webv6 = opt('webv6', $h) // '';
+            my $arg_cmd   = opt('cmd',   $h) // '';
+            my $arg_cmdv4 = opt('cmdv4', $h) // '';
+            my $arg_cmdv6 = opt('cmdv6', $h) // '';
+            my $ip = undef;
+            my $ipv4 = undef;
+            my $ipv6 = undef;
+
+            if ($use ne 'disabled') {
+                if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
+                    # If we have already done a get_ip() for this, don't do it again.
+                    $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
+                } else {
+                    # Else need to find the IP address...
+                    $ip = get_ip($use, $h);
+                    if (is_ipv4($ip) || is_ipv6($ip)) {
+                         # And if it is valid, remember it...
+                        $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
+                    } else {
+                        warning("%s: unable to determine IP address with strategy use=%s", $h, $use)
+                            if !$daemon || opt('verbose');
+                    }
                 }
-                $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
+                # And remember it as the IP address we want to send to the DNS service.
+                $config{$h}{'wantip'} = $ip;
             }
-            $config{$h}{'wantip'} = $ip;
+
+            if ($usev4 ne 'disabled') {
+                if (exists $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4}) {
+                    # If we have already done a get_ipv4() for this, don't do it again.
+                    $ipv4 = $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4};
+                } else {
+                    # Else need to find the IPv4 address...
+                    $ipv4 = get_ipv4($usev4, $h);
+                    if (is_ipv4($ipv4)) {
+                         # And if it is valid, remember it...
+                        $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4} = $ipv4;
+                    } else {
+                        warning("%s: unable to determine IPv4 address with strategy usev4=%s", $h, $usev4)
+                            if !$daemon || opt('verbose');
+                    }
+                }
+                # And remember it as the IPv4 address we want to send to the DNS service.
+                $config{$h}{'wantipv4'} = $ipv4;
+            }
+
+            if ($usev6 ne 'disabled') {
+                if (exists $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6}) {
+                    # If we have already done a get_ipv6() for this, don't do it again.
+                    $ipv6 = $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6};
+                } else {
+                    # Else need to find the IPv6 address...
+                    $ipv6 = get_ipv6($usev6, $h);
+                    if (is_ipv6($ipv6)) {
+                        # And if it is valid, remember it...
+                        $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6} = $ipv6;
+                    } else {
+                        warning("%s: unable to determine IPv6 address with strategy usev6=%s", $h, $usev6)
+                            if !$daemon || opt('verbose');
+                    }
+                }
+                # And remember it as the IP address we want to send to the DNS service.
+                $config{$h}{'wantipv6'} = $ipv6;
+            }
+
+            # DNS service update functions should only have to handle 'wantipv4' and 'wantipv6'
+            $config{$h}{'wantipv4'} = $ipv4 = $ip if (!$ipv4 && is_ipv4($ip));
+            $config{$h}{'wantipv6'} = $ipv6 = $ip if (!$ipv6 && is_ipv6($ip));
+            # But we will set 'wantip' to the IPv4 so old functions continue to work until we update them all
+            $config{$h}{'wantip'}   = $ipv4       if (!$ip && $ipv4);
+
             next if !nic_updateable($h, $updateable);
             push @hosts, $h;
-            $ips{$ip} = $h;
+
+            $ipsv4{$ipv4} = $h if ($ipv4);
+            $ipsv6{$ipv6} = $h if ($ipv6);
         }
         if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             &$update(@hosts);
-            runpostscript(join ' ', keys %ips);
+            runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
         }
     }
     foreach my $h (sort keys %config) {
@@ -1052,8 +1208,7 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     foreach my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
-            map { $cache{$h}{$_} = $config{$h}{$_} } @{$config{$h}{'cacheable'}};
-
+	        map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
         } else {
             map { $cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
         }
@@ -1341,10 +1496,22 @@ sub init_config {
     $opt{'quiet'} = 0 if opt('verbose');
 
     ## infer the IP strategy if possible
-    if (!defined($opt{'use'})) {
-        $opt{'use'} = 'web' if defined($opt{'web'});
-        $opt{'use'} = 'if'  if defined($opt{'if'});
-        $opt{'use'} = 'ip'  if defined($opt{'ip'});
+    if (!$opt{'use'}) {
+        $opt{'use'} = 'web' if ($opt{'web'});
+        $opt{'use'} = 'if'  if ($opt{'if'});
+        $opt{'use'} = 'ip'  if ($opt{'ip'});
+    }
+    ## infer the IPv4 strategy if possible
+    if (!$opt{'usev4'}) {
+        $opt{'usev4'} = 'webv4' if ($opt{'webv4'});
+        $opt{'usev4'} = 'ifv4'  if ($opt{'ifv4'});
+        $opt{'usev4'} = 'ipv4'  if ($opt{'ipv4'});
+    }
+    ## infer the IPv6 strategy if possible
+    if (!$opt{'usev6'}) {
+        $opt{'usev6'} = 'webv6' if ($opt{'webv6'});
+        $opt{'usev6'} = 'ifv6'  if ($opt{'ifv6'});
+        $opt{'usev6'} = 'ipv6'  if ($opt{'ipv6'});
     }
 
     ## sanity check
@@ -1532,6 +1699,7 @@ sub process_args {
 sub test_possible_ip {
     local $opt{'debug'} = 0;
 
+    printf "----- Test_possible_ip with 'get_ip' -----\n";
     printf "use=ip, ip=%s address is %s\n", opt('ip'), get_ip('ip') // 'NOT FOUND'
         if defined opt('ip');
 
@@ -1575,6 +1743,75 @@ sub test_possible_ip {
         local $opt{'use'} = 'cmd';
         printf "use=cmd, cmd=%s address is %s\n", opt('cmd'), get_ip('cmd') // 'NOT FOUND';
     }
+
+    # Now force IPv4
+    printf "----- Test_possible_ip with 'get_ipv4' ------\n";
+    printf "use=ipv4, ipv4=%s address is %s\n", opt('ipv4'), get_ipv4('ipv4') // 'NOT FOUND'
+        if defined opt('ipv4');
+
+    {
+        # Note: The `ip` command adds a `@eth0` suffix to the names of VLAN
+        # interfaces. That `@eth0` suffix is NOT part of the interface name.
+        my @ifs = map({ /^[^\s:]*:\s*([^\s:@]+)/ ? $1 : () }
+                      `command -v ip >/dev/null && ip -o link show`);
+        @ifs = map({ /^([a-zA-Z].*?)(?::?\s.*)?$/ ? $1 : () }
+                   `command -v ifconfig >/dev/null && ifconfig -a`) if $? || !@ifs;
+        @ifs = () if $?;
+        warning("failed to get list of interfaces") if !@ifs;
+        foreach my $if (@ifs) {
+            local $opt{'ifv4'} = $if;
+            printf "use=ifv4, ifv4=%s address is %s\n", opt('ifv4'), get_ipv4('ifv4') // 'NOT FOUND';
+        }
+    }
+    {
+        local $opt{'usev4'} = 'webv4';
+        foreach my $web (sort keys %builtinweb) {
+            local $opt{'webv4'} = $web;
+            printf "use=webv4, webv4=$web address is %s\n", get_ipv4('webv4') // 'NOT FOUND'
+                if ($web !~ "6")  ## Don't bother if web site only supports IPv6;
+        }
+        printf "use=webv4, webv4=%s address is %s\n", opt('webv4'), get_ipv4('webv4') // 'NOT FOUND'
+            if ! exists $builtinweb{opt('webv4')};
+    }
+    if (opt('cmdv4')) {
+        local $opt{'usev4'} = 'cmdv4';
+        printf "use=cmdv4, cmdv4=%s address is %s\n", opt('cmdv4'), get_ipv4('cmdv4') // 'NOT FOUND';
+    }
+
+    # Now force IPv6
+    printf "----- Test_possible_ip with 'get_ipv6' -----\n";
+    printf "use=ipv6, ipv6=%s address is %s\n", opt('ipv6'), get_ipv6('ipv6') // 'NOT FOUND'
+        if defined opt('ipv6');
+
+    {
+        # Note: The `ip` command adds a `@eth0` suffix to the names of VLAN
+        # interfaces. That `@eth0` suffix is NOT part of the interface name.
+        my @ifs = map({ /^[^\s:]*:\s*([^\s:@]+)/ ? $1 : () }
+                      `command -v ip >/dev/null && ip -o link show`);
+        @ifs = map({ /^([a-zA-Z].*?)(?::?\s.*)?$/ ? $1 : () }
+                   `command -v ifconfig >/dev/null && ifconfig -a`) if $? || !@ifs;
+        @ifs = () if $?;
+        warning("failed to get list of interfaces") if !@ifs;
+        foreach my $if (@ifs) {
+            local $opt{'ifv6'} = $if;
+            printf "use=ifv6, ifv6=%s address is %s\n", opt('ifv6'), get_ipv6('ifv6') // 'NOT FOUND';
+        }
+    }
+    {
+        local $opt{'usev6'} = 'webv6';
+        foreach my $web (sort keys %builtinweb) {
+            local $opt{'webv6'} = $web;
+            printf "use=webv6, webv6=$web address is %s\n", get_ipv6('webv6') // 'NOT FOUND'
+                if ($web !~ "4");  ## Don't bother if web site only supports IPv4
+        }
+        printf "use=webv6, webv6=%s address is %s\n", opt('webv6'), get_ipv6('webv6') // 'NOT FOUND'
+            if ! exists $builtinweb{opt('webv6')};
+    }
+    if (opt('cmdv6')) {
+        local $opt{'usev6'} = 'cmdv6';
+        printf "use=cmdv6, cmdv6=%s address is %s\n", opt('cmdv6'), get_ipv6('cmdv6') // 'NOT FOUND';
+    }
+
     exit 0 unless opt('debug');
 }
 ######################################################################
@@ -1942,6 +2179,14 @@ sub check_value {
         $value = lc $value;
         return undef if !exists $ip_strategies{$value};
 
+    } elsif ($type eq T_USEV4) {
+        $value = lc $value;
+        return undef if ! exists $ipv4_strategies{$value};
+
+    } elsif ($type eq T_USEV6) {
+        $value = lc $value;
+        return undef if ! exists $ipv6_strategies{$value};
+
     } elsif ($type eq T_FILE) {
         return undef if $value eq "";
 
@@ -1956,6 +2201,13 @@ sub check_value {
 
     } elsif ($type eq T_IP) {
         return undef if !is_ipv4($value) && !is_ipv6($value);
+
+    } elsif ($type eq T_IPV4) {
+        return undef if !is_ipv4($value);
+
+    } elsif ($type eq T_IPV6) {
+        return undef if !is_ipv6($value);
+
     }
     return $value;
 }
@@ -2448,6 +2700,7 @@ sub fetch_via_curl {
 ######################################################################
 sub get_ip {
     my $use = lc shift;
+    $use    = 'disabled' if ($use eq 'no'); # backward compatibility
     my $h   = shift;
     my ($ip, $arg, $reply, $url, $skip) = (undef, opt($use, $h), '');
     $arg = '' unless $arg;
@@ -2455,7 +2708,7 @@ sub get_ip {
     if ($use eq 'ip') {
         $ip  = opt('ip', $h);
         if (!is_ipv4($ip) && !is_ipv6($ip)) {
-            warning("'%s' is not a valid IPv4 or IPv6 address", $ip);
+            warning("'%s' is not a valid IPv4 or IPv6 address", $ip // '');
             $ip = undef;
         }
         $arg = 'ip';
@@ -2534,6 +2787,10 @@ sub get_ip {
         ) // '';
         $arg = $url;
 
+    } elsif ($use eq 'disabled') {
+        ## This is a no-op... Do not get an IP address for this host/service
+        $reply = '';
+
     } else {
         $url = opt('fw', $h) // '';
         $skip = opt('fw-skip', $h) // '';
@@ -2570,7 +2827,6 @@ sub get_ip {
     debug("get_ip: using %s, %s reports %s", $use, $arg, $ip // "<undefined>");
     return $ip;
 }
-
 
 ######################################################################
 ## Regex to find IPv4 address. Accepts embedded leading zeros.
@@ -2874,9 +3130,241 @@ sub get_ip_from_interface {
 }
 
 ######################################################################
+## get_ipv4
+######################################################################
+sub get_ipv4 {
+    my $usev4 = lc(shift);  ## Method to obtain IP address
+    my $h     = shift;      ## Host/service making the request
+
+    my $ipv4  = undef;      ## Found IPv4 address
+    my $reply = '';         ## Text returned from various methods
+    my $url   = '';         ## URL of website or firewall
+    my $skip  = '';         ## Regex of pattern to skip before looking for IP
+    my $arg   = opt($usev4, $h) // '';  ## Value assigned to the "usev4" method
+
+    if ($usev4 eq 'ipv4') {
+        ## Static IPv4 address is provided in "ipv4=<address>"
+        $ipv4  = $arg;
+        if (!is_ipv4($ipv4)) {
+            warning("'%s' is not a valid IPv4",$ipv4 // '');
+            $ipv4 = undef;
+        }
+        $arg = 'ipv4';  # For debug message at end of function
+
+    } elsif ($usev4 eq 'ifv4') {
+        ## Obtain IPv4 address from interface mamed in "ifv4=<if>"
+        warning("'if-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('if-skip', $h));
+        $ipv4 = get_ip_from_interface($arg,4);
+
+    } elsif ($usev4 eq 'cmdv4') {
+        ## Obtain IPv4 address by executing the command in "cmdv4=<command>"
+        warning("'cmd-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('cmd-skip', $h));
+        if ($arg) {
+            my $sys_cmd = quotemeta($arg);
+            $reply = qx{$sys_cmd};
+            $reply = '' if $?;
+        }
+
+    } elsif ($usev4 eq 'webv4') {
+        ## Obtain IPv4 address by accessing website at url in "webv4=<url>"
+        $url = $arg;
+        $skip = opt('webv4-skip', $h) // '';
+        if (exists $builtinweb{$url}) {
+            $skip = $builtinweb{$url}->{'skip'} unless $skip;
+            $url  = $builtinweb{$url}->{'url'};
+            $arg  = $url;
+        }
+        if ($url) {
+            $reply = geturl( proxy => opt('proxy', $h),
+                url => $url,
+                ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
+                ssl_validate => opt('ssl-validate', $h),
+            ) // '';
+        }
+
+    } elsif ($usev4 eq 'cisco' || $usev4 eq 'cisco-asa') {
+        # Stuff added to support Cisco router ip http or ASA https daemon
+        # User fw-login should only have level 1 access to prevent
+        # password theft.  This is pretty harmless.
+        warning("'if' does nothing for IPv4. Use 'ifv4'") if (opt('if', $h));
+        warning("'fw' does nothing for IPv4. Use 'fwv4'") if (opt('fw', $h));
+        warning("'fw-skip' does nothing for IPv4. Use 'fwv4-skip'") if (opt('fw-skip', $h));
+        my $queryif = opt('ifv4', $h) // opt('if', $h);
+        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
+        # Convert slashes to protected value "\/"
+        $queryif =~ s%\/%\\\/%g;
+        # Protect special HTML characters (like '?')
+        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
+        if ($usev4 eq 'cisco') {
+            $url = "http://" . (opt('fwv4', $h) // opt('fw', $h)) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
+        } else {
+            $url = "https://" . (opt('fwv4', $h) // opt('fw', $h))  . "/exec/show%20interface%20${queryif}";
+        }
+        $arg = $url;
+        $reply = geturl(
+            url => $url,
+            login => opt('fw-login', $h),
+            password => opt('fw-password', $h),
+            ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
+            ignore_ssl_option => 1,
+            ssl_validate => opt('ssl-validate', $h),
+        ) // '';
+
+    } elsif ($usev4 eq 'disabled') {
+        ## This is a no-op... Do not get an IPv4 address for this host/service
+        $reply = '';
+
+    } else {
+        warning("'fw' does nothing for IPv4. Use 'fwv4'") if (opt('fw', $h));
+        warning("'fw-skip' does nothing for IPv4. Use 'fwv4-skip'") if (opt('fw-skip', $h));
+        $url  = opt('fwv4', $h) // opt('fw', $h) // '';
+        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
+
+        if (exists $builtinfw{$usev4}) {
+            $skip = $builtinfw{$usev4}->{'skip'} unless $skip;
+            $url  = "http://${url}" . $builtinfw{$usev4}->{'url'} unless $url =~ /\//;
+        }
+        $arg = $url;
+        if ($url) {
+            $reply = geturl(
+                url => $url,
+                login => opt('fw-login', $h),
+                password => opt('fw-password', $h),
+                ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
+                ignore_ssl_option => 1,
+                ssl_validate => opt('ssl-validate', $h),
+            ) // '';
+        }
+    }
+
+    ## Set to loopback address if no text set yet
+    $reply = '0.0.0.0' if !defined($reply);
+    if (($skip // '') ne '') {
+        $skip  =~ s/ /\\s/is;
+        $reply =~ s/^.*?${skip}//is;
+    }
+    ## If $ipv4 not set yet look for IPv4 address in the $reply text
+    $ipv4 //= extract_ipv4($reply);
+    ## Return undef for loopback address unless statically assigned by "ipv4=0.0.0.0"
+    $ipv4 = undef if (($usev4 ne 'ipv4') && (($ipv4 // '') eq '0.0.0.0'));
+    debug("get_ipv4: using (%s, %s) reports %s", $usev4, $arg, $ipv4 // "<undefined>");
+    return $ipv4;
+}
+
+######################################################################
+## get_ipv6
+######################################################################
+sub get_ipv6 {
+    my $usev6 = lc(shift);  ## Method to obtain IP address
+    $usev6    = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+    my $h     = shift;      ## Host/service making the request
+
+    my $ipv6  = undef;      ## Found IPv6 address
+    my $reply = '';         ## Text returned from various methods
+    my $url   = '';         ## URL of website or firewall
+    my $skip  = '';         ## Regex of pattern to skip before looking for IP
+    my $arg   = opt($usev6, $h) // '';  ## Value assigned to the "usev6" method
+
+    if ($usev6 eq 'ipv6' || $usev6 eq 'ip') {
+        ## Static IPv6 address is provided in "ipv6=<address>"
+        if ($usev6 eq 'ip') {
+            warning("'usev6=ip' is deprecated. Use 'usev6=ipv6'");
+            $usev6 = 'ipv6';
+            ## If there is a value for ipv6= use that, else use value for ip=
+            $arg = opt($usev6, $h) // $arg;
+        }
+        $ipv6 = $arg;
+        if (!is_ipv6($ipv6)) {
+            warning("'%s' is not a valid IPv6",$ipv6 // '');
+            $ipv6 = undef;
+        }
+        $arg = 'ipv6';  # For debug message at end of function
+
+    } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if' ) {
+        ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
+        if ($usev6 eq 'if') {
+            warning("'usev6=if' is deprecated. Use 'usev6=ifv6'");
+            $usev6 = 'ifv6';
+            ## If there is a value for ifv6= use that, else use value for if=
+            $arg = opt($usev6, $h) // $arg;
+        }
+        warning("'if-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('if-skip', $h));
+        $ipv6 = get_ip_from_interface($arg,6);
+
+    }  elsif ($usev6 eq 'cmdv6' || $usev6 eq 'cmd') {
+        ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
+        if ($usev6 eq 'cmd') {
+            warning("'usev6=cmd' is deprecated. Use 'usev6=cmdv6'");
+            $usev6 = 'cmdv6';
+            ## If there is a value for cmdv6= use that, else use value for cmd=
+            $arg = opt($usev6, $h) // $arg;
+        }
+        warning("'cmd-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('cmd-skip', $h));
+        if ($arg) {
+            my $sys_cmd = quotemeta($arg);
+            $reply = qx{$sys_cmd};
+            $reply = '' if $?;
+        }
+
+    } elsif ($usev6 eq 'webv6' || $usev6 eq 'web') {
+        ## Obtain IPv6 address by accessing website at url in "webv6=<url>"
+        if ($usev6 eq 'web') {
+            warning("'usev6=web' is deprecated. Use 'usev6=webv6'");
+            $usev6 = 'webv6';
+            ## If there is a value for webv6= use that, else use value for web=
+            $arg = opt($usev6, $h) // $arg;
+        }
+        warning("'web-skip' does nothing for IPv6. Use 'webv6-skip'") if (opt('web-skip', $h));
+        $url = $arg;
+        $skip = opt('webv6-skip', $h) // '';
+        if (exists $builtinweb{$url}) {
+            $skip = $builtinweb{$url}->{'skip'} unless $skip;
+            $url  = $builtinweb{$url}->{'url'};
+            $arg  = $url;
+        }
+        if ($url) {
+            $reply = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                ipversion => 6, # when using a URL to find IPv6 address we should force use of IPv6
+                ssl_validate => opt('ssl-validate', $h),
+            ) // '';
+        }
+
+    } elsif ($usev6 eq 'cisco' || $usev6 eq 'cisco-asa') {
+        warning("'usev6=cisco' and 'usev6=cisco-asa' are not implemented and do nothing");
+        $reply = '';
+
+    } elsif ($usev6 eq 'disabled') {
+        ## This is a no-op... Do not get an IPv6 address for this host/service
+        warning("'usev6=no' is deprecated. Use 'usev6=disabled'") if ($usev6 eq 'no');
+        $reply = '';
+
+    } else {
+        warning("'usev6=%s' is not implemented and does nothing", $usev6);
+        $reply = '';
+
+    }
+
+    ## Set to loopback address if no text set yet
+    $reply = '::' if !defined($reply);
+    if (($skip // '') ne '') {
+        $skip  =~ s/ /\\s/is;
+        $reply =~ s/^.*?${skip}//is;
+    }
+    ## If $ipv6 not set yet look for IPv6 address in the $reply text
+    $ipv6 //= extract_ipv6($reply);
+    ## Return undef for loopback address unless statically assigned by "ipv6=::"
+    $ipv6 = undef if (($usev6 ne 'ipv6') && (($ipv6 // '') eq '::'));
+    debug("get_ipv6: using (%s, %s) reports %s", $usev6, $arg, $ipv6 // "<undefined>");
+    return $ipv6;
+}
+
+######################################################################
 ## group_hosts_by
 ######################################################################
 sub group_hosts_by {
+##TODO - Update for wantipv4 and wantipv6
     my ($hosts, $attributes) = @_;
     my %attrs = (map({ ($_ => 1) } @$attributes), 'wantip' => 1);
     my @attrs = sort(keys(%attrs));
@@ -2984,12 +3472,35 @@ EoEXAMPLE
 }
 ######################################################################
 ## nic_updateable
+## Returns true if we can go ahead and update the IP address at server
 ######################################################################
 sub nic_updateable {
     my $host   = shift;
     my $sub    = shift;
     my $update = 0;
     my $ip     = $config{$host}{'wantip'};
+    my $ipv4   = $config{$host}{'wantipv4'};
+    my $ipv6   = $config{$host}{'wantipv6'};
+    my $use    = opt('use',   $host) // 'disabled';
+    my $usev4  = opt('usev4', $host) // 'disabled';
+    my $usev6  = opt('usev6', $host) // 'disabled';
+    $use       = 'disabled' if ($use eq 'no');   # backward compatibility
+    $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+
+    # If we have a valid IP address and we have previously warned that it was invalid.
+    # reset the warning count back to zero.
+    if (($use ne 'disabled') && $ip && $warned_ip{$host}) {
+        $warned_ip{$host} = 0;
+        warning("IP address for %s valid: %s. Reset warning count", $host, $ip);
+    }
+    if (($usev4 ne 'disabled') && $ipv4 && $warned_ipv4{$host}) {
+        $warned_ipv4{$host} = 0;
+        warning("IPv4 address for %s valid: %s. Reset warning count", $host, $ipv4);
+    }
+    if (($usev6 ne 'disabled') && $ipv6 && $warned_ipv6{$host}) {
+        $warned_ipv6{$host} = 0;
+        warning("IPv6 address for %s valid: %s. Reset warning count", $host, $ipv6);
+    }
 
     if ($config{$host}{'login'} eq '') {
         warning("null login name specified for host %s.", $host);
@@ -3021,7 +3532,9 @@ sub nic_updateable {
         );
         $update = 1;
 
-    } elsif (!exists($cache{$host}{'ip'}) || $cache{$host}{'ip'} ne $ip) {
+    } elsif ( ($use ne 'disabled')
+           && ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
+        ## Check whether to update IP address for the "use" method"
         if (($cache{$host}{'status'} eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
@@ -3036,17 +3549,117 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status'} ne 'good') && !interval_expired($host, 'atime', 'min-error-interval')) {
+        } elsif (($cache{$host}{'status'} ne 'good') &&
+            !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
+            if ( opt('verbose')
+                 || ( ! $cache{$host}{'warned-min-error-interval'}
+                     && (($warned_ip{$host} // 0) < $inv_ip_warn_count)) ) {
+
+                warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
+                        $host,
+                        ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'),
+                        $ip,
+                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        prettyinterval($config{$host}{'min-error-interval'})
+                );
+                if (!$ip && !opt('verbose')) {
+                    $warned_ip{$host} = ($warned_ip{$host} // 0) + 1;
+                    warning("IP address for %s undefined. Warned %s times, suppressing further warnings", $host, $inv_ip_warn_count)
+                        if ($warned_ip{$host} >= $inv_ip_warn_count);
+                }
+            }
+
+            $cache{$host}{'warned-min-error-interval'} = $now;
+
+        } else {
+            $update = 1;
+        }
+
+    } elsif ( ($usev4 ne 'disabled')
+           && ((!exists($cache{$host}{'ipv4'})) || ("$cache{$host}{'ipv4'}" ne "$ipv4"))) {
+        ## Check whether to update IPv4 address for the "usev4" method"
+        if (($cache{$host}{'status-ipv4'} eq 'good') &&
+            !interval_expired($host, 'mtime', 'min-interval')) {
+
+            warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'),
-                    $ip,
+                    ($cache{$host}{'ipv4'}  ? $cache{$host}{'ipv4'}              : '<nothing>'),
+                    $ipv4,
                     ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                    ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
-                    prettyinterval($config{$host}{'min-error-interval'})
+                    prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-error-interval'} // 0);
+                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+
+            $cache{$host}{'warned-min-interval'} = $now;
+
+        } elsif (($cache{$host}{'status-ipv4'} ne 'good') &&
+            !interval_expired($host, 'atime', 'min-error-interval')) {
+
+            if ( opt('verbose')
+                 || ( ! $cache{$host}{'warned-min-error-interval'}
+                     && (($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) ) {
+
+                warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
+                        $host,
+                        ($cache{$host}{'ipv4'}  ? $cache{$host}{'ipv4'}              : '<nothing>'),
+                        $ipv4,
+                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        prettyinterval($config{$host}{'min-error-interval'})
+                );
+                if (!$ipv4 && !opt('verbose')) {
+                    $warned_ipv4{$host} = ($warned_ipv4{$host} // 0) + 1;
+                    warning("IPv4 address for %s undefined. Warned %s times, suppressing further warnings", $host, $inv_ip_warn_count)
+                        if ($warned_ipv4{$host} >= $inv_ip_warn_count);
+                }
+            }
+
+            $cache{$host}{'warned-min-error-interval'} = $now;
+
+        } else {
+            $update = 1;
+        }
+
+    } elsif ( ($usev6 ne 'disabled')
+           && ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
+        ## Check whether to update IPv6 address for the "usev6" method"
+        if (($cache{$host}{'status-ipv6'} eq 'good') &&
+            !interval_expired($host, 'mtime', 'min-interval')) {
+
+            warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
+                    $host,
+                    ($cache{$host}{'ipv6'}  ? $cache{$host}{'ipv6'}              : '<nothing>'),
+                    $ipv6,
+                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    prettyinterval($config{$host}{'min-interval'})
+            )
+                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+
+            $cache{$host}{'warned-min-interval'} = $now;
+
+        } elsif (($cache{$host}{'status-ipv6'} ne 'good') &&
+            !interval_expired($host, 'atime', 'min-error-interval')) {
+
+            if ( opt('verbose')
+                 || ( ! $cache{$host}{'warned-min-error-interval'}
+                     && (($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) ) {
+
+                warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
+                        $host,
+                        ($cache{$host}{'ipv6'}  ? $cache{$host}{'ipv6'}              : '<nothing>'),
+                        $ipv6,
+                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        prettyinterval($config{$host}{'min-error-interval'})
+                );
+                if (!$ipv6 && !opt('verbose')) {
+                    $warned_ipv6{$host} = ($warned_ipv6{$host} // 0) + 1;
+                    warning("IPv6 address for %s undefined. Warned %s times, suppressing further warnings", $host, $inv_ip_warn_count)
+                        if ($warned_ipv6{$host} >= $inv_ip_warn_count);
+                }
+            }
 
             $cache{$host}{'warned-min-error-interval'} = $now;
 
@@ -3068,13 +3681,27 @@ sub nic_updateable {
         $update = 1;
 
     } else {
-        success("%s: skipped: IP address was already set to %s.", $host, $ip)
-            if opt('verbose');
+        if (opt('verbose')) {
+            if ($use ne 'disabled') {
+                success("%s: skipped: IP address was already set to %s.", $host, $ip);
+            }
+            if ($usev4 ne 'disabled') {
+                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv6);
+            }
+            if ($usev6 ne 'disabled') {
+                success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
+            }
+        }
     }
+
     $config{$host}{'status'} = $cache{$host}{'status'} // '';
+    $config{$host}{'status-ipv4'} = $cache{$host}{'status-ipv4'} // '';
+    $config{$host}{'status-ipv6'} = $cache{$host}{'status-ipv6'} // '';
     $config{$host}{'update'} = $update;
     if ($update) {
         $config{$host}{'status'}                    = 'noconnect';
+        $config{$host}{'status-ipv4'}               = 'noconnect';
+        $config{$host}{'status-ipv6'}               = 'noconnect';
         $config{$host}{'atime'}                     = $now;
         $config{$host}{'wtime'}                     = 0;
         $config{$host}{'warned-min-interval'}       = 0;
