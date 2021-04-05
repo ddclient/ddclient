@@ -4733,6 +4733,7 @@ Example ${program}.conf file entries:
   ## single host update using an API token
   protocol=cloudflare,                                         \\
   zone=dns.zone,                                               \\
+  login=token,                                                 \\
   password=cloudflare-api-token                                \\
   myhost.com
 
