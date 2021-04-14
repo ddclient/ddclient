@@ -301,3 +301,13 @@ ssl=yes					# use ssl-support.  Works with
 # login=myusername,     \
 # password=mypassword   \
 # myhost.mydomain.com
+
+##
+## DNS-O-Matic account-configuration
+##
+use=web, web=myip.dnsomatic.com
+server=updates.dnsomatic.com,      \
+protocol=dyndns2,                  \
+login=dnsomatic_username,          \ insert dnsomatic username
+password=dnsomatic_password        \ insert dnsomatic password
+all.dnsomatic.com
