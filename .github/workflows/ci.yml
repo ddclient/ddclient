@@ -85,11 +85,11 @@ jobs:
   #        dnf --refresh --enablerepo=PowerTools install -y \
   #            automake \
   #            make \
- #             perl-HTTP-Daemon \
- #             perl-IO-Socket-INET6 \
- #             perl-Test-Warnings \
- #             perl-core \
- #             ;
+  #            perl-HTTP-Daemon \
+  #            perl-IO-Socket-INET6 \
+  #            perl-Test-Warnings \
+  #            perl-core \
+  #            ;
   #    - name: autogen
   #      run: ./autogen
   #    - name: configure
