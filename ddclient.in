@@ -5744,11 +5744,11 @@ sub nic_gandi_update {
         $url .= "/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
 
         my $reply = geturl(
-            proxy   => opt('proxy'),
-            url     => $url,
-            headers => $headers,
-            method  => 'PUT',
-            data    => $data,
+            proxy    => opt('proxy'),
+            url      => $url,
+            headers  => $headers,
+            method   => 'PUT',
+            data     => $data,
         );
         unless ($reply) {
             failed("%s -- Could not connect to %s.", $h, $config{$h}{'server'});
