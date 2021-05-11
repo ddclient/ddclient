@@ -2105,7 +2105,7 @@ sub fetch_via_socket_io {
     } else {
         $request .= "https://$server" if defined($proxy);
     }
-    $request .= "/$url HTTP/1.0\n";
+    $request .= "/$url HTTP/1.1\n";
     $request .= "Host: $server\n";
 
     if (defined($login) || defined($password)) {
