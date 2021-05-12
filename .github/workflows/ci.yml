@@ -38,6 +38,7 @@ jobs:
               libtest-tcp-perl \
               libtest-warnings-perl \
               liburi-perl \
+              net-tools \
               make \
               ;
       - uses: actions/checkout@v2
@@ -52,51 +53,51 @@ jobs:
       - name: distribution tarball is complete
         run: ./.github/workflows/scripts/dist-tarball-check
 
-  test-centos6:
-    runs-on: ubuntu-latest
-    container: centos:6
-    steps:
-      - uses: actions/checkout@v1
-      - name: install dependencies
-        run: |
-          yum install -y \
-              automake \
-              perl-IO-Socket-INET6 \
-              perl-core \
-              perl-libwww-perl \
-              ;
-      - name: autogen
-        run: ./autogen
-      - name: configure
-        run: ./configure
-      - name: check
-        run: make VERBOSE=1 AM_COLOR_TESTS=always check
-      - name: distcheck
-        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
+  #test-centos6:
+  #  runs-on: ubuntu-latest
+  #  container: centos:6
+  #  steps:
+  #    - uses: actions/checkout@v1
+  #    - name: install dependencies
+  #      run: |
+  #        yum install -y \
+  #            automake \
+  #            perl-IO-Socket-INET6 \
+  #            perl-core \
+  #            perl-libwww-perl \
+  #            ;
+  #    - name: autogen
+  #      run: ./autogen
+  #    - name: configure
+  #      run: ./configure
+  #    - name: check
+  #      run: make VERBOSE=1 AM_COLOR_TESTS=always check
+  #    - name: distcheck
+  #      run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
-  test-centos8:
-    runs-on: ubuntu-latest
-    container: centos:8
-    steps:
-      - uses: actions/checkout@v2
-      - name: install dependencies
-        run: |
-          dnf --refresh --enablerepo=PowerTools install -y \
-              automake \
-              make \
-              perl-HTTP-Daemon \
-              perl-IO-Socket-INET6 \
-              perl-Test-Warnings \
-              perl-core \
-              ;
-      - name: autogen
-        run: ./autogen
-      - name: configure
-        run: ./configure
-      - name: check
-        run: make VERBOSE=1 AM_COLOR_TESTS=always check
-      - name: distcheck
-        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
+  #test-centos8:
+  #  runs-on: ubuntu-latest
+  #  container: centos:8
+  #  steps:
+  #    - uses: actions/checkout@v2
+  #    - name: install dependencies
+  #      run: |
+  #        dnf --refresh --enablerepo=PowerTools install -y \
+  #            automake \
+  #            make \
+  #            perl-HTTP-Daemon \
+  #            perl-IO-Socket-INET6 \
+  #            perl-Test-Warnings \
+  #            perl-core \
+  #            ;
+  #    - name: autogen
+  #      run: ./autogen
+  #    - name: configure
+  #      run: ./configure
+  #    - name: check
+  #      run: make VERBOSE=1 AM_COLOR_TESTS=always check
+  #    - name: distcheck
+  #      run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   test-fedora:
     runs-on: ubuntu-latest
@@ -117,6 +118,7 @@ jobs:
               perl-Test-MockModule \
               perl-Test-TCP \
               perl-Test-Warnings \
+              net-tools \
               ;
       - name: autogen
         run: ./autogen
@@ -142,6 +144,7 @@ jobs:
               perl-HTTP-Daemon \
               perl-IO-Socket-INET6 \
               perl-core \
+              iproute \
               ;
       - name: autogen
         run: ./autogen

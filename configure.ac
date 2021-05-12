@@ -27,6 +27,8 @@ AC_PROG_MKDIR_P
 AC_PATH_PROG([FIND], [find])
 AS_IF([test -z "${FIND}"], [AC_MSG_ERROR(['find' utility not found])])
 
+AC_PATH_PROG([CURL], [curl])
+
 AX_WITH_PROG([PERL], perl)
 AX_PROG_PERL_VERSION([5.10.1], [],
   [AC_MSG_ERROR([Perl 5.10.1 or newer not found])])
@@ -39,6 +41,7 @@ AC_SUBST([PERL])
 m4_foreach_w([_m], [
     File::Basename
     File::Path
+    File::Temp
     Getopt::Long
     IO::Socket::INET
     Socket
@@ -70,6 +73,7 @@ m4_foreach_w([_m], [
     HTTP::Response
     IO::Socket::INET6
     IO::Socket::IP
+    IO::Socket::SSL
     Scalar::Util
     Test::MockModule
     Test::TCP
@@ -81,6 +85,7 @@ m4_foreach_w([_m], [
 
 AC_CONFIG_FILES([
     Makefile
+    t/geturl_connectivity.pl
     t/version.pl
   ])
 AC_OUTPUT

@@ -56,8 +56,10 @@ subtest "extract_ipv6_global()" => sub {
 
 subtest "interface config samples" => sub {
     for my $sample (@ddclient::t::interface_samples) {
-        my $got = ddclient::extract_ipv6_global($sample->{text});
-        is($got, $sample->{want_extract_ipv6_global}, $sample->{name});
+        if (defined($sample->{want_extract_ipv6_global})) {
+            my $got = ddclient::extract_ipv6_global($sample->{text});
+            is($got, $sample->{want_extract_ipv6_global}, $sample->{name});
+        }
     }
 };
 
