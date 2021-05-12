@@ -1893,7 +1893,12 @@ sub _print_hash {
         $value = "<undefined>";
     } elsif (ref $ptr eq 'HASH') {
         foreach my $key (sort keys %$ptr) {
-            _print_hash("${string}\{$key\}", $ptr->{$key});
+            if (($key eq "login") || ($key eq "password")) {
+               $value = "<redacted>";
+            } else {
+                $value = $ptr->{$key};
+            }
+            _print_hash("${string}\{$key\}", $value);
         }
         return;
     }
@@ -2336,7 +2341,7 @@ sub fetch_via_socket_io {
     debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
-    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact ALL parameters passed on URL, including possible passwords
     debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
 
