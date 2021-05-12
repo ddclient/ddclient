@@ -32,6 +32,7 @@ Dynamic DNS services currently supported include:
     ClouDNS     - See https://www.cloudns.net
     dinahosting - See https://dinahosting.com
     Gandi       - See https://gandi.net
+    dnsexit     - See https://dnsexit.com/ for details
 
 DDclient now supports many of cable/dsl broadband routers.
 
