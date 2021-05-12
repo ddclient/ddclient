@@ -2077,7 +2077,7 @@ sub geturl {
     debug("proxy    = %s", $proxy // '<undefined>');
     debug("protocol = %s", $use_ssl ? "https" : "http");
     debug("server   = %s", $server);
-    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
+    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact ALL parameters passed on URL, including possible passwords
     debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
 
