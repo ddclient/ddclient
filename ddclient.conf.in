@@ -218,8 +218,9 @@ ssl=yes					# use ssl-support.  Works with
 ## Duckdns (http://www.duckdns.org/)
 ##
 #
-# password=my-auto-generated-password
-# protocol=duckdns hostwithoutduckdnsorg
+# protocol=duckdns, \
+# password=my-auto-generated-password \
+# hostwithoutduckdnsorg
 
 ##
 ## Freemyip (http://freemyip.com/)
