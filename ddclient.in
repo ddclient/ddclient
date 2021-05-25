@@ -769,6 +769,19 @@ my %services = (
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
         },
     },
+    'simply' => {
+        'updateable' => undef,
+        'update'     => \&nic_simply_update,
+        'examples'   => \&nic_simply_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'server'       => setv(T_FQDNP,  1, 0, 'api.simply.com', undef),
+            'script'       => setv(T_STRING, 1, 1, '/ddns.php',      undef),
+            'zone'         => setv(T_FQDN,   1, 0, undef,            undef),
+            # Unused variables.
+            'login'        => setv(T_STRING, 0, 0, 'unused',         undef),
+        },
+    },
     'sitelutions' => {
         'updateable' => undef,
         'update'     => \&nic_sitelutions_update,
@@ -2377,7 +2390,7 @@ sub fetch_via_socket_io {
     } else {
         $request .= "https://$server" if defined($proxy);
     }
-    $request .= "/$url HTTP/1.1\n";
+    $request .= "/$url HTTP/1.0\n";
     $request .= "Host: $server\n";
 
     if (defined($login) || defined($password)) {
@@ -2387,8 +2400,8 @@ sub fetch_via_socket_io {
     $request .= "User-Agent: ${program}/${version}\n";
     if ($data) {
         $request .= "Content-Type: application/x-www-form-urlencoded\n" if $headers !~ /^Content-Type:/mi;
-        $request .= "Content-Length: " . length($data) . "\n";
     }
+    $request .= "Content-Length: " . length($data) . "\n";
     $request .= "Connection: close\n";
     $headers .= "\n" if $headers ne '' && substr($headers, -1) ne "\n";
     $request .= $headers;
@@ -2622,7 +2635,7 @@ sub fetch_via_curl {
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CAINFO, opt('ssl_ca_file')) if defined(opt('ssl_ca_file'));
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CAPATH, opt('ssl_ca_dir')) if defined(opt('ssl_ca_dir'));
             $curl->setopt(WWW::Curl::Easy->CURLOPT_IPRESOLVE,
-                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 : 
+                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 :
                                             ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
                                                                 WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
@@ -3101,7 +3114,7 @@ sub get_ip_from_interface {
     debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
 
     ## IPv6 is more complex than IPv4.  Start by filtering on only "inet6" addresses
-    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses 
+    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses
     my @reply = split(/\n/, $reply);
     @reply = grep(/\binet6\b/, @reply);                             # Select only IPv6 entries
     @reply = grep(!/\bdeprecated\b|\btemporary\b/, @reply);         # Remove deprecated and temporary
@@ -6554,6 +6567,94 @@ sub nic_gandi_update {
                 failed("%s -- %s.", $h, join(", ", @errors));
             } else {
                 failed("%s -- Unexpected service response.", $h);
+            }
+        }
+    }
+}
+
+######################################################################
+## nic_simply_examples
+######################################################################
+sub nic_simply_examples {
+    return <<"EoEXAMPLE";
+o 'simply'
+
+The 'simply' protocol is used by the DDNS service offered by Simply.com.
+API is documented here: https://www.simply.com/en/docs/ddns/
+
+Available configuration variables:
+  * password: API key for account the domain is attached to. Required.
+  * zone: The DNS zone to be updated. Required.
+
+Example ${program}.conf file entry:
+  protocol=simply,                           \\
+  zone=example.com,                          \\
+  password=api-key,                          \\
+  qualifiedhost.example.com,unqualifiedhost
+EoEXAMPLE
+}
+
+######################################################################
+## nic_simply_update
+######################################################################
+sub nic_simply_update {
+    debug("\nnic_simply_update -------------------");
+
+    my %errors = (
+        'dnserr'   => 'Something went wrong',
+        'nochg'    => 'The record is already set to the IP given.',
+        'badauth'  => 'Invalid login',
+        'abuse',   => 'The record has been updated/changed too many times in a given period.',
+    );
+
+    # Update each configured host.
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        # Set the URL that we're going to update
+        my $url;
+        $url  = "https://$config{$h}{'server'}$config{$h}{'script'}";
+        $url .= "?apikey=$config{$h}{'password'}";
+        $url .= "&domain=$config{$h}{'zone'}";
+        $url .= "&hostname=$h";
+        $url .= "&myip=";
+        $url .= $ip if $ip;
+
+        # Try to get URL
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+        );
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+
+        # Response found
+        my @reply = split /\n/, $reply;
+        my $returned = pop(@reply);
+        my ($status, $returnedip) = split / /, lc $returned;
+        $ip = $returnedip if (not $ip);
+        if ($status eq 'good' || $status eq 'nochg') {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            if ($status eq 'good') {
+                success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+            } else {
+                warning("updating %s: %s: %s", $h, $status, $errors{$status});
+            }
+        } else {
+            $config{$h}{'status'} = $status;
+            if (exists $errors{$status}) {
+                failed("updating %s: %s: %s", $h, $status, $errors{$status});
+            } else {
+                failed("updating %s: unexpected status (%s): %s", $h, $status, $returned);
             }
         }
     }

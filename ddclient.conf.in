@@ -309,3 +309,11 @@ ssl=yes					# use ssl-support.  Works with
 #login=myusername,                                            \
 #password=mypassword,                                         \
 #subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## Simply.com (https://www.simply.com/en/docs/ddns/)
+##
+# protocol=simply,                      \
+# zone=example.com,                     \
+# password=api-key,                     \
+# qualifiedhost.example.com,unqualifiedhost
