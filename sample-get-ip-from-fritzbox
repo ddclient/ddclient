@@ -1,6 +1,6 @@
 #!/bin/bash
 # 
-# Scirpt to fetch IP from fritzbox
+# Script to fetch IP from fritzbox
 #
 # Contributed by @Rusk85 in request #45
 # Script can be used in the configuration by adding
