@@ -648,11 +648,12 @@ my %services = (
         'examples'   => \&nic_easydns_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'backupmx'     => setv(T_BOOL,  0, 1, 0,                     undef),
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),        0),
-            'mx'           => setv(T_OFQDN, 0, 1, '',                    undef),
-            'server'       => setv(T_FQDNP, 1, 0, 'members.easydns.com', undef),
-            'wildcard'     => setv(T_BOOL,  0, 1, 0,                     undef),
+            'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
+            'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),       0),
+            'mx'           => setv(T_OFQDN,  0, 1, '',                   undef),
+            'server'       => setv(T_FQDNP,  1, 0, 'api.cp.easydns.com', undef),
+            'script'       => setv(T_STRING, 1, 1, '/dyn/generic.php',   undef),
+            'wildcard'     => setv(T_BOOL,   0, 1, 0,                    undef),
         },
     },
     'freedns' => {
@@ -4585,10 +4586,10 @@ sub nic_easydns_update {
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
-        #'http://members.easydns.com/dyn/dyndns.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
+        #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
 
         my $url;
-        $url  = "http://$config{$h}{'server'}/dyn/dyndns.php?";
+        $url  = "https://$config{$h}{'server'}$config{$h}{'script'}?";
         $url .= "hostname=$hosts";
         $url .= "&myip=";
         $url .= $ip if $ip;
