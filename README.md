@@ -155,7 +155,7 @@ if you plan to use cloudflare or feedns you need the perl json module
 
     apt-get install libjson-pp-perl
 
-for IPv6 you also need to instal the perl io-socker-inet6 module
+for IPv6 you also need to instal the perl io-socket-inet6 module
 
     apt install libio-socket-inet6-perl
 
