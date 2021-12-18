@@ -33,6 +33,7 @@ Dynamic DNS services currently supported include:
     dinahosting - See https://dinahosting.com
     Gandi       - See https://gandi.net
     dnsexit     - See https://dnsexit.com/ for details
+    1984.is     - See https://www.1984.is/product/freedns/ for details
 
 DDclient now supports many of cable/dsl broadband routers.
 

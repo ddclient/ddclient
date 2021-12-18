@@ -531,6 +531,16 @@ my %variables = (
     },
 );
 my %services = (
+    '1984' => {
+        'updateable' => undef,
+        'update' => \&nic_1984_update,
+        'examples' => \&nic_1984_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'login'  => setv(T_LOGIN, 0, 0, 'unused',      undef),
+            'server' => setv(T_FQDNP, 1, 0, 'api.1984.is', undef),
+        },
+    },
     'changeip' => {
         'updateable' => undef,
         'update'     => \&nic_changeip_update,
@@ -1636,7 +1646,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("cloudflare", "gandi", "yandex", "nfsn")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "yandex", "nfsn")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -5194,6 +5204,81 @@ sub nic_freedns_update {
                     failed("updating %s: Could not connect to %s.", $h, $url_tmpl);
                 }
             }
+        }
+    }
+}
+
+######################################################################
+## nic_1984_examples
+######################################################################
+sub nic_1984_examples {
+    return <<"EoEXAMPLE";
+
+o '1984'
+
+The '1984' protocol is used by DNS services offered by 1984.is.
+
+Configuration variables applicable to the '1984' protocol are:
+  protocol=1984                ##
+  password=api-key             ## your API key
+  fully.qualified.host         ## the domain to update
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=1984,                                                   \\
+  password=my-1984-api-key,                                        \\
+  myhost
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_1984_update
+## https://api.1984.is/1.0/freedns/?apikey=xxx&domain=mydomain&ip=myip
+## The response is a JSON document containing the following entries
+## - ok: true or false depending on if the request was successful or not,
+##       if the ip is the same as before this will be true,
+## - msg: successes or why it is not working,
+## - lookup: if domain or subdomain was not found lookup will contain a list of names tried
+######################################################################
+sub nic_1984_update {
+    debug("\nnic_1984_update -------------------");
+    foreach my $host (@_) {
+        my $ip = delete $config{$host}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $host);
+        verbose("UPDATE:", "updating %s", $host);
+
+        my $url;
+        $url  = "https://$config{$host}{'server'}/1.0/freedns/";
+        $url .= "?apikey=$config{$host}{'password'}";
+        $url .= "&domain=$host";
+        $url .= "&ip=$ip";
+
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+        ) // '';
+        if ($reply eq '') {
+            failed("Updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
+        }
+        next if !header_ok($host, $reply);
+    
+        # Strip header
+        $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+        my $response = eval { decode_json(${^MATCH}) };
+        if ($@) {
+            failed("Updating %s: JSON decoding failure", $host);
+            next;
+        }
+        unless ($response->{ok}) {
+            failed("%s", $response->{msg});
+        }
+
+        if ($response->{msg} =~ /unaltered/) {
+            success("Updating %s: skipped: IP was already set to %s", $host, $response->{ip});
+        } else {
+            success("%s -- Updated successfully to %s", $host, $response->{ip});
         }
     }
 }
