@@ -1,6 +1,6 @@
 [Unit]
 Description=Dynamic DNS Update Client
-After=network.target
+After=network.target network-online.target
 
 [Service]
 Type=forking
