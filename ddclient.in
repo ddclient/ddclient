@@ -5561,8 +5561,8 @@ sub nic_cloudflare_update {
             }
 
             # Strip header
-            $reply =~ s/^.*?\n\n//s;
-            my $response = eval {decode_json($reply)};
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval {decode_json(${^MATCH})};
             unless ($response && $response->{result}) {
                 failed("updating %s: invalid json or result.", $domain);
                 next;
@@ -5598,8 +5598,8 @@ sub nic_cloudflare_update {
                     next;
                 }
                 # Strip header
-                $reply =~ s/^.*?\n\n//s;
-                $response = eval {decode_json($reply)};
+                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+                $response = eval {decode_json(${^MATCH})};
                 unless ($response && $response->{result}) {
                     failed("updating %s: invalid json or result.", $domain);
                     next;
@@ -5625,8 +5625,8 @@ sub nic_cloudflare_update {
                     next;
                 }
                 # Strip header
-                $reply =~ s/^.*?\n\n//s;
-                $response = eval {decode_json($reply)};
+                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+                $response = eval {decode_json(${^MATCH})};
                 if ($response && $response->{result}) {
                     success("updating %s: IPv$ipv address set to %s", $domain, $ip);
                     $config{$domain}{"ipv$ipv"} = $ip;
