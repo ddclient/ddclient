@@ -1,10 +1,9 @@
-===============================================================================
 # DDCLIENT v3.9.1
 
-ddclient is a Perl client used to update dynamic DNS entries for accounts
+`ddclient` is a Perl client used to update dynamic DNS entries for accounts 
 on many dynamic DNS services.
 
-===============================================================================
+## Supported services
 
 Dynamic DNS services currently supported include:
 
@@ -34,14 +33,12 @@ Dynamic DNS services currently supported include:
     Gandi       - See https://gandi.net
     dnsexit     - See https://dnsexit.com/ for details
 
-DDclient now supports many of cable/dsl broadband routers.
+`ddclient` now supports many cable and DSL broadband routers.
 
 Comments, suggestions and requests: use the issues on https://github.com/ddclient/ddclient/issues/new
 
-The code was originally written by Paul Burry and is now hosted and maintained
+The code was originally written by Paul Burry and is now hosted and maintained 
 through github.com. Please check out http://ddclient.net
-
--------------------------------------------------------------------------------
 
 ## REQUIREMENTS
 
@@ -187,8 +184,6 @@ start the service manually for the first time
 
 If you are not using daemon-mode, configure cron and dhcp or ppp as described below.
 
--------------------------------------------------------------------------------
-
 ## TROUBLESHOOTING
 
   1. enable debugging and verbose messages: ``$ ddclient -daemon=0 -debug -verbose -noquiet``
@@ -227,9 +222,7 @@ to the beginning of your ddclient.conf file.
 Note that some routers use either 'root' or 'admin' as their login
 while some others accept anything.
 
--------------------------------------------------------------------------------
-
-## USING DDCLIENT WITH ppp
+## USING DDCLIENT WITH `ppp`
 
 If you are using a ppp connection, you can easily update your DynDNS
 entry with each connection, with:
@@ -240,9 +233,7 @@ entry with each connection, with:
 Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ppp interface.
 
--------------------------------------------------------------------------------
-
-## USING DDCLIENT WITH cron
+## USING DDCLIENT WITH `cron`
 
 If you have not configured ddclient to use daemon-mode, you'll need to
 configure cron to force an update once a month so that the dns entry will
@@ -252,9 +243,7 @@ not become stale.
     cp sample-etc_cron.d_ddclient /etc/cron.d/ddclient
     vi /etc/cron.d/ddclient
 
--------------------------------------------------------------------------------
-
-## USING DDCLIENT WITH dhcpcd-1.3.17
+## USING DDCLIENT WITH `dhcpcd-1.3.17`
 
 If you are using dhcpcd-1.3.17 or thereabouts, you can easily update
 your DynDNS entry automatically every time your lease is obtained
@@ -279,8 +268,7 @@ for updating DNS entries.
 Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ethernet interface.
 
--------------------------------------------------------------------------------
-## USING DDCLIENT WITH dhclient
+## USING DDCLIENT WITH `dhclient`
 
 If you are using the ISC DHCP client (dhclient), you can update
 your DynDNS entry automatically every time your lease is obtained
@@ -293,5 +281,3 @@ Edit ``/etc/dhclient-exit-hooks`` to change any options required.
 
 Alternatively, you may just configure ddclient to operate as a daemon
 and monitor your ethernet interface.
-
--------------------------------------------------------------------------------
