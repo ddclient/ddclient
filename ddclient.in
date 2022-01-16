@@ -5868,9 +5868,7 @@ sub nic_keysystems_update {
                $config{$h}{'mtime'}  = $now;
                $config{$h}{'status'} = 'good';
                success("updating %s: good: IP address set to %s", $h, $ip);
-        }
-        else
-        {
+        } else {
                $config{$h}{'status'} = 'failed';
                failed("updating %s: Server said: '$reply'", $h);
         }
