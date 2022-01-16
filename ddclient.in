@@ -5819,7 +5819,7 @@ Configuration variables applicable to the 'keysystems' protocol are:
 
 Example ${program}.conf file entries:
  ## single host update
- protocol=keysystems,                                       \\
+ protocol=keysystems,                       \\
  password=prettypassword                    \\
  myhost
 
