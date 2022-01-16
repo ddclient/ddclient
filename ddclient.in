@@ -5845,12 +5845,9 @@ sub nic_keysystems_update {
        # Set the URL that we're going to to update
        my $url;
        $url  = "http://$config{$h}{'server'}/update.php";
-       $url .= "?hostname=";
-       $url .= $h;
-       $url .= "&password=";
-       $url .= $config{$h}{'password'};
-       $url .= "&ip=";
-       $url .= $ip;
+       $url .= "?hostname=$h";
+       $url .= "&password=$config{$h}{'password'}";
+       $url .= "&ip=$ip";
        
        # Try to get URL
        my $reply = geturl(opt('proxy'), $url);
