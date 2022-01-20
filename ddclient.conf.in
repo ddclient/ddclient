@@ -139,11 +139,11 @@ ssl=yes					# use ssl-support.  Works with
 ##
 ## NameCheap (namecheap.com)
 ##
-# protocol=namecheap,				\
+# protocol=namecheap,                     \
 # server=dynamicdns.park-your-domain.com,	\
-# login=my-namecheap.com-login,			\
-# password=my-namecheap.com-password		\
-# fully.qualified.host
+# login=example.com,                      \
+# password=example.com-password           \
+# subdomain.example.com
 
 ##
 ## NearlyFreeSpeech.NET (nearlyfreespeech.net)
