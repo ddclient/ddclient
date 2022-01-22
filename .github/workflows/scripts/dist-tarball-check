@@ -28,9 +28,11 @@ try git archive --format=tar --prefix=git-repo/ HEAD \
     # Delete files checked into Git that shouldn't be in the distribution
     # tarball.
     try rm -rf \
+        .envrc \
         .github \
         .gitignore \
         docs/ipv6-design-doc.md \
+        shell.nix \
         ;
     # TODO: Delete this next line once support for Automake 1.11 is dropped and
     # tap-driver.sh is removed from the Git repository. It is deleted here to
