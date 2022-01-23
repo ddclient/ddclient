@@ -107,18 +107,18 @@ my %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
     'googledomains' => {'url' => 'https://domains.google.com/checkip'},
-    'he' => {'url' => 'http://checkip.dns.he.net/'},
-    'ip4only.me' => {'url' => 'http://ip4only.me/api/'},
-    'ip6only.me' => {'url' => 'http://ip6only.me/api/'},
+    'he' => {'url' => 'https://checkip.dns.he.net/'},
+    'ip4only.me' => {'url' => 'https://ip4only.me/api/'},
+    'ip6only.me' => {'url' => 'https://ip6only.me/api/'},
     'ipify-ipv4' => {'url' => 'https://api.ipify.org/'},
     'ipify-ipv6' => {'url' => 'https://api6.ipify.org/'},
-    'loopia' => {'url' => 'http://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:'},
+    'loopia' => {'url' => 'https://dns.loopia.se/checkip/checkip.php', 'skip' => 'Current IP Address:'},
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
     'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
     'nsupdate.info-ipv4' => {'url' => 'http://ipv4.nsupdate.info/myip'},
     'nsupdate.info-ipv6' => {'url' => 'http://ipv6.nsupdate.info/myip'},
-    'zoneedit' => {'url' => 'http://dynamic.zoneedit.com/checkip.html'},
+    'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
 my %builtinfw = (
     '2wire' => {
@@ -524,7 +524,7 @@ my %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
     'dnsexit-common-defaults'       => {
-        'ssl'         => setv(T_BOOL,   0, 0, 0, undef),
+        'ssl'         => setv(T_BOOL,   0, 0, 1, undef),
         'server'      => setv(T_FQDNP,  1, 0, 'update.dnsexit.com', undef),
         'script'      => setv(T_STRING, 0, 1, '/RemoteUpdate.sv', undef),
         'min-error-interval' => setv(T_DELAY, 0, 0, interval('8m'), 0),
@@ -3806,7 +3806,7 @@ sub nic_dyndns1_update {
         verbose("UPDATE:", "updating %s", $h);
 
         my $url;
-        $url  = "http://$config{$h}{'server'}/nic/";
+        $url  = "https://$config{$h}{'server'}/nic/";
         $url .= ynu($config{$h}{'static'}, 'statdns', 'dyndns', 'dyndns');
         $url .= "?action=edit&started=1&hostname=YES&host_id=$h";
         $url .= "&myip=";
@@ -4199,7 +4199,7 @@ sub nic_noip_update {
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
-        my $url = "http://$config{$h}{'server'}/nic/update?system=";
+        my $url = "https://$config{$h}{'server'}/nic/update?system=";
         $url .= 'noip';
         $url .= "&hostname=$hosts";
         $url .= "&myip=";
@@ -4279,7 +4279,7 @@ o 'noip'
 
 The 'No-IP Compatible' protocol is used to make dynamic dns updates
 over an http request.  Details of the protocol are outlined at:
-http://www.no-ip.com/integrate/
+https://www.noip.com/integrate/
 
 Configuration variables applicable to the 'noip' protocol are:
   protocol=noip                ##
@@ -4338,7 +4338,7 @@ sub nic_dslreports1_update {
         verbose("UPDATE:", "updating %s", $h);
 
         my $url;
-        $url  = "http://$config{$h}{'server'}/nic/";
+        $url  = "https://$config{$h}{'server'}/nic/";
         $url .= ynu($config{$h}{'static'}, 'statdns', 'dyndns', 'dyndns');
         $url .= "?action=edit&started=1&hostname=YES&host_id=$h";
         $url .= "&myip=";
@@ -4440,7 +4440,7 @@ sub nic_zoneedit1_update {
         verbose("UPDATE:", "updating %s", $hosts);
 
         my $url = '';
-        $url .= "http://$config{$h}{'server'}/auth/dynamic.html";
+        $url .= "https://$config{$h}{'server'}/auth/dynamic.html";
         $url .= "?host=$hosts";
         $url .= "&dnsto=$ip"   if $ip;
         $url .= "&zone=$config{$h}{'zone'}" if defined $config{$h}{'zone'};
@@ -5002,7 +5002,7 @@ EoEXAMPLE
 ##
 ## written by Mike W. Smith
 ##
-## based on http://www.sitelutions.com/help/dynamic_dns_clients#updatespec
+## based on https://www.sitelutions.com/help/dynamic_dns_clients#updatespec
 ## needs this url to update:
 ## https://www.sitelutions.com/dnsup?id=990331&user=myemail@mydomain.com&pass=SecretPass&ip=192.168.10.4
 ## domain=domain.com&password=domain_password&ip=your_ip
@@ -5020,7 +5020,7 @@ sub nic_sitelutions_update {
         verbose("UPDATE:", "updating %s", $h);
 
         my $url;
-        $url  = "http://$config{$h}{'server'}/dnsup";
+        $url  = "https://$config{$h}{'server'}/dnsup";
         $url .= "?id=$h";
         $url .= "&user=$config{$h}{'login'}";
         $url .= "&pass=$config{$h}{'password'}";
@@ -5080,10 +5080,10 @@ EoEXAMPLE
 ######################################################################
 ## nic_freedns_update
 ##
-## API v1 documented at http://freedns.afraid.org/api/
+## API v1 documented at https://freedns.afraid.org/api/
 ##
 ## An update requires two steps. The first is to get a list of records from:
-##   http://freedns.afraid.org/api/?action=getdyndns&v=2&sha=<sha1sum of login|password>
+##   https://freedns.afraid.org/api/?action=getdyndns&v=2&sha=<sha1sum of login|password>
 ## The returned list looks like:
 ##
 ##   hostname1.example.com|1.2.3.4|http://example/update/url1
@@ -5111,7 +5111,7 @@ sub nic_freedns_update {
     # address type.
     my %recs_ipv4;
     my %recs_ipv6;
-    my $url_tmpl = "http://$config{$_[0]}{'server'}/api/?action=getdyndns&v=2&sha=<credentials>";
+    my $url_tmpl = "https://$config{$_[0]}{'server'}/api/?action=getdyndns&v=2&sha=<credentials>";
     my $creds = sha1_hex("$config{$_[0]}{'login'}|$config{$_[0]}{'password'}");
     (my $url = $url_tmpl) =~ s/<credentials>/$creds/;
 
@@ -5245,7 +5245,7 @@ sub nic_changeip_update {
         verbose("UPDATE:", "updating %s", $h);
 
         my $url;
-        $url  = "http://$config{$h}{'server'}/nic/update";
+        $url  = "https://$config{$h}{'server'}/nic/update";
         $url .= "?hostname=$h";
         $url .= "&ip=";
         $url .= $ip if $ip;
@@ -5790,7 +5790,7 @@ EoEXAMPLE
 ######################################################################
 ## nic_duckdns_update
 ## by George Kranis (copypasta from nic_dtdns_update)
-## http://www.duckdns.org/update?domains=mydomain1,mydomain2&token=xxxx-xxx-xx-x&ip=x.x.x.x
+## https://www.duckdns.org/update?domains=mydomain1,mydomain2&token=xxxx-xxx-xx-x&ip=x.x.x.x
 ## response contains OK or KO
 ######################################################################
 sub nic_duckdns_update {
@@ -5879,7 +5879,7 @@ sub nic_freemyip_update {
 
         # Set the URL that we're going to to update
         my $url;
-        $url  = "http://$config{$h}{'server'}/update";
+        $url  = "https://$config{$h}{'server'}/update";
         $url .= "?token=";
         $url .= $config{$h}{'password'};
         $url .= "&domain=";
@@ -5988,6 +5988,7 @@ sub nic_woima_update {
         verbose("UPDATE:", "updating %s", $h);
 
         ## Select the DynDNS system to update
+        ## TODO: endpoint does not support https with functioning certificate. Remove?
         my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
         if ($config{$h}{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $h)
