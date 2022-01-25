@@ -130,8 +130,8 @@ ssl=yes					# use ssl-support.  Works with
 ## OrgDNS.org account-configuration
 ##
 # use=web, web=members.orgdns.org/nic/ip
+# protocol=dyndns2
 # server=www.orgdns.org 		\
-# protocol=dyndns2 			\
 # login=yourLoginName 			\
 # password=yourPassword 		\
 # yourSubdomain.orgdns.org
@@ -158,8 +158,7 @@ ssl=yes					# use ssl-support.  Works with
 ##
 ## Loopia (loopia.se)
 ##
-# use=web
-# web=loopia
+# use=web, web=loopia
 # protocol=dyndns2
 # server=dns.loopia.se
 # script=/XDynDNSServer/XDynDNS.php
@@ -233,12 +232,12 @@ ssl=yes					# use ssl-support.  Works with
 ##
 ## MyOnlinePortal (http://myonlineportal.net)
 ##
-# protocol=dyndns2
-# ssl=yes
 # # ipv6=yes # optional
 # use=web, web=myonlineportal.net/checkip
 # # use=if, if=eth0     # alternative to use=web
 # # if-skip=Scope:Link  # alternative to use=web
+# protocol=dyndns2
+# ssl=yes
 # login=your-myonlineportal-username
 # password=your-myonlineportal-password
 # domain.myonlineportal.net
@@ -246,8 +245,8 @@ ssl=yes					# use ssl-support.  Works with
 ##
 ## nsupdate.info IPV4(https://www.nsupdate.info)
 ##
-#protocol=dyndns2
 #use=web, web=http://ipv4.nsupdate.info/myip
+#protocol=dyndns2
 #server=ipv4.nsupdate.info
 #login=domain.nsupdate.info
 #password='123'
@@ -257,8 +256,8 @@ ssl=yes					# use ssl-support.  Works with
 ## nsupdate.info IPV6 (https://www.nsupdate.info)
 ## ddclient releases <= 3.8.1 do not support IPv6
 ##
-#protocol=dyndns2
 #usev6=if, if=eth0
+#protocol=dyndns2
 #server=ipv6.nsupdate.info
 #login=domain.nsupdate.info
 #password='123'
