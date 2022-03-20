@@ -19,6 +19,7 @@ Dynamic DNS services currently supported include:
     ChangeIP    - See http://www.changeip.com/ for details
     nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
     CloudFlare  - See https://www.cloudflare.com/ for details
+    GoDaddy     - See https://www.godaddy.com/ for details
     Google      - See http://www.google.com/domains for details
     Duckdns     - See https://duckdns.org/ for details
     Freemyip    - See https://freemyip.com for details
