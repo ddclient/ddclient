@@ -446,6 +446,7 @@ my %variables = (
         'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
         'webv6'               => setv(T_STRING,0, 0, 'googledomains',      undef),
         'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webif'               => setv(T_STRING,0, 0, undef,                undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
         'fw-skip'             => setv(T_STRING,1, 0, '',                   undef),
         'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
@@ -908,6 +909,7 @@ my @opt = (
     ["webv4-skip",   "=s", "-webv4-skip <pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
     ["webv6",        "=s", "-webv6 <service>|<url>: obtain IPv6 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
     ["webv6-skip",   "=s", "-webv6-skip <pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
+    ["webif",        "=s", "-webif <interface>    : obtain IP address  via <interface>'"],
     "",
     "  Options that apply to 'use=fw' and 'use=<device>':",
     ["fw",           "=s", "-fw <address>|<url>   : deprecated, use 'fwv4' or 'fwv6'"],
@@ -1134,7 +1136,7 @@ sub update_nics {
                     # Else need to find the IP address...
                     $ip = get_ip($use, $h);
                     if (is_ipv4($ip) || is_ipv6($ip)) {
-                         # And if it is valid, remember it...
+                        # And if it is valid, remember it...
                         $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
                     } else {
                         warning("%s: unable to determine IP address with strategy use=%s", $h, $use)
@@ -1153,7 +1155,7 @@ sub update_nics {
                     # Else need to find the IPv4 address...
                     $ipv4 = get_ipv4($usev4, $h);
                     if (is_ipv4($ipv4)) {
-                         # And if it is valid, remember it...
+                        # And if it is valid, remember it...
                         $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4} = $ipv4;
                     } else {
                         warning("%s: unable to determine IPv4 address with strategy usev4=%s", $h, $usev4)
@@ -2354,6 +2356,7 @@ sub fetch_via_socket_io {
     my $login = $params{login};
     my $password = $params{password};
     my $ipversion = $params{ipversion} // '';
+    my $interface = $params{interface};
     my $headers = $params{headers} // '';
     my $method = $params{method} // 'GET';
     my $data = $params{data} // '';
@@ -2382,6 +2385,7 @@ sub fetch_via_socket_io {
     (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact ALL parameters passed on URL, including possible passwords
     debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
+    debug("interface= %s", $interface // '<undefined>');
 
     ## determine peer and port to use.
     $peer = $proxy // $server;
@@ -2456,7 +2460,20 @@ sub fetch_via_socket_io {
         fatal("geturl passed unsupported 'ipversion' value %s", $ipversion);
     }
 
+    my $local_addr;
+    if (defined($interface)) {
+        # get IP of interface
+        $local_addr = get_ip_from_interface($interface, $params{ipversion});
+        if (defined($local_addr)) {
+            $socket_args{LocalAddr} = $local_addr;
+            verbose("LOCAL ADDR:", "%s", $local_addr);
+        } else {
+            fatal("webif '%s' not found or has no IPv%s address", $interface, $ipversion eq '' ? '4' : $ipversion);
+        }
+    }
+
     my $ipv = $ipversion eq '' ? '' : sprintf(" (IPv%s)", $ipversion);
+    $ipv .= defined($local_addr) ? sprintf(" from %s", $local_addr) : '';
     my $peer_port_ipv = sprintf("%s:%s%s", $peer, $port, $ipv);
     my $to = sprintf("%s%s%s", $server, defined($proxy) ? " via proxy $peer:$port" : "", $ipv);
     verbose("CONNECT:", "%s", $to);
@@ -2597,6 +2614,7 @@ sub fetch_via_curl {
     my $login = $params{login};
     my $password = $params{password};
     my $ipversion = ($params{ipversion}) ? int($params{ipversion}) : 0;
+    my $interface = $params{interface};
     my $headers = $params{headers} // '';
     my $method = $params{method} // 'GET';
     my $data = $params{data} // '';
@@ -2628,6 +2646,7 @@ sub fetch_via_curl {
     (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
     debug("url      = %s", $_url);
     debug("ip ver   = %s", $ipversion);
+    debug("interface= %s", $interface // '<undefined>');
 
     if (!opt('exec')) {
         debug("skipped network connection");
@@ -2648,6 +2667,7 @@ sub fetch_via_curl {
                                             ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 : 
                                             ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
                                                                 WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_INTERFACE, $interface) if defined($interface);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CONNECTTIMEOUT, $timeout);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_TIMEOUT, $timeout);
@@ -2693,6 +2713,7 @@ sub fetch_via_curl {
             push(@curlopt, "capath=\"".escape_curl_param(opt('ssl_ca_dir')).'"') if defined(opt('ssl_ca_dir'));
             push(@curlopt, "ipv4") if ($ipversion == 4);
             push(@curlopt, "ipv6") if ($ipversion == 6);
+            push(@curlopt, "interface=\"".escape_curl_param($interface)."\"") if defined($interface);
             push(@curlopt, "user-agent=\"".escape_curl_param("${program}/${version}").'"');
             push(@curlopt, "connect-timeout=$timeout");
             push(@curlopt, "max-time=$timeout");
@@ -2779,6 +2800,7 @@ sub get_ip {
         if ($url) {
             $reply = geturl(
                 proxy => opt('proxy', $h),
+                interface => opt('webif', $h),
                 url => $url,
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
