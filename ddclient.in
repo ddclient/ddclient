@@ -2671,6 +2671,7 @@ sub fetch_via_curl {
             $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CONNECTTIMEOUT, $timeout);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_TIMEOUT, $timeout);
+            $curl->setopt(WWW::Curl::Easy->CURLOPT_VERBOSE, 1) if opt('verbose');
 
             $curl->setopt(WWW::Curl::Easy->CURLOPT_POST, 1) if ($method eq 'POST');
             $curl->setopt(WWW::Curl::Easy->CURLOPT_PUT, 1) if ($method eq 'PUT');
@@ -2685,10 +2686,16 @@ sub fetch_via_curl {
                 @header_lines = split('\n', $headers);
                 $curl->setopt(WWW::Curl::Easy->CURLOPT_HTTPHEADER, \@header_lines);
             }
-            # Add in the data if any was provided (for POST/PATCH)
+            my $fh;
             if (my $datalen = length($data)) {
+                if ($method eq 'PUT') {
+                    open ($fh, "<", \$data) or fatal("cannot open PUT data for reading: $!");
+                    $curl->setopt(WWW::Curl::Easy->CURLOPT_READDATA, $fh);
+                } else {
+                    # Add in the data if any was provided (for POST/PATCH)
                 $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDS, ${data});
                 $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDSIZE, $datalen);
+            }
             }
             $curl->setopt(WWW::Curl::Easy->CURLOPT_WRITEDATA,\$reply);
 
@@ -2703,6 +2710,11 @@ sub fetch_via_curl {
             if ($rc != 0) {
                 warning("CURL error (%d) %s", $rc, $curl->strerror($rc));
                 debug($curl->errbuf);
+            }
+            close($fh) if defined($fh);
+            if ($method eq 'PUT') {
+                # remove continue section
+                $reply =~ s/^HTTP\/.*(HTTP\/)/$1/s if defined($reply);
             }
         } else {
             # System does not have the WWW::Curl::Easy module so attempt with system Curl command
