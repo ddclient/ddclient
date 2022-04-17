@@ -701,6 +701,18 @@ my %services = (
             'login'        => setv(T_STRING, 0, 0, 'unused', undef),
         }
     },
+    'godaddy' => {
+        'updateable' => undef,
+        'update'     => \&nic_godaddy_update,
+        'examples'   => \&nic_godaddy_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
+            'server'       => setv(T_FQDNP,  1, 0, 'api.godaddy.com/v1/domains',   undef),
+            'ttl'          => setv(T_NUMBER, 1, 0, 600,                            undef),
+            'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
+        },
+    },
     'googledomains' => {
         'updateable' => undef,
         'update'     => \&nic_googledomains_update,
@@ -1646,7 +1658,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "yandex", "nfsn")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "yandex", "nfsn")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -5358,6 +5370,141 @@ sub nic_changeip_update {
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("updating %s: Invalid reply.", $h);
+        }
+    }
+}
+
+######################################################################
+## nic_googledomains_examples
+##
+## written by awalon
+##
+######################################################################
+sub nic_godaddy_examples {
+    return <<"EoEXAMPLE";
+
+o 'godaddy'
+
+The 'godaddy' protocol is used by DNS service offered by https://www.godaddy.com/domains.
+
+Configuration variables applicable to the 'godaddy' protocol are:
+  protocol=godaddy              ##
+  login=my-generated-token      ## the token/key name provided by the API interface
+  password=my-generated-secret  ## the secret provided by the API interface
+  zone=domain.tld               ## the domain used for DNS update.
+  ttl=600                       ## time to live of the record;
+  hostname.domain.tld           ## hostname/subdomain
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=godaddy                                             \\
+  login=my-generated-token                                     \\
+  password=my-generated-secret                                 \\
+  zone=example.com                                             \\
+  hostname.example.com
+
+  ## multiple host update to the DNS service
+  protocol=godaddy                                             \\
+  login=my-generated-token                                     \\
+  password=my-generated-secret                                 \\
+  zone=example.com                                             \\
+  host1.example.com,host2.example.com
+EoEXAMPLE
+}
+######################################################################
+## nic_godaddy_update
+######################################################################
+sub nic_godaddy_update {
+    debug("\nnic_godaddy_update --------------------");
+
+    ## group hosts with identical attributes together
+    my %groups = group_hosts_by([ @_ ], [ qw(server login password zone) ]);
+
+    ## update each set of hosts that had similar configurations
+    foreach my $sig (keys %groups) {
+        my @hosts = @{$groups{$sig}};
+
+        # Update each set configured host.
+        for my $host (@hosts) {
+            my $ip = delete $config{$host}{'wantip'};
+            my $zone = $config{$host}{'zone'};
+            (my $hostname = $host) =~ s/\.\Q$zone\E$//;
+
+            info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
+            verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
+
+            my $ipversion = is_ipv6($ip) ? "6" : "4";
+            my $rrset_type = $ipversion == "6" ? "AAAA" : "A";
+            my $data = encode_json([{
+                data => $ip,
+                defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
+                name => $hostname,
+                type => $rrset_type,
+            }]);
+
+            my $url = "https://$config{$host}{'server'}";
+            $url .= "/${zone}/records/${rrset_type}/${hostname}";
+
+            my $header = "Content-Type: application/json\n";
+            $header .= "Accept: application/json\n";
+            $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
+            my $reply = geturl(
+                proxy     => opt('proxy'),
+                url       => $url,
+                headers   => $header,
+                method    => 'PUT',
+                data      => $data,
+            );
+            unless ($reply) {
+                failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
+                next;
+            }
+
+            (my $status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
+            my $ok = header_ok($host, $reply);
+            my $msg;
+            $reply =~ s/^.*?\n\n//s; # extract payload
+            my $response = eval { decode_json($reply) };
+            if (!defined($response) && $status != "200") {
+                $config{$host}{'status'} = "bad";
+
+                failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
+            } elsif (defined($response->{code})) {
+                verbose("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
+            }
+            if ($ok) {
+                # read data
+                $config{$host}{'ip'}     = $ip;
+                $config{$host}{'mtime'}  = $now;
+                $config{$host}{'status'} = "good";
+
+                success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $status);
+                next;
+            } elsif ($status == "400") {
+                $msg = 'GoDaddy API URL ($url) was malformed.';
+            } elsif ($status == "401") { # authentication error
+                if ($config{$host}{'login'} && $config{$host}{'login'}) {
+                    $msg  = 'login or password option incorrect.';
+                } else {
+                    $msg  = 'login or password option missing.';
+                }
+                $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
+            } elsif ($status == "403") {
+                $msg = 'Customer identified by login and password options denied permission.';
+            } elsif ($status == "404") {
+                $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
+            } elsif ($status == "422") {
+                $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
+            } elsif ($status == "429") {
+                $msg = 'Too many requests to GoDaddy within brief period.';
+            } elsif ($status == "503") {
+                $msg = "\"${hostname}.${zone}\" is unavailable.";
+            } else {
+                $msg = 'Unexpected service response.';
+            }
+
+            $config{$host}{'status'} = "bad";
+            failed("%s.%s -- %s", $hostname, $zone, $msg);
         }
     }
 }
