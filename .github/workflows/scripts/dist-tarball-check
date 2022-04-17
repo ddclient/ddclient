@@ -19,6 +19,8 @@ dist_tarball=$(ls ddclient-*.tar.gz) \
     || fatal "'make dist' must be run before this test"
 
 tmpdir=$(try mktemp -d) || exit 1
+# newer git versions are particular about file ownership which can be ignored here
+git config --global --add safe.directory /__w/ddclient/ddclient || true
 
 log "Copying contents of Git repository..."
 try git archive --format=tar --prefix=git-repo/ HEAD \
