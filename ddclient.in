@@ -1412,14 +1412,21 @@ sub _read_config {
     if (!open(FD, "< $file")) {
         warning("Cannot open file '%s'. (%s)", $file, $!);
     }
-    # Check for only owner has any access to config file
+
+    # If file is owned by our effective uid, ensure that it has no access for group or others.
+    # Otherwise, require that it isn't writable when not owned by us. For example allow it to
+    # be owned by root:ddclient with mode 640. Always ensure that it is not accessible to others.
     my ($dev, $ino, $mode, @statrest) = stat(FD);
-    if ($mode & 077) {
+    if ($mode & 077 && -o FD) {
         if (-f FD && (chmod 0600, $file)) {
-            warning("file %s must be accessible only by its owner (fixed).", $file);
-        } else {
-            warning("file %s must be accessible only by its owner.", $file);
+            warning("file $file must be accessible only by its owner (fixed).");
         }
+        warning("file $file must be accessible only by its owner.");
+    } elsif (! -o FD && -w FD) {
+        warning("file $file should be owned only by ddclient or not be writable.");
+    }
+    if ($mode & 07) {
+        warning("file $file must not be accessible by others.");
     }
 
     local $lineno = 0;
