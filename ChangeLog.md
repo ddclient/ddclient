@@ -5,8 +5,19 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## Not yet released
 
+## 2022-05-15 v3.10.0-rc1
+
+This release contains a total of 350 commits according to GitHub.
+Many of them cleaned up and improved the code to make further maintenance easier.
+ddclient also went through a major maintainer change. More help is highly appreciated
+and for the time new features are unlikely to be implemented.
+This is a first release candidate to hopefully catch some more bugs before the final 3.10.0 release.
+Due to ddclient's nature talking to many cloud services, testing all of them is not easy
+and it is necessary to rely on the community to test all of them.
+
 ### New features
 
+  * Added support for Cloudflare API tokens
   * Added support for OVH DynHost.
   * Added support for ClouDNS.
   * Added support for dinahosting.
@@ -74,10 +85,12 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The way ddclient chooses the default for the `use` option has changed.
     Rather than rely on the default, users should explicitly set the `use`
     option.
+    * The default `interval` changed from 1 minute to 5 minutes.
   * The `fw-banlocal` option is deprecated and no longer does anything.
   * The `if-skip` option is deprecated and no longer does anything.
   * The default server for the `dslreports1` protocol changed from
     `members.dyndns.org` to `www.dslreports.com`.
+  * Removed support for defunct dnsspark service
   * Removed support for defunct dtdns service
   * Removed support for defunct Hammernode service
 
