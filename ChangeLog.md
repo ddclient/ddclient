@@ -7,7 +7,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## 2022-05-15 v3.10.0-rc1
 
-This release contains a total of 350 commits according to GitHub.
+This release contains a total of over 360 commits according to GitHub.
 Many of them cleaned up and improved the code to make further maintenance easier.
 ddclient also went through a major maintainer change. More help is highly appreciated
 and for the time new features are unlikely to be implemented.
