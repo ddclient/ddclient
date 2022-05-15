@@ -7,8 +7,6 @@ EXTRA_DIST = \
 	README.cisco \
 	README.md \
 	README.ssl \
-	TODO \
-	UPGRADE \
 	autogen \
 	sample-ddclient-wrapper.sh \
 	sample-etc_cron.d_ddclient \
