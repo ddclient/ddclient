@@ -5,7 +5,12 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## Not yet released
 
-## 2022-05-15 v3.10.0-rc1
+## 2022-05-15 v3.10.0_2
+
+### Bug fixes
+  * Fix version number being unable to parse
+
+## 2022-05-15 v3.10.0_1
 
 This release contains a total of over 360 commits according to GitHub.
 Many of them cleaned up and improved the code to make further maintenance easier.
