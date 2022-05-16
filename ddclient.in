@@ -30,7 +30,7 @@ use IO::Socket::INET;
 use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
 
-use version 0.77; our $VERSION = version->declare('v3.10.0');
+use version 0.77; our $VERSION = version->declare('v3.10.0_2');
 (my $version = $VERSION->stringify()) =~ s/^v//;
 my $programd = $0;
 $programd =~ s%^.*/%%;
