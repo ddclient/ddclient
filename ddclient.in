@@ -523,6 +523,10 @@ my %variables = (
         'static'              => setv(T_BOOL,  0, 1, 0,                    undef),
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
+    'keysystems-common-defaults'    => {
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'dynamicdns.key-systems.net', undef),
+        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',      undef),
+    },
     'dnsexit-common-defaults'       => {
         'ssl'         => setv(T_BOOL,   0, 0, 1, undef),
         'server'      => setv(T_FQDNP,  1, 0, 'update.dnsexit.com', undef),
@@ -861,6 +865,15 @@ my %services = (
             'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
         },
+    },
+    'keysystems' => {
+    'updateable' => undef,
+    'update' => \&nic_keysystems_update,
+    'examples'  => \&nic_keysystems_examples,
+    'variables' => merge(
+            $variables{'keysystems-common-defaults'},
+            $variables{'service-common-defaults'},
+            ),
     },
     'dnsexit' => {
         'updateable' => undef,
@@ -6976,6 +6989,82 @@ sub nic_gandi_update {
         }
     }
 }
+######################################################################
+## nic_keysystems_examples
+######################################################################
+sub nic_keysystems_examples {
+    return <<EoEXAMPLE;
+o 'keysystems'
+
+The 'keysystems' protocol is used by the non-free
+dynamic DNS service offered by [www.domaindiscount24.com](www.domaindiscount24.com) and [www.rrpproxy.net/](www.rrpproxy.net/).
+Check [https://www.domaindiscount24.com/faq/en/dynamic-dns](https://www.domaindiscount24.com/faq/en/dynamic-dns) for API
+
+Configuration variables applicable to the 'keysystems' protocol are:
+protocol=keysystems        ##
+server=www.fqdn.of.service  ## defaults to dynamicdns.key-systems.net
+password=service-password  ## password (token) registered with the service
+non-fully.qualified.host     ## the host registered with the service.
+
+Example ${program}.conf file entries:
+## single host update
+protocol=keysystems,                    \\\\
+password=prettypassword          \\\\
+myhost
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_keysystems_update
+## by Tom Bosmans
+## response contains "code 200" on succesfull completion
+######################################################################
+sub nic_keysystems_update {
+ debug("\nnic_keysystems_update -------------------");
+
+ ## update each configured host
+ ## should improve to update in one pass
+ foreach my $h (@_) {
+   my $ip = delete $config{$h}{'wantip'};
+   info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
+   verbose("UPDATE:","updating %s", $h);
+
+   # Set the URL that we're going to to update
+   my $url;
+   $url = "http://$config{$h}{'server'}/update.php";
+   $url .= "?hostname=";
+   $url .= $h;
+   $url .= "&password=";
+   $url .= $config{$h}{'password'};
+   $url .= "&ip=";
+   $url .= $ip;
+
+   # Try to get URL
+   my $reply = geturl(opt('proxy'), $url);
+
+   # No response, declare as failed
+   if (!defined($reply) || !$reply) {
+     failed("KEYSYSTEMS updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+     last;
+   }
+   last if !header_ok($h, $reply);
+
+   if ($reply =~ /code = 200/)
+   {
+       $config{$h}{'ip'}   = $ip;
+       $config{$h}{'mtime'} = $now;
+       $config{$h}{'status'} = 'good';
+       success("updating %s: good: IP address set to %s", $h, $ip);
+    }
+    else
+    {
+       $config{$h}{'status'} = 'failed';
+       failed("updating %s: Server said: '$reply'", $h);
+    }
+  }
+}
+
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
 # otherwise do nothing. This "modulino" pattern makes it possible to import this file as a module
