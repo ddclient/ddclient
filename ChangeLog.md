@@ -6,11 +6,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ## 2022-07-27 v3.10.0_3
 ### New features
 
-  * Added support for domaindiscount24.com DynamicDNS
-     - protocol=keysystems, \
-     - server=dynamicdns.key-systems.net, \
+  * Added support for domaindiscount24.com
  
- ## 2022-05-15 v3.10.0_2
+## 2022-05-15 v3.10.0_2
 
 ### Bug fixes
   * Fix version number being unable to parse
