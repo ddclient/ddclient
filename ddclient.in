@@ -7017,7 +7017,6 @@ EoEXAMPLE
 
 ######################################################################
 ## nic_keysystems_update
-## by Tom Bosmans
 ## response contains "code 200" on succesfull completion
 ######################################################################
 sub nic_keysystems_update {
