@@ -7030,15 +7030,7 @@ sub nic_keysystems_update {
    info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
    verbose("UPDATE:","updating %s", $h);
 
-   # Set the URL that we're going to to update
-   my $url;
-   $url = "http://$config{$h}{'server'}/update.php";
-   $url .= "?hostname=";
-   $url .= $h;
-   $url .= "&password=";
-   $url .= $config{$h}{'password'};
-   $url .= "&ip=";
-   $url .= $ip;
+   my $url = "http://$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
 
    # Try to get URL
    my $reply = geturl(opt('proxy'), $url);
