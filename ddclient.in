@@ -7001,16 +7001,16 @@ dynamic DNS service offered by www.domaindiscount24.com and www.rrpproxy.net.
 Check https://www.domaindiscount24.com/faq/en/dynamic-dns for API
 
 Configuration variables applicable to the 'keysystems' protocol are:
-protocol=keysystems        ##
-server=www.fqdn.of.service  ## defaults to dynamicdns.key-systems.net
-password=service-password  ## password (token) registered with the service
-non-fully.qualified.host     ## the host registered with the service.
+protocol=keysystems
+server=dynamicdns.key-systems.net
+password=service-password          ## password (token) registered with the service
+subdomain.example.com              ## the host registered with the service.
 
 Example ${program}.conf file entries:
 ## single host update
-protocol=keysystems,                    \\\\
-password=prettypassword          \\\\
-myhost
+protocol=keysystems,             \\\\
+password=service-password        \\\\
+example.com
 
 EoEXAMPLE
 }
