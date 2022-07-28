@@ -6997,8 +6997,8 @@ sub nic_keysystems_examples {
 o 'keysystems'
 
 The 'keysystems' protocol is used by the non-free
-dynamic DNS service offered by [www.domaindiscount24.com](www.domaindiscount24.com) and [www.rrpproxy.net/](www.rrpproxy.net/).
-Check [https://www.domaindiscount24.com/faq/en/dynamic-dns](https://www.domaindiscount24.com/faq/en/dynamic-dns) for API
+dynamic DNS service offered by www.domaindiscount24.com and www.rrpproxy.net.
+Check https://www.domaindiscount24.com/faq/en/dynamic-dns for API
 
 Configuration variables applicable to the 'keysystems' protocol are:
 protocol=keysystems        ##
