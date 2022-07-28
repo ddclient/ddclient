@@ -7027,7 +7027,6 @@ sub nic_keysystems_update {
  foreach my $h (@_) {
    my $ip = delete $config{$h}{'wantip'};
    info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
-   verbose("UPDATE:","updating %s", $h);
 
    my $url = "http://$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
 
