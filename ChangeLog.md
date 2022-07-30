@@ -4,7 +4,10 @@ This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## Not yet released
+### New features
 
+  * Added support for domaindiscount24.com
+ 
 ## 2022-05-15 v3.10.0_2
 
 ### Bug fixes
