@@ -308,3 +308,12 @@ ssl=yes					# use ssl-support.  Works with
 #login=myusername,                                            \
 #password=mypassword,                                         \
 #subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## domaindiscount24 (https://dynamicdns.key-systems.net)
+##
+#protocol=keysystems, \
+#server=dynamicdns.key-systems.net, \
+#password=mypassword   \
+#myhost.mydomain.com
+
