@@ -206,6 +206,16 @@ ssl=yes					# use ssl-support.  Works with
 # myhost.example.com
 
 ##
+## GoDaddy (godaddy.com)
+##
+# protocol=godaddy,                    \
+# password=my-godaddy-api-key,         \
+# password=my-godaddy-secret,          \
+# ttl=600                              \
+# zone=example.com,                    \
+# myhost.example.com,nexthost.example.com
+
+##
 ## Google Domains (www.google.com/domains)
 ##
 # protocol=googledomains,

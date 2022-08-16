@@ -360,6 +360,7 @@ my %builtinfw = (
 
 my %ip_strategies = (
     'no'        => ": deprecated, see 'usev4' and 'usev6'",
+    'disabled'  => ": deprecated, see 'usev4' and 'usev6'",
     'ip'        => ": deprecated, see 'usev4' and 'usev6'",
     'web'       => ": deprecated, see 'usev4' and 'usev6'",
     'fw'        => ": deprecated, see 'usev4' and 'usev6'",
@@ -5474,85 +5475,91 @@ sub nic_godaddy_update {
 
         # Update each set configured host.
         for my $host (@hosts) {
-            my $ip = delete $config{$host}{'wantip'};
+            my $ipv4 = delete $config{$host}{'wantipv4'};
+            my $ipv6 = delete $config{$host}{'wantipv6'};
+
             my $zone = $config{$host}{'zone'};
             (my $hostname = $host) =~ s/\.\Q$zone\E$//;
 
-            info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
-            verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
+            foreach my $ip ($ipv4, $ipv6) {
+                next if (!$ip);
 
-            my $ipversion = is_ipv6($ip) ? "6" : "4";
-            my $rrset_type = $ipversion == "6" ? "AAAA" : "A";
-            my $data = encode_json([{
-                data => $ip,
-                defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
-                name => $hostname,
-                type => $rrset_type,
-            }]);
+                info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
+                verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
 
-            my $url = "https://$config{$host}{'server'}";
-            $url .= "/${zone}/records/${rrset_type}/${hostname}";
+                my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
+                my $data = encode_json([ {
+                    data => $ip,
+                    defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
+                    name => $hostname,
+                    type => $rrset_type,
+                } ]);
 
-            my $header = "Content-Type: application/json\n";
-            $header .= "Accept: application/json\n";
-            $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
-            my $reply = geturl(
-                proxy     => opt('proxy'),
-                url       => $url,
-                headers   => $header,
-                method    => 'PUT',
-                data      => $data,
-            );
-            unless ($reply) {
-                failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
-                next;
-            }
+                my $url = "https://$config{$host}{'server'}";
+                $url .= "/${zone}/records/${rrset_type}/${hostname}";
 
-            (my $status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
-            my $ok = header_ok($host, $reply);
-            my $msg;
-            $reply =~ s/^.*?\n\n//s; # extract payload
-            my $response = eval { decode_json($reply) };
-            if (!defined($response) && $status != "200") {
-                $config{$host}{'status'} = "bad";
-
-                failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
-            } elsif (defined($response->{code})) {
-                verbose("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
-            }
-            if ($ok) {
-                # read data
-                $config{$host}{'ip'}     = $ip;
-                $config{$host}{'mtime'}  = $now;
-                $config{$host}{'status'} = "good";
-
-                success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $status);
-                next;
-            } elsif ($status == "400") {
-                $msg = 'GoDaddy API URL ($url) was malformed.';
-            } elsif ($status == "401") { # authentication error
-                if ($config{$host}{'login'} && $config{$host}{'login'}) {
-                    $msg  = 'login or password option incorrect.';
-                } else {
-                    $msg  = 'login or password option missing.';
+                my $header = "Content-Type: application/json\n";
+                $header .= "Accept: application/json\n";
+                $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
+                my $reply = geturl(
+                    proxy   => opt('proxy'),
+                    url     => $url,
+                    headers => $header,
+                    method  => 'PUT',
+                    data    => $data,
+                );
+                unless ($reply) {
+                    failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
+                    next;
                 }
-                $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
-            } elsif ($status == "403") {
-                $msg = 'Customer identified by login and password options denied permission.';
-            } elsif ($status == "404") {
-                $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
-            } elsif ($status == "422") {
-                $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
-            } elsif ($status == "429") {
-                $msg = 'Too many requests to GoDaddy within brief period.';
-            } elsif ($status == "503") {
-                $msg = "\"${hostname}.${zone}\" is unavailable.";
-            } else {
-                $msg = 'Unexpected service response.';
-            }
 
-            $config{$host}{'status'} = "bad";
-            failed("%s.%s -- %s", $hostname, $zone, $msg);
+                (my $status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
+                my $ok = header_ok($host, $reply);
+                my $msg;
+                $reply =~ s/^.*?\n\n//s; # extract payload
+                my $response = eval {decode_json($reply)};
+                if (!defined($response) && $status != "200") {
+                    $config{$host}{'status'} = "bad";
+
+                    failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
+                } elsif (defined($response->{code})) {
+                    verbose("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
+                }
+                if ($ok) {
+                    # read data
+                    $config{$host}{"ipv$ipversion"} = $ip;
+                    $config{$host}{'mtime'} = $now;
+                    $config{$host}{"status-ipv$ipversion"} = 'good';
+
+                    success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $status);
+                    next;
+                } elsif ($status == "400") {
+                    $msg = 'GoDaddy API URL ($url) was malformed.';
+                } elsif ($status == "401") { # authentication error
+                    if ($config{$host}{'login'} && $config{$host}{'login'}) {
+                        $msg = 'login or password option incorrect.';
+                    } else {
+                        $msg = 'login or password option missing.';
+                    }
+                    $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
+                } elsif ($status == "403") {
+                    $msg = 'Customer identified by login and password options denied permission.';
+                } elsif ($status == "404") {
+                    $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
+                } elsif ($status == "422") {
+                    $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
+                } elsif ($status == "429") {
+                    $msg = 'Too many requests to GoDaddy within brief period.';
+                } elsif ($status == "503") {
+                    $msg = "\"${hostname}.${zone}\" is unavailable.";
+                } else {
+                    $msg = 'Unexpected service response.';
+                }
+
+                $config{$host}{"status-ipv$ipversion"} = 'bad';
+                failed("%s.%s -- %s", $hostname, $zone, $msg);
+            }
         }
     }
 }
