@@ -533,6 +533,10 @@ my %variables = (
         'script'      => setv(T_STRING, 0, 1, '/RemoteUpdate.sv', undef),
         'min-error-interval' => setv(T_DELAY, 0, 0, interval('8m'), 0),
     },
+    'regfishde-common-defaults' => {
+        'server'              => setv(T_FQDNP, 1, 0, 1, 'dyndns.regfish.de', undef),
+        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',      undef),
+    },
 );
 my %services = (
     '1984' => {
@@ -883,6 +887,15 @@ my %services = (
             $variables{'dnsexit-common-defaults'},
             $variables{'service-common-defaults'},
         ),
+    },
+     'regfishde' => {
+        'updateable' => undef,
+        'update'     => \&nic_regfishde_update,
+        'examples'   => \&nic_regfishde_examples,
+        'variables'  => merge(
+            $variables{'regfishde-common-defaults'},
+            $variables{'service-common-defaults'},
+            ),
     },
 );
 $variables{'merged'} = {
@@ -7041,6 +7054,70 @@ sub nic_keysystems_update {
    last if !header_ok($h, $reply);
 
    if ($reply =~ /code = 200/)
+   {
+       $config{$h}{'ip'}   = $ip;
+       $config{$h}{'mtime'} = $now;
+       $config{$h}{'status'} = 'good';
+       success("updating %s: good: IP address set to %s", $h, $ip);
+    }
+    else
+    {
+       $config{$h}{'status'} = 'failed';
+       failed("updating %s: Server said: '$reply'", $h);
+    }
+  }
+}
+
+######################################################################
+## nic_regfishde_examples
+######################################################################
+sub nic_regfishde_examples {
+    return <<EoEXAMPLE;
+o 'regfishde'
+The 'regfishde' protocol is used by the non-free
+dynamic DNS service offered by www.regfish.de.
+???Check https://www.regfish.de for configuration variables applicable
+to the 'regfishde' protocol are:
+protocol=regfishde
+server=dyndns.regfish.de
+password=service-password          ## password (token) registered with the service
+myhost.mydomain.com                ## the host registered with the service.
+Example ${program}.conf file entries:
+## single host update
+protocol=regfishde, \
+password=service-password \
+myhost.mydomain.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_regfishde_update
+## response contains "code 100 or 101" on succesfull completion
+######################################################################
+sub nic_regfishde_update {
+ debug("\nnic_regfishde_update -------------------");
+
+ ## update each configured host
+ ## should improve to update in one pass
+ for my $h (@_) {
+   my $ip = delete $config{$h}{'wantip'};
+   info("regfishde setting IP address to %s for %s", $ip, $h);
+
+   my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv4=$ip&forcehost=1&token=$config
+{$h}{'password'}";
+
+   # Try to get URL
+   my $reply = geturl(opt('proxy'), $url);
+
+   # No response, declare as failed
+   if (!defined($reply) || !$reply) {
+     failed("regfishde updating %s: Could not connect to %s.", $h, $config{$h}{'server
+'});
+     last;
+   }
+   last if !header_ok($h, $reply);
+
+   if ($reply =~ /success/)
    {
        $config{$h}{'ip'}   = $ip;
        $config{$h}{'mtime'} = $now;
