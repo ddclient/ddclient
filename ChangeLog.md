@@ -7,6 +7,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ### New features
 
   * Added support for domaindiscount24.com
+  * Added support for regfish.de
  
 ## 2022-05-15 v3.10.0_2
 
