@@ -89,7 +89,6 @@ ssl=yes					# use ssl-support.  Works with
 # your-static-host.dyndns.org
 
 ##
-##
 ## dyndns.org custom addresses
 ##
 ## (supports variables: wildcard,mx,backupmx)
@@ -154,7 +153,6 @@ ssl=yes					# use ssl-support.  Works with
 # zone=example.com                      \
 # example.com,subdomain.example.com
 
-##
 ##
 ## Loopia (loopia.se)
 ##
@@ -302,9 +300,18 @@ ssl=yes					# use ssl-support.  Works with
 # password=mypassword   \
 # myhost.mydomain.com
 
+##
 ## dnsexit (www.dnsexit.com)
 ##
 #protocol=dnsexit,                                            \
 #login=myusername,                                            \
 #password=mypassword,                                         \
 #subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## Njal.la (http://njal.la/)
+##
+# protocol=njalla,
+# password=mypassword
+# quietreply=no|yes
+# my-host
