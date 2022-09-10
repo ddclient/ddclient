@@ -34,6 +34,7 @@ Dynamic DNS services currently supported include:
     Gandi       - See https://gandi.net
     dnsexit     - See https://dnsexit.com/ for details
     1984.is     - See https://www.1984.is/product/freedns/ for details
+    Njal.la     - See https://njal.la/docs/ddns/
 
 `ddclient` now supports many cable and DSL broadband routers.
 
