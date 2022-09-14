@@ -762,6 +762,17 @@ my %services = (
             'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
         },
     },
+    'njalla' => {
+        'updateable' => undef,
+        'update'     => \&nic_njalla_update,
+        'examples'   => \&nic_njalla_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'login'    => setv(T_STRING, 0, 0, 'unused', undef),
+            'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
+            'quietreply' => setv(T_BOOL, 0, 1, 0,      undef)
+        },
+    },
     'noip' => {
         'updateable' => undef,
         'update'     => \&nic_noip_update,
@@ -1706,7 +1717,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "hetzner", "yandex", "nfsn")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -2693,7 +2704,7 @@ sub fetch_via_curl {
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CAINFO, opt('ssl_ca_file')) if defined(opt('ssl_ca_file'));
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CAPATH, opt('ssl_ca_dir')) if defined(opt('ssl_ca_dir'));
             $curl->setopt(WWW::Curl::Easy->CURLOPT_IPRESOLVE,
-                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 : 
+                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 :
                                             ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
                                                                 WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
@@ -3172,7 +3183,7 @@ sub get_ip_from_interface {
     debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
 
     ## IPv6 is more complex than IPv4.  Start by filtering on only "inet6" addresses
-    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses 
+    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses
     my @reply = split(/\n/, $reply);
     @reply = grep(/\binet6\b/, @reply);                             # Select only IPv6 entries
     @reply = grep(!/\bdeprecated\b|\btemporary\b/, @reply);         # Remove deprecated and temporary
@@ -5042,6 +5053,126 @@ sub nic_nfsn_update {
 ######################################################################
 
 ######################################################################
+## nic_njalla_examples
+######################################################################
+sub nic_njalla_examples {
+    return <<"EoEXAMPLE";
+
+o 'njalla'
+
+The 'njalla' protocol is used by DNS service offered by njal.la.
+
+Configuration variables applicable to the 'njalla' protocol are:
+  protocol=njalla              ##
+  password=service-password    ## Generated password for your dynamic DNS record
+  quietreply=no|yes            ## If yes return empty response on success with status 200 but print errors
+  domain                       ## subdomain to update, use @ for base domain name, * for catch all
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=njalla                                             \\
+  password=njal.la-key
+  quietreply=no
+  hostname
+
+EoEXAMPLE
+}
+######################################################################
+## nic_njalla_update
+##
+## written by satrapes
+##
+## based on https://njal.la/docs/ddns/
+## needs this url to update:
+## https://njal.la/update?h=host_name&k=domain_password&a=your_ip
+## response contains "code 200" on succesful completion
+######################################################################
+sub nic_njalla_update {
+    debug("\nnic_njalla_update -------------------");
+
+    foreach my $h (@_) {
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        my $quietreply = delete $config{$h}{'quietreply'};
+        my $ip_output = '';
+        my $url;
+        $url  = "https://$config{$h}{'server'}/update/";
+        $url .= "?h=";
+        $url .= $h;
+        $url .= "&k=";
+        $url .= $config{$h}{'password'};
+        my $auto = 1;
+        foreach my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            $auto = 0;
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'aaaa' : 'a';
+            $ip_output .= ' IP v' . $ipv . ': '. $ip .',';
+            $url .= '&' . $type . '=' . $ip;
+        }
+        $url .= (($auto eq 1)) ? '&auto' : '';
+        $url .= (($quietreply eq 1)) ? '&quiet' : '';
+        info("setting address to%s for %s", ($ip_output eq '') ? ' auto' : $ip_output, $h);
+        verbose("UPDATE:", "updating %s", $h);
+        debug("url: %s", $url);
+
+        # Try to get URL
+        my $reply = geturl(proxy => opt('proxy'), url => $url);
+        $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+        my $response = '';
+        if ($quietreply) {
+            $reply =~ qr/^invalid host or key/mp;
+            $response = ${^MATCH};
+        } else {
+            $response = eval {decode_json(${^MATCH})};
+        }
+
+        next if !header_ok($h, $reply);
+        verbose("After getting url-*-*-*-*-*-*-*-*-*-\n\n");
+        # verbose($reply);
+        # verbose($response);
+        verbose("\n\nAfter printing reply , response.-^-^-^-^-^-^-^-^-^-^-^-^-^-^-^-^-\n\n");
+        # my @reply = split /\n/, $reply;
+        # my $returned = pop(@reply);
+        if ($quietreply) {
+            if (!$response) {
+                success("updating %s: good: IP address set to %s", $h, $ip_output);
+            }
+            elsif ($response =~ /invalid host or key/) {
+                # verbose($response);
+                failed("Invalid host or key");
+                # success("Invalid host or key");
+            } else {
+                # verbose($response);
+                failed("Unknown response");
+                # success("Unknown response");
+            }
+        } else {
+            # No response, declare as failed
+            if (!defined($reply) || !$reply) {
+                failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            } else {
+                # Strip header
+                verbose("\n\n\nNo quietreply\n\n\n");
+
+                # info($response);
+                # verbose($response);
+                print($response->{status});
+                print($response->{message});
+                verbose("\n\n\nNo quietreply after printing messges\n\n\n");
+                if ($response->{status} == 401 && $response->{message} =~ /invalid host or key/) {
+                    failed("Invalid host or key");
+                } elsif ($response->{status} == 200 && $response->{message} =~ /record updated/) {
+                    success("updating %s: good: IP address set to %s", $h, $response->{value}->{A});
+                } else {
+                    failed("Unknown response");
+                }
+            }
+        }
+    }
+}
+
+######################################################################
 ## nic_sitelutions_examples
 ######################################################################
 sub nic_sitelutions_examples {
@@ -5323,7 +5454,7 @@ sub nic_1984_update {
             next;
         }
         next if !header_ok($host, $reply);
-    
+
         # Strip header
         $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
         my $response = eval { decode_json(${^MATCH}) };
