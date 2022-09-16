@@ -314,4 +314,4 @@ ssl=yes					# use ssl-support.  Works with
 # protocol=njalla,
 # password=mypassword
 # quietreply=no|yes
-# my-host
+# my-domain.com

@@ -768,7 +768,6 @@ my %services = (
         'examples'   => \&nic_njalla_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login'    => setv(T_STRING, 0, 0, 'unused', undef),
             'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
             'quietreply' => setv(T_BOOL, 0, 1, 0,      undef)
         },
@@ -5073,7 +5072,7 @@ Example ${program}.conf file entries:
   protocol=njalla                                             \\
   password=njal.la-key
   quietreply=no
-  hostname
+  domain.com
 
 EoEXAMPLE
 }
@@ -5091,12 +5090,14 @@ sub nic_njalla_update {
     debug("\nnic_njalla_update -------------------");
 
     foreach my $h (@_) {
+        # Read input params
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
         my $quietreply = delete $config{$h}{'quietreply'};
         my $ip_output = '';
-        my $url;
-        $url  = "https://$config{$h}{'server'}/update/";
+
+        # Build url
+        my $url = "https://$config{$h}{'server'}/update/";
         $url .= "?h=";
         $url .= $h;
         $url .= "&k=";
@@ -5112,54 +5113,33 @@ sub nic_njalla_update {
         }
         $url .= (($auto eq 1)) ? '&auto' : '';
         $url .= (($quietreply eq 1)) ? '&quiet' : '';
+
         info("setting address to%s for %s", ($ip_output eq '') ? ' auto' : $ip_output, $h);
         verbose("UPDATE:", "updating %s", $h);
         debug("url: %s", $url);
 
         # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-        $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
         my $response = '';
         if ($quietreply) {
-            $reply =~ qr/^invalid host or key/mp;
+            $reply =~ qr/invalid host or key/mp;
             $response = ${^MATCH};
-        } else {
-            $response = eval {decode_json(${^MATCH})};
-        }
-
-        next if !header_ok($h, $reply);
-        verbose("After getting url-*-*-*-*-*-*-*-*-*-\n\n");
-        # verbose($reply);
-        # verbose($response);
-        verbose("\n\nAfter printing reply , response.-^-^-^-^-^-^-^-^-^-^-^-^-^-^-^-^-\n\n");
-        # my @reply = split /\n/, $reply;
-        # my $returned = pop(@reply);
-        if ($quietreply) {
             if (!$response) {
                 success("updating %s: good: IP address set to %s", $h, $ip_output);
             }
             elsif ($response =~ /invalid host or key/) {
-                # verbose($response);
                 failed("Invalid host or key");
-                # success("Invalid host or key");
             } else {
-                # verbose($response);
                 failed("Unknown response");
-                # success("Unknown response");
             }
         } else {
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            $response = eval {decode_json(${^MATCH})};
             # No response, declare as failed
             if (!defined($reply) || !$reply) {
                 failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             } else {
                 # Strip header
-                verbose("\n\n\nNo quietreply\n\n\n");
-
-                # info($response);
-                # verbose($response);
-                print($response->{status});
-                print($response->{message});
-                verbose("\n\n\nNo quietreply after printing messges\n\n\n");
                 if ($response->{status} == 401 && $response->{message} =~ /invalid host or key/) {
                     failed("Invalid host or key");
                 } elsif ($response->{status} == 200 && $response->{message} =~ /record updated/) {
