@@ -5098,19 +5098,15 @@ sub nic_njalla_update {
         my $ip_output = '';
 
         # Build url
-        my $url = "https://$config{$h}{'server'}/update/";
-        $url .= "?h=";
-        $url .= $h;
-        $url .= "&k=";
-        $url .= $config{$h}{'password'};
+        my $url = "https://$config{$h}{'server'}/update/?h=$h&k=$config{$h}{'password'}";
         my $auto = 1;
         foreach my $ip ($ipv4, $ipv6) {
             next if (!$ip);
             $auto = 0;
             my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
             my $type = ($ip eq ($ipv6 // '')) ? 'aaaa' : 'a';
-            $ip_output .= ' IP v' . $ipv . ': '. $ip .',';
-            $url .= '&' . $type . '=' . $ip;
+            $ip_output .= " IP v$ipv: $ip,";
+            $url .= "&$type=$ip";
         }
         $url .= (($auto eq 1)) ? '&auto' : '';
         $url .= (($quietreply eq 1)) ? '&quiet' : '';
