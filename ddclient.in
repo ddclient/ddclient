@@ -5821,7 +5821,6 @@ sub nic_cloudflare_update {
 
         # FQDNs
         for my $domain (@hosts) {
-            (my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
             my $ipv4  = delete $config{$domain}{'wantipv4'};
             my $ipv6  = delete $config{$domain}{'wantipv6'};
 
