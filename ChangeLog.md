@@ -3,10 +3,11 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
-## Not yet released
+## 2022-10-20 v3.10.0
 ### New features
 
   * Added support for domaindiscount24.com
+  * Added support for njal.la
  
 ## 2022-05-15 v3.10.0_2
 
