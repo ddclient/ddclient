@@ -3,6 +3,12 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
+## 2022-10-24 v3.10.1
+
+### Bug fixes
+
+  * Fix t/version.pl test failure
+
 ## 2022-10-20 v3.10.0
 ### New features
 
