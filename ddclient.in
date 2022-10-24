@@ -555,6 +555,16 @@ my %services = (
             'server'       => setv(T_FQDNP, 1, 0, 'nic.changeip.com', undef),
         },
     },
+    'cdmon' => {
+        'updateable' => undef,
+        'update'     => \&dinamico_cdmon_update,
+        'examples'   => \&dinamico_cdmon_examples,
+        'variables'  => merge(
+			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'dinamico.cdmon.org',    undef)    },
+			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, 0, interval('5m')),},
+			  $variables{'service-common-defaults'},
+			),
+    },
     'cloudflare' => {
         'updateable' => undef,
         'update'     => \&nic_cloudflare_update,
@@ -5449,6 +5459,153 @@ sub nic_1984_update {
             success("%s -- Updated successfully to %s", $host, $response->{ip});
         }
     }
+}
+###################################################################### 
+## dinamico_cdmon_examples 
+###################################################################### 
+sub dinamico_cdmon_examples {
+return <<EoEXAMPLE;
+
+o 'cdmon'
+
+The 'cdmon' protocol is used by DNS services offered by cdmon.org.
+
+Configuration variables applicable to the 'cdmon' protocol are:
+  protocol=cdmon               ##
+  login=service-login          ## login name and password registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=cdmon,                                               \\
+  login=my-my-cdmon.org-login,                                     \\
+  password=my-cdmon.org-password                                   \\
+  myhost.mydomain.cat
+
+EoEXAMPLE
+} 
+######################################################################
+## dinamico_cdmon_update
+##
+## adapted by David
+## https://ticket.cdmon.com/ca/support/solutions/articles/7000005922-api-d-actualitzaci%c3%b3-de-ip-del-dns-gratis-din%c3%a0mic?set_locale=1075
+## https://dinamico.cdmon.org/onlineService.php?enctype=MD5&n=usuario&p=1bc29b36f623ba82aaf6724fd3b16718&cip=x.x.x.x
+##
+######################################################################
+sub dinamico_cdmon_update {
+
+
+    debug("\ndinamico_cdmon_update -------------------");
+
+    ## update each configured host
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        my $url;
+        $url   = "https://dinamico.cdmon.org/onlineService.php";
+        $url  .= "?enctype=MD5";
+        $url  .= "&n=$config{$h}{'login'}";
+        $url  .= "&p=$config{$h}{'password'}";
+        $url  .= "&cip=$ip" if $ip;
+
+        verbose("SENDING:", "%s",  $url);
+        my $reply = geturl(opt('proxy'), $url);
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
+
+        debug("REPLIED: %s\n", $reply);
+
+
+        my ($result) = $reply =~ /^&(.*)&$/m;
+        my $params = {};
+        foreach my $var ( split( /&/, $result) ){
+            my ( $k, $v ) = split( /=/, $var );
+            if( exists $params->{$k} ) {
+                if( 'ARRAY' eq ref $params->{$k} ) {
+                    push @{ $params->{$k} }, $v;
+                } else {
+                    $params->{$k} = [ $params->{$k}, $v ];
+                }
+            } else {
+                $params->{$k} = $v;
+            }
+        }
+
+        if (exists $params->{'resultat'}) {
+            if ($params->{'resultat'} eq 'guardatok' || $params->{'resultat'} eq 'customok') {
+                # &resultat=guardatok&newip=x.x.x.x&
+                # Cuando se hace una petición sin la variable cip y la autentificación ha sido correcta, se nos devuelve la IP actual que detecta el servidor.
+                # When a request is made without the cip variable and the authentication has been correct, the current IP detected by the server is returned.
+
+                # &resultat=customok&newip=x.x.x.x&customip=x.x.x.x&temps=1200000&
+                # Cuando hemos mandado nuestra IP mediante la variable cip y la autentificación ha sido satisfactoria.
+                # When we have sent our IP through the cip variable and the authentication has been successful.
+
+                # &resultat=guardatok&temps=1200000
+                # Nos devuelve este resultado, para informarnos que se ha guardado bien la configuración y que los cambios no estarán operativos hasta pasados 20 minutos.
+                # It returns this result, to inform us that the configuration has been saved correctly and that the changes will not be operational until after 20 minutes.
+
+                my $newip = $ip;
+                my $msg;
+                $msg  = sprintf "updating %s: good", $h;
+
+                if (exists $params->{'customip'}) {
+                    $msg  .= sprintf " : sent IP address %s", $params->{'customip'};
+                } else {
+                    $msg  .= sprintf " : sent IP address %s", $ip;
+                }
+
+                if (exists $params->{'newip'})    {$newip = $params->{'newip'}; $msg  .= sprintf " :IP address set to newip:%s", $newip;}
+                if (exists $params->{'temps'})    {$msg  .= sprintf ", the changes will not be operational until after %d minutes", int(int($params->{'temps'})/60000);}
+
+                #$config{$h}{'ip'}     = $ip;
+                $config{$h}{'ip'}     = $newip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                success("%s.", $msg);
+
+            } elsif ($params->{'resultat'} eq 'badip') {
+                # &resultat=badip&
+                # Nos devuelve este resultado cuando la autentificación ha sido satisfactoria pero la IP es errónea.
+                # It returns this result when the authentication has been successful but the IP is wrong.
+                $config{$h}{'status'} = 'failed';
+                warning("SENT:    %s", $url) unless opt('verbose');
+                warning("REPLIED: %s", $reply);
+                failed("Not updating %s: The IP address is not valid. ==> %s", $h, $result);
+            } elsif ($params->{'resultat'} eq 'errorlogin') {
+                # &resultat=errorlogin&
+                # Nos devuelve este resultado cuando la autentificación no ha sido satisfactoria.
+                # It returns this result when the authentication has not been successful. The username or password is incorrect.
+                $config{$h}{'status'} = 'failed';
+                warning("SENT:    %s", $url) unless opt('verbose');
+                warning("REPLIED: %s", $reply);
+                failed("Not updating %s: The username or password is incorrect. ==> %s", $h, $result);
+            } elsif ($params->{'resultat'} eq 'novaversio') {
+                # &resultat=novaversio&
+                # Nos devuelve este resultado en raras ocasiones, sólo cuando modificamos el archivo que procesa todas las peticiones para obligar a todos los usuarios a actualizar a una nueva versión de la aplicación. En su caso sólo tendrá que ponerse en contacto con nosotros para obtener la nueva URL para hacer la petición.
+                # It returns this result on rare occasions, only when we modify the file that processes all requests to force all users to upgrade to a new version of the application. In your case, you will only have to contact us to obtain the new URL to make the request.
+                $config{$h}{'status'} = 'failed';
+                warning("SENT:    %s", $url) unless opt('verbose');
+                warning("REPLIED: %s", $reply);
+                failed("Not updating %s: Update to a new version of the application API. ==> %s", $h, $result);
+            } else {
+                $config{$h}{'status'} = 'failed';
+                warning("SENT:    %s", $url) unless opt('verbose');
+                warning("REPLIED: %s", $reply);
+                failed("Not updating %s: Unknown return parameters. ==> %s", $h, $result);
+            }
+
+            debug("Exist");
+        } else {
+            failed("updating %s: Invalid resultat.'%s'", $h, $result);
+        }
+   }
 }
 
 ######################################################################
