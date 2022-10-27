@@ -8,6 +8,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
   * Added support for domaindiscount24.com
   * Added support for njal.la
+  * Added support for regfish.de
  
 ## 2022-05-15 v3.10.0_2
 
