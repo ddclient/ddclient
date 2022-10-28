@@ -5502,11 +5502,7 @@ sub dinamico_cdmon_update {
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
 
-        my $url;
-        $url   = "https://dinamico.cdmon.org/onlineService.php";
-        $url  .= "?enctype=MD5";
-        $url  .= "&n=$config{$h}{'login'}";
-        $url  .= "&p=$config{$h}{'password'}";
+        my $url = "https://dinamico.cdmon.org/onlineService.php?enctype=MD5&n=$config{$h}{'login'}&p=$config{$h}{'password'}";
         $url  .= "&cip=$ip" if $ip;
 
         verbose("SENDING:", "%s",  $url);
