@@ -5494,8 +5494,6 @@ EoEXAMPLE
 ##
 ######################################################################
 sub dinamico_cdmon_update {
-
-
     debug("\ndinamico_cdmon_update -------------------");
 
     ## update each configured host
