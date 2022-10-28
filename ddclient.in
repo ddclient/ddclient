@@ -5559,8 +5559,13 @@ sub dinamico_cdmon_update {
                     $msg  .= sprintf " : sent IP address %s", $ip;
                 }
 
-                if (exists $params->{'newip'})    {$newip = $params->{'newip'}; $msg  .= sprintf " :IP address set to newip:%s", $newip;}
-                if (exists $params->{'temps'})    {$msg  .= sprintf ", the changes will not be operational until after %d minutes", int(int($params->{'temps'})/60000);}
+                if (exists $params->{'newip'}) {
+                  $newip = $params->{'newip'};
+                  $msg  .= sprintf " :IP address set to newip:%s", $newip;
+                }
+                if (exists $params->{'temps'}) {
+                  $msg  .= sprintf ", the changes will not be operational until after %d minutes", int(int($params->{'temps'})/60000);
+                }
 
                 $config{$h}{'ip'}     = $newip;
                 $config{$h}{'mtime'}  = $now;
