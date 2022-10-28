@@ -5481,7 +5481,7 @@ Example ${program}.conf file entries:
   protocol=cdmon,                                               \\
   login=my-my-cdmon.org-login,                                  \\
   password=my-cdmon.org-password                                \\
-  myhost.mydomain.cat
+  domain.example.com
 
 EoEXAMPLE
 } 
