@@ -5479,8 +5479,8 @@ Configuration variables applicable to the 'cdmon' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=cdmon,                                               \\
-  login=my-my-cdmon.org-login,                                     \\
-  password=my-cdmon.org-password                                   \\
+  login=my-my-cdmon.org-login,                                  \\
+  password=my-cdmon.org-password                                \\
   myhost.mydomain.cat
 
 EoEXAMPLE
