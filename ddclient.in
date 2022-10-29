@@ -533,9 +533,9 @@ my %variables = (
         'script'      => setv(T_STRING, 0, 1, '/RemoteUpdate.sv', undef),
         'min-error-interval' => setv(T_DELAY, 0, 0, interval('8m'), 0),
     },
-        'regfishde-common-defaults' => {
-        'server'              => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
-        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',      undef),
+    'regfishde-common-defaults' => {
+        'server'      => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
+        'login'       => setv(T_LOGIN, 0, 0, 0, 'unused', undef),
     },
 );
 my %services = (
