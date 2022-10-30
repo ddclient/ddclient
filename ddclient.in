@@ -4280,10 +4280,7 @@ sub nic_noip_update {
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
-        my $url = "https://$config{$h}{'server'}/nic/update?system=";
-        $url .= 'noip';
-        $url .= "&hostname=$hosts";
-        $url .= "&myip=";
+        my $url = "https://$config{$h}{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
         $url .= $ip if $ip;
 
         my $reply = geturl(
