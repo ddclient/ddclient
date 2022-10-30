@@ -116,8 +116,8 @@ my %builtinweb = (
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
     'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
-    'nsupdate.info-ipv4' => {'url' => 'http://ipv4.nsupdate.info/myip'},
-    'nsupdate.info-ipv6' => {'url' => 'http://ipv6.nsupdate.info/myip'},
+    'nsupdate.info-ipv4' => {'url' => 'https://ipv4.nsupdate.info/myip'},
+    'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
 my %builtinfw = (
@@ -4263,8 +4263,8 @@ sub nic_noip_update {
         'badagent' => 'Invalid user agent',
         'nohost'   => 'The hostname specified does not exist in the database',
         '!donator' => 'The offline setting was set, when the user is not a donator',
-        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at http://www.no-ip.com',
-        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at http://www.no-ip.com',
+        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at https://www.no-ip.com',
+        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at https://www.no-ip.com',
         'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
         'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
@@ -6402,7 +6402,7 @@ EoEXAMPLE
 ######################################################################
 ## nic_freemyip_update
 ## by Cadence (reused code from nic_duckdns)
-## http://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
+## https://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
 ## response contains OK or ERROR
 ######################################################################
 sub nic_freemyip_update {
