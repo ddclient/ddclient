@@ -906,7 +906,7 @@ my %services = (
         'variables'  => merge(
             $variables{'regfishde-common-defaults'},
             $variables{'service-common-defaults'},
-            ),
+        ),
     },
 );
 $variables{'merged'} = {
