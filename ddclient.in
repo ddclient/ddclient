@@ -7215,7 +7215,7 @@ sub nic_regfishdev4_update {
 
    # No response, declare as failed
    if (!defined($reply) || !$reply) {
-     failed("regfish.de updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+     failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
      last;
    }
    last if !header_ok($h, $reply);
