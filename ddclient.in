@@ -5924,7 +5924,7 @@ sub nic_mythicdyn_update {
             ipversion => $ipversion,
         );
         unless ($reply) {
-            failed("%s -- Could not connect to %s.", $h, $config{$h}{'server'});
+            failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
             next;
         }
 
