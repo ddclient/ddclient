@@ -315,3 +315,11 @@ ssl=yes					# use ssl-support.  Works with
 # password=mypassword
 # quietreply=no|yes
 # my-domain.com
+
+##
+## cdmon.org (https://dinamico.cdmon.org/)
+##
+#protocol=cdmon,                  \
+#login=my-cdmon.org-login,        \
+#password=my-cdmon.org-password   \
+#domain.example.com
