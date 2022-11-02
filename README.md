@@ -35,6 +35,7 @@ Dynamic DNS services currently supported include:
     dnsexit     - See https://dnsexit.com/ for details
     1984.is     - See https://www.1984.is/product/freedns/ for details
     Njal.la     - See https://njal.la/docs/ddns/
+    cdmon.org   - See https://ticket.cdmon.com/ca/support/solutions/articles/7000005922-api-d-actualitzaci%C3%B3-de-ip-del-dns-gratis-din%C3%A0mic
 
 `ddclient` now supports many cable and DSL broadband routers.
 
