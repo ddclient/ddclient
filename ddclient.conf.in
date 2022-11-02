@@ -320,6 +320,7 @@ ssl=yes					# use ssl-support.  Works with
 ## cdmon.org (https://dinamico.cdmon.org/)
 ##
 #protocol=cdmon,                  \
+#use=web,                         \
 #login=my-cdmon.org-login,        \
 #password=my-cdmon.org-password   \
 #domain.example.com
