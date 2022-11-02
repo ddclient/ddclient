@@ -5479,7 +5479,8 @@ Configuration variables applicable to the 'cdmon' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=cdmon,                                               \\
-  login=my-my-cdmon.org-login,                                  \\
+  use=web,                                                      \\
+  login=my-cdmon.org-login,                                     \\
   password=my-cdmon.org-password                                \\
   domain.example.com
 
@@ -5488,7 +5489,7 @@ EoEXAMPLE
 ######################################################################
 ## dinamico_cdmon_update
 ##
-## adapted by David
+## adapted by Serrallonga
 ## https://ticket.cdmon.com/ca/support/solutions/articles/7000005922-api-d-actualitzaci%c3%b3-de-ip-del-dns-gratis-din%c3%a0mic?set_locale=1075
 ## https://dinamico.cdmon.org/onlineService.php?enctype=MD5&n=usuario&p=1bc29b36f623ba82aaf6724fd3b16718&cip=x.x.x.x
 ##
