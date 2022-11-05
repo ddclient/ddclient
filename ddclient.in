@@ -548,6 +548,13 @@ my %variables = (
         'script'      => setv(T_STRING, 0, 1, '/RemoteUpdate.sv', undef),
         'min-error-interval' => setv(T_DELAY, 0, 0, interval('8m'), 0),
     },
+    'dnsexit2-common-defaults'       => {
+        'ssl'         => setv(T_BOOL,   0, 0, 1, undef),
+        'server'      => setv(T_FQDNP,  1, 0, 'api.dnsexit.com', undef),
+        'path'        => setv(T_STRING, 0, 1, '/dns/', undef),
+        'record-type' => setv(T_STRING, 1, 0, 'A', undef),
+        'ttl'         => setv(T_NUMBER, 1, 0, 5, 0),
+    },
     'regfishde-common-defaults' => {
         'server'      => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
         'login'       => setv(T_LOGIN, 0, 0, 0, 'unused', undef),
@@ -958,6 +965,19 @@ my %services = (
             $variables{'dnsexit-common-defaults'},
             $variables{'service-common-defaults'},
         ),
+    },
+    'dnsexit2' => {
+        'updateable' => undef,
+        'update'     => \&nic_dnsexit2_update,
+        'examples'   => \&nic_dnsexit2_examples,
+        'variables'  => {
+            %{$variables{'service-common-defaults'}},
+            %{$variables{'dnsexit2-common-defaults'}},
+            # nic_updateable() assumes that every service uses a username/login but that is
+            # not true for the DNSExit API. Silence warnings by redefining the username variable
+            # as non-required with value unused.
+            'login'  => setv(T_STRING, 0, 0, 'unused', undef),
+        },
     },
     'regfishde' => {
         'updateable' => undef,
@@ -1815,7 +1835,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -4348,6 +4368,173 @@ sub nic_dnsexit_update {
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("updating %s: unrecognized reply.", $h);
+        }
+    }
+}
+######################################################################
+## nic_dnsexit2_examples
+######################################################################
+sub nic_dnsexit2_examples {
+    return <<"EoEXAMPLE";
+o 'dnsexit2'
+
+The 'dnsexit2' protocol is the new API protocol used by the dynamic hostname services
+of the 'DNSExit' dns services. This is currently used by the free
+dynamic DNS service offered by www.dnsexit.com.
+
+Configuration variables applicable to the 'dnsexit2' protocol are:
+  protocol=dnsexit2         ##
+  password=YourAPIKey       ## API Key of your account.
+  server=api.dnsexit.com    ## defaults to api.dnsexit.com.
+  path=/dns/                ## defaults to /dns/.
+  record-type=A             ## defaults to A record.
+  ttl=5                     ## defaults to 5 minutes.
+  fully.qualified.host      ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=dnsexit2
+  password=YourAPIKey
+  fully.qualified.host
+
+EoEXAMPLE
+}
+######################################################################
+## nic_dnsexit2_update
+##
+## by @jortkoopmans
+## based on https://dnsexit.com/dns/dns-api/
+##
+######################################################################
+sub nic_dnsexit2_update {
+    debug("\nnic_dnsexit2_update -------------------");
+
+    ## Update each configured host
+    foreach my $h (@_) {
+        # All the known status
+        my %status = (
+             '0'        => [ 'good',    'Success! Actions got executed successfully.' ],
+             '1'        => [ 'warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.' ],
+             '2'        => [ 'badauth', 'API Key Authentication Error. The API Key is missing or wrong.' ],
+             '3'        => [ 'error',   'Missing Required Definitions. Your JSON file may missing some required definitions.' ],
+             '4'        => [ 'error',   'JSON Data Syntax Error. Your JSON file has syntax error.' ],
+             '5'        => [ 'error',   'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.' ],
+             '6'        => [ 'error',   'System Error. Our system problem. May not be your problem. Contact our support if you got such error.' ],
+             '7'        => [ 'error',   'Error getting post data. Our server has problem to receive your JSON posting.' ],
+        );
+        my $ip = delete $config{$h}{'wantip'};
+        info("Going to update IP address to %s for %s.", $ip, $h);
+        # Set the URL of the API endpoint
+        my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
+
+        # Set JSON payload
+        my $data = encode_json({
+                        apikey => $config{$h}{'password'},
+                        domain => $h,
+                        update => {
+                           type => $config{$h}{'record-type'},
+                           name => $h,
+                           content => $ip,
+                           ttl => $config{$h}{'ttl'}},
+                    });
+
+        # Set additional headers
+        my $header = "Content-Type: application/json\n";
+        $header .= "Accept: application/json";
+
+        # Make the call
+        my $reply = geturl(
+            proxy     => opt('proxy'),
+            url       => $url,
+            headers   => $header,
+            method    => 'POST',
+            data      => $data,
+        );
+
+        # No reply, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s%s.", $h, $config{$h}{'server'}, $config{$h}{'path'});
+            $config{$h}{'status'} = 'failed';
+            last;
+        };
+
+        # Reply found
+        debug("%s", $reply);
+        # $ok is mandatory?
+        my $ok = header_ok($h, $reply);
+
+        # Extract the HTTP response code
+        (my $http_status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
+        debug("HTTP response code: %s", $http_status);
+
+        # If not 200, bail
+        if ( $http_status != "200"){
+            failed("Failed to update Host\n%s to IP:%s", $h, $ip);
+            failed("HTTP response code\n%s", $http_status);
+            failed("Full reply\n%s", $reply) unless opt('verbose');
+            $config{$h}{'status'} = 'failed';
+            last;
+        }
+
+        # Strip HTTP response headers
+        (my $strip_status) = ($reply =~ s/^[\s\S]*?(?=\{"code":)//);
+        debug("strip_status");
+        debug("%s", $strip_status);
+        if ($strip_status) {
+            debug("HTTP headers are stripped.");
+        }
+        else {
+            warning("Unexpected: no HTTP headers stripped!");
+        }
+
+        # Decode the remaining reply, it should be JSON.
+        my $response = decode_json($reply);
+
+        # It should at least have a 'code' and 'message'.
+        if (defined($response->{'code'}) and defined($response->{'message'})) {
+            if (exists $status{$response->{'code'}}) {
+                # Add the server response data to the applicable array
+                push( @{ $status {$response->{'code'} } }, $response->{'message'});
+                if (defined($response->{'details'})) {
+                    push ( @{ $status {$response->{'code'} } }, $response->{'details'}[0]);
+                } else {
+                    # Keep it symmetrical for simplicity
+                    push ( @{ $status {$response->{'code'} } }, "no details received");
+                }
+
+                # Set data from array
+                my ($status, $message, $srv_message, $srv_details) = @{ $status {$response->{'code'} } };
+                info("Status: %s -- Message: %s", $status, $message);
+                info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
+                $config{$h}{'status'} = $status;
+
+                # Handle statuses
+                if ($status eq 'good') {
+                    $config{$h}{'ip'}     = $ip;
+                    $config{$h}{'mtime'}  = $now;
+                    $config{$h}{'status'} = 'good';
+                    success("%s", $message);
+                    success("Updated %s successfully to IP address %s at time %s", $h, $ip, prettytime($config{$h}{'mtime'}));
+                } elsif ($status eq 'warning') {
+                    warning("%s", $message);
+                    warning("Server response: %s", $srv_message);
+                } elsif ($status =~ m'^(badauth|error)$') {
+                    failed("%s", $message);
+                    failed("Server response: %s", $srv_message);
+                    $config{$h}{'status'} = 'failed';
+                } else {
+                    failed("This should not be possible");
+                    $config{$h}{'status'} = 'failed';
+                }
+            } else {
+                failed("Status code %s is unknown!", $response->{'code'});
+                $config{$h}{'status'} = 'failed';
+            }
+        } else {
+            failed("Did not receive expected \"code\" and \"message\" keys in server response.");
+            failed("Response:");
+            failed("%s", $response);
+            $config{$h}{'status'} = 'failed';
         }
     }
 }
