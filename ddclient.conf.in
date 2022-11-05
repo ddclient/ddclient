@@ -309,6 +309,13 @@ ssl=yes					# use ssl-support.  Works with
 #subdomain-1.domain.com,subdomain-2.domain.com
 
 ##
+## dnsexit2 (API method www.dnsexit.com)
+##
+#protocol=dnsexit2
+#password=MyAPIKey
+#subdomain-1.domain.com,subdomain-2.domain.com
+
+##
 ## Njal.la (http://njal.la/)
 ##
 # protocol=njalla,
