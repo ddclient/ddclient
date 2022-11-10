@@ -901,8 +901,8 @@ my %services = (
     },
     'regfishde' => {
         'updateable' => undef,
-        'update'     => \&nic_regfishdev4_update,
-        'examples'   => \&nic_regfishdev4_examples,
+        'update'     => \&nic_regfishde_update,
+        'examples'   => \&nic_regfishde_examples,
         'variables'  => merge(
             $variables{'regfishde-common-defaults'},
             $variables{'service-common-defaults'},
@@ -7176,9 +7176,9 @@ sub nic_keysystems_update {
 }
 
 ######################################################################
-## nic_regfishdev4_examples
+## nic_regfishde_examples
 ######################################################################
-sub nic_regfishdev4_examples {
+sub nic_regfishde_examples {
     return <<EoEXAMPLE;
 o 'regfishde'
 The 'regfishde' protocol is used by the non-free dynamic DNS service offered by www.regfish.de.
@@ -7189,31 +7189,33 @@ password=service-password          ## password (token) registered with the servi
 myhost.mydomain.com                ## the host registered with the service.
 Example ${program}.conf file entries:
 ## single host update
-protocol=regfishde, \
-password=service-password \
+protocol=regfishde
+password=service-password
 myhost.mydomain.com
 EoEXAMPLE
 }
 
 ######################################################################
-## nic_regfishdev4_update
+## nic_regfishde_update
 ## response contains "success" on succesfull completion
 ######################################################################
-sub nic_regfishdev4_update {
- debug("\nnic_regfishdev4_update -------------------");
+sub nic_regfishde_update {
+ debug("\nnic_regfishde_update -------------------");
 
- ## update each configured host
- ## should improve to update in one pass
+ ## update configured host
  for my $h (@_) {
    my $ip = delete $config{$h}{'wantip'};
+   my $ipv6 = delete $config{$h}{'wantip'};
+   
    info("regfish.de setting IP address to %s for %s", $ip, $h);
 
-   my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv4=$ip&forcehost=1&token=$config{$h}{'password'}";
+   my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+   my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv$ipv=$ip&forcehost=1&token=$config{$h}{'password'}";
 
    # Try to get URL
    my $reply = geturl(proxy => opt('proxy'), url => $url);
 
-   # No response, declare as failed
+   # No response, give error
    if (!defined($reply) || !$reply) {
      failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
      last;
