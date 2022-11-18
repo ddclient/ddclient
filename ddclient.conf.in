@@ -315,3 +315,10 @@ ssl=yes					# use ssl-support.  Works with
 # password=mypassword
 # quietreply=no|yes
 # my-domain.com
+
+##
+## regfish.de (www.regfish.de/)
+##
+# protocol=regfishde,
+# password=mypassword
+# my-domain.com

@@ -35,6 +35,7 @@ Dynamic DNS services currently supported include:
     dnsexit     - See https://dnsexit.com/ for details
     1984.is     - See https://www.1984.is/product/freedns/ for details
     Njal.la     - See https://njal.la/docs/ddns/
+    regfish.de  - See https://www.regfish.de/domains/dyndns/ for details
 
 `ddclient` now supports many cable and DSL broadband routers.
 
