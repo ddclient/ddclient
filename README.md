@@ -36,6 +36,7 @@ Dynamic DNS services currently supported include:
     1984.is     - See https://www.1984.is/product/freedns/ for details
     Njal.la     - See https://njal.la/docs/ddns/
     regfish.de  - See https://www.regfish.de/domains/dyndns/ for details
+    domenehsop  - See https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get
 
 `ddclient` now supports many cable and DSL broadband routers.
 
