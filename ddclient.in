@@ -564,7 +564,6 @@ my %services = (
         'update'     => \&dinamico_cdmon_update,
         'examples'   => \&dinamico_cdmon_examples,
         'variables'  => merge(
-			  { 'server'       => setv(T_FQDNP,  1, 0, 1, 'dinamico.cdmon.org',    undef)    },
 			  { 'min-interval' => setv(T_DELAY,  0, 0, 1, 0, interval('5m')),},
 			  $variables{'service-common-defaults'},
 			),
