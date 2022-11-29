@@ -30,8 +30,8 @@ use IO::Socket::INET;
 use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
 
-use version 0.77; our $VERSION = version->declare('v3.10.0');
-(my $version = $VERSION->stringify()) =~ s/^v//;
+use version 0.77; our $VERSION = version->declare('@PACKAGE_VERSION@');
+my $version = $VERSION->stringify();
 my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
@@ -116,8 +116,8 @@ my %builtinweb = (
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
     'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
-    'nsupdate.info-ipv4' => {'url' => 'http://ipv4.nsupdate.info/myip'},
-    'nsupdate.info-ipv6' => {'url' => 'http://ipv6.nsupdate.info/myip'},
+    'nsupdate.info-ipv4' => {'url' => 'https://ipv4.nsupdate.info/myip'},
+    'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
 my %builtinfw = (
@@ -533,6 +533,10 @@ my %variables = (
         'script'      => setv(T_STRING, 0, 1, '/RemoteUpdate.sv', undef),
         'min-error-interval' => setv(T_DELAY, 0, 0, interval('8m'), 0),
     },
+    'regfishde-common-defaults' => {
+        'server'      => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
+        'login'       => setv(T_LOGIN, 0, 0, 0, 'unused', undef),
+    },
 );
 my %services = (
     '1984' => {
@@ -902,6 +906,15 @@ my %services = (
         'examples'   => \&nic_dnsexit_examples,
         'variables'  => merge(
             $variables{'dnsexit-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'regfishde' => {
+        'updateable' => undef,
+        'update'     => \&nic_regfishde_update,
+        'examples'   => \&nic_regfishde_examples,
+        'variables'  => merge(
+            $variables{'regfishde-common-defaults'},
             $variables{'service-common-defaults'},
         ),
     },
@@ -4273,8 +4286,8 @@ sub nic_noip_update {
         'badagent' => 'Invalid user agent',
         'nohost'   => 'The hostname specified does not exist in the database',
         '!donator' => 'The offline setting was set, when the user is not a donator',
-        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at http://www.no-ip.com',
-        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at http://www.no-ip.com',
+        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at https://www.no-ip.com',
+        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at https://www.no-ip.com',
         'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
         'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
@@ -4290,10 +4303,7 @@ sub nic_noip_update {
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
-        my $url = "https://$config{$h}{'server'}/nic/update?system=";
-        $url .= 'noip';
-        $url .= "&hostname=$hosts";
-        $url .= "&myip=";
+        my $url = "https://$config{$h}{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
         $url .= $ip if $ip;
 
         my $reply = geturl(
@@ -6273,7 +6283,7 @@ sub nic_hetzner_update {
                 $config{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$key}{'server'}/records?$zone_id";
+                $url = "https://$config{$key}{'server'}/records";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
                                 headers => $headers
@@ -6290,7 +6300,7 @@ sub nic_hetzner_update {
                     next;
                 }
                 # Pull the ID out of the json, messy
-                my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? $_->{id} : ()} @{$response->{records}};
+                my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type && &zone_id eq $_{zone_id}) ? $_->{id} : ()} @{$response->{records}};
 
                 # Set domain
                 my $http_method="";
@@ -6558,7 +6568,7 @@ EoEXAMPLE
 ######################################################################
 ## nic_freemyip_update
 ## by Cadence (reused code from nic_duckdns)
-## http://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
+## https://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
 ## response contains OK or ERROR
 ######################################################################
 sub nic_freemyip_update {
@@ -7318,6 +7328,67 @@ sub nic_keysystems_update {
   }
 }
 
+######################################################################
+## nic_regfishde_examples
+######################################################################
+sub nic_regfishde_examples {
+    return <<EoEXAMPLE;
+o 'regfishde'
+The 'regfishde' protocol is used by the non-free dynamic DNS service offered by www.regfish.de.
+Check https://www.regfish.de for configuration variables applicable to the 'regfishde' protocol:
+protocol=regfishde
+server=dyndns.regfish.de
+password=service-password          ## password (token) registered with the service
+myhost.mydomain.com                ## the host registered with the service.
+Example ${program}.conf file entries:
+## single host update
+protocol=regfishde
+password=service-password
+myhost.mydomain.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_regfishde_update
+## response contains "success" on succesfull completion
+######################################################################
+sub nic_regfishde_update {
+ debug("\nnic_regfishde_update -------------------");
+
+ ## update configured host
+ for my $h (@_) {
+   my $ip = delete $config{$h}{'wantip'};
+   my $ipv6 = delete $config{$h}{'wantip'};
+   
+   info("regfish.de setting IP address to %s for %s", $ip, $h);
+
+   my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+   my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv$ipv=$ip&forcehost=1&token=$config{$h}{'password'}";
+
+   # Try to get URL
+   my $reply = geturl(proxy => opt('proxy'), url => $url);
+
+   # No response, give error
+   if (!defined($reply) || !$reply) {
+     failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
+     last;
+   }
+   last if !header_ok($h, $reply);
+
+   if ($reply =~ /success/)
+   {
+       $config{$h}{'ip'} = $ip;
+       $config{$h}{'mtime'} = $now;
+       $config{$h}{'status'} = 'good';
+       success("updating %s: good: IP address set to %s", $h, $ip);
+    }
+    else
+    {
+       $config{$h}{'status'} = 'failed';
+       failed("updating %s: Server said: '$reply'", $h);
+    }
+  }
+}
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
 # otherwise do nothing. This "modulino" pattern makes it possible to import this file as a module

@@ -317,6 +317,13 @@ ssl=yes					# use ssl-support.  Works with
 # my-domain.com
 
 ##
+## regfish.de (www.regfish.de/)
+##
+# protocol=regfishde,
+# password=mypassword
+# my-domain.com
+
+##
 ## cdmon.org (https://dinamico.cdmon.org/)
 ##
 #protocol=cdmon,                  \

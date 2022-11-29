@@ -1,4 +1,4 @@
-# DDCLIENT v3.10.0
+# DDCLIENT
 
 `ddclient` is a Perl client used to update dynamic DNS entries for accounts 
 on many dynamic DNS services.
@@ -35,6 +35,7 @@ Dynamic DNS services currently supported include:
     dnsexit     - See https://dnsexit.com/ for details
     1984.is     - See https://www.1984.is/product/freedns/ for details
     Njal.la     - See https://njal.la/docs/ddns/
+    regfish.de  - See https://www.regfish.de/domains/dyndns/ for details
     cdmon.org   - See https://ticket.cdmon.com/ca/support/solutions/articles/7000005922-api-d-actualitzaci%C3%B3-de-ip-del-dns-gratis-din%C3%A0mic
 
 `ddclient` now supports many cable and DSL broadband routers.
@@ -79,8 +80,8 @@ ddclient package.
      the directory:
 
      ```shell
-     tar xvfa ddclient-3.10.0.tar.gz
-     cd ddclient-3.10.0
+     tar xvfa ddclient-3.XX.X.tar.gz
+     cd ddclient-3.XX.X
      ```
 
      (If you are installing from a clone of the Git repository, you
