@@ -2480,7 +2480,6 @@ sub fetch_via_socket_io {
         PeerAddr => $peer,
         PeerPort => $port,
         Proto => 'tcp',
-        MultiHomed => 1,
         Timeout => opt('timeout'),
     );
     my $socket_class = 'IO::Socket::IP';
