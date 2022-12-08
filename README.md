@@ -50,7 +50,6 @@ through github.com. Please check out http://ddclient.net
   * Perl v5.10.1 or later
       * `IO::Socket::SSL` perl library for ssl-support
       * `JSON::PP` perl library for JSON support
-      * `IO::Socket::INET6` perl library for ipv6-support
   * Linux, macOS, or any other Unix-ish system
   * An implementation of `make` (such as [GNU
     Make](https://www.gnu.org/software/make/))

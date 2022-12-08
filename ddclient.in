@@ -26,7 +26,7 @@ use File::Basename;
 use File::Path qw(make_path);
 use File::Temp;
 use Getopt::Long;
-use IO::Socket::INET;
+use IO::Socket::IP;
 use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
 
@@ -2363,23 +2363,6 @@ EOM
 }
 
 ######################################################################
-## load_ipv6_support
-######################################################################
-sub load_ipv6_support {
-    my $ipv6_loaded = eval { require IO::Socket::INET6 };
-    unless ($ipv6_loaded) {
-        fatal("%s", <<"EOM");
-Error loading the Perl module IO::Socket::INET6 needed for ipv6 connect.
-On Debian, the package libio-socket-inet6-perl must be installed.
-On Red Hat, the package perl-IO-Socket-INET6 must be installed.
-On Alpine, the package perl-io-socket-inet6 must be installed.
-EOM
-    }
-    import IO::Socket::INET6;
-    { no warnings; $IO::Socket::INET6::DEBUG = 0; }
-}
-
-######################################################################
 ## load_sha1_support
 ######################################################################
 sub load_sha1_support {
@@ -2500,7 +2483,7 @@ sub fetch_via_socket_io {
         MultiHomed => 1,
         Timeout => opt('timeout'),
     );
-    my $socket_class = 'IO::Socket::INET';
+    my $socket_class = 'IO::Socket::IP';
     if ($use_ssl) {
         # IO::Socket::SSL will load IPv6 support if available on the system.
         load_ssl_support;
@@ -2510,9 +2493,6 @@ sub fetch_via_socket_io {
         $socket_args{SSL_verify_mode} = ($params{ssl_validate} // 1)
                                         ? IO::Socket::SSL->SSL_VERIFY_PEER
                                         : IO::Socket::SSL->SSL_VERIFY_NONE;
-    } elsif ($globals{'ipv6'} || $ipversion eq '6') {
-        load_ipv6_support;
-        $socket_class = 'IO::Socket::INET6';
     }
     if (defined($params{_testonly_socket_class})) {
         $socket_args{original_socket_class} = $socket_class;
