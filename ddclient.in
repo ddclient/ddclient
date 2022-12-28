@@ -4671,10 +4671,12 @@ sub nic_easydns_update {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
-        my $ip    = $config{$h}{'wantip'};
-        delete $config{$_}{'wantip'} foreach @hosts;
+        my $ipv4  = $config{$h}{'wantipv4'};
+        my $ipv6  = $config{$h}{'wantipv6'};
+        delete $config{$_}{'wantipv4'} foreach @hosts;
+        delete $config{$_}{'wantipv6'} foreach @hosts;
 
-        info("setting IP address to %s for %s", $ip, $hosts);
+        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
         #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
@@ -4683,7 +4685,11 @@ sub nic_easydns_update {
         $url  = "https://$config{$h}{'server'}$config{$h}{'script'}?";
         $url .= "hostname=$hosts";
         $url .= "&myip=";
-        $url .= $ip if $ip;
+        $url .= $ipv4 if $ipv4;
+        foreach my $ipv6a ($ipv6) {
+            $url .= "&myip=";
+            $url .= $ipv6a
+        }
         $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF') if defined $config{$h}{'wildcard'};
 
         if ($config{$h}{'mx'}) {
@@ -4720,9 +4726,10 @@ sub nic_easydns_update {
 
                 $config{$h}{'status'} = $status;
                 if ($status eq 'NOERROR') {
-                    $config{$h}{'ip'}    = $ip;
+                    $config{$h}{'ipv4'}  = $ipv4;
+                    $config{$h}{'ipv6'}  = $ipv6;
                     $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+                    success("updating %s: %s: IP address set to %s %s", $h, $status, $ipv4, $ipv6);
 
                 } elsif ($status =~ /TOOSOON/) {
                     ## make sure we wait at least a little
