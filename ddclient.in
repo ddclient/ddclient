@@ -6850,8 +6850,8 @@ sub nic_ovh_update {
         }
 
         my @reply = split /\n/, $reply;
-        my $returned = pop(@reply);
-        if ($returned =~ /good/ || $returned =~ /nochg/) {
+        my $returned = List::Util::first { $_ =~ /good/ || $_ =~ /nochg/ } @reply;
+        if ($returned) {
             $config{$h}{'ip'}     = $ip;
             $config{$h}{'mtime'}  = $now;
             $config{$h}{'status'} = 'good';
@@ -6862,7 +6862,7 @@ sub nic_ovh_update {
             }
         } else {
             $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s'", $h, $returned);
+            failed("updating %s: Server said: '%s'", $h, $reply);
         }
     }
 }
