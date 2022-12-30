@@ -4492,13 +4492,13 @@ Configuration variables applicable to the 'domeneshop' api are:
   protocol=domeneshop          ##
   login=token                  ## api-token
   password=secret              ## api-secret
-  your.domain.name             ## the host registered with the service.
+    domain.example.com         ## the host registered with the service.             ## the host registered with the service.
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=domeneshop
-  login=djk239023jf
-  password=32jkl23nkl2rhron89wec89023kewjkoej
+  login=username
+  password=your-password
   my.example.com
 
 EoEXAMPLE
@@ -4522,9 +4522,7 @@ sub nic_domeneshop_update {
         # Set the URL that we're going to to update
         my $url;
         $url  = $globals{'ssl'} ? "https://" : "http://";
-        $url .= "$config{$h}{'server'}$endpointPath";
-        $url .= "?hostname=$h";
-        $url .= "&myip=$ip";
+        $url .= "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip";
 
         # Try to get URL
         my $reply = geturl(
