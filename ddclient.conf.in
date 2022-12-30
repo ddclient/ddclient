@@ -309,6 +309,14 @@ ssl=yes					# use ssl-support.  Works with
 #subdomain-1.domain.com,subdomain-2.domain.com
 
 ##
+## domeneshop (www.domeneshop.no)
+##
+# protocol=domeneshop
+# login=<token>
+# password=<secret>
+# subdomain-1.domain.com,subdomain-2.domain.com
+
+##
 ## Njal.la (http://njal.la/)
 ##
 # protocol=njalla,
