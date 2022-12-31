@@ -29,6 +29,7 @@ Dynamic DNS services currently supported include:
     DonDominio  - See https://www.dondominio.com for details
     NearlyFreeSpeech.net - See https://www.nearlyfreespeech.net/services/dns for details
     OVH         - See https://www.ovh.com for details
+    Porkbun     - See https://porkbun.com/
     ClouDNS     - See https://www.cloudns.net
     dinahosting - See https://dinahosting.com
     Gandi       - See https://gandi.net

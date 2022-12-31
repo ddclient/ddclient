@@ -286,6 +286,15 @@ ssl=yes					# use ssl-support.  Works with
 # test.example.com
 
 ##
+## Porkbun (https://porkbun.com/)
+##
+# protocol=porkbun
+# apikey=APIKey
+# secretapikey=SecretAPIKey
+# host.example.com,host2.sub.example.com
+# on-root-domain=yes example.com,sub.example.com
+
+##
 ## ClouDNS (https://www.cloudns.net)
 ##
 # protocol=cloudns, \
