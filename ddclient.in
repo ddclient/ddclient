@@ -637,6 +637,15 @@ my %services = (
             'host' => setv(T_NUMBER, 1, 1, 0, undef),
         },
     },
+    'domeneshop' => {
+        'updateable' => undef,
+        'update'     => \&nic_domeneshop_update,
+        'examples'   => \&nic_domeneshop_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'server' => setv(T_FQDNP,  1, 0, 'api.domeneshop.no', undef),
+        },
+    },
     'duckdns' => {
         'updateable' => undef,
         'update'     => \&nic_duckdns_update,
@@ -4653,6 +4662,86 @@ sub nic_dslreports1_update {
         }
     }
 }
+
+######################################################################
+## nic_domeneshop_examples
+######################################################################
+sub nic_domeneshop_examples {
+    return <<"EoEXAMPLE";
+o 'domeneshop'
+
+API is documented here: https://api.domeneshop.no/docs/
+
+To generate credentials, visit https://www.domeneshop.no/admin?view=api after logging in to the control panel at
+https://www.domeneshop.no/admin?view=api
+
+Configuration variables applicable to the 'domeneshop' api are:
+  protocol=domeneshop          ##
+  login=token                  ## api-token
+  password=secret              ## api-secret
+    domain.example.com         ## the host registered with the service.             ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=domeneshop
+  login=username
+  password=your-password
+  my.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_domeneshop_update
+######################################################################
+sub nic_domeneshop_update {
+    debug("\nnic_domeneshop_update -------------------");
+
+    my $endpointPath = "/v0/dyndns/update";
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("Setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:", "Updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+        $url  = $globals{'ssl'} ? "https://" : "http://";
+        $url .= "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip";
+
+        # Try to get URL
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        );
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            next;
+        }
+        next if !header_ok($h, $reply);
+
+        # evaluate response
+        my @reply = split /\n/, $reply;
+        my $status = shift(@reply);
+        my $message = pop(@reply);
+        if ($status =~ /204/) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '%s' '%s'", $h, $status, $message);
+        }
+    }
+}
+
 
 ######################################################################
 ## nic_zoneedit1_examples
