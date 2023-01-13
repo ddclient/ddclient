@@ -5911,7 +5911,6 @@ sub nic_mythicdyn_update {
     # Update each set configured host.
     foreach my $h (@_) {
         info("%s -- Setting IP address.", $h);
-        verbose("UPDATE:", "updating %s", $h);
 
         my $ipversion = $config{$h}{'ipv6'} ? '6' : '4';
 
