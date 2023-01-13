@@ -6223,7 +6223,7 @@ sub nic_hetzner_update {
                 $config{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$key}{'server'}/records";
+                $url = "https://$config{$key}{'server'}/records?zone_id=$zone_id";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
                                 headers => $headers
@@ -6240,7 +6240,7 @@ sub nic_hetzner_update {
                     next;
                 }
                 # Pull the ID out of the json, messy
-                my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type && &zone_id eq $_{zone_id}) ? $_->{id} : ()} @{$response->{records}};
+                my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? $_->{id} : ()} @{$response->{records}};
 
                 # Set domain
                 my $http_method="";
