@@ -753,6 +753,16 @@ my %services = (
             'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
         },
     },
+    'mythicdyn' => {
+        'updateable' => undef,
+        'update'     => \&nic_mythicdyn_update,
+        'examples'   => \&nic_mythicdyn_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
+            'server'       => setv(T_FQDNP, 1, 0, 'api.mythic-beasts.com', undef),
+        },
+    },
     'namecheap' => {
         'updateable' => undef,
         'update'     => \&nic_namecheap_update,
@@ -3852,7 +3862,9 @@ sub header_ok {
             $ok = 1;
 
         } elsif ($result eq '401') {
-            failed("updating %s: authorization failed (%s)", $host, $line);
+            failed("updating %s: authentication failed (%s)", $host, $line);
+        } elsif ($result eq '403') {
+            failed("updating %s: not authorized (%s)", $host, $line);
         }
 
     } else {
@@ -5847,6 +5859,82 @@ sub nic_googledomains_update {
             $config{$host}{'ip'}     = $ip;
             $config{$host}{'mtime'}  = $now;
             $config{$host}{'status'} = 'good';
+        }
+    }
+}
+
+######################################################################
+## nic_mythicdyn_examples
+##
+## written by Reuben Thomas
+##
+######################################################################
+sub nic_mythicdyn_examples {
+    return <<"EoEXAMPLE";
+o 'mythicdyn'
+
+The 'mythicdyn' protocol is used by the Dynamic DNS service offered by
+www.mythic-beasts.com.
+
+Configuration variables applicable to the 'mythicdyn' protocol are:
+  protocol=mythicdyn           ##
+  ipv6=no|yes                  ## whether to set an A record (default, ipv6=no)
+                               ## or AAAA record (ipv6=yes).
+  login=service-login          ## the user name provided by the admin interface
+  password=service-password    ## the password provided by the admin interface
+  fully.qualified.host         ## the host registered with the service
+
+Note: this service automatically sets the IP address to that from which the
+request comes, so the IP address detected by ddclient is only used to keep
+track of when it needs updating.
+
+Example ${program}.conf file entries:
+  ## Single host update.
+  protocol=mythicdyn,                       \\
+  login=service-login                       \\
+  password=service-password,                \\
+  host.example.com
+
+  ## Multiple host update.
+  protocol=mythicdyn,                       \\
+  login=service-login                       \\
+  password=service-password,                \\
+  hosta.example.com,hostb.sub.example.com
+EoEXAMPLE
+}
+######################################################################
+## nic_mythicdyn_update
+######################################################################
+sub nic_mythicdyn_update {
+    debug("\nnic_mythicdyn_update --------------------");
+
+    # Update each set configured host.
+    foreach my $h (@_) {
+        info("%s -- Setting IP address.", $h);
+
+        my $ipversion = $config{$h}{'ipv6'} ? '6' : '4';
+
+        my $reply = geturl(
+            proxy     => opt('proxy'),
+            url       => "https://ipv$ipversion.$config{$h}{'server'}/dns/v2/dynamic/$h",
+            method    => 'POST',
+            login     => $config{$h}{'login'},
+            password  => $config{$h}{'password'},
+            ipversion => $ipversion,
+        );
+        unless ($reply) {
+            failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
+            next;
+        }
+
+        my $ok = header_ok($h, $reply);
+        if ($ok) {
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = "good";
+
+            success("%s -- Updated successfully.", $h);
+        } else {
+            failed("%s -- Failed to update.", $h);
         }
     }
 }
