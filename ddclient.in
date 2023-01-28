@@ -6580,7 +6580,6 @@ sub nic_duckdns_update {
         if ($state eq 'noresult') {
             failed("updating %s: Server said: '%s'", $h, $line);
         }
-
     }
 }
 
