@@ -3820,7 +3820,7 @@ sub nic_updateable {
                 success("%s: skipped: IP address was already set to %s.", $host, $ip);
             }
             if ($usev4 ne 'disabled') {
-                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv6);
+                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
             }
             if ($usev6 ne 'disabled') {
                 success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
