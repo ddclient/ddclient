@@ -1191,6 +1191,7 @@ sub update_nics {
             my $usev6     = opt('usev6', $h) // 'disabled';
             $use          = 'disabled' if ($use eq 'no'); # backward compatibility
             $usev6        = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+            $use          = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
             my $arg_ip    = opt('ip',    $h) // '';
             my $arg_ipv4  = opt('ipv4',  $h) // '';
             my $arg_ipv6  = opt('ipv6',  $h) // '';
@@ -3620,6 +3621,7 @@ sub nic_updateable {
     my $usev6  = opt('usev6', $host) // 'disabled';
     $use       = 'disabled' if ($use eq 'no');   # backward compatibility
     $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+    $use       = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
 
     # If we have a valid IP address and we have previously warned that it was invalid.
     # reset the warning count back to zero.
