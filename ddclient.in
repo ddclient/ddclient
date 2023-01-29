@@ -3820,7 +3820,7 @@ sub nic_updateable {
                 success("%s: skipped: IP address was already set to %s.", $host, $ip);
             }
             if ($usev4 ne 'disabled') {
-                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv6);
+                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
             }
             if ($usev6 ne 'disabled') {
                 success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
@@ -4069,10 +4069,13 @@ sub nic_dyndns2_update {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
-        my $ip    = $config{$h}{'wantip'};
-        delete $config{$_}{'wantip'} foreach @hosts;
+        my $ipv4  = $config{$h}{'wantipv4'};
+        my $ipv6  = $config{$h}{'wantipv6'};
+        delete $config{$_}{'wantipv4'} foreach @hosts;
+        delete $config{$_}{'wantipv6'} foreach @hosts;
 
-        info("setting IP address to %s for %s", $ip, $hosts);
+        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
+        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
 
         ## Select the DynDNS system to update
@@ -4091,7 +4094,11 @@ sub nic_dyndns2_update {
 
         $url .= "&hostname=$hosts";
         $url .= "&myip=";
-        $url .= $ip if $ip;
+        $url .= $ipv4 if $ipv4;
+        if ($ipv6) {
+            $url .= "," if $ipv4;
+            $url .= $ipv6;
+        }
 
         ## some args are not valid for a custom domain.
         $url .= "&wildcard=ON" if ynu($config{$h}{'wildcard'}, 1, 0, 0);
@@ -4114,7 +4121,6 @@ sub nic_dyndns2_update {
 
         my @reply      = split /\n/, $reply;
         my $state      = 'header';
-        my $returnedip = $ip;
 
         foreach my $line (@reply) {
             if ($state eq 'header') {
@@ -4128,22 +4134,28 @@ sub nic_dyndns2_update {
 
                 # bug #10: some dyndns providers does not return the IP so
                 # we can't use the returned IP
-                my ($status, $returnedip) = split / /, lc $line;
-                $ip = $returnedip if (not $ip);
+                my ($status, $returnedips) = split / /, lc $line;
                 my $h = shift @hosts;
 
                 $config{$h}{'status'} = $status;
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
                 if ($status eq 'good') {
-                    $config{$h}{'ip'}    = $ip;
+                    $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
+                    $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                     $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+                    success("updating %s: %s: IPv4 address set to %s", $h, $status, $ipv4) if $ipv4;
+                    success("updating %s: %s: IPv6 address set to %s", $h, $status, $ipv6) if $ipv6;
 
                 } elsif (exists $errors{$status}) {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                        $config{$h}{'ip'}     = $ip;
+                        $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
+                        $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                         $config{$h}{'mtime'}  = $now;
                         $config{$h}{'status'} = 'good';
+                        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+                        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
 
                     } else {
                         failed("updating %s: %s: %s", $h, $status, $errors{$status});
