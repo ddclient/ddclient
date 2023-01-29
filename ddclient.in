@@ -6571,15 +6571,26 @@ sub nic_duckdns_update {
         next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
-        my $returned = pop(@reply);
-        if ($returned =~ /OK/) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
-            $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
-        } else {
-            $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s'", $h, $returned);
+        my $state = 'noresult';
+        my $line = '';
+
+        foreach $line (@reply) {
+            if ($line eq 'OK') {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                $state = 'result';
+                success("updating %s: good: IP address set to %s", $h, $ip);
+
+            } elsif ($line eq 'KO') {
+                $config{$h}{'status'} = 'failed';
+                $state = 'result';
+                failed("updating %s: Server said: '%s'", $h, $line);
+            }
+        }
+
+        if ($state eq 'noresult') {
+            failed("updating %s: Server said: '%s'", $h, $line);
         }
     }
 }
