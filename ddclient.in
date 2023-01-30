@@ -927,6 +927,16 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
+    'enom' => {
+        'updateable' => undef,
+        'update'     => \&nic_enom_update,
+        'examples'   => \&nic_enom_examples,
+        'variables'  => {
+              %{$variables{'service-common-defaults'}},
+              'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
+              'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
+            },
+     },
 );
 $variables{'merged'} = {
     map({ %{$services{$_}{'variables'}} } keys(%services)),
@@ -7445,6 +7455,90 @@ sub nic_regfishde_update {
        failed("updating %s: Server said: '$reply'", $h);
     }
   }
+}
+
+######################################################################
+######################################################################
+## enom
+######################################################################
+sub nic_enom_examples {
+    return <<EoEXAMPLE;
+o 'enom'
+The 'enom' protocol is used by DNS services offered by www.enom.com and their resellers.
+Configuration variables applicable to the 'enom' protocol are:
+  protocol=enom                ## 
+  server=fqdn.of.service       ## defaults to dynamic.name-services.com
+  login=domain.name            ## base domain name
+  password=domain-password     ## the domain password registered with the service
+  A_record                     ## the A record(s) registered with the service
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=enom,                                   \\
+  login=mydomain.com,                              \\
+  password=mydomain.com-password                   \\
+  www
+  ## multiple host update
+  protocol=enom,                                   \\
+  login=mydomain.com,                              \\
+  password=mydomain.com-password                   \\
+  www,mail,*
+EoEXAMPLE
+}
+######################################################################
+## enom_update
+##
+## written by Lars Fredriksson
+## modified by Leonidas Arvanitis
+##
+## based on http://www.edoceo.com/creo/enomddu.php
+##
+## needs this url to update:
+##   http://dynamic.name-services.com/interface.asp?Command=SetDNSHost&HostName=www
+##   &Zone=mydomain.com&DomainPassword=MyD0mainPa55w0rD&Address=123.45.678.90
+##
+######################################################################
+sub nic_enom_update {
+    debug("\nenom_update -------------------");
+    ## update each configured host
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        my $url;
+        $url   = "https://$config{$h}{'server'}/interface.asp?Command=SetDNSHost";
+        $url  .= "&HostName=$h";
+        $url  .= "&Zone=$config{$h}{'login'}";
+        $url  .= "&DomainPassword=$config{$h}{'password'}";
+        $url  .= "&Address=";
+        $url  .= $ip if $ip;
+
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url
+        );
+
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+
+        if (grep /Done=true/i, @reply) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            warning("SENT:    %s", $url) unless opt('verbose');
+            warning("REPLIED: %s", $reply);
+            failed("updating %s: Invalid reply.", $h);
+        }
+    }
 }
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
