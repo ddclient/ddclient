@@ -38,6 +38,7 @@ Dynamic DNS services currently supported include:
     regfish.de  - See https://www.regfish.de/domains/dyndns/ for details
     domenehsop  - See https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get
     Mythic Beasts - See https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns for details
+    Enom        - See https://www.enom.com for details
 
 `ddclient` now supports many cable and DSL broadband routers.
 
