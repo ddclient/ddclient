@@ -49,7 +49,7 @@ sub subst_var {
 }
 
 my $etc = subst_var('@sysconfdir@', '/etc/ddclient');
-my $cachedir = subst_var('@localstatedir@', '/var') . '/cache/ddclient';
+my $cachedir = '/var/cache/ddclient';
 my $savedir = '/tmp';
 if ($program =~ /test/i) {
     $etc = '.';
