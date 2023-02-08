@@ -858,6 +858,21 @@ my %services = (
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
         },
     },
+    'porkbun' => {
+        'updateable' => undef,
+        'update'     => \&nic_porkbun_update,
+        'examples'   => \&nic_porkbun_examples,
+        'variables'  => {
+            'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
+            'secretapikey'   => setv(T_PASSWD, 1, 0, '',         undef),
+            'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
+            'login'          => setv(T_LOGIN,  0, 0, 'unused',   undef),
+            'password'       => setv(T_PASSWD, 0, 0, 'unused',   undef),
+            'use'            => setv(T_USE,    0, 0, 'disabled', undef),
+            'usev4'          => setv(T_USEV4,  0, 0, 'disabled', undef),
+            'usev6'          => setv(T_USEV6,  0, 0, 'disabled', undef),
+        },
+    },
     'sitelutions' => {
         'updateable' => undef,
         'update'     => \&nic_sitelutions_update,
@@ -1765,7 +1780,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -7091,6 +7106,269 @@ sub nic_ovh_update {
         } else {
             $config{$h}{'status'} = 'failed';
             failed("updating %s: Server said: '%s'", $h, $reply);
+        }
+    }
+}
+
+######################################################################
+## nic_porkbun_examples
+######################################################################
+sub nic_porkbun_examples {
+    return <<"EoEXAMPLE";
+o 'porkbun'
+
+The 'porkbun' protocol is used for porkbun (https://porkbun.com/).
+The API is documented here: https://porkbun.com/api/json/v3/documentation
+
+Before setting up, it is necessary to create your API Key by referring to the following page.
+
+https://kb.porkbun.com/article/190-getting-started-with-the-porkbun-api
+
+Available configuration variables:
+  * apikey (required): API Key of Porkbun API
+  * secretapikey (required): Secret API Key of Porkbun API
+  * on-root-domain=yes or no (default: no): Indicates whether the specified domain name (FQDN) is
+    an unnamed record (Zone APEX) in a zone.
+    It is useful to specify it as a local variable as shown in the example.
+  * usev4, usev6 : These configuration variables can be specified as local variables to override
+    the global settings. It is useful to finely control IPv4 or IPv6 as shown in the example.
+  * use (deprecated) : This parameter is deprecated but can be overridden like the above parameters.
+
+Limitations:
+  * Multiple same name records (for round robin) are not supported.
+    The same IP address is set for all, creating meaningless extra records.
+
+Example ${program}.conf file entry:
+  protocol=porkbun
+  apikey=APIKey
+  secretapikey=SecretAPIKey
+  host.example.com,host2.sub.example.com
+  on-root-domain=yes example.com,sub.example.com
+
+Additional example to finely control IPv4 or IPv6 :
+  # Example 01 : Global enable both IPv4 and IPv6, and update both records.
+  usev4=webv4
+  usev6=ifv6, ifv6=enp1s0
+
+  protocol=porkbun
+  apikey=APIKey
+  secretapikey=SecretAPIKey
+  host.example.com,host2.sub.example.com
+
+  # Example 02 : Global enable only IPv4, and update only IPv6 record.
+  usev4=webv4
+
+  protocol=porkbun
+  apikey=APIKey
+  secretapikey=SecretAPIKey
+  usev6=ifv6, ifv6=enp1s0, usev4=disabled ipv6.example.com
+  
+EoEXAMPLE
+}
+
+######################################################################
+## nic_porkbun_update
+######################################################################
+sub nic_porkbun_update {
+    debug("\nnic_porkbun_update -------------------");
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $host (@_) {
+        my ($sub_domain, $domain);
+        if ($config{$host}{'on-root-domain'}) {
+            $sub_domain = '';
+            $domain = $host;
+        } else {
+            ($sub_domain, $domain) = split(/\./, $host, 2);
+        }
+        my $ipv4 = delete $config{$host}{'wantipv4'};
+        my $ipv6 = delete $config{$host}{'wantipv6'};
+        if (is_ipv4($ipv4)) {
+            info("setting IPv4 address to %s for %s", $ipv4, $host);
+            verbose("UPDATE:","updating %s", $host);
+
+            my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/A/$sub_domain";
+            my $data = encode_json({
+                secretapikey => $config{$host}{'secretapikey'},
+                apikey       => $config{$host}{'apikey'},
+            });
+            my $header = "Content-Type: application/json\n";
+            my $reply = geturl(
+                proxy     => opt('proxy'),
+                url       => $url,
+                headers   => $header,
+                method    => 'POST',
+                data      => $data,
+            );
+            # No response, declare as failed
+            if (!defined($reply) || !$reply) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: Could not connect to porkbun.com.", $host);
+                next;
+            }
+            if (!header_ok($host, $reply)) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: failed (%s)", $host, $reply);
+                next;
+            }
+            # Strip header
+            # Porkbun sends data in chunks, so it is assumed to be one chunk and parsed forcibly.
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval { decode_json(${^MATCH}) };
+            if (!defined($response)) {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected service response.", $host);
+                next;
+            }
+            if ($response->{status} ne 'SUCCESS') {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected status. (status = %s)", $host, $response->{status});
+                next;
+            }
+            my $records = $response->{records};
+            if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
+                my $count = scalar(@{$records});
+                if ($count > 1) {
+                    warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.");
+                }
+                my $current_content = $records->[0]->{'content'};
+                if ($current_content eq $ipv4) {
+                    $config{$host}{'status'} = "good";
+                    success("updating %s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
+                    next;
+                }
+                my $ttl = $records->[0]->{'ttl'};
+                my $notes = $records->[0]->{'notes'};
+                debug("ttl = %s", $ttl);
+                debug("notes = %s", $notes);
+                $url = "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/A/$sub_domain";
+                $data = encode_json({
+                    secretapikey => $config{$host}{'secretapikey'},
+                    apikey       => $config{$host}{'apikey'},
+                    content      => $ipv4,
+                    ttl          => $ttl,
+                    notes        => $notes,
+                });
+                $reply = geturl(
+                    proxy     => opt('proxy'),
+                    url       => $url,
+                    headers   => $header,
+                    method    => 'POST',
+                    data      => $data,
+                );
+                # No response, declare as failed
+                if (!defined($reply) || !$reply) {
+                    failed("updating %s: Could not connect to porkbun.com.", $host);
+                    next;
+                }
+                if (!header_ok($host, $reply)) {
+                    failed("updating %s: failed (%s)", $host, $reply);
+                    next;
+                }
+                $config{$host}{'status'} = "good";
+                success("updating %s: good: IPv4 address set to %s", $host, $ipv4);
+                next;
+            } else {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: No applicable existing records.", $host);
+                next;
+            }
+        } else {
+            info("No IPv4 address for %s", $host);
+        }
+        if (is_ipv6($ipv6)) {
+            info("setting IPv6 address to %s for %s", $ipv6, $host);
+            verbose("UPDATE:","updating %s", $host);
+
+            my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/AAAA/$sub_domain";
+            my $data = encode_json({
+                secretapikey => $config{$host}{'secretapikey'},
+                apikey       => $config{$host}{'apikey'},
+            });
+            my $header = "Content-Type: application/json\n";
+            my $reply = geturl(
+                proxy     => opt('proxy'),
+                url       => $url,
+                headers   => $header,
+                method    => 'POST',
+                data      => $data,
+            );
+            # No response, declare as failed
+            if (!defined($reply) || !$reply) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: Could not connect to porkbun.com.", $host);
+                next;
+            }
+            if (!header_ok($host, $reply)) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: failed (%s)", $host, $reply);
+                next;
+            }
+            # Strip header
+            # Porkbun sends data in chunks, so it is assumed to be one chunk and parsed forcibly.
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval { decode_json(${^MATCH}) };
+            if (!defined($response)) {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected service response.", $host);
+                next;
+            }
+            if ($response->{status} ne 'SUCCESS') {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected status. (status = %s)", $host, $response->{status});
+                next;
+            }
+            my $records = $response->{records};
+            if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
+                my $count = scalar(@{$records});
+                if ($count > 1) {
+                    warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.");
+                }
+                my $current_content = $records->[0]->{'content'};
+                if ($current_content eq $ipv6) {
+                    $config{$host}{'status'} = "good";
+                    success("updating %s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
+                    next;
+                }
+                my $ttl = $records->[0]->{'ttl'};
+                my $notes = $records->[0]->{'notes'};
+                debug("ttl = %s", $ttl);
+                debug("notes = %s", $notes);
+                $url = "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/AAAA/$sub_domain";
+                $data = encode_json({
+                    secretapikey => $config{$host}{'secretapikey'},
+                    apikey       => $config{$host}{'apikey'},
+                    content      => $ipv6,
+                    ttl          => $ttl,
+                    notes        => $notes,
+                });
+                $reply = geturl(
+                    proxy     => opt('proxy'),
+                    url       => $url,
+                    headers   => $header,
+                    method    => 'POST',
+                    data      => $data,
+                );
+                # No response, declare as failed
+                if (!defined($reply) || !$reply) {
+                    failed("updating %s: Could not connect to porkbun.com.", $host);
+                    next;
+                }
+                if (!header_ok($host, $reply)) {
+                    failed("updating %s: failed (%s)", $host, $reply);
+                    next;
+                }
+                $config{$host}{'status'} = "good";
+                success("updating %s: good: IPv6 address set to %s", $host, $ipv4);
+                next;
+            } else {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: No applicable existing records.", $host);
+                next;
+            }
+        } else {
+            info("No IPv6 address for %s", $host);
         }
     }
 }
