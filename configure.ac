@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([ddclient], [3.10.1])
+AC_INIT([ddclient], [3.11.0])
 AC_CONFIG_SRCDIR([ddclient.in])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])

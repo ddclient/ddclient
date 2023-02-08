@@ -3,7 +3,31 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
+## 2023-XX-XX v3.11.0
+
+### Breaking changes
+
+  * ddclient no longer ships any example files for init systems that use `/etc/init.d`.
+    This was done because those files where effectively unmaintained, untested by the developers and only updated by downstream distros.
+    If you where relying on those files, please copy them into your packaging.
+
+### New features
+
+  * Added support for domaindiscount24.com
+  * Added support for domeneshop.no
+  * Added support for Enom
+  * Added support for Mythic Beasts Dynamic DNS
+  * Added support for njal.la
+  * Added support for Porkbun
+  * Added support for IPv6 to the EasyDNS and DuckDNS provider
+
+### Bug fixes
+
+  * DynDNS2 now uses the newer ipv4/ipv6 syntax's
+  * The OVH provider now ignores extra data returned
+
 ## 2022-10-20 v3.10.0
+
 ### New features
 
   * Added support for domaindiscount24.com
@@ -12,6 +36,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 ## 2022-05-15 v3.10.0_2
 
 ### Bug fixes
+
   * Fix version number being unable to parse
 
 ## 2022-05-15 v3.10.0_1
