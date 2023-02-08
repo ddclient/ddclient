@@ -339,3 +339,11 @@ ssl=yes					# use ssl-support.  Works with
 # protocol=regfishde,
 # password=mypassword
 # my-domain.com
+
+##
+## Enom (www.enom.com)
+##
+# protocol=enom,
+# login=domain.name,
+# password=domain-password
+# my-domain.com
