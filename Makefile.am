@@ -6,7 +6,6 @@ EXTRA_DIST = \
 	ChangeLog.md \
 	README.cisco \
 	README.md \
-	README.ssl \
 	autogen \
 	sample-ddclient-wrapper.sh \
 	sample-etc_cron.d_ddclient \
