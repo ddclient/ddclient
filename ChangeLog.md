@@ -25,6 +25,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
   * DynDNS2 now uses the newer ipv4/ipv6 syntax's
   * The OVH provider now ignores extra data returned
+  * Allow to define usev4 and usev6 options per hostname
+  * Merge multiple configs for the same hostname instead of use the last
 
 ## 2022-10-20 v3.10.0
 
