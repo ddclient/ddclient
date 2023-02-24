@@ -286,6 +286,15 @@ ssl=yes					# use ssl-support.  Works with
 # test.example.com
 
 ##
+## Porkbun (https://porkbun.com/)
+##
+# protocol=porkbun
+# apikey=APIKey
+# secretapikey=SecretAPIKey
+# host.example.com,host2.sub.example.com
+# on-root-domain=yes example.com,sub.example.com
+
+##
 ## ClouDNS (https://www.cloudns.net)
 ##
 # protocol=cloudns, \
@@ -309,6 +318,14 @@ ssl=yes					# use ssl-support.  Works with
 #subdomain-1.domain.com,subdomain-2.domain.com
 
 ##
+## domeneshop (www.domeneshop.no)
+##
+# protocol=domeneshop
+# login=<token>
+# password=<secret>
+# subdomain-1.domain.com,subdomain-2.domain.com
+
+##
 ## Njal.la (http://njal.la/)
 ##
 # protocol=njalla,
@@ -322,6 +339,15 @@ ssl=yes					# use ssl-support.  Works with
 # protocol=regfishde,
 # password=mypassword
 # my-domain.com
+
+##
+## Enom (www.enom.com)
+##
+# protocol=enom,
+# login=domain.name,
+# password=domain-password
+# my-domain.com
+
 
 ##
 ## cdmon.org (https://dinamico.cdmon.org/)
