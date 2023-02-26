@@ -931,13 +931,13 @@ my %services = (
         },
     },
     'keysystems' => {
-    'updateable' => undef,
-    'update' => \&nic_keysystems_update,
-    'examples'  => \&nic_keysystems_examples,
-    'variables' => merge(
+        'updateable' => undef,
+        'update' => \&nic_keysystems_update,
+        'examples'  => \&nic_keysystems_examples,
+        'variables' => merge(
             $variables{'keysystems-common-defaults'},
             $variables{'service-common-defaults'},
-            ),
+        ),
     },
     'dnsexit' => {
         'updateable' => undef,
@@ -962,10 +962,10 @@ my %services = (
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
-              %{$variables{'service-common-defaults'}},
-              'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
-              'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
-            },
+            %{$variables{'service-common-defaults'}},
+            'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
+            'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
+         },
      },
 );
 $variables{'merged'} = {
@@ -1371,7 +1371,7 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     foreach my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
-	        map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
+            map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
         } else {
             map { $cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
         }
@@ -5703,7 +5703,7 @@ sub nic_changeip_update {
 }
 
 ######################################################################
-## nic_googledomains_examples
+## nic_godaddy_examples
 ##
 ## written by awalon
 ##
