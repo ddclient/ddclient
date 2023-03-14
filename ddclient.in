@@ -1639,9 +1639,14 @@ sub _read_config {
 
             ## allow {host} to be a comma separated list of hosts
             foreach my $h (split_by_comma($host)) {
-                ## save a copy of the current globals
-                $config{$h} = { %locals };
-                $config{$h}{'host'} = $h;
+                if ($config{$h}) {
+                    ## host already defined, merging configs
+                    $config{$h} = { %{merge($config{$h}, \%locals)} };
+                } else {
+                    ## save a copy of the current globals
+                    $config{$h} = { %locals };
+                    $config{$h}{'host'} = $h;
+                }
             }
         }
         %passwords = ();
