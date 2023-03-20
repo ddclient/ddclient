@@ -347,3 +347,11 @@ ssl=yes					# use ssl-support.  Works with
 # login=domain.name,
 # password=domain-password
 # my-domain.com
+
+##
+## DigitalOcean (www.digitalocean.com)
+##
+#protocol=digitalocean, \
+#zone=example.com,      \
+#password=api-token     \
+#example.com,sub.example.com
