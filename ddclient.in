@@ -30,8 +30,8 @@ use IO::Socket::INET;
 use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
 
-use version 0.77; our $VERSION = version->declare('v3.10.0_2');
-(my $version = $VERSION->stringify()) =~ s/^v//;
+use version 0.77; our $VERSION = version->declare('@PACKAGE_VERSION@');
+my $version = $VERSION->stringify();
 my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
@@ -116,8 +116,8 @@ my %builtinweb = (
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
     'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
-    'nsupdate.info-ipv4' => {'url' => 'http://ipv4.nsupdate.info/myip'},
-    'nsupdate.info-ipv6' => {'url' => 'http://ipv6.nsupdate.info/myip'},
+    'nsupdate.info-ipv4' => {'url' => 'https://ipv4.nsupdate.info/myip'},
+    'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
 my %builtinfw = (
@@ -491,17 +491,32 @@ my %variables = (
         'host'                => setv(T_STRING,1, 1, '',                   undef),
 
         'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
+        'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
+        'usev6'               => setv(T_USEV6, 0, 0, 'disabled',           undef),
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
+        'ifv4'                => setv(T_IF,    0, 0, 'default',            undef),
+        'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,0, 0, '',                   undef),
         'web-ssl-validate'    => setv(T_BOOL,  0, 0, 1,                    undef),
+        'webv4'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webv6'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
         'fw-skip'             => setv(T_STRING,0, 0, '',                   undef),
         'fw-login'            => setv(T_LOGIN, 0, 0, '',                   undef),
         'fw-password'         => setv(T_PASSWD,0, 0, '',                   undef),
         'fw-ssl-validate'     => setv(T_BOOL,  0, 0, 1,                    undef),
+        'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv4-skip'           => setv(T_STRING,1, 0, '',                   undef),
+        'fwv6'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv6-skip'           => setv(T_STRING,1, 0, '',                   undef),
         'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
         'cmd-skip'            => setv(T_STRING,0, 0, '',                   undef),
+        'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
+        'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
+        
         'ip'                  => setv(T_IP,    0, 1, undef,                undef),  #TODO remove from cache?
         'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
         'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
@@ -533,6 +548,10 @@ my %variables = (
         'server'      => setv(T_FQDNP,  1, 0, 'update.dnsexit.com', undef),
         'script'      => setv(T_STRING, 0, 1, '/RemoteUpdate.sv', undef),
         'min-error-interval' => setv(T_DELAY, 0, 0, interval('8m'), 0),
+    },
+    'regfishde-common-defaults' => {
+        'server'      => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
+        'login'       => setv(T_LOGIN, 0, 0, 0, 'unused', undef),
     },
 );
 my %services = (
@@ -587,6 +606,17 @@ my %services = (
             'password' => setv(T_STRING, 0, 0, 'unused', undef),
         },
     },
+    'digitalocean' => {
+        'updateable' => undef,
+        'update' => \&nic_digitalocean_update,
+        'examples' => \&nic_digitalocean_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'server' => setv(T_FQDNP, 1, 0, 'api.digitalocean.com', undef),
+            'zone'   => setv(T_FQDN,  1, 0, '',                     undef),
+            'login'  => setv(T_LOGIN, 0, 0, 'unused',               undef),
+        },
+    },
     'dinahosting' => {
         'updateable' => undef,
         'update'     => \&nic_dinahosting_update,
@@ -625,6 +655,15 @@ my %services = (
             %{$variables{'service-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
             'host' => setv(T_NUMBER, 1, 1, 0, undef),
+        },
+    },
+    'domeneshop' => {
+        'updateable' => undef,
+        'update'     => \&nic_domeneshop_update,
+        'examples'   => \&nic_domeneshop_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'server' => setv(T_FQDNP,  1, 0, 'api.domeneshop.no', undef),
         },
     },
     'duckdns' => {
@@ -741,6 +780,16 @@ my %services = (
             'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
         },
     },
+    'mythicdyn' => {
+        'updateable' => undef,
+        'update'     => \&nic_mythicdyn_update,
+        'examples'   => \&nic_mythicdyn_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
+            'server'       => setv(T_FQDNP, 1, 0, 'api.mythic-beasts.com', undef),
+        },
+    },
     'namecheap' => {
         'updateable' => undef,
         'update'     => \&nic_namecheap_update,
@@ -761,6 +810,17 @@ my %services = (
             'server'       => setv(T_FQDNP,  1, 0, 'api.nearlyfreespeech.net', undef),
             'ttl'          => setv(T_NUMBER, 1, 0, 300,                        undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
+        },
+    },
+    'njalla' => {
+        'updateable' => undef,
+        'update'     => \&nic_njalla_update,
+        'examples'   => \&nic_njalla_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'login' => setv(T_STRING, 0, 0, 'unused', undef),
+            'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
+            'quietreply' => setv(T_BOOL, 0, 1, 0,      undef)
         },
     },
     'noip' => {
@@ -808,6 +868,21 @@ my %services = (
             'password' => setv(T_PASSWD, 1, 0, '',            undef),
             'script'   => setv(T_STRING, 1, 1, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
+        },
+    },
+    'porkbun' => {
+        'updateable' => undef,
+        'update'     => \&nic_porkbun_update,
+        'examples'   => \&nic_porkbun_examples,
+        'variables'  => {
+            'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
+            'secretapikey'   => setv(T_PASSWD, 1, 0, '',         undef),
+            'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
+            'login'          => setv(T_LOGIN,  0, 0, 'unused',   undef),
+            'password'       => setv(T_PASSWD, 0, 0, 'unused',   undef),
+            'use'            => setv(T_USE,    0, 0, 'disabled', undef),
+            'usev4'          => setv(T_USEV4,  0, 0, 'disabled', undef),
+            'usev6'          => setv(T_USEV6,  0, 0, 'disabled', undef),
         },
     },
     'sitelutions' => {
@@ -868,13 +943,13 @@ my %services = (
         },
     },
     'keysystems' => {
-    'updateable' => undef,
-    'update' => \&nic_keysystems_update,
-    'examples'  => \&nic_keysystems_examples,
-    'variables' => merge(
+        'updateable' => undef,
+        'update' => \&nic_keysystems_update,
+        'examples'  => \&nic_keysystems_examples,
+        'variables' => merge(
             $variables{'keysystems-common-defaults'},
             $variables{'service-common-defaults'},
-            ),
+        ),
     },
     'dnsexit' => {
         'updateable' => undef,
@@ -885,6 +960,25 @@ my %services = (
             $variables{'service-common-defaults'},
         ),
     },
+    'regfishde' => {
+        'updateable' => undef,
+        'update'     => \&nic_regfishde_update,
+        'examples'   => \&nic_regfishde_examples,
+        'variables'  => merge(
+            $variables{'regfishde-common-defaults'},
+            $variables{'service-common-defaults'},
+        ),
+    },
+    'enom' => {
+        'updateable' => undef,
+        'update'     => \&nic_enom_update,
+        'examples'   => \&nic_enom_examples,
+        'variables'  => {
+            %{$variables{'service-common-defaults'}},
+            'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
+            'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
+         },
+     },
 );
 $variables{'merged'} = {
     map({ %{$services{$_}{'variables'}} } keys(%services)),
@@ -1149,6 +1243,7 @@ sub update_nics {
             my $usev6     = opt('usev6', $h) // 'disabled';
             $use          = 'disabled' if ($use eq 'no'); # backward compatibility
             $usev6        = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+            $use          = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
             my $arg_ip    = opt('ip',    $h) // '';
             my $arg_ipv4  = opt('ipv4',  $h) // '';
             my $arg_ipv6  = opt('ipv6',  $h) // '';
@@ -1288,7 +1383,7 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     foreach my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
-	        map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
+            map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
         } else {
             map { $cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
         }
@@ -1556,9 +1651,14 @@ sub _read_config {
 
             ## allow {host} to be a comma separated list of hosts
             foreach my $h (split_by_comma($host)) {
-                ## save a copy of the current globals
-                $config{$h} = { %locals };
-                $config{$h}{'host'} = $h;
+                if ($config{$h}) {
+                    ## host already defined, merging configs
+                    $config{$h} = { %{merge($config{$h}, \%locals)} };
+                } else {
+                    ## save a copy of the current globals
+                    $config{$h} = { %locals };
+                    $config{$h}{'host'} = $h;
+                }
             }
         }
         %passwords = ();
@@ -1707,7 +1807,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "hetzner", "yandex", "nfsn")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -2694,7 +2794,7 @@ sub fetch_via_curl {
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CAINFO, opt('ssl_ca_file')) if defined(opt('ssl_ca_file'));
             $curl->setopt(WWW::Curl::Easy->CURLOPT_CAPATH, opt('ssl_ca_dir')) if defined(opt('ssl_ca_dir'));
             $curl->setopt(WWW::Curl::Easy->CURLOPT_IPRESOLVE,
-                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 : 
+                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 :
                                             ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
                                                                 WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
             $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
@@ -3173,7 +3273,7 @@ sub get_ip_from_interface {
     debug("Reply from '%s' :\n------\n%s------", $cmd, $reply);
 
     ## IPv6 is more complex than IPv4.  Start by filtering on only "inet6" addresses
-    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses 
+    ## Then remove deprecated or temporary addresses and finally seleect on global or local addresses
     my @reply = split(/\n/, $reply);
     @reply = grep(/\binet6\b/, @reply);                             # Select only IPv6 entries
     @reply = grep(!/\bdeprecated\b|\btemporary\b/, @reply);         # Remove deprecated and temporary
@@ -3578,6 +3678,7 @@ sub nic_updateable {
     my $usev6  = opt('usev6', $host) // 'disabled';
     $use       = 'disabled' if ($use eq 'no');   # backward compatibility
     $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+    $use       = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
 
     # If we have a valid IP address and we have previously warned that it was invalid.
     # reset the warning count back to zero.
@@ -3778,7 +3879,7 @@ sub nic_updateable {
                 success("%s: skipped: IP address was already set to %s.", $host, $ip);
             }
             if ($usev4 ne 'disabled') {
-                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv6);
+                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
             }
             if ($usev6 ne 'disabled') {
                 success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
@@ -3820,7 +3921,9 @@ sub header_ok {
             $ok = 1;
 
         } elsif ($result eq '401') {
-            failed("updating %s: authorization failed (%s)", $host, $line);
+            failed("updating %s: authentication failed (%s)", $host, $line);
+        } elsif ($result eq '403') {
+            failed("updating %s: not authorized (%s)", $host, $line);
         }
 
     } else {
@@ -4025,10 +4128,13 @@ sub nic_dyndns2_update {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
-        my $ip    = $config{$h}{'wantip'};
-        delete $config{$_}{'wantip'} foreach @hosts;
+        my $ipv4  = $config{$h}{'wantipv4'};
+        my $ipv6  = $config{$h}{'wantipv6'};
+        delete $config{$_}{'wantipv4'} foreach @hosts;
+        delete $config{$_}{'wantipv6'} foreach @hosts;
 
-        info("setting IP address to %s for %s", $ip, $hosts);
+        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
+        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
 
         ## Select the DynDNS system to update
@@ -4047,7 +4153,11 @@ sub nic_dyndns2_update {
 
         $url .= "&hostname=$hosts";
         $url .= "&myip=";
-        $url .= $ip if $ip;
+        $url .= $ipv4 if $ipv4;
+        if ($ipv6) {
+            $url .= "," if $ipv4;
+            $url .= $ipv6;
+        }
 
         ## some args are not valid for a custom domain.
         $url .= "&wildcard=ON" if ynu($config{$h}{'wildcard'}, 1, 0, 0);
@@ -4070,7 +4180,6 @@ sub nic_dyndns2_update {
 
         my @reply      = split /\n/, $reply;
         my $state      = 'header';
-        my $returnedip = $ip;
 
         foreach my $line (@reply) {
             if ($state eq 'header') {
@@ -4084,22 +4193,28 @@ sub nic_dyndns2_update {
 
                 # bug #10: some dyndns providers does not return the IP so
                 # we can't use the returned IP
-                my ($status, $returnedip) = split / /, lc $line;
-                $ip = $returnedip if (not $ip);
+                my ($status, $returnedips) = split / /, lc $line;
                 my $h = shift @hosts;
 
                 $config{$h}{'status'} = $status;
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
                 if ($status eq 'good') {
-                    $config{$h}{'ip'}    = $ip;
+                    $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
+                    $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                     $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+                    success("updating %s: %s: IPv4 address set to %s", $h, $status, $ipv4) if $ipv4;
+                    success("updating %s: %s: IPv6 address set to %s", $h, $status, $ipv6) if $ipv6;
 
                 } elsif (exists $errors{$status}) {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                        $config{$h}{'ip'}     = $ip;
+                        $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
+                        $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                         $config{$h}{'mtime'}  = $now;
                         $config{$h}{'status'} = 'good';
+                        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+                        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
 
                     } else {
                         failed("updating %s: %s: %s", $h, $status, $errors{$status});
@@ -4253,8 +4368,8 @@ sub nic_noip_update {
         'badagent' => 'Invalid user agent',
         'nohost'   => 'The hostname specified does not exist in the database',
         '!donator' => 'The offline setting was set, when the user is not a donator',
-        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at http://www.no-ip.com',
-        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at http://www.no-ip.com',
+        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at https://www.no-ip.com',
+        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at https://www.no-ip.com',
         'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
         'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
@@ -4270,10 +4385,7 @@ sub nic_noip_update {
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
-        my $url = "https://$config{$h}{'server'}/nic/update?system=";
-        $url .= 'noip';
-        $url .= "&hostname=$hosts";
-        $url .= "&myip=";
+        my $url = "https://$config{$h}{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
         $url .= $ip if $ip;
 
         my $reply = geturl(
@@ -4446,6 +4558,86 @@ sub nic_dslreports1_update {
         }
     }
 }
+
+######################################################################
+## nic_domeneshop_examples
+######################################################################
+sub nic_domeneshop_examples {
+    return <<"EoEXAMPLE";
+o 'domeneshop'
+
+API is documented here: https://api.domeneshop.no/docs/
+
+To generate credentials, visit https://www.domeneshop.no/admin?view=api after logging in to the control panel at
+https://www.domeneshop.no/admin?view=api
+
+Configuration variables applicable to the 'domeneshop' api are:
+  protocol=domeneshop          ##
+  login=token                  ## api-token
+  password=secret              ## api-secret
+    domain.example.com         ## the host registered with the service.             ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=domeneshop
+  login=username
+  password=your-password
+  my.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_domeneshop_update
+######################################################################
+sub nic_domeneshop_update {
+    debug("\nnic_domeneshop_update -------------------");
+
+    my $endpointPath = "/v0/dyndns/update";
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("Setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:", "Updating %s", $h);
+
+        # Set the URL that we're going to to update
+        my $url;
+        $url  = $globals{'ssl'} ? "https://" : "http://";
+        $url .= "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip";
+
+        # Try to get URL
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        );
+
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            next;
+        }
+        next if !header_ok($h, $reply);
+
+        # evaluate response
+        my @reply = split /\n/, $reply;
+        my $status = shift(@reply);
+        my $message = pop(@reply);
+        if ($status =~ /204/) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '%s' '%s'", $h, $status, $message);
+        }
+    }
+}
+
 
 ######################################################################
 ## nic_zoneedit1_examples
@@ -4651,10 +4843,12 @@ sub nic_easydns_update {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
-        my $ip    = $config{$h}{'wantip'};
-        delete $config{$_}{'wantip'} foreach @hosts;
+        my $ipv4  = $config{$h}{'wantipv4'};
+        my $ipv6  = $config{$h}{'wantipv6'};
+        delete $config{$_}{'wantipv4'} foreach @hosts;
+        delete $config{$_}{'wantipv6'} foreach @hosts;
 
-        info("setting IP address to %s for %s", $ip, $hosts);
+        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
         #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
@@ -4663,7 +4857,11 @@ sub nic_easydns_update {
         $url  = "https://$config{$h}{'server'}$config{$h}{'script'}?";
         $url .= "hostname=$hosts";
         $url .= "&myip=";
-        $url .= $ip if $ip;
+        $url .= $ipv4 if $ipv4;
+        foreach my $ipv6a ($ipv6) {
+            $url .= "&myip=";
+            $url .= $ipv6a
+        }
         $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF') if defined $config{$h}{'wildcard'};
 
         if ($config{$h}{'mx'}) {
@@ -4700,9 +4898,10 @@ sub nic_easydns_update {
 
                 $config{$h}{'status'} = $status;
                 if ($status eq 'NOERROR') {
-                    $config{$h}{'ip'}    = $ip;
+                    $config{$h}{'ipv4'}  = $ipv4;
+                    $config{$h}{'ipv6'}  = $ipv6;
                     $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+                    success("updating %s: %s: IP address set to %s %s", $h, $status, $ipv4, $ipv6);
 
                 } elsif ($status =~ /TOOSOON/) {
                     ## make sure we wait at least a little
@@ -5043,6 +5242,103 @@ sub nic_nfsn_update {
 ######################################################################
 
 ######################################################################
+## nic_njalla_examples
+######################################################################
+sub nic_njalla_examples {
+    return <<"EoEXAMPLE";
+
+o 'njalla'
+
+The 'njalla' protocol is used by DNS service offered by njal.la.
+
+Configuration variables applicable to the 'njalla' protocol are:
+  protocol=njalla              ##
+  password=service-password    ## Generated password for your dynamic DNS record
+  quietreply=no|yes            ## If yes return empty response on success with status 200 but print errors
+  domain                       ## subdomain to update, use @ for base domain name, * for catch all
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=njalla                                             \\
+  password=njal.la-key
+  quietreply=no
+  domain.com
+
+EoEXAMPLE
+}
+######################################################################
+## nic_njalla_update
+##
+## written by satrapes
+##
+## based on https://njal.la/docs/ddns/
+## needs this url to update:
+## https://njal.la/update?h=host_name&k=domain_password&a=your_ip
+## response contains "code 200" on succesful completion
+######################################################################
+sub nic_njalla_update {
+    debug("\nnic_njalla_update -------------------");
+
+    foreach my $h (@_) {
+        # Read input params
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        my $quietreply = delete $config{$h}{'quietreply'};
+        my $ip_output = '';
+
+        # Build url
+        my $url = "https://$config{$h}{'server'}/update/?h=$h&k=$config{$h}{'password'}";
+        my $auto = 1;
+        foreach my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            $auto = 0;
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'aaaa' : 'a';
+            $ip_output .= " IP v$ipv: $ip,";
+            $url .= "&$type=$ip";
+        }
+        $url .= (($auto eq 1)) ? '&auto' : '';
+        $url .= (($quietreply eq 1)) ? '&quiet' : '';
+
+        info("setting address to%s for %s", ($ip_output eq '') ? ' auto' : $ip_output, $h);
+        verbose("UPDATE:", "updating %s", $h);
+        debug("url: %s", $url);
+
+        # Try to get URL
+        my $reply = geturl(proxy => opt('proxy'), url => $url);
+        my $response = '';
+        if ($quietreply) {
+            $reply =~ qr/invalid host or key/mp;
+            $response = ${^MATCH};
+            if (!$response) {
+                success("updating %s: good: IP address set to %s", $h, $ip_output);
+            }
+            elsif ($response =~ /invalid host or key/) {
+                failed("Invalid host or key");
+            } else {
+                failed("Unknown response");
+            }
+        } else {
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            $response = eval {decode_json(${^MATCH})};
+            # No response, declare as failed
+            if (!defined($reply) || !$reply) {
+                failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            } else {
+                # Strip header
+                if ($response->{status} == 401 && $response->{message} =~ /invalid host or key/) {
+                    failed("Invalid host or key");
+                } elsif ($response->{status} == 200 && $response->{message} =~ /record updated/) {
+                    success("updating %s: good: IP address set to %s", $h, $response->{value}->{A});
+                } else {
+                    failed("Unknown response");
+                }
+            }
+        }
+    }
+}
+
+######################################################################
 ## nic_sitelutions_examples
 ######################################################################
 sub nic_sitelutions_examples {
@@ -5324,7 +5620,7 @@ sub nic_1984_update {
             next;
         }
         next if !header_ok($host, $reply);
-    
+
         # Strip header
         $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
         my $response = eval { decode_json(${^MATCH}) };
@@ -5424,7 +5720,7 @@ sub nic_changeip_update {
 }
 
 ######################################################################
-## nic_googledomains_examples
+## nic_godaddy_examples
 ##
 ## written by awalon
 ##
@@ -5645,6 +5941,82 @@ sub nic_googledomains_update {
 }
 
 ######################################################################
+## nic_mythicdyn_examples
+##
+## written by Reuben Thomas
+##
+######################################################################
+sub nic_mythicdyn_examples {
+    return <<"EoEXAMPLE";
+o 'mythicdyn'
+
+The 'mythicdyn' protocol is used by the Dynamic DNS service offered by
+www.mythic-beasts.com.
+
+Configuration variables applicable to the 'mythicdyn' protocol are:
+  protocol=mythicdyn           ##
+  ipv6=no|yes                  ## whether to set an A record (default, ipv6=no)
+                               ## or AAAA record (ipv6=yes).
+  login=service-login          ## the user name provided by the admin interface
+  password=service-password    ## the password provided by the admin interface
+  fully.qualified.host         ## the host registered with the service
+
+Note: this service automatically sets the IP address to that from which the
+request comes, so the IP address detected by ddclient is only used to keep
+track of when it needs updating.
+
+Example ${program}.conf file entries:
+  ## Single host update.
+  protocol=mythicdyn,                       \\
+  login=service-login                       \\
+  password=service-password,                \\
+  host.example.com
+
+  ## Multiple host update.
+  protocol=mythicdyn,                       \\
+  login=service-login                       \\
+  password=service-password,                \\
+  hosta.example.com,hostb.sub.example.com
+EoEXAMPLE
+}
+######################################################################
+## nic_mythicdyn_update
+######################################################################
+sub nic_mythicdyn_update {
+    debug("\nnic_mythicdyn_update --------------------");
+
+    # Update each set configured host.
+    foreach my $h (@_) {
+        info("%s -- Setting IP address.", $h);
+
+        my $ipversion = $config{$h}{'ipv6'} ? '6' : '4';
+
+        my $reply = geturl(
+            proxy     => opt('proxy'),
+            url       => "https://ipv$ipversion.$config{$h}{'server'}/dns/v2/dynamic/$h",
+            method    => 'POST',
+            login     => $config{$h}{'login'},
+            password  => $config{$h}{'password'},
+            ipversion => $ipversion,
+        );
+        unless ($reply) {
+            failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
+            next;
+        }
+
+        my $ok = header_ok($h, $reply);
+        if ($ok) {
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = "good";
+
+            success("%s -- Updated successfully.", $h);
+        } else {
+            failed("%s -- Failed to update.", $h);
+        }
+    }
+}
+
+######################################################################
 ## nic_nsupdate_examples
 ######################################################################
 sub nic_nsupdate_examples {
@@ -5828,7 +6200,6 @@ sub nic_cloudflare_update {
 
         # FQDNs
         for my $domain (@hosts) {
-            (my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
             my $ipv4  = delete $config{$domain}{'wantipv4'};
             my $ipv6  = delete $config{$domain}{'wantipv6'};
 
@@ -6017,7 +6388,7 @@ sub nic_hetzner_update {
                 $config{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$key}{'server'}/records?$zone_id";
+                $url = "https://$config{$key}{'server'}/records?zone_id=$zone_id";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
                                 headers => $headers
@@ -6246,7 +6617,11 @@ sub nic_duckdns_update {
         $url .= $h;
         $url .= "&token=";
         $url .= $config{$h}{'password'};
-        $url .= "&ip=";
+        if (is_ipv6($ip)) {
+            $url .= "&ipv6=";
+        } else {
+            $url .= "&ip=";
+        }
         $url .= $ip;
 
 
@@ -6261,15 +6636,26 @@ sub nic_duckdns_update {
         next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
-        my $returned = pop(@reply);
-        if ($returned =~ /OK/) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
-            $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
-        } else {
-            $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s'", $h, $returned);
+        my $state = 'noresult';
+        my $line = '';
+
+        foreach $line (@reply) {
+            if ($line eq 'OK') {
+                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'status'} = 'good';
+                $state = 'result';
+                success("updating %s: good: IP address set to %s", $h, $ip);
+
+            } elsif ($line eq 'KO') {
+                $config{$h}{'status'} = 'failed';
+                $state = 'result';
+                failed("updating %s: Server said: '%s'", $h, $line);
+            }
+        }
+
+        if ($state eq 'noresult') {
+            failed("updating %s: Server said: '%s'", $h, $line);
         }
     }
 }
@@ -6302,7 +6688,7 @@ EoEXAMPLE
 ######################################################################
 ## nic_freemyip_update
 ## by Cadence (reused code from nic_duckdns)
-## http://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
+## https://freemyip.com/update?token=ec54b4b64db27fe8873c7f7&domain=myhost
 ## response contains OK or ERROR
 ######################################################################
 sub nic_freemyip_update {
@@ -6740,8 +7126,8 @@ sub nic_ovh_update {
         }
 
         my @reply = split /\n/, $reply;
-        my $returned = pop(@reply);
-        if ($returned =~ /good/ || $returned =~ /nochg/) {
+        my $returned = List::Util::first { $_ =~ /good/ || $_ =~ /nochg/ } @reply;
+        if ($returned) {
             $config{$h}{'ip'}     = $ip;
             $config{$h}{'mtime'}  = $now;
             $config{$h}{'status'} = 'good';
@@ -6752,7 +7138,270 @@ sub nic_ovh_update {
             }
         } else {
             $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s'", $h, $returned);
+            failed("updating %s: Server said: '%s'", $h, $reply);
+        }
+    }
+}
+
+######################################################################
+## nic_porkbun_examples
+######################################################################
+sub nic_porkbun_examples {
+    return <<"EoEXAMPLE";
+o 'porkbun'
+
+The 'porkbun' protocol is used for porkbun (https://porkbun.com/).
+The API is documented here: https://porkbun.com/api/json/v3/documentation
+
+Before setting up, it is necessary to create your API Key by referring to the following page.
+
+https://kb.porkbun.com/article/190-getting-started-with-the-porkbun-api
+
+Available configuration variables:
+  * apikey (required): API Key of Porkbun API
+  * secretapikey (required): Secret API Key of Porkbun API
+  * on-root-domain=yes or no (default: no): Indicates whether the specified domain name (FQDN) is
+    an unnamed record (Zone APEX) in a zone.
+    It is useful to specify it as a local variable as shown in the example.
+  * usev4, usev6 : These configuration variables can be specified as local variables to override
+    the global settings. It is useful to finely control IPv4 or IPv6 as shown in the example.
+  * use (deprecated) : This parameter is deprecated but can be overridden like the above parameters.
+
+Limitations:
+  * Multiple same name records (for round robin) are not supported.
+    The same IP address is set for all, creating meaningless extra records.
+
+Example ${program}.conf file entry:
+  protocol=porkbun
+  apikey=APIKey
+  secretapikey=SecretAPIKey
+  host.example.com,host2.sub.example.com
+  on-root-domain=yes example.com,sub.example.com
+
+Additional example to finely control IPv4 or IPv6 :
+  # Example 01 : Global enable both IPv4 and IPv6, and update both records.
+  usev4=webv4
+  usev6=ifv6, ifv6=enp1s0
+
+  protocol=porkbun
+  apikey=APIKey
+  secretapikey=SecretAPIKey
+  host.example.com,host2.sub.example.com
+
+  # Example 02 : Global enable only IPv4, and update only IPv6 record.
+  usev4=webv4
+
+  protocol=porkbun
+  apikey=APIKey
+  secretapikey=SecretAPIKey
+  usev6=ifv6, ifv6=enp1s0, usev4=disabled ipv6.example.com
+  
+EoEXAMPLE
+}
+
+######################################################################
+## nic_porkbun_update
+######################################################################
+sub nic_porkbun_update {
+    debug("\nnic_porkbun_update -------------------");
+
+    ## update each configured host
+    ## should improve to update in one pass
+    foreach my $host (@_) {
+        my ($sub_domain, $domain);
+        if ($config{$host}{'on-root-domain'}) {
+            $sub_domain = '';
+            $domain = $host;
+        } else {
+            ($sub_domain, $domain) = split(/\./, $host, 2);
+        }
+        my $ipv4 = delete $config{$host}{'wantipv4'};
+        my $ipv6 = delete $config{$host}{'wantipv6'};
+        if (is_ipv4($ipv4)) {
+            info("setting IPv4 address to %s for %s", $ipv4, $host);
+            verbose("UPDATE:","updating %s", $host);
+
+            my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/A/$sub_domain";
+            my $data = encode_json({
+                secretapikey => $config{$host}{'secretapikey'},
+                apikey       => $config{$host}{'apikey'},
+            });
+            my $header = "Content-Type: application/json\n";
+            my $reply = geturl(
+                proxy     => opt('proxy'),
+                url       => $url,
+                headers   => $header,
+                method    => 'POST',
+                data      => $data,
+            );
+            # No response, declare as failed
+            if (!defined($reply) || !$reply) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: Could not connect to porkbun.com.", $host);
+                next;
+            }
+            if (!header_ok($host, $reply)) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: failed (%s)", $host, $reply);
+                next;
+            }
+            # Strip header
+            # Porkbun sends data in chunks, so it is assumed to be one chunk and parsed forcibly.
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval { decode_json(${^MATCH}) };
+            if (!defined($response)) {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected service response.", $host);
+                next;
+            }
+            if ($response->{status} ne 'SUCCESS') {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected status. (status = %s)", $host, $response->{status});
+                next;
+            }
+            my $records = $response->{records};
+            if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
+                my $count = scalar(@{$records});
+                if ($count > 1) {
+                    warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.");
+                }
+                my $current_content = $records->[0]->{'content'};
+                if ($current_content eq $ipv4) {
+                    $config{$host}{'status'} = "good";
+                    success("updating %s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
+                    next;
+                }
+                my $ttl = $records->[0]->{'ttl'};
+                my $notes = $records->[0]->{'notes'};
+                debug("ttl = %s", $ttl);
+                debug("notes = %s", $notes);
+                $url = "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/A/$sub_domain";
+                $data = encode_json({
+                    secretapikey => $config{$host}{'secretapikey'},
+                    apikey       => $config{$host}{'apikey'},
+                    content      => $ipv4,
+                    ttl          => $ttl,
+                    notes        => $notes,
+                });
+                $reply = geturl(
+                    proxy     => opt('proxy'),
+                    url       => $url,
+                    headers   => $header,
+                    method    => 'POST',
+                    data      => $data,
+                );
+                # No response, declare as failed
+                if (!defined($reply) || !$reply) {
+                    failed("updating %s: Could not connect to porkbun.com.", $host);
+                    next;
+                }
+                if (!header_ok($host, $reply)) {
+                    failed("updating %s: failed (%s)", $host, $reply);
+                    next;
+                }
+                $config{$host}{'status'} = "good";
+                success("updating %s: good: IPv4 address set to %s", $host, $ipv4);
+                next;
+            } else {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: No applicable existing records.", $host);
+                next;
+            }
+        } else {
+            info("No IPv4 address for %s", $host);
+        }
+        if (is_ipv6($ipv6)) {
+            info("setting IPv6 address to %s for %s", $ipv6, $host);
+            verbose("UPDATE:","updating %s", $host);
+
+            my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/AAAA/$sub_domain";
+            my $data = encode_json({
+                secretapikey => $config{$host}{'secretapikey'},
+                apikey       => $config{$host}{'apikey'},
+            });
+            my $header = "Content-Type: application/json\n";
+            my $reply = geturl(
+                proxy     => opt('proxy'),
+                url       => $url,
+                headers   => $header,
+                method    => 'POST',
+                data      => $data,
+            );
+            # No response, declare as failed
+            if (!defined($reply) || !$reply) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: Could not connect to porkbun.com.", $host);
+                next;
+            }
+            if (!header_ok($host, $reply)) {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: failed (%s)", $host, $reply);
+                next;
+            }
+            # Strip header
+            # Porkbun sends data in chunks, so it is assumed to be one chunk and parsed forcibly.
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval { decode_json(${^MATCH}) };
+            if (!defined($response)) {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected service response.", $host);
+                next;
+            }
+            if ($response->{status} ne 'SUCCESS') {
+                $config{$host}{'status'} = "bad";
+                failed("%s -- Unexpected status. (status = %s)", $host, $response->{status});
+                next;
+            }
+            my $records = $response->{records};
+            if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
+                my $count = scalar(@{$records});
+                if ($count > 1) {
+                    warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.");
+                }
+                my $current_content = $records->[0]->{'content'};
+                if ($current_content eq $ipv6) {
+                    $config{$host}{'status'} = "good";
+                    success("updating %s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
+                    next;
+                }
+                my $ttl = $records->[0]->{'ttl'};
+                my $notes = $records->[0]->{'notes'};
+                debug("ttl = %s", $ttl);
+                debug("notes = %s", $notes);
+                $url = "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/AAAA/$sub_domain";
+                $data = encode_json({
+                    secretapikey => $config{$host}{'secretapikey'},
+                    apikey       => $config{$host}{'apikey'},
+                    content      => $ipv6,
+                    ttl          => $ttl,
+                    notes        => $notes,
+                });
+                $reply = geturl(
+                    proxy     => opt('proxy'),
+                    url       => $url,
+                    headers   => $header,
+                    method    => 'POST',
+                    data      => $data,
+                );
+                # No response, declare as failed
+                if (!defined($reply) || !$reply) {
+                    failed("updating %s: Could not connect to porkbun.com.", $host);
+                    next;
+                }
+                if (!header_ok($host, $reply)) {
+                    failed("updating %s: failed (%s)", $host, $reply);
+                    next;
+                }
+                $config{$host}{'status'} = "good";
+                success("updating %s: good: IPv6 address set to %s", $host, $ipv4);
+                next;
+            } else {
+                $config{$host}{'status'} = "bad";
+                failed("updating %s: No applicable existing records.", $host);
+                next;
+            }
+        } else {
+            info("No IPv6 address for %s", $host);
         }
     }
 }
@@ -7062,6 +7711,268 @@ sub nic_keysystems_update {
   }
 }
 
+######################################################################
+## nic_regfishde_examples
+######################################################################
+sub nic_regfishde_examples {
+    return <<EoEXAMPLE;
+o 'regfishde'
+The 'regfishde' protocol is used by the non-free dynamic DNS service offered by www.regfish.de.
+Check https://www.regfish.de for configuration variables applicable to the 'regfishde' protocol:
+protocol=regfishde
+server=dyndns.regfish.de
+password=service-password          ## password (token) registered with the service
+myhost.mydomain.com                ## the host registered with the service.
+Example ${program}.conf file entries:
+## single host update
+protocol=regfishde
+password=service-password
+myhost.mydomain.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_regfishde_update
+## response contains "success" on succesfull completion
+######################################################################
+sub nic_regfishde_update {
+ debug("\nnic_regfishde_update -------------------");
+
+ ## update configured host
+ for my $h (@_) {
+   my $ip = delete $config{$h}{'wantip'};
+   my $ipv6 = delete $config{$h}{'wantip'};
+   
+   info("regfish.de setting IP address to %s for %s", $ip, $h);
+
+   my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+   my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv$ipv=$ip&forcehost=1&token=$config{$h}{'password'}";
+
+   # Try to get URL
+   my $reply = geturl(proxy => opt('proxy'), url => $url);
+
+   # No response, give error
+   if (!defined($reply) || !$reply) {
+     failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
+     last;
+   }
+   last if !header_ok($h, $reply);
+
+   if ($reply =~ /success/)
+   {
+       $config{$h}{'ip'} = $ip;
+       $config{$h}{'mtime'} = $now;
+       $config{$h}{'status'} = 'good';
+       success("updating %s: good: IP address set to %s", $h, $ip);
+    }
+    else
+    {
+       $config{$h}{'status'} = 'failed';
+       failed("updating %s: Server said: '$reply'", $h);
+    }
+  }
+}
+
+######################################################################
+######################################################################
+## enom
+######################################################################
+sub nic_enom_examples {
+    return <<EoEXAMPLE;
+o 'enom'
+The 'enom' protocol is used by DNS services offered by www.enom.com and their resellers.
+Configuration variables applicable to the 'enom' protocol are:
+  protocol=enom                ## 
+  server=fqdn.of.service       ## defaults to dynamic.name-services.com
+  login=domain.name            ## base domain name
+  password=domain-password     ## the domain password registered with the service
+  A_record                     ## the A record(s) registered with the service
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=enom,                                   \\
+  login=mydomain.com,                              \\
+  password=mydomain.com-password                   \\
+  www
+  ## multiple host update
+  protocol=enom,                                   \\
+  login=mydomain.com,                              \\
+  password=mydomain.com-password                   \\
+  www,mail,*
+EoEXAMPLE
+}
+######################################################################
+## enom_update
+##
+## written by Lars Fredriksson
+## modified by Leonidas Arvanitis
+##
+## based on http://www.edoceo.com/creo/enomddu.php
+##
+## needs this url to update:
+##   http://dynamic.name-services.com/interface.asp?Command=SetDNSHost&HostName=www
+##   &Zone=mydomain.com&DomainPassword=MyD0mainPa55w0rD&Address=123.45.678.90
+##
+######################################################################
+sub nic_enom_update {
+    debug("\nenom_update -------------------");
+    ## update each configured host
+    foreach my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $h);
+        verbose("UPDATE:","updating %s", $h);
+
+        my $url;
+        $url   = "https://$config{$h}{'server'}/interface.asp?Command=SetDNSHost";
+        $url  .= "&HostName=$h";
+        $url  .= "&Zone=$config{$h}{'login'}";
+        $url  .= "&DomainPassword=$config{$h}{'password'}";
+        $url  .= "&Address=";
+        $url  .= $ip if $ip;
+
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url
+        );
+
+        if (!defined($reply) || !$reply) {
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+
+        last if !header_ok($h, $reply);
+
+        my @reply = split /\n/, $reply;
+
+        if (grep /Done=true/i, @reply) {
+            $config{$h}{'ip'}     = $ip;
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            warning("SENT:    %s", $url) unless opt('verbose');
+            warning("REPLIED: %s", $reply);
+            failed("updating %s: Invalid reply.", $h);
+        }
+    }
+}
+
+sub nic_digitalocean_examples {
+    return <<"EoEXAMPLE";
+o 'digitalocean'
+
+The 'digitalocean' protocol updates domains hosted by Digital Ocean (https://www.digitalocean.com/).
+
+This protocol supports both IPv4 and IPv6. It will only update an existing record; it will not
+create a new one. So, before using it, make sure there's already one (and at most one) of each
+record type (A and/or AAAA) you plan to update present in your Digital Ocean zone.
+
+This protocol implements the API documented here:
+  https://docs.digitalocean.com/reference/api/api-reference/.
+
+You can get your API token by following these instructions:
+  https://docs.digitalocean.com/reference/api/create-personal-access-token/
+
+Available configuration variables:
+  * server (optional): API server. Defaults to 'api.digitalocean.com'.
+  * zone (required): DNS zone under which the hostname falls.
+  * password (required): API token from DigitalOcean Control Panel. See instructions linked above.
+
+Example ${program}.conf file entries:
+  protocol=digitalocean, \\
+  zone=example.com,      \\
+  password=api-token     \\
+  example.com,sub.example.com
+EoEXAMPLE
+}
+
+sub nic_digitalocean_update_one {
+    my ($h, $ip, $ipv) = @_;
+
+    info("setting %s address to %s for %s", $ipv, $ip, $h);
+
+    my $server = $config{$h}{'server'};
+    my $type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
+
+    my $headers;
+    $headers  = "Content-Type: application/json\n";
+    $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
+
+    my $list_url;
+    $list_url  = "https://$server/v2/domains/$config{$h}{'zone'}/records";
+    $list_url .= "?name=$h";
+    $list_url .= "&type=$type";
+
+    my $list_resp = geturl(
+        proxy => opt('proxy'),
+        url => $list_url,
+        headers => $headers,
+    );
+    unless ($list_resp && header_ok($h, $list_resp)) {
+        $config{$h}{"status-$ipv"} = 'failed';
+        failed("listing %s %s: Failed connection or bad response from %s.", $h, $ipv, $server);
+        return;
+    }
+    $list_resp =~ s/^.*?\n\n//s;  # Strip header
+
+    my $list = eval { decode_json($list_resp) };
+    if ($@) {
+        $config{$h}{"status-$ipv"} = 'failed';
+        failed("listing %s %s: JSON decoding failure", $h, $ipv);
+        return;
+    }
+
+    my $elem = $list;
+    unless ((ref($elem) eq 'HASH') &&
+            (ref ($elem = $elem->{'domain_records'}) eq 'ARRAY') &&
+            (@$elem == 1 && ref ($elem = $elem->[0]) eq 'HASH')) {
+        $config{$h}{"status-$ipv"} = 'failed';
+        failed("listing %s %s: no record, multiple records, or malformed JSON", $h, $ipv);
+        return;
+    }
+
+    my $current_ip = $elem->{'data'};
+    my $record_id = $elem->{'id'};
+
+    if ($current_ip eq $ip) {
+        info("updating %s %s: IP is already %s, no update needed.", $h, $ipv, $ip);
+    } else {
+        my $update_data = encode_json({'type' => $type, 'data' => $ip});
+        my $update_resp = geturl(
+            proxy => opt('proxy'),
+            url => "https://$server/v2/domains/$config{$h}{'zone'}/records/$record_id",
+            method => 'PATCH',
+            headers => $headers,
+            data => $update_data,
+        );
+        unless ($update_resp && header_ok($h, $update_resp)) {
+            $config{$h}{"status-$ipv"} = 'failed';
+            failed("updating %s %s: Failed connection or bad response from %s.", $h, $ipv, $server);
+            return;
+        }
+    }
+
+    $config{$h}{"status-$ipv"} = 'good';
+    $config{$h}{"ip-$ipv"}     = $ip;
+    $config{$h}{"mtime"}       = $now;
+}
+
+sub nic_digitalocean_update {
+    debug("\nnic_digitalocean_update -------------------");
+
+    foreach my $h (@_) {
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        if ($ipv4) {
+            nic_digitalocean_update_one($h, $ipv4, 'ipv4');
+        }
+
+        if ($ipv6) {
+            nic_digitalocean_update_one($h, $ipv6, 'ipv6');
+        }
+    }
+}
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
 # otherwise do nothing. This "modulino" pattern makes it possible to import this file as a module

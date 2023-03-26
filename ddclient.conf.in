@@ -19,12 +19,12 @@
 daemon=300				# check every 300 seconds
 syslog=yes				# log update msgs to syslog
 mail=root				# mail all msgs to root
-mail-failure=root			# mail failed update msgs to root
+mail-failure=root		# mail failed update msgs to root
 pid=@runstatedir@/ddclient.pid		# record PID in file.
 ssl=yes					# use ssl-support.  Works with
-					# ssl-library
-# postscript=script			# run script after updating.  The
-					# new IP is added as argument.
+						# ssl-library
+# postscript=script		# run script after updating.  The
+						# new IP is added as argument.
 #
 #use=watchguard-soho,        fw=192.168.111.1:80	# via Watchguard's SOHO FW
 #use=netopia-r910,           fw=192.168.111.1:80	# via Netopia R910 FW
@@ -88,7 +88,6 @@ ssl=yes					# use ssl-support.  Works with
 # protocol=dyndns2			\
 # your-static-host.dyndns.org
 
-##
 ##
 ## dyndns.org custom addresses
 ##
@@ -154,7 +153,6 @@ ssl=yes					# use ssl-support.  Works with
 # zone=example.com                      \
 # example.com,subdomain.example.com
 
-##
 ##
 ## Loopia (loopia.se)
 ##
@@ -298,6 +296,15 @@ ssl=yes					# use ssl-support.  Works with
 # test.example.com
 
 ##
+## Porkbun (https://porkbun.com/)
+##
+# protocol=porkbun
+# apikey=APIKey
+# secretapikey=SecretAPIKey
+# host.example.com,host2.sub.example.com
+# on-root-domain=yes example.com,sub.example.com
+
+##
 ## ClouDNS (https://www.cloudns.net)
 ##
 # protocol=cloudns, \
@@ -312,9 +319,49 @@ ssl=yes					# use ssl-support.  Works with
 # password=mypassword   \
 # myhost.mydomain.com
 
+##
 ## dnsexit (www.dnsexit.com)
 ##
 #protocol=dnsexit,                                            \
 #login=myusername,                                            \
 #password=mypassword,                                         \
 #subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## domeneshop (www.domeneshop.no)
+##
+# protocol=domeneshop
+# login=<token>
+# password=<secret>
+# subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## Njal.la (http://njal.la/)
+##
+# protocol=njalla,
+# password=mypassword
+# quietreply=no|yes
+# my-domain.com
+
+##
+## regfish.de (www.regfish.de/)
+##
+# protocol=regfishde,
+# password=mypassword
+# my-domain.com
+
+##
+## Enom (www.enom.com)
+##
+# protocol=enom,
+# login=domain.name,
+# password=domain-password
+# my-domain.com
+
+##
+## DigitalOcean (www.digitalocean.com)
+##
+#protocol=digitalocean, \
+#zone=example.com,      \
+#password=api-token     \
+#example.com,sub.example.com

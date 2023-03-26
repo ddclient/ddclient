@@ -1,4 +1,4 @@
-# DDCLIENT v3.10.0
+# DDCLIENT
 
 `ddclient` is a Perl client used to update dynamic DNS entries for accounts 
 on many dynamic DNS services.
@@ -29,11 +29,17 @@ Dynamic DNS services currently supported include:
     DonDominio  - See https://www.dondominio.com for details
     NearlyFreeSpeech.net - See https://www.nearlyfreespeech.net/services/dns for details
     OVH         - See https://www.ovh.com for details
+    Porkbun     - See https://porkbun.com/
     ClouDNS     - See https://www.cloudns.net
     dinahosting - See https://dinahosting.com
     Gandi       - See https://gandi.net
     dnsexit     - See https://dnsexit.com/ for details
     1984.is     - See https://www.1984.is/product/freedns/ for details
+    Njal.la     - See https://njal.la/docs/ddns/
+    regfish.de  - See https://www.regfish.de/domains/dyndns/ for details
+    domenehsop  - See https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get
+    Mythic Beasts - See https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns for details
+    Enom        - See https://www.enom.com for details
 
 `ddclient` now supports many cable and DSL broadband routers.
 
@@ -77,8 +83,8 @@ ddclient package.
      the directory:
 
      ```shell
-     tar xvfa ddclient-3.10.0.tar.gz
-     cd ddclient-3.10.0
+     tar xvfa ddclient-3.XX.X.tar.gz
+     cd ddclient-3.XX.X
      ```
 
      (If you are installing from a clone of the Git repository, you
@@ -109,82 +115,6 @@ enable automatic startup when booting
 start the first time by hand
 
     systemctl start ddclient.service
-
-#### Redhat style rc files and daemon-mode
-
-    cp sample-etc_rc.d_init.d_ddclient /etc/rc.d/init.d/ddclient
-
-enable automatic startup when booting. also check your distribution
-
-    /sbin/chkconfig --add ddclient
-
-start the first time by hand
-
-    /etc/rc.d/init.d/ddclient start
-
-#### Alpine style rc files and daemon-mode
-
-    cp sample-etc_rc.d_init.d_ddclient.alpine /etc/init.d/ddclient
-
-enable automatic startup when booting
-
-    rc-update add ddclient
-
-make sure you have perl installed
-
-    apk add perl
-
-start the first time by hand
-
-    rc-service ddclient start
-
-#### Ubuntu style rc files and daemon-mode
-
-    cp sample-etc_rc.d_init.d_ddclient.ubuntu /etc/init.d/ddclient
-
-enable automatic startup when booting
-
-    update-rc.d ddclient defaults
-
-make sure you have perl and the required modules installed
-
-    apt-get install perl libdata-validate-ip-perl libio-socket-ssl-perl
-
-if you plan to use cloudflare or feedns you need the perl json module
-
-    apt-get install libjson-pp-perl
-
-for IPv6 you also need to instal the perl io-socket-inet6 module
-
-    apt install libio-socket-inet6-perl
-
-start the first time by hand
-
-    service ddclient start
-
-#### FreeBSD style rc files and daemon mode
-
-    mkdir -p /usr/local/etc/rc.d
-    cp sample-etc_rc.d_ddclient.freebsd /usr/local/etc/rc.d/ddclient
-
-enable automatic startup when booting
-
-    sysrc ddclient_enable=YES
-
-make sure you have perl and the required modules installed
-
-    pkg install perl5 p5-Data-Validate-IP p5-IO-Socket-SSL
-
-if you plan to use cloudflare or feedns you need the perl json module
-
-    pkg install p5-JSON-PP
-
-start the service manually for the first time
-
-    service ddclient start
-
-
-If you are not using daemon-mode, configure cron and dhcp or ppp as described below.
 
 ## TROUBLESHOOTING
 
@@ -245,7 +175,7 @@ not become stale.
     cp sample-etc_cron.d_ddclient /etc/cron.d/ddclient
     vi /etc/cron.d/ddclient
 
-## USING DDCLIENT WITH `dhcpcd-1.3.17`
+## USING DDCLIENT WITH `dhcpcd`
 
 If you are using dhcpcd-1.3.17 or thereabouts, you can easily update
 your DynDNS entry automatically every time your lease is obtained
