@@ -614,6 +614,17 @@ my %services = (
             'password' => setv(T_STRING, 0, 0, 'unused', undef),
         },
     },
+    'digitalocean' => {
+        'updateable' => undef,
+        'update' => \&nic_digitalocean_update,
+        'examples' => \&nic_digitalocean_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'server' => setv(T_FQDNP, 1, 0, 'api.digitalocean.com', undef),
+            'zone'   => setv(T_FQDN,  1, 0, '',                     undef),
+            'login'  => setv(T_LOGIN, 0, 0, 'unused',               undef),
+        },
+    },
     'dinahosting' => {
         'updateable' => undef,
         'update'     => \&nic_dinahosting_update,
@@ -940,13 +951,13 @@ my %services = (
         },
     },
     'keysystems' => {
-    'updateable' => undef,
-    'update' => \&nic_keysystems_update,
-    'examples'  => \&nic_keysystems_examples,
-    'variables' => merge(
+        'updateable' => undef,
+        'update' => \&nic_keysystems_update,
+        'examples'  => \&nic_keysystems_examples,
+        'variables' => merge(
             $variables{'keysystems-common-defaults'},
             $variables{'service-common-defaults'},
-            ),
+        ),
     },
     'dnsexit' => {
         'updateable' => undef,
@@ -971,10 +982,10 @@ my %services = (
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
-              %{$variables{'service-common-defaults'}},
-              'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
-              'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
-            },
+            %{$variables{'service-common-defaults'}},
+            'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
+            'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
+         },
      },
 );
 $variables{'merged'} = {
@@ -1380,7 +1391,7 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     foreach my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
-	        map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
+            map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
         } else {
             map { $cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
         }
@@ -1648,9 +1659,14 @@ sub _read_config {
 
             ## allow {host} to be a comma separated list of hosts
             foreach my $h (split_by_comma($host)) {
-                ## save a copy of the current globals
-                $config{$h} = { %locals };
-                $config{$h}{'host'} = $h;
+                if ($config{$h}) {
+                    ## host already defined, merging configs
+                    $config{$h} = { %{merge($config{$h}, \%locals)} };
+                } else {
+                    ## save a copy of the current globals
+                    $config{$h} = { %locals };
+                    $config{$h}{'host'} = $h;
+                }
             }
         }
         %passwords = ();
@@ -1799,7 +1815,7 @@ sub init_config {
         $proto = opt('protocol') if !defined($proto);
 
         load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun")));
+        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun")));
 
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -5858,7 +5874,7 @@ sub nic_changeip_update {
 }
 
 ######################################################################
-## nic_googledomains_examples
+## nic_godaddy_examples
 ##
 ## written by awalon
 ##
@@ -7985,6 +8001,123 @@ sub nic_enom_update {
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("updating %s: Invalid reply.", $h);
+        }
+    }
+}
+
+sub nic_digitalocean_examples {
+    return <<"EoEXAMPLE";
+o 'digitalocean'
+
+The 'digitalocean' protocol updates domains hosted by Digital Ocean (https://www.digitalocean.com/).
+
+This protocol supports both IPv4 and IPv6. It will only update an existing record; it will not
+create a new one. So, before using it, make sure there's already one (and at most one) of each
+record type (A and/or AAAA) you plan to update present in your Digital Ocean zone.
+
+This protocol implements the API documented here:
+  https://docs.digitalocean.com/reference/api/api-reference/.
+
+You can get your API token by following these instructions:
+  https://docs.digitalocean.com/reference/api/create-personal-access-token/
+
+Available configuration variables:
+  * server (optional): API server. Defaults to 'api.digitalocean.com'.
+  * zone (required): DNS zone under which the hostname falls.
+  * password (required): API token from DigitalOcean Control Panel. See instructions linked above.
+
+Example ${program}.conf file entries:
+  protocol=digitalocean, \\
+  zone=example.com,      \\
+  password=api-token     \\
+  example.com,sub.example.com
+EoEXAMPLE
+}
+
+sub nic_digitalocean_update_one {
+    my ($h, $ip, $ipv) = @_;
+
+    info("setting %s address to %s for %s", $ipv, $ip, $h);
+
+    my $server = $config{$h}{'server'};
+    my $type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
+
+    my $headers;
+    $headers  = "Content-Type: application/json\n";
+    $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
+
+    my $list_url;
+    $list_url  = "https://$server/v2/domains/$config{$h}{'zone'}/records";
+    $list_url .= "?name=$h";
+    $list_url .= "&type=$type";
+
+    my $list_resp = geturl(
+        proxy => opt('proxy'),
+        url => $list_url,
+        headers => $headers,
+    );
+    unless ($list_resp && header_ok($h, $list_resp)) {
+        $config{$h}{"status-$ipv"} = 'failed';
+        failed("listing %s %s: Failed connection or bad response from %s.", $h, $ipv, $server);
+        return;
+    }
+    $list_resp =~ s/^.*?\n\n//s;  # Strip header
+
+    my $list = eval { decode_json($list_resp) };
+    if ($@) {
+        $config{$h}{"status-$ipv"} = 'failed';
+        failed("listing %s %s: JSON decoding failure", $h, $ipv);
+        return;
+    }
+
+    my $elem = $list;
+    unless ((ref($elem) eq 'HASH') &&
+            (ref ($elem = $elem->{'domain_records'}) eq 'ARRAY') &&
+            (@$elem == 1 && ref ($elem = $elem->[0]) eq 'HASH')) {
+        $config{$h}{"status-$ipv"} = 'failed';
+        failed("listing %s %s: no record, multiple records, or malformed JSON", $h, $ipv);
+        return;
+    }
+
+    my $current_ip = $elem->{'data'};
+    my $record_id = $elem->{'id'};
+
+    if ($current_ip eq $ip) {
+        info("updating %s %s: IP is already %s, no update needed.", $h, $ipv, $ip);
+    } else {
+        my $update_data = encode_json({'type' => $type, 'data' => $ip});
+        my $update_resp = geturl(
+            proxy => opt('proxy'),
+            url => "https://$server/v2/domains/$config{$h}{'zone'}/records/$record_id",
+            method => 'PATCH',
+            headers => $headers,
+            data => $update_data,
+        );
+        unless ($update_resp && header_ok($h, $update_resp)) {
+            $config{$h}{"status-$ipv"} = 'failed';
+            failed("updating %s %s: Failed connection or bad response from %s.", $h, $ipv, $server);
+            return;
+        }
+    }
+
+    $config{$h}{"status-$ipv"} = 'good';
+    $config{$h}{"ip-$ipv"}     = $ip;
+    $config{$h}{"mtime"}       = $now;
+}
+
+sub nic_digitalocean_update {
+    debug("\nnic_digitalocean_update -------------------");
+
+    foreach my $h (@_) {
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        if ($ipv4) {
+            nic_digitalocean_update_one($h, $ipv4, 'ipv4');
+        }
+
+        if ($ipv6) {
+            nic_digitalocean_update_one($h, $ipv6, 'ipv6');
         }
     }
 }

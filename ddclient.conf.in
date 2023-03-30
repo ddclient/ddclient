@@ -341,15 +341,6 @@ ssl=yes					# use ssl-support.  Works with
 # my-domain.com
 
 ##
-## Enom (www.enom.com)
-##
-# protocol=enom,
-# login=domain.name,
-# password=domain-password
-# my-domain.com
-
-
-##
 ## cdmon.org (https://dinamico.cdmon.org/)
 ##
 #protocol=cdmon,                  \
@@ -357,3 +348,19 @@ ssl=yes					# use ssl-support.  Works with
 #login=my-cdmon.org-login,        \
 #password=my-cdmon.org-password   \
 #domain.example.com
+
+##
+## Enom (www.enom.com)
+##
+# protocol=enom,
+# login=domain.name,
+# password=domain-password
+# my-domain.com
+
+##
+## DigitalOcean (www.digitalocean.com)
+##
+#protocol=digitalocean, \
+#zone=example.com,      \
+#password=api-token     \
+#example.com,sub.example.com
