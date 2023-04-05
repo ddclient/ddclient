@@ -1209,9 +1209,10 @@ sub main {
 
 sub runpostscript {
     my ($ip) = @_;
+    my @postscript = split(/\s+/, $globals{postscript});
 
     if (defined $globals{postscript}) {
-        if (-x $globals{postscript}) {
+        if (-x $postscript[0]) {
             system("$globals{postscript} $ip &");
         } else {
             warning("Can not execute post script: %s", $globals{postscript});
