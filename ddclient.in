@@ -539,7 +539,7 @@ my %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
     'keysystems-common-defaults' => {
-        'server'              => setv(T_FQDNP, 1, 0, 1, 'dynamicdns.key-systems.net', undef),
+        'server'              => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
         'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',      undef),
     },
     'dnsexit-common-defaults'       => {
