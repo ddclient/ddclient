@@ -355,3 +355,11 @@ ssl=yes					# use ssl-support.  Works with
 #zone=example.com,      \
 #password=api-token     \
 #example.com,sub.example.com
+
+##
+## Infomaniak (www.infomaniak.com)
+##
+# protocol=infomaniak,
+# login=ddns_username,
+# password=ddns_password
+# example.com
