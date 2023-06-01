@@ -40,6 +40,7 @@ Dynamic DNS services currently supported include:
     domenehsop  - See https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get
     Mythic Beasts - See https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns for details
     Enom        - See https://www.enom.com for details
+    Infomaniak  - See https://faq.infomaniak.com/2376 for details
 
 `ddclient` now supports many cable and DSL broadband routers.
 
