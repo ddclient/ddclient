@@ -936,7 +936,7 @@ my %services = (
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),         0),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
         },
