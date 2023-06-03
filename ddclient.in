@@ -4741,7 +4741,7 @@ sub nic_zoneedit1_update {
 
         my @reply = split /\n/, $reply;
         foreach my $line (@reply) {
-            if ($line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
+            if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
                 my ($left, %var) = parse_assignments($assignments);
 
