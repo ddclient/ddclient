@@ -936,7 +936,7 @@ my %services = (
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),         0),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
         },
@@ -1217,9 +1217,9 @@ sub main {
 
 sub runpostscript {
     my ($ip) = @_;
-    my @postscript = split(/\s+/, $globals{postscript});
 
     if (defined $globals{postscript}) {
+        my @postscript = split(/\s+/, $globals{postscript});
         if (-x $postscript[0]) {
             system("$globals{postscript} $ip &");
         } else {
@@ -4741,7 +4741,7 @@ sub nic_zoneedit1_update {
 
         my @reply = split /\n/, $reply;
         foreach my $line (@reply) {
-            if ($line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
+            if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
                 my ($left, %var) = parse_assignments($assignments);
 
