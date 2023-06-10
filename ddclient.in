@@ -6097,16 +6097,14 @@ sub nic_nsupdate_update {
         ## nsupdate requires a port number to be separated by whitepace, not colon
         $server =~ s/:/ /;
         my $zone       = $config{$h}{'zone'};
-        my $ip         = $config{$h}{'wantip'};
+        my $ipv4       = $config{$h}{'wantipv4'};
+        my $ipv6       = $config{$h}{'wantipv6'};
         my $recordtype = '';
-        if (is_ipv6($ip)) {
-            $recordtype = 'AAAA';
-        } else {
-            $recordtype = 'A';
-        }
-        delete $config{$_}{'wantip'} foreach @hosts;
+        delete $config{$_}{'wantipv4'} foreach @hosts;
+        delete $config{$_}{'wantipv6'} foreach @hosts;
 
-        info("setting IP address to %s for %s", $ip, $hosts);
+        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
+        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
 
         ## send separate requests for each zone with all hosts in that zone
@@ -6117,12 +6115,21 @@ EoINSTR1
         foreach (@hosts) {
             $instructions .= <<"EoINSTR2";
 update delete $_. $recordtype
-update add $_. $config{$_}{'ttl'} $recordtype $ip
 EoINSTR2
-        }
-        $instructions .= <<"EoINSTR3";
-send
+             if ($ipv4) {
+                $instructions .= <<"EoINSTR3";
+update add $_. $config{$_}{'ttl'} A $ipv4
 EoINSTR3
+	    }
+            if ($ipv6) {
+                $instructions .= <<"EoINSTR4";
+update add $_. $config{$_}{'ttl'} AAAA $ipv6
+EoINSTR4
+	    }
+        }
+        $instructions .= <<"EoINSTR5";
+send
+EoINSTR5
         my $command = "$binary -k $keyfile";
         $command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
         $command .= " -d" if (opt('debug'));
@@ -6132,9 +6139,11 @@ EoINSTR3
         my $status = pipecmd($command, $instructions);
         if ($status eq 1) {
             foreach (@hosts) {
-                $config{$_}{'ip'}    = $ip;
+                $config{$_}{'ipv4'}    = $ipv4;
+                $config{$_}{'ipv6'}    = $ipv6;
                 $config{$_}{'mtime'} = $now;
-                success("updating %s: %s: IP address set to %s", $_, $status, $ip);
+                success("updating %s: %s: IPv4 address set to %s", $_, $status, $ipv4) if $ipv4;
+                success("updating %s: %s: IPv6 address set to %s", $_, $status, $ipv6) if $ipv6;
             }
         } else {
             foreach (@hosts) {
