@@ -3,7 +3,6 @@ eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
 my $has_http_daemon_ssl = eval { require HTTP::Daemon::SSL; };
-my $has_io_socket_inet6 = eval { require IO::Socket::INET6; };
 my $ipv6_supported = eval {
     require IO::Socket::IP;
     my $ipv6_socket = IO::Socket::IP->new(
@@ -56,13 +55,13 @@ my %httpd = (
 );
 
 my @test_cases = (
-    # Fetch via IO::Socket::INET
+    # Fetch via IO::Socket::IP
     {ipv6_opt => 0, server_ipv => '4', client_ipv => ''},
     {ipv6_opt => 0, server_ipv => '4', client_ipv => '4'},
     # IPv* client to a non-SSL IPv6 server is not expected to work unless opt('ipv6') is true
     {ipv6_opt => 0, server_ipv => '6', client_ipv => '6'},
 
-    # Fetch via IO::Socket::INET6
+    # Fetch via IO::Socket::IP
     {ipv6_opt => 1, server_ipv => '4', client_ipv => ''},
     {ipv6_opt => 1, server_ipv => '4', client_ipv => '4'},
     {ipv6_opt => 1, server_ipv => '6', client_ipv => ''},
@@ -92,8 +91,6 @@ for my $tc (@test_cases) {
     $tc->{ssl} //= 0;
     $tc->{curl} //= 0;
     SKIP: {
-        skip("IO::Socket::INET6 not available", 1)
-            if ($tc->{ipv6_opt} || $tc->{client_ipv} eq '6') && !$tc->{curl} && !$has_io_socket_inet6;
         skip("IPv6 not supported on this system", 1)
             if $tc->{server_ipv} eq '6' && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1)
