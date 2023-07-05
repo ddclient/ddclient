@@ -44,7 +44,7 @@ my $args;
 #   * opt_ssl: Value to return from opt('ssl'). Defaults to 0.
 #   * opt_ssl_ca_dir: Value to return from opt('ssl_ca_dir'). Defaults to undef.
 #   * opt_ssl_ca_file: Value to return from opt('ssl_ca_file'). Defaults to undef.
-#   * want_args: Args that should be passed to the socket constructor minus MultiHomed, Proto,
+#   * want_args: Args that should be passed to the socket constructor minus Proto,
 #     Timeout, and original_socket_class.
 #   * want_req_method: The HTTP method geturl is expected to use. Defaults to 'GET'.
 #   * want_req_uri: URI that geturl is expected to request.
@@ -244,7 +244,6 @@ for my $tc (@test_cases) {
         local $TODO = $tc->{todo};
         subtest $tc->{name} => sub {
             my %want_args = (
-                MultiHomed => 1,
                 Proto => 'tcp',
                 Timeout => ddclient::opt('timeout'),
                 original_socket_class => 'IO::Socket::SSL',

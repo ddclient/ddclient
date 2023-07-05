@@ -189,7 +189,7 @@ ssl=yes					# use ssl-support.  Works with
 #protocol=cloudflare,        \
 #zone=domain.tld,            \
 #ttl=1,                      \
-#login=your-login-email,     \ # Only needed if you are using your global API key. If you are using an API token, set it to "token" (wihtout double quotes).
+#login=your-login-email,     \ # Only needed if you are using your global API key. If you are using an API token, set it to "token" (without double quotes).
 #password=APIKey             \ # This is either your global API key, or an API token. If you are using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
 #domain.tld,my.domain.tld
 
@@ -365,3 +365,11 @@ ssl=yes					# use ssl-support.  Works with
 #zone=example.com,      \
 #password=api-token     \
 #example.com,sub.example.com
+
+##
+## Infomaniak (www.infomaniak.com)
+##
+# protocol=infomaniak,
+# login=ddns_username,
+# password=ddns_password
+# example.com

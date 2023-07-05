@@ -26,7 +26,7 @@ use File::Basename;
 use File::Path qw(make_path);
 use File::Temp;
 use Getopt::Long;
-use IO::Socket::INET;
+use IO::Socket::IP;
 use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
 
@@ -540,7 +540,7 @@ my %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
     'keysystems-common-defaults' => {
-        'server'              => setv(T_FQDNP, 1, 0, 1, 'dynamicdns.key-systems.net', undef),
+        'server'              => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
         'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',      undef),
     },
     'dnsexit-common-defaults'       => {
@@ -937,7 +937,7 @@ my %services = (
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),         0),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
         },
@@ -979,6 +979,14 @@ my %services = (
             'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
          },
      },
+    'infomaniak' => {
+        'updateable' => undef,
+        'update'     => \&nic_infomaniak_update,
+        'examples'   => \&nic_infomaniak_examples,
+        'variables'  => {
+            %{$variables{'service-common-defaults'}},
+        },
+    },
 );
 $variables{'merged'} = {
     map({ %{$services{$_}{'variables'}} } keys(%services)),
@@ -1212,7 +1220,8 @@ sub runpostscript {
     my ($ip) = @_;
 
     if (defined $globals{postscript}) {
-        if (-x $globals{postscript}) {
+        my @postscript = split(/\s+/, $globals{postscript});
+        if (-x $postscript[0]) {
             system("$globals{postscript} $ip &");
         } else {
             warning("Can not execute post script: %s", $globals{postscript});
@@ -2440,23 +2449,6 @@ EOM
 }
 
 ######################################################################
-## load_ipv6_support
-######################################################################
-sub load_ipv6_support {
-    my $ipv6_loaded = eval { require IO::Socket::INET6 };
-    unless ($ipv6_loaded) {
-        fatal("%s", <<"EOM");
-Error loading the Perl module IO::Socket::INET6 needed for ipv6 connect.
-On Debian, the package libio-socket-inet6-perl must be installed.
-On Red Hat, the package perl-IO-Socket-INET6 must be installed.
-On Alpine, the package perl-io-socket-inet6 must be installed.
-EOM
-    }
-    import IO::Socket::INET6;
-    { no warnings; $IO::Socket::INET6::DEBUG = 0; }
-}
-
-######################################################################
 ## load_sha1_support
 ######################################################################
 sub load_sha1_support {
@@ -2574,10 +2566,9 @@ sub fetch_via_socket_io {
         PeerAddr => $peer,
         PeerPort => $port,
         Proto => 'tcp',
-        MultiHomed => 1,
         Timeout => opt('timeout'),
     );
-    my $socket_class = 'IO::Socket::INET';
+    my $socket_class = 'IO::Socket::IP';
     if ($use_ssl) {
         # IO::Socket::SSL will load IPv6 support if available on the system.
         load_ssl_support;
@@ -2587,9 +2578,6 @@ sub fetch_via_socket_io {
         $socket_args{SSL_verify_mode} = ($params{ssl_validate} // 1)
                                         ? IO::Socket::SSL->SSL_VERIFY_PEER
                                         : IO::Socket::SSL->SSL_VERIFY_NONE;
-    } elsif ($globals{'ipv6'} || $ipversion eq '6') {
-        load_ipv6_support;
-        $socket_class = 'IO::Socket::INET6';
     }
     if (defined($params{_testonly_socket_class})) {
         $socket_args{original_socket_class} = $socket_class;
@@ -4194,30 +4182,38 @@ sub nic_dyndns2_update {
                 # bug #10: some dyndns providers does not return the IP so
                 # we can't use the returned IP
                 my ($status, $returnedips) = split / /, lc $line;
-                my $h = shift @hosts;
 
-                $config{$h}{'status'} = $status;
-                $config{$h}{'status-ipv4'} = $status if $ipv4;
-                $config{$h}{'status-ipv6'} = $status if $ipv6;
+                foreach my $h (@hosts) {
+                    $config{$h}{'status'} = $status;
+                    $config{$h}{'status-ipv4'} = $status if $ipv4;
+                    $config{$h}{'status-ipv6'} = $status if $ipv6;
+                }
+
                 if ($status eq 'good') {
-                    $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
-                    $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
-                    $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IPv4 address set to %s", $h, $status, $ipv4) if $ipv4;
-                    success("updating %s: %s: IPv6 address set to %s", $h, $status, $ipv6) if $ipv6;
+                    foreach my $h (@hosts) {
+                        $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
+                        $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
+                        $config{$h}{'mtime'} = $now;
+                    }
+
+                    success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
+                    success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
 
                 } elsif (exists $errors{$status}) {
                     if ($status eq 'nochg') {
-                        warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                        $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
-                        $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
-                        $config{$h}{'mtime'}  = $now;
-                        $config{$h}{'status'} = 'good';
-                        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-                        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+                        warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
+
+                        foreach my $h (@hosts) {
+                            $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
+                            $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
+                            $config{$h}{'mtime'}  = $now;
+                            $config{$h}{'status'} = 'good';
+                            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+                            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+                        }
 
                     } else {
-                        failed("updating %s: %s: %s", $h, $status, $errors{$status});
+                        failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
                     }
 
                 } elsif ($status =~ /w(\d+)(.)/) {
@@ -4229,11 +4225,14 @@ sub nic_dyndns2_update {
                     ($scale, $units) = (60*60, 'hours') if $units eq 'h';
 
                     $sec = $wait * $scale;
-                    $config{$h}{'wtime'} = $now + $sec;
-                    warning("updating %s: %s: wait %s %s before further updates", $h, $status, $wait, $units);
+                    foreach my $h (@hosts) {
+                        $config{$h}{'wtime'} = $now + $sec;
+                    }
+
+                    warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
 
                 } else {
-                    failed("updating %s: unexpected status (%s)", $h, $line);
+                    failed("updating %s: unexpected status (%s)", $hosts, $line);
                 }
             }
         }
@@ -4722,7 +4721,7 @@ sub nic_zoneedit1_update {
 
         my @reply = split /\n/, $reply;
         foreach my $line (@reply) {
-            if ($line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
+            if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
                 my ($left, %var) = parse_assignments($assignments);
 
@@ -7970,6 +7969,118 @@ sub nic_digitalocean_update {
 
         if ($ipv6) {
             nic_digitalocean_update_one($h, $ipv6, 'ipv6');
+        }
+    }
+}
+
+######################################################################
+## nic_infomaniak_examples
+######################################################################
+sub nic_infomaniak_examples {
+    return <<"EoEXAMPLE";
+
+o 'infomaniak'
+
+The 'infomaniak' protocol is used by DNS services offered by www.infomaniak.com.
+
+Configuration variables applicable to the 'infomaniak' protocol are:
+  protocol=infomaniak
+  login=ddns_username          ## the DDNS username set up in Infomaniak
+  password=ddns_password       ## the DDNS username set up in Infomaniak
+  example.com                  ## domain name to update
+
+Example ${program}.conf file entries:
+  protocol=infomaniak,       \\
+  login=my-username,         \\
+  password=my-password       \\
+  my.address.com
+
+For more information about how to create a dynamic DNS, see https://faq.infomaniak.com/2357.
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_infomaniak_update
+##
+## written by Timothée Andres
+##
+## based on https://faq.infomaniak.com/2376
+##
+## needs one of the following urls to update:
+##   https://username:password@infomaniak.com/nic/update?hostname=subdomain.yourdomain.com&myip=1.2.3.4
+##   https://infomaniak.com/nic/update?hostname=subdomain.yourdomain.com&myip=1.2.3.4&username=XXX&password=XXX
+######################################################################
+sub nic_infomaniak_update {
+    debug("\nnic_infomaniak_update -------------------");
+
+    foreach my $h (@_) {
+        INFOMANIAK_IP_LOOP:
+        foreach my $v (4, 6) {
+            my $ip = delete $config{$h}{"wantipv$v"};
+
+            if (!defined $ip) {
+                debug("ipv%d not wanted, skipping", $v);
+                next;
+            }
+
+            verbose("setting IP address to %s for %s", $ip, $h);
+            info("updating %s", $h);
+
+            # No change in IP => nochg <w.x.y.z>
+            # Bad auth => badauth
+            # Bad domain name => nohost
+            # Bad IP => nohost
+            # IP changed => good <xxxx::yyyy>
+            # No domain name => Validation failed
+            my %statuses = (
+                'good'    => (1, sprintf("IP set to %s for %s", $ip, $h)),
+                'nochg'   => (1, sprintf("IP already set to %s for %s", $ip, $h)),
+                'nohost'  => (0, sprintf("Bad domain name %s or bad IP %s", $h, $ip)),
+                'badauth' => (0, sprintf("Bad authentication for %s", $h)),
+            );
+
+            my $url1 = "https://$config{$h}{'login'}:$config{$h}{'password'}";
+            $url1 .= "\@infomaniak.com/nic/update";
+            $url1 .= "?hostname=$h";
+            $url1 .= "&myip=$ip";
+
+            my $url2 = "https://infomaniak.com/nic/update";
+            $url2 .= "?hostname=$h";
+            $url2 .= "&myip=$ip";
+            $url2 .= "&username=$config{$h}{'login'}";
+            $url2 .= "&password=$config{$h}{'password'}";
+
+            my $reply;
+
+            foreach my $url ($url1, $url2) {
+                verbose("trying update with %s", $url);
+                $reply = geturl(proxy => opt('proxy'), url => $url);
+                if (!defined($reply) || !$reply) {
+                    info("could not update %s using url %s, trying next one", $h, $url);
+                    next;
+                }
+
+                my ($status) = split / /, $reply, 1;
+                my ($updated, $msg) =
+                    $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $reply));
+
+                if (defined $updated && $updated) {
+                    info($msg);
+                    $config{$h}{"ipv$v"} = $ip;
+                    $config{$h}{'mtime'} = $config{$h}{'mtime'} // $now;
+                    $config{$h}{'status'} = 'good';
+                    $config{$h}{"status-ipv$v"} = 'good';
+                    next INFOMANIAK_IP_LOOP;
+                }
+                else {
+                    warning($msg);
+                }
+            }
+
+            $config{$h}{'status'} = $config{$h}{'status'} // 'failed';
+            $config{$h}{"status-ipv$v"} = 'failed';
+            failed("updating %s: could not update IP on Infomaniak", $h);
         }
     }
 }
