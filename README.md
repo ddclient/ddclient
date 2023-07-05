@@ -1,18 +1,13 @@
-# Unmaintained
-
-ddclient is unmaintained and no further changes will be done nor will issues or pull requests of any kind be accepted.
-
-As alternatives consider <https://github.com/troglobit/inadyn> or <https://github.com/lopsided98/dnsupdate>.
-There will be no support for migrating of ddclient and your current provider might not be supported by those alternatives.
-
-See https://github.com/ddclient/ddclient/issues/528 and https://github.com/ddclient/ddclient/issues/380 for more details.
-
----
-
 # DDCLIENT
 
 `ddclient` is a Perl client used to update dynamic DNS entries for accounts 
 on many dynamic DNS services.
+
+This is a friendly fork/continuation of https://github.com/ddclient/ddclient
+
+## Alternatives
+
+You might also want to consider using one of the following, if they support your dynamic DNS provider(s): <https://github.com/troglobit/inadyn> or <https://github.com/lopsided98/dnsupdate>.
 
 ## Supported services
 
