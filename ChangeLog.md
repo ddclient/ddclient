@@ -18,6 +18,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added support for domeneshop.no
   * Added support for Enom
   * Added support for Mythic Beasts Dynamic DNS
+  * Added support for DNSExit API v2
   * Added support for njal.la
   * Added support for Porkbun
   * Added support for IPv6 to the EasyDNS and DuckDNS provider
