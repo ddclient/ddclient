@@ -17,8 +17,6 @@ use File::Basename;
 use File::Path qw(make_path);
 use File::Temp;
 use Getopt::Long;
-use IO::Socket::IP;
-use Socket qw(AF_INET AF_INET6 PF_INET PF_INET6);
 use Sys::Hostname;
 
 use version 0.77; our $VERSION = version->declare('@PACKAGE_VERSION@');
@@ -454,7 +452,6 @@ my %variables = (
         'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'ssl'                 => setv(T_BOOL,  0, 0, 0,                    undef),
-        'curl'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
         'facility'            => setv(T_STRING,0, 0, 'daemon',             undef),
         'priority'            => setv(T_STRING,0, 0, 'notice',             undef),
@@ -1090,7 +1087,6 @@ my @opt = (
     ["ssl_ca_file",       "=s", "-ssl_ca_file <file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["fw-ssl-validate",   "!", "-{no}fw-ssl-validate   : Validate SSL certificate when retrieving IP address from firewall"],
     ["web-ssl-validate",  "!","-{no}web-ssl-validate   : Validate SSL certificate when retrieving IP address from web"],
-    ["curl",              "!",  "-{no}curl             : use curl for network connections"],
     ["retry",             "!",  "-{no}retry            : retry failed updates"],
     ["force",             "!",  "-{no}force            : force an update even if the update may be unnecessary"],
     ["timeout",           "=i", "-timeout <max>        : when fetching a URL, wait at most <max> seconds for a response"],
@@ -2460,22 +2456,6 @@ sub encode_base64 ($;$) {
     $res =~ s/.{$padding}$/'=' x $padding/e if $padding;
     $res;
 }
-######################################################################
-## load_ssl_support
-######################################################################
-sub load_ssl_support {
-    my $ssl_loaded = eval { require IO::Socket::SSL };
-    unless ($ssl_loaded) {
-        fatal("%s", <<"EOM");
-Error loading the Perl module IO::Socket::SSL needed for SSL connect.
-On Debian, the package libio-socket-ssl-perl must be installed.
-On Red Hat, the package perl-IO-Socket-SSL must be installed.
-On Alpine, the package perl-io-socket-ssl must be installed.
-EOM
-    }
-    import IO::Socket::SSL;
-    { no warnings; $IO::Socket::SSL::DEBUG = 0; }
-}
 
 ######################################################################
 ## load_sha1_support
@@ -2508,180 +2488,6 @@ Error loading the Perl module JSON::PP needed for $why update.
 EOM
     }
     import JSON::PP (qw/decode_json encode_json/);
-}
-
-######################################################################
-## geturl
-######################################################################
-sub geturl {
-    return opt('curl') ? fetch_via_curl(@_) : fetch_via_socket_io(@_);
-}
-
-sub fetch_via_socket_io {
-    my %params = @_;
-    my $proxy = $params{proxy};
-    my $url = $params{url};
-    my $login = $params{login};
-    my $password = $params{password};
-    my $ipversion = $params{ipversion} // '';
-    my $headers = $params{headers} // '';
-    my $method = $params{method} // 'GET';
-    my $data = $params{data} // '';
-    my ($peer, $server, $port, $default_port, $use_ssl);
-    my ($sd, $request, $reply);
-
-    ## canonify proxy and url
-    my $force_ssl;
-    $force_ssl = 1 if ($url =~ /^https:/);
-    $proxy  =~ s%^https?://%%i if defined($proxy);
-    $url    =~ s%^https?://%%i;
-    $server = $url;
-    $server =~ s%[?/].*%%;
-    $url    =~ s%^[^?/]*/?%%;
-
-    if ($force_ssl || ($globals{'ssl'} && !($params{ignore_ssl_option} // 0))) {
-        $use_ssl      = 1;
-        $default_port = '443';
-    } else {
-        $use_ssl      = 0;
-        $default_port = '80';
-    }
-    debug("proxy    = %s", $proxy // '<undefined>');
-    debug("protocol = %s", $use_ssl ? "https" : "http");
-    debug("server   = %s", $server);
-    (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact ALL parameters passed on URL, including possible passwords
-    debug("url      = %s", $_url);
-    debug("ip ver   = %s", $ipversion);
-
-    ## determine peer and port to use.
-    $peer = $proxy // $server;
-    $peer =~ s%[?/].*%%;
-    if ($peer =~ /^\[([^]]+)\](?::(\d+))?$/ || $peer =~ /^([^:]+)(?::(\d+))?/) {
-        $peer = $1;
-        $port = $2 // $default_port;
-    } else {
-        failed("unable to extract host and port from %s", $peer);
-        return undef;
-    }
-
-    $request = "$method ";
-    if (!$use_ssl) {
-        $request .= "http://$server" if defined($proxy);
-    } else {
-        $request .= "https://$server" if defined($proxy);
-    }
-    $request .= "/$url HTTP/1.1\n";
-    $request .= "Host: $server\n";
-
-    if (defined($login) || defined($password)) {
-        my $auth = encode_base64(($login // '') . ':' . ($password // ''), '');
-        $request .= "Authorization: Basic $auth\n";
-    }
-    $request .= "User-Agent: ${program}/${version}\n";
-    if ($data) {
-        $request .= "Content-Type: application/x-www-form-urlencoded\n" if $headers !~ /^Content-Type:/mi;
-        $request .= "Content-Length: " . length($data) . "\n";
-    }
-    $request .= "Connection: close\n";
-    $headers .= "\n" if $headers ne '' && substr($headers, -1) ne "\n";
-    $request .= $headers;
-    $request .= "\n";
-    # RFC 7230 says that all lines before the body must end with <cr><lf>.
-    (my $rq = $request) =~ s/(?<!\r)\n/\r\n/g;
-    $request .= $data;
-    $rq .= $data;
-
-    my %socket_args = (
-        PeerAddr => $peer,
-        PeerPort => $port,
-        Proto => 'tcp',
-        Timeout => opt('timeout'),
-    );
-    my $socket_class = 'IO::Socket::IP';
-    if ($use_ssl) {
-        # IO::Socket::SSL will load IPv6 support if available on the system.
-        load_ssl_support;
-        $socket_class = 'IO::Socket::SSL';
-        $socket_args{SSL_ca_file} = opt('ssl_ca_file') if defined(opt('ssl_ca_file'));
-        $socket_args{SSL_ca_path} = opt('ssl_ca_dir') if defined(opt('ssl_ca_dir'));
-        $socket_args{SSL_verify_mode} = ($params{ssl_validate} // 1)
-                                        ? IO::Socket::SSL->SSL_VERIFY_PEER
-                                        : IO::Socket::SSL->SSL_VERIFY_NONE;
-    }
-    if (defined($params{_testonly_socket_class})) {
-        $socket_args{original_socket_class} = $socket_class;
-        $socket_class = $params{_testonly_socket_class};
-    }
-    if ($ipversion eq '4') {
-        $socket_args{Domain} = PF_INET;
-        $socket_args{Family} = AF_INET;
-    } elsif ($ipversion eq '6') {
-        $socket_args{Domain} = PF_INET6;
-        $socket_args{Family} = AF_INET6;
-    } elsif ($ipversion ne '') {
-        fatal("geturl passed unsupported 'ipversion' value %s", $ipversion);
-    }
-
-    my $ipv = $ipversion eq '' ? '' : sprintf(" (IPv%s)", $ipversion);
-    my $peer_port_ipv = sprintf("%s:%s%s", $peer, $port, $ipv);
-    my $to = sprintf("%s%s%s", $server, defined($proxy) ? " via proxy $peer:$port" : "", $ipv);
-    verbose("CONNECT:", "%s", $to);
-    $0 = sprintf("%s - connecting to %s", $program, $peer_port_ipv);
-    if (opt('exec')) {
-        $sd = $socket_class->new(%socket_args);
-        defined($sd) or warning("cannot connect to %s socket: %s%s", $peer_port_ipv, $@,
-                                $use_ssl ? ' ' . IO::Socket::SSL::errstr() : '');
-    } else {
-        debug("skipped network connection");
-        verbose("SENDING:", "%s", $request);
-    }
-    if (defined $sd) {
-        ## send the request to the http server
-        verbose("CONNECTED: ", $use_ssl ? 'using SSL' : 'using HTTP');
-        verbose("SENDING:", "%s", $request);
-
-        $0 = sprintf("%s - sending to %s", $program, $peer_port_ipv);
-        my $result = syswrite $sd, $rq;
-        if ($result != length($rq)) {
-            warning("cannot send to %s (%s).", $peer_port_ipv, $!);
-        } else {
-            $0 = sprintf("%s - reading from %s", $program, $peer_port_ipv);
-            eval {
-                local $SIG{'ALRM'} = sub { die "timeout"; };
-                alarm(opt('timeout')) if opt('timeout') > 0;
-                while ($_ = <$sd>) {
-                    $0 = sprintf("%s - read from %s", $program, $peer_port_ipv);
-                    verbose("RECEIVE:", "%s", $_ // "<undefined>");
-                    $reply .= $_ // '';
-                }
-                if (opt('timeout') > 0) {
-                    alarm(0);
-                }
-            };
-            close($sd);
-
-            if ($@ and $@ =~ /timeout/) {
-                warning("TIMEOUT: %s after %s seconds", $to, opt('timeout'));
-                $reply = '';
-            }
-            $reply //= '';
-        }
-    }
-    $0 = sprintf("%s - closed %s", $program, $peer_port_ipv);
-
-    ## during testing simulate reading the URL
-    if (opt('test')) {
-        my $filename = "$server/$url";
-        $filename =~ s|/|%2F|g;
-        if (opt('exec')) {
-            $reply = save_file("$savedir/$filename", $reply, 'unique');
-        } else {
-            $reply = load_file("$savedir/$filename");
-        }
-    }
-
-    $reply =~ s/\r//g if defined $reply;
-    return $reply;
 }
 
 ######################################################################
@@ -2753,10 +2559,7 @@ sub escape_curl_param {
     return $str;
 }
 
-######################################################################
-## fetch_via_curl() is used for geturl() when global curl option set
-######################################################################
-sub fetch_via_curl {
+sub geturl {
     my %params = @_;
     my $proxy = $params{proxy};
     my $url = $params{url};
@@ -2799,89 +2602,35 @@ sub fetch_via_curl {
         debug("skipped network connection");
         verbose("SENDING:", "%s", "${server}/${url}");
     } else {
-        my $curl_loaded = eval { require WWW::Curl::Easy };
-        if ($curl_loaded) {
-            # System has the WWW::Curl::Easy module so use that
-            import WWW::Curl::Easy;
-            my $curl = WWW::Curl::Easy->new;
+        push(@curlopt, "silent");
+        push(@curlopt, "include"); ## Include HTTP response for compatibility
+        push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
+        push(@curlopt, "cacert=\"".escape_curl_param(opt('ssl_ca_file')).'"') if defined(opt('ssl_ca_file'));
+        push(@curlopt, "capath=\"".escape_curl_param(opt('ssl_ca_dir')).'"') if defined(opt('ssl_ca_dir'));
+        push(@curlopt, "ipv4") if ($ipversion == 4);
+        push(@curlopt, "ipv6") if ($ipversion == 6);
+        push(@curlopt, "user-agent=\"".escape_curl_param("${program}/${version}").'"');
+        push(@curlopt, "connect-timeout=$timeout");
+        push(@curlopt, "max-time=$timeout");
+        push(@curlopt, "request=$method");
+        push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
+        push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
+        push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
 
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_HEADER, 1);   ## Include HTTP response for compatibility
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_SSL_VERIFYPEER, ($params{ssl_validate} // 1) ? 1 : 0 );
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_SSL_VERIFYHOST, ($params{ssl_validate} // 1) ? 1 : 0 );
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_CAINFO, opt('ssl_ca_file')) if defined(opt('ssl_ca_file'));
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_CAPATH, opt('ssl_ca_dir')) if defined(opt('ssl_ca_dir'));
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_IPRESOLVE,
-                                            ($ipversion == 4) ? WWW::Curl::Easy->CURL_IPRESOLVE_V4 :
-                                            ($ipversion == 6) ? WWW::Curl::Easy->CURL_IPRESOLVE_V6 :
-                                                                WWW::Curl::Easy->CURL_IPRESOLVE_WHATEVER);
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_USERAGENT, "${program}/${version}");
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_CONNECTTIMEOUT, $timeout);
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_TIMEOUT, $timeout);
+        # Each header line is added individually
+        @header_lines = split('\n', $headers);
+        $_ = "header=\"".escape_curl_param($_).'"' foreach (@header_lines);
+        push(@curlopt, @header_lines);
 
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_POST, 1) if ($method eq 'POST');
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_PUT, 1) if ($method eq 'PUT');
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_CUSTOMREQUEST, $method) if ($method ne 'GET'); ## for PATCH
+        # Add in the data if any was provided (for POST/PATCH)
+        push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data);
 
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_USERPWD, "${login}:${password}") if (defined($login) && defined($password));
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_PROXY, "${protocol}://${proxy}") if defined($proxy);
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_URL, "${protocol}://${server}/${url}");
+        # don't include ${url} as that might expose login credentials
+        $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
+        verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
+        verbose("SENDING:", "%s", $_) foreach (@curlopt);
 
-            # Add header lines if any was provided
-            if ($headers) {
-                @header_lines = split('\n', $headers);
-                $curl->setopt(WWW::Curl::Easy->CURLOPT_HTTPHEADER, \@header_lines);
-            }
-            # Add in the data if any was provided (for POST/PATCH)
-            if (my $datalen = length($data)) {
-                $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDS, ${data});
-                $curl->setopt(WWW::Curl::Easy->CURLOPT_POSTFIELDSIZE, $datalen);
-            }
-            $curl->setopt(WWW::Curl::Easy->CURLOPT_WRITEDATA,\$reply);
-
-            # don't include ${url} as that might expose login credentials
-            $0 = sprintf("%s - WWW::Curl::Easy sending to %s", $program, "${protocol}://${server}");
-            verbose("SENDING:", "WWW::Curl::Easy to %s", "${protocol}://${server}");
-            verbose("SENDING:", "%s", $headers) if ($headers);
-            verbose("SENDING:", "%s", $data) if ($data);
-
-            my $rc = $curl->perform;
-
-            if ($rc != 0) {
-                warning("CURL error (%d) %s", $rc, $curl->strerror($rc));
-                debug($curl->errbuf);
-            }
-        } else {
-            # System does not have the WWW::Curl::Easy module so attempt with system Curl command
-            push(@curlopt, "silent");
-            push(@curlopt, "include");  ## Include HTTP response for compatibility
-            push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
-            push(@curlopt, "cacert=\"".escape_curl_param(opt('ssl_ca_file')).'"') if defined(opt('ssl_ca_file'));
-            push(@curlopt, "capath=\"".escape_curl_param(opt('ssl_ca_dir')).'"') if defined(opt('ssl_ca_dir'));
-            push(@curlopt, "ipv4") if ($ipversion == 4);
-            push(@curlopt, "ipv6") if ($ipversion == 6);
-            push(@curlopt, "user-agent=\"".escape_curl_param("${program}/${version}").'"');
-            push(@curlopt, "connect-timeout=$timeout");
-            push(@curlopt, "max-time=$timeout");
-            push(@curlopt, "request=$method");
-            push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
-            push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
-            push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
-
-            # Each header line is added individually
-            @header_lines = split('\n', $headers);
-            $_ = "header=\"".escape_curl_param($_).'"' foreach (@header_lines);
-            push(@curlopt, @header_lines);
-
-            # Add in the data if any was provided (for POST/PATCH)
-            push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data);
-
-            # don't include ${url} as that might expose login credentials
-            $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
-            verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
-            verbose("SENDING:", "%s", $_) foreach (@curlopt);
-
-            $reply = curl_cmd(@curlopt);
-        }
+        $reply = curl_cmd(@curlopt);
         verbose("RECEIVE:", "%s", $reply // "<undefined>");
         if (!$reply) {
             # don't include ${url} as that might expose login credentials

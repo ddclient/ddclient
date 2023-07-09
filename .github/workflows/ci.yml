@@ -9,7 +9,7 @@ jobs:
       matrix:
         image:
           - ubuntu:latest
-          - ubuntu:16.04
+          - ubuntu:20.04
           - debian:testing
           - debian:stable
           - debian:oldstable
@@ -24,6 +24,7 @@ jobs:
               automake \
               ca-certificates \
               git \
+              curl \
               libhttp-daemon-perl \
               libhttp-daemon-ssl-perl \
               libio-socket-inet6-perl \
@@ -47,28 +48,6 @@ jobs:
         run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
       - name: distribution tarball is complete
         run: ./.github/workflows/scripts/dist-tarball-check
-
-  #test-centos6:
-  #  runs-on: ubuntu-latest
-  #  container: centos:6
-  #  steps:
-  #    - uses: actions/checkout@v1
-  #    - name: install dependencies
-  #      run: |
-  #        yum install -y \
-  #            automake \
-  #            perl-IO-Socket-INET6 \
-  #            perl-core \
-  #            perl-libwww-perl \
-  #            ;
-  #    - name: autogen
-  #      run: ./autogen
-  #    - name: configure
-  #      run: ./configure
-  #    - name: check
-  #      run: make VERBOSE=1 AM_COLOR_TESTS=always check
-  #    - name: distcheck
-  #      run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
 
   #test-centos8:
   #  runs-on: ubuntu-latest
@@ -105,6 +84,7 @@ jobs:
               automake \
               findutils \
               make \
+              curl \
               perl \
               perl-HTTP-Daemon \
               perl-HTTP-Daemon-SSL \
