@@ -7,6 +7,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Breaking changes
 
+  * ddclient now requires curl.
   * ddclient no longer ships any example files for init systems that use `/etc/init.d`.
     This was done because those files where effectively unmaintained, untested by the developers and only updated by downstream distros.
     If you where relying on those files, please copy them into your packaging.
@@ -23,7 +24,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Bug fixes
 
-  * DynDNS2 now uses the newer ipv4/ipv6 syntax's
+  * DynDNS2 now uses the newer ipv4/ipv6 syntaxes
   * The OVH provider now ignores extra data returned
   * Allow to define usev4 and usev6 options per hostname
   * Merge multiple configs for the same hostname instead of use the last

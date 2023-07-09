@@ -28,6 +28,7 @@ AC_PATH_PROG([FIND], [find])
 AS_IF([test -z "${FIND}"], [AC_MSG_ERROR(['find' utility not found])])
 
 AC_PATH_PROG([CURL], [curl])
+AS_IF([test -z "${CURL}"], [AC_MSG_ERROR([curl not found])])
 
 AX_WITH_PROG([PERL], perl)
 AX_PROG_PERL_VERSION([5.10.1], [],
