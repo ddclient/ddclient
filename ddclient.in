@@ -3696,6 +3696,25 @@ sub header_ok {
     }
     return $ok;
 }
+
+######################################################################
+## DDNS providers
+#  A DDNS provider consists of an example function, the update
+#  function, and an optional updateable function.
+#
+#  The example function simply returns a string for the help message,
+#  explaining how to configure the provider
+#
+#  The update function performs the actual record update.
+#  It receives an array of hosts as its argument.
+#
+#  The updateable function allows a provider implementation to force
+#  an update even if ddclient has itself determined no update is
+#  necessary. The function shall return 1 if an update should be
+#  performed, else 0.
+######################################################################
+
+
 ######################################################################
 ## nic_dyndns1_examples
 ######################################################################
