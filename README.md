@@ -39,7 +39,6 @@ Dynamic DNS services currently supported include:
     ClouDNS     - See https://www.cloudns.net
     dinahosting - See https://dinahosting.com
     Gandi       - See https://gandi.net
-    dnsexit     - See https://dnsexit.com/ for details
     dnsexit2    - See https://dnsexit.com/dns/dns-api/ for details
     1984.is     - See https://www.1984.is/product/freedns/ for details
     Njal.la     - See https://njal.la/docs/ddns/
