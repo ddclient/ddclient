@@ -1337,6 +1337,18 @@ sub update_nics {
         if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             &$update(@hosts);
+
+            # Backwards compatibility:
+            # If we only have 'use', we set 'wantipv4' or 'wantipv6' depending on the IP type of
+            # 'wantip'. Newer provider implementations such as cloudflare only check 'wantipv*'
+            # and set 'status-ipv*' accordingly, ignoring 'wantip' and 'status'.
+            # For these we then load back the 'status' from 'status-ipv*' to ensure correct
+            # caching and updating behaviour.
+            foreach my $h (@hosts) {
+                $config{$h}{'status'} //= $config{$h}{'status-ipv4'};
+                $config{$h}{'status'} //= $config{$h}{'status-ipv6'};
+            }
+
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
         }
     }
