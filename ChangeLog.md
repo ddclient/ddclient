@@ -11,6 +11,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * ddclient no longer ships any example files for init systems that use `/etc/init.d`.
     This was done because those files where effectively unmaintained, untested by the developers and only updated by downstream distros.
     If you where relying on those files, please copy them into your packaging.
+  * The defunct `dnsexit` protocol is removed (replaced by `dnsexit2`).
 
 ### New features
 
@@ -18,7 +19,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added support for domeneshop.no
   * Added support for Enom
   * Added support for Mythic Beasts Dynamic DNS
-  * Added support for DNSExit API v2
+  * Added support for DNSExit API v2 (replaces old DNSExit).
   * Added support for njal.la
   * Added support for Porkbun
   * Added support for IPv6 to the EasyDNS and DuckDNS provider
