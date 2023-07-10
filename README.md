@@ -54,7 +54,7 @@ Dynamic DNS services currently supported include:
 broadband routers.
 
 Comments, suggestions and requests: please file an issue at
-https://github.com/ddclient/ddclient/issues/new
+https://github.com/rrthomas/ddclient/issues/new
 
 The code was originally written by Paul Burry and is now hosted and
 maintained through github.com. Please check out https://ddclient.net
@@ -73,7 +73,7 @@ maintained through github.com. Please check out https://ddclient.net
 
 ## DOWNLOAD
 
-See https://github.com/ddclient/ddclient/releases
+See https://github.com/rrthomas/ddclient/releases
 
 ## INSTALLATION
 
@@ -83,8 +83,7 @@ See https://github.com/ddclient/ddclient/releases
   <img src="https://repology.org/badge/vertical-allrepos/ddclient.svg" alt="Packaging status" align="right">
 </a>
 The easiest way to install ddclient is to install a package offered by your
-operating system. See the image to the right for a list of distributions with a
-ddclient package.
+operating system. See the image to the right for a list of distributions with a ddclient package.
 
 ### Manual Installation
 
