@@ -4,7 +4,9 @@
 # DDCLIENT - a Perl client for updating DynDNS information
 #
 # Original Author: Paul Burry (paul+ddclient@burry.ca)
-# Current maintainer: Reuben Thomas <rrt@sc3d.org>
+# Current maintainers:
+#   Reuben Thomas <rrt@sc3d.org>
+#   Lenard Heß <lenard@rrhess.de>
 #
 # website: https://github.com/rrthomas/ddclient
 #
