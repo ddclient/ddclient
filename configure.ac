@@ -44,7 +44,6 @@ m4_foreach_w([_m], [
     File::Path
     File::Temp
     Getopt::Long
-    IO::Socket::IP
     Socket
     Sys::Hostname
     version=0.77
@@ -72,7 +71,6 @@ m4_foreach_w([_m], [
     HTTP::Message::PSGI
     HTTP::Request
     HTTP::Response
-    IO::Socket::SSL
     Scalar::Util
     Test::MockModule
     Test::TCP

@@ -63,7 +63,6 @@ maintained through github.com. Please check out https://ddclient.net
 
   * An account from a supported dynamic DNS service provider
   * Perl v5.10.1 or later
-      * `IO::Socket::SSL` perl library for ssl-support
       * `JSON::PP` perl library for JSON support
   * Linux, macOS, or any other Unix-ish system
   * An implementation of `make` (such as [GNU
