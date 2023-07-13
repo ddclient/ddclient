@@ -4747,7 +4747,8 @@ sub nic_easydns_update {
                 my ($status) = $line =~ /^(\S*)\b.*/;
                 my $h = shift @hosts;
 
-                $config{$h}{'status'} = $status;
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
                 if ($status eq 'NOERROR') {
                     $config{$h}{'ipv4'}  = $ipv4;
                     $config{$h}{'ipv6'}  = $ipv6;
@@ -7081,12 +7082,12 @@ sub nic_porkbun_update {
             );
             # No response, declare as failed
             if (!defined($reply) || !$reply) {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv4'} = "bad";
                 failed("updating %s: Could not connect to porkbun.com.", $host);
                 next;
             }
             if (!header_ok($host, $reply)) {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv4'} = "bad";
                 failed("updating %s: failed (%s)", $host, $reply);
                 next;
             }
@@ -7095,12 +7096,12 @@ sub nic_porkbun_update {
             $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv4'} = "bad";
                 failed("%s -- Unexpected service response.", $host);
                 next;
             }
             if ($response->{status} ne 'SUCCESS') {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv4'} = "bad";
                 failed("%s -- Unexpected status. (status = %s)", $host, $response->{status});
                 next;
             }
@@ -7112,7 +7113,7 @@ sub nic_porkbun_update {
                 }
                 my $current_content = $records->[0]->{'content'};
                 if ($current_content eq $ipv4) {
-                    $config{$host}{'status'} = "good";
+                    $config{$host}{'status-ipv4'} = "good";
                     success("updating %s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
                     next;
                 }
@@ -7144,11 +7145,11 @@ sub nic_porkbun_update {
                     failed("updating %s: failed (%s)", $host, $reply);
                     next;
                 }
-                $config{$host}{'status'} = "good";
+                $config{$host}{'status-ipv4'} = "good";
                 success("updating %s: good: IPv4 address set to %s", $host, $ipv4);
                 next;
             } else {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv4'} = "bad";
                 failed("updating %s: No applicable existing records.", $host);
                 next;
             }
@@ -7174,12 +7175,12 @@ sub nic_porkbun_update {
             );
             # No response, declare as failed
             if (!defined($reply) || !$reply) {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv6'} = "bad";
                 failed("updating %s: Could not connect to porkbun.com.", $host);
                 next;
             }
             if (!header_ok($host, $reply)) {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv6'} = "bad";
                 failed("updating %s: failed (%s)", $host, $reply);
                 next;
             }
@@ -7188,12 +7189,12 @@ sub nic_porkbun_update {
             $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv6'} = "bad";
                 failed("%s -- Unexpected service response.", $host);
                 next;
             }
             if ($response->{status} ne 'SUCCESS') {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv6'} = "bad";
                 failed("%s -- Unexpected status. (status = %s)", $host, $response->{status});
                 next;
             }
@@ -7205,7 +7206,7 @@ sub nic_porkbun_update {
                 }
                 my $current_content = $records->[0]->{'content'};
                 if ($current_content eq $ipv6) {
-                    $config{$host}{'status'} = "good";
+                    $config{$host}{'status-ipv6'} = "good";
                     success("updating %s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
                     next;
                 }
@@ -7237,11 +7238,11 @@ sub nic_porkbun_update {
                     failed("updating %s: failed (%s)", $host, $reply);
                     next;
                 }
-                $config{$host}{'status'} = "good";
+                $config{$host}{'status-ipv6'} = "good";
                 success("updating %s: good: IPv6 address set to %s", $host, $ipv4);
                 next;
             } else {
-                $config{$host}{'status'} = "bad";
+                $config{$host}{'status-ipv6'} = "bad";
                 failed("updating %s: No applicable existing records.", $host);
                 next;
             }
