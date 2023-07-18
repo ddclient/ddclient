@@ -19,6 +19,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Added support for moving secrets out of the configuration through environment variables
   * Extended postscript mechanism
   * sample-get-ip-from-fritzbox: Added environment variable to override hostname
+  * Warn about hosts where no IP could be determined - and skip the (bogus) update.
 
 ### Provider updates:
   * Added regfish
