@@ -1328,6 +1328,12 @@ sub update_nics {
             # But we will set 'wantip' to the IPv4 so old functions continue to work until we update them all
             $config{$h}{'wantip'}   = $ipv4       if (!$ip && $ipv4);
 
+            if (!$ip && !$ipv4 && !$ipv6)
+            {
+                warning("Could not determine an IP for %s", $h);
+                next;
+            }
+
             next if !nic_updateable($h, $updateable);
             push @hosts, $h;
 
