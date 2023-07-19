@@ -54,7 +54,7 @@ Dynamic DNS services currently supported include:
 broadband routers.
 
 Comments, suggestions and requests: please file an issue at
-https://github.com/rrthomas/ddclient/issues/new
+https://github.com/ddclient/ddclient/issues/new
 
 The code was originally written by Paul Burry and is now hosted and
 maintained through github.com. Please check out https://ddclient.net
@@ -73,7 +73,7 @@ maintained through github.com. Please check out https://ddclient.net
 
 ## DOWNLOAD
 
-See https://github.com/rrthomas/ddclient/releases
+See https://github.com/ddclient/ddclient/releases
 
 ## INSTALLATION
 

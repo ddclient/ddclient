@@ -8,7 +8,7 @@
 #   Reuben Thomas <rrt@sc3d.org>
 #   Lenard Heß <lenard@rrhess.de>
 #
-# website: https://github.com/rrthomas/ddclient
+# website: https://github.com/ddclient/ddclient
 #
 ######################################################################
 package ddclient;
