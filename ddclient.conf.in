@@ -270,6 +270,14 @@ ssl=yes					# use ssl-support.  Works with
 # my.domain.tld,other.domain.tld        \
 
 ##
+## YDNS (https://ydns.io)
+##
+# protocol=ydns, \
+# login=eXample9V9ddVxyjpqN2, \
+# password=DONOTUSEQ7THYJYVPFZT5R7CYXZQCH \
+# my.domain.tld,other.domain.tld
+
+##
 ## DNS Made Easy (https://dnsmadeeasy.com)
 ##
 # protocol=dnsmadeeasy,
