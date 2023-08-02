@@ -7339,20 +7339,20 @@ Available configuration variables:
     Required.
   * zone: The DNS zone to be updated. Required.
   * ttl: The time-to-live value associated with the updated DNS record.
-    Optional; uses Gandi's default (3h) if unset.
+    Optional; uses Gandi's default (10800) if unset.
 
 Example ${program}.conf file entries:
   ## Single host update.
-  protocol=gandi,                           \\
-  zone=example.com,                         \\
-  password=my-gandi-api-key,                \\
+  protocol=gandi
+  zone=example.com
+  password=my-gandi-api-key
   host.example.com
 
   ## Multiple host update.
-  protocol=gandi,                           \\
-  zone=example.com,                         \\
-  password=my-gandi-api-key,                \\
-  ttl=1h                                    \\
+  protocol=gandi
+  zone=example.com
+  password=my-gandi-api-key
+  ttl=3600 # optional
   hosta.example.com,hostb.sub.example.com
 EoEXAMPLE
 }
