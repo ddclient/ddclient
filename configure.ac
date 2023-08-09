@@ -28,6 +28,7 @@ AC_PATH_PROG([FIND], [find])
 AS_IF([test -z "${FIND}"], [AC_MSG_ERROR(['find' utility not found])])
 
 AC_PATH_PROG([CURL], [curl])
+AS_IF([test -z "${CURL}"], [AC_MSG_ERROR([curl not found])])
 
 AX_WITH_PROG([PERL], perl)
 AX_PROG_PERL_VERSION([5.10.1], [],
@@ -43,7 +44,6 @@ m4_foreach_w([_m], [
     File::Path
     File::Temp
     Getopt::Long
-    IO::Socket::IP
     Socket
     Sys::Hostname
     version=0.77
@@ -71,7 +71,6 @@ m4_foreach_w([_m], [
     HTTP::Message::PSGI
     HTTP::Request
     HTTP::Response
-    IO::Socket::SSL
     Scalar::Util
     Test::MockModule
     Test::TCP

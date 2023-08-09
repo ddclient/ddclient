@@ -3,29 +3,42 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
-## 2023-XX-XX v3.11.0
+## 2023-XX-XX v3.11.0_1
 
 ### Breaking changes
 
+  * ddclient now requires curl.
   * ddclient no longer ships any example files for init systems that use `/etc/init.d`.
     This was done because those files where effectively unmaintained, untested by the developers and only updated by downstream distros.
     If you where relying on those files, please copy them into your packaging.
+  * The defunct `dnsexit` protocol is removed (replaced by `dnsexit2`).
 
 ### New features
 
-  * Added support for domaindiscount24.com
-  * Added support for domeneshop.no
-  * Added support for Enom
-  * Added support for Mythic Beasts Dynamic DNS
-  * Added support for njal.la
-  * Added support for Porkbun
-  * Added support for IPv6 to the EasyDNS and DuckDNS provider
+  * Introduced `usev4` and `usev6` for separate IPv4/IPv6 configuration. These will replace the legacy `use` eventually.
+  * Added support for moving secrets out of the configuration through environment variables
+  * Extended postscript mechanism
+  * sample-get-ip-from-fritzbox: Added environment variable to override hostname
+  * Warn about hosts where no IP could be determined - and skip the (bogus) update.
+
+### Provider updates:
+  * Added regfish
+  * Added domeneshop.no
+  * Added Mythic Beasts
+  * Added Porkbun
+  * Added Enom
+  * Added DigitalOcean
+  * Added Infomaniak
+  * Added DNSExit API v2
+  * Removed old DNSExit API
+  * Extended EasyDNS to support IPv6
+  * Extended duckdns to support IPv6
 
 ### Bug fixes
 
-  * DynDNS2 now uses the newer ipv4/ipv6 syntax's
+  * Fixed various issues with caching
+  * Fixed issues with Hetzner zones
   * The OVH provider now ignores extra data returned
-  * Allow to define usev4 and usev6 options per hostname
   * Merge multiple configs for the same hostname instead of use the last
 
 ## 2022-10-20 v3.10.0

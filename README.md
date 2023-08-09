@@ -1,70 +1,68 @@
-# Unmaintained
-
-ddclient is unmaintained and no further changes will be done nor will issues or pull requests of any kind be accepted.
-
-As alternatives consider <https://github.com/troglobit/inadyn> or <https://github.com/lopsided98/dnsupdate>.
-There will be no support for migrating of ddclient and your current provider might not be supported by those alternatives.
-
-See https://github.com/ddclient/ddclient/issues/528 and https://github.com/ddclient/ddclient/issues/380 for more details.
-
----
-
 # DDCLIENT
 
 `ddclient` is a Perl client used to update dynamic DNS entries for accounts 
-on many dynamic DNS services.
+on many dynamic DNS services. It uses `curl` for internet access.
+
+This is a friendly fork/continuation of https://github.com/ddclient/ddclient
+
+## Alternatives
+
+You might also want to consider using one of the following, if they support
+your dynamic DNS provider(s): <https://github.com/troglobit/inadyn> or
+<https://github.com/lopsided98/dnsupdate>.
 
 ## Supported services
 
 Dynamic DNS services currently supported include:
 
-    DynDNS.com  - See http://www.dyndns.com for details on obtaining a free account.
-    Zoneedit    - See http://www.zoneedit.com for details.
-    EasyDNS     - See http://www.easydns.com for details.
-    NameCheap   - See http://www.namecheap.com for details
-    DslReports  - See http://www.dslreports.com for details
-    Sitelutions - See http://www.sitelutions.com for details
-    Loopia      - See http://www.loopia.se for details
-    Noip        - See http://www.noip.com/ for details
-    Freedns     - See http://freedns.afraid.org/ for details
-    ChangeIP    - See http://www.changeip.com/ for details
-    nsupdate    - See nsupdate(1) and ddns-confgen(8) for details
-    CloudFlare  - See https://www.cloudflare.com/ for details
-    GoDaddy     - See https://www.godaddy.com/ for details
-    Google      - See http://www.google.com/domains for details
-    Duckdns     - See https://duckdns.org/ for details
-    Freemyip    - See https://freemyip.com for details
-    woima.fi    - See https://woima.fi/ for details
-    Yandex      - See https://domain.yandex.com/ for details
-    DNS Made Easy - See https://dnsmadeeasy.com/ for details
-    DonDominio  - See https://www.dondominio.com for details
-    NearlyFreeSpeech.net - See https://www.nearlyfreespeech.net/services/dns for details
-    OVH         - See https://www.ovh.com for details
-    Porkbun     - See https://porkbun.com/
-    ClouDNS     - See https://www.cloudns.net
-    dinahosting - See https://dinahosting.com
-    Gandi       - See https://gandi.net
-    dnsexit     - See https://dnsexit.com/ for details
-    1984.is     - See https://www.1984.is/product/freedns/ for details
-    Njal.la     - See https://njal.la/docs/ddns/
-    regfish.de  - See https://www.regfish.de/domains/dyndns/ for details
-    domenehsop  - See https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get
-    Mythic Beasts - See https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns for details
-    Enom        - See https://www.enom.com for details
-    Infomaniak  - See https://faq.infomaniak.com/2376 for details
+* [1984.is](https://www.1984.is/product/freedns)
+* [ChangeIP](https://www.changeip.com)
+* [CloudFlare](https://www.cloudflare.com)
+* [ClouDNS](https://www.cloudns.net)
+* [dinahosting](https://dinahosting.com)
+* [DonDominio](https://www.dondominio.com)
+* [DNS Made Easy](https://dnsmadeeasy.com)
+* [DNSExit](https://dnsexit.com/dns/dns-api)
+* [domenehsop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
+* [DslReports](https://www.dslreports.com)
+* [Duck DNS](https://duckdns.org)
+* [DynDNS.com](https://account.dyn.com)
+* [EasyDNS](https://www.easydns.com )
+* [Enom](https://www.enom.com)
+* [Freedns](https://freedns.afraid.org)
+* [Freemyip](https://freemyip.com)
+* [Gandi](https://gandi.net)
+* [GoDaddy](https://www.godaddy.com)
+* [Google](https://domains.google)
+* [Infomaniak](https://faq.infomaniak.com/2376)
+* [Loopia](https://www.loopia.se)
+* [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
+* [NameCheap](https://www.namecheap.com)
+* [NearlyFreeSpeech.net](https://www.nearlyfreespeech.net/services/dns)
+* [Njalla](https://njal.la/docs/ddns)
+* [Noip](https://www.noip.com)
+* nsupdate - see nsupdate(1) and ddns-confgen(8)
+* [OVH](https://www.ovhcloud.com)
+* [Porkbun](https://porkbun.com)
+* [regfish.de](https://www.regfish.de/domains/dyndns)
+* [Sitelutions](https://www.sitelutions.com)
+* [woima.fi](https://woima.fi)
+* [Yandex](https://dns.yandex.com)
+* [Zoneedit](https://www.zoneedit.com)
 
-`ddclient` now supports many cable and DSL broadband routers.
+`ddclient` supports finding your IP address from many cable and DSL
+broadband routers.
 
-Comments, suggestions and requests: use the issues on https://github.com/ddclient/ddclient/issues/new
+Comments, suggestions and requests: please file an issue at
+https://github.com/ddclient/ddclient/issues/new
 
-The code was originally written by Paul Burry and is now hosted and maintained 
-through github.com. Please check out http://ddclient.net
+The code was originally written by Paul Burry and is now hosted and
+maintained through github.com. Please check out https://ddclient.net
 
 ## REQUIREMENTS
 
   * An account from a supported dynamic DNS service provider
   * Perl v5.10.1 or later
-      * `IO::Socket::SSL` perl library for ssl-support
       * `JSON::PP` perl library for JSON support
   * Linux, macOS, or any other Unix-ish system
   * An implementation of `make` (such as [GNU
@@ -85,8 +83,7 @@ See https://github.com/ddclient/ddclient/releases
   <img src="https://repology.org/badge/vertical-allrepos/ddclient.svg" alt="Packaging status" align="right">
 </a>
 The easiest way to install ddclient is to install a package offered by your
-operating system. See the image to the right for a list of distributions with a
-ddclient package.
+operating system. See the image to the right for a list of distributions with a ddclient package.
 
 ### Manual Installation
 

@@ -12,7 +12,6 @@ my $ipv6_supported = eval {
     );
     defined($ipv6_socket);
 };
-my $has_curl = qx{ @CURL@ --version 2>/dev/null; } && $? == 0;
 
 my $http_daemon_supports_ipv6 = eval {
     require HTTP::Daemon;
@@ -55,54 +54,37 @@ my %httpd = (
 );
 
 my @test_cases = (
-    # Fetch via IO::Socket::IP
     {ipv6_opt => 0, server_ipv => '4', client_ipv => ''},
     {ipv6_opt => 0, server_ipv => '4', client_ipv => '4'},
     # IPv* client to a non-SSL IPv6 server is not expected to work unless opt('ipv6') is true
     {ipv6_opt => 0, server_ipv => '6', client_ipv => '6'},
 
-    # Fetch via IO::Socket::IP
-    {ipv6_opt => 1, server_ipv => '4', client_ipv => ''},
-    {ipv6_opt => 1, server_ipv => '4', client_ipv => '4'},
-    {ipv6_opt => 1, server_ipv => '6', client_ipv => ''},
-    {ipv6_opt => 1, server_ipv => '6', client_ipv => '6'},
+    # Fetch without ssl
+    { server_ipv => '4', client_ipv => '' },
+    { server_ipv => '4', client_ipv => '4' },
+    { server_ipv => '6', client_ipv => '' },
+    { server_ipv => '6', client_ipv => '6' },
 
-    # Fetch via IO::Socket::SSL
-    {ssl => 1, server_ipv => '4', client_ipv => ''},
-    {ssl => 1, server_ipv => '4', client_ipv => '4'},
-    {ssl => 1, server_ipv => '6', client_ipv => ''},
-    {ssl => 1, server_ipv => '6', client_ipv => '6'},
-
-    # Fetch with curl
-    { curl => 1, server_ipv => '4', client_ipv => '' },
-    { curl => 1, server_ipv => '4', client_ipv => '4' },
-    { curl => 1, server_ipv => '6', client_ipv => '' },
-    { curl => 1, server_ipv => '6', client_ipv => '6' },
-
-    # Fetch with curl and ssl
-    { curl => 1, ssl => 1, server_ipv => '4', client_ipv => '' },
-    { curl => 1, ssl => 1, server_ipv => '4', client_ipv => '4' },
-    { curl => 1, ssl => 1, server_ipv => '6', client_ipv => '' },
-    { curl => 1, ssl => 1, server_ipv => '6', client_ipv => '6' },
+    # Fetch with ssl
+    { ssl => 1, server_ipv => '4', client_ipv => '' },
+    { ssl => 1, server_ipv => '4', client_ipv => '4' },
+    { ssl => 1, server_ipv => '6', client_ipv => '' },
+    { ssl => 1, server_ipv => '6', client_ipv => '6' },
 );
 
 for my $tc (@test_cases) {
     $tc->{ipv6_opt} //= 0;
     $tc->{ssl} //= 0;
-    $tc->{curl} //= 0;
     SKIP: {
         skip("IPv6 not supported on this system", 1)
             if $tc->{server_ipv} eq '6' && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1)
             if $tc->{server_ipv} eq '6' && !$http_daemon_supports_ipv6;
         skip("HTTP::Daemon::SSL not available", 1) if $tc->{ssl} && !$has_http_daemon_ssl;
-        skip("Curl not available on this system", 1) if $tc->{curl} && !$has_curl;
         my $uri = $httpd{$tc->{server_ipv}}{$tc->{ssl} ? 'https' : 'http'}->endpoint();
-        my $name = sprintf("IPv%s client to %s%s%s",
-                           $tc->{client_ipv} || '*', $uri, $tc->{ipv6_opt} ? ' (-ipv6)' : '',
-                           $tc->{curl} ? ' (curl)' : '');
+        my $name = sprintf("IPv%s client to %s%s",
+                           $tc->{client_ipv} || '*', $uri, $tc->{ipv6_opt} ? ' (-ipv6)' : '');
         $ddclient::globals{'ipv6'} = $tc->{ipv6_opt};
-        $ddclient::globals{'curl'} = $tc->{curl};
         my $got = ddclient::geturl(url => $uri, ipversion => $tc->{client_ipv});
         isnt($got // '', '', $name);
     }
