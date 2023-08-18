@@ -25,6 +25,7 @@ daemon=300                      # check every 300 seconds
 syslog=yes                      # log update msgs to syslog
 mail=root                       # mail all msgs to root
 mail-failure=root               # mail failed update msgs to root
+# mail-from=root                # send mail from root, by default unset and handled by system sendmail
 pid=@runstatedir@/ddclient.pid  # record PID in file.
 # postscript=script             # run script after updating.  The new IP is
                                 # added as argument.
