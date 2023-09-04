@@ -19,6 +19,7 @@ Dynamic DNS services currently supported include:
 * [ChangeIP](https://www.changeip.com)
 * [CloudFlare](https://www.cloudflare.com)
 * [ClouDNS](https://www.cloudns.net)
+* [DigitalOcean](https://www.digitalocean.com/)
 * [dinahosting](https://dinahosting.com)
 * [DonDominio](https://www.dondominio.com)
 * [DNS Made Easy](https://dnsmadeeasy.com)
