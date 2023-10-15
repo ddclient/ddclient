@@ -3,6 +3,8 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
+## 20XX-XX-XX v3.11.0_2
+
 ## 2023-10-15 v3.11.0_1
 
 ### Breaking changes
