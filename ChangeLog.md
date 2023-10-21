@@ -3,7 +3,7 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
-## 20XX-XX-XX v3.11.1 (WIP)
+## 20XX-XX-XX v3.11.1_0 (WIP)
 
 ## 2023-10-21 v3.11.0
 This version is the same as v3.11.0_1 (except for the updated version number in the code).
