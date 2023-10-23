@@ -273,8 +273,8 @@ ssl=yes					# use ssl-support.  Works with
 ## YDNS (https://ydns.io)
 ##
 # protocol=ydns, \
-# login=eXample9V9ddVxyjpqN2, \
-# password=DONOTUSEQ7THYJYVPFZT5R7CYXZQCH \
+# login=your-api-username, \
+# password=your-api-secret \
 # my.domain.tld,other.domain.tld
 
 ##
