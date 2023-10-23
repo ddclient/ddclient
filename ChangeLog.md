@@ -3,11 +3,17 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
-## 2023-XX-XX v3.11.0_1
+## 20XX-XX-XX v3.11.1_0 (WIP)
+
+## 2023-10-21 v3.11.0
+This version is the same as v3.11.0_1 (except for the updated version number in the code).
+Refer to [v3.11 release plan discussions](https://github.com/ddclient/ddclient/issues/552) for the reasons.
+
+## 2023-10-15 v3.11.0_1
 
 ### Breaking changes
 
-  * ddclient now requires curl.
+  * ddclient now requires curl. The Perl modules IO::Socket::IP and IO::Socket::SSL are no longer used.
   * ddclient no longer ships any example files for init systems that use `/etc/init.d`.
     This was done because those files where effectively unmaintained, untested by the developers and only updated by downstream distros.
     If you where relying on those files, please copy them into your packaging.
