@@ -5,6 +5,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ## 20XX-XX-XX v3.11.1_0 (WIP)
 
+### Bug fixes
+  * Fixed simultaneous IPv4 and IPv6 updates for provider porkbun
+
 ## 2023-10-21 v3.11.0
 This version is the same as v3.11.0_1 (except for the updated version number in the code).
 Refer to [v3.11 release plan discussions](https://github.com/ddclient/ddclient/issues/552) for the reasons.
