@@ -21,7 +21,7 @@ use File::Temp;
 use Getopt::Long;
 use Sys::Hostname;
 
-use version 0.77; our $VERSION = version->declare('@PACKAGE_VERSION@');
+use version 0.77; our $VERSION = version->declare('3.11.1_0');
 my $version = $VERSION->stringify();
 my $programd = $0;
 $programd =~ s%^.*/%%;
