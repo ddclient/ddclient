@@ -1,6 +1,6 @@
 # DDCLIENT
 
-`ddclient` is a Perl client used to update dynamic DNS entries for accounts 
+`ddclient` is a Perl client used to update dynamic DNS entries for accounts
 on many dynamic DNS services. It uses `curl` for internet access.
 
 This is a friendly fork/continuation of https://github.com/ddclient/ddclient
@@ -24,7 +24,7 @@ Dynamic DNS services currently supported include:
 * [DonDominio](https://www.dondominio.com)
 * [DNS Made Easy](https://dnsmadeeasy.com)
 * [DNSExit](https://dnsexit.com/dns/dns-api)
-* [domenehsop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
+* [Domeneshop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
 * [DslReports](https://www.dslreports.com)
 * [Duck DNS](https://duckdns.org)
 * [DynDNS.com](https://account.dyn.com)
