@@ -6477,8 +6477,10 @@ sub nic_duckdns_update {
     ## update each configured host
     ## should improve to update in one pass
     foreach my $h (@_) {
-        my $ip = delete $config{$h}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        info("setting IPv4 address to %s for %s", $ipv4, $h) if $ipv4;
+        info("setting IPv6 address to %s for %s", $ipv6, $h) if $ipv6;
         verbose("UPDATE:", "updating %s", $h);
 
         # Set the URL that we're going to to update
@@ -6488,13 +6490,8 @@ sub nic_duckdns_update {
         $url .= $h;
         $url .= "&token=";
         $url .= $config{$h}{'password'};
-        if (is_ipv6($ip)) {
-            $url .= "&ipv6=";
-        } else {
-            $url .= "&ip=";
-        }
-        $url .= $ip;
-
+        $url .= "&ip=$ipv4" if $ipv4;
+        $url .= "&ipv6=$ipv6" if $ipv6;
 
         # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
@@ -6512,14 +6509,20 @@ sub nic_duckdns_update {
 
         foreach $line (@reply) {
             if ($line eq 'OK') {
-                $config{$h}{'ip'}     = $ip;
+                $config{$h}{'ipv4'}   = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'}   = $ipv6 if $ipv6;
                 $config{$h}{'mtime'}  = $now;
                 $config{$h}{'status'} = 'good';
+                $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+                $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                 $state = 'result';
-                success("updating %s: good: IP address set to %s", $h, $ip);
+                success("updating %s: good: IPv4 address set to %s", $h, $ipv4) if $ipv4;
+                success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
 
             } elsif ($line eq 'KO') {
                 $config{$h}{'status'} = 'failed';
+                $config{$h}{'status-ipv4'} = 'failed' if $ipv4;
+                $config{$h}{'status-ipv6'} = 'failed' if $ipv6;
                 $state = 'result';
                 failed("updating %s: Server said: '%s'", $h, $line);
             }
