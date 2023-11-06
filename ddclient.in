@@ -818,6 +818,7 @@ my %services = (
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
         'variables' => {
+            %{$variables{'service-common-defaults'}},
             'atime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'host'                      => setv(T_STRING, 1, 1, '',              undef),
