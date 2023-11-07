@@ -370,3 +370,12 @@ ssl=yes					# use ssl-support.  Works with
 # login=ddns_username,
 # password=ddns_password
 # example.com
+#
+# N.B. the infomaniak protocol is obsolete. Please use dyndns2 instead:
+#
+# protocol=dyndns2,
+# use=web, web=infomaniak.com/ip.php/
+# login=ddns_username,
+# password=ddns_password
+# redirect=2
+# example.com
