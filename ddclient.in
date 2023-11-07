@@ -472,6 +472,7 @@ my %variables = (
         'postscript'          => setv(T_POSTS, 0, 0, '',                   undef),
         'ssl_ca_dir'          => setv(T_FILE,  0, 0, undef,                undef),
         'ssl_ca_file'         => setv(T_FILE,  0, 0, undef,                undef),
+        'redirect'            => setv(T_NUMBER,0, 0, 0,                    undef)
     },
     'service-common-defaults' => {
         'server'              => setv(T_FQDNP, 1, 0, 'members.dyndns.org', undef),
@@ -505,7 +506,7 @@ my %variables = (
         'cmd-skip'            => setv(T_STRING,0, 0, '',                   undef),
         'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
         'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
-        
+
         'ip'                  => setv(T_IP,    0, 1, undef,                undef),  #TODO remove from cache?
         'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
         'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
@@ -1094,6 +1095,7 @@ my @opt = (
     ["if-skip",           "=s", ""], ## deprecated
     ["test",              "!",  ""], ## hidden
     ["geturl",            "=s", ""], ## hidden
+    ["redirect",          "=i", "-redirect <max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
     "$program version $version, ",
@@ -2581,6 +2583,7 @@ sub geturl {
     my $force_ssl = 0;
     my $protocol;
     my $timeout  = opt('timeout');
+    my $redirect  = opt('redirect');
     my @curlopt = ();
     my @header_lines = ();
 
@@ -2629,6 +2632,12 @@ sub geturl {
 
         # Add in the data if any was provided (for POST/PATCH)
         push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data);
+
+        # Handle 30x redirections
+        if ($redirect) {
+            push(@curlopt, "location");
+            push(@curlopt, "max-redirs=$redirect");
+        }
 
         # don't include ${url} as that might expose login credentials
         $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
@@ -4101,7 +4110,7 @@ sub nic_dnsexit2_update {
         );
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
-       
+
         # Updates for ipv4 and ipv6 need to be combined in a single API call, create Hash of Arrays for tracking
         my %total_payload;
 
@@ -7066,7 +7075,7 @@ Additional example to finely control IPv4 or IPv6 :
   apikey=APIKey
   secretapikey=SecretAPIKey
   usev6=ifv6, ifv6=enp1s0, usev4=disabled ipv6.example.com
-  
+
 EoEXAMPLE
 }
 
@@ -7520,7 +7529,7 @@ sub nic_regfishde_update {
  for my $h (@_) {
    my $ip = delete $config{$h}{'wantip'};
    my $ipv6 = delete $config{$h}{'wantip'};
-   
+
    info("regfish.de setting IP address to %s for %s", $ip, $h);
 
    my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
@@ -7560,7 +7569,7 @@ sub nic_enom_examples {
 o 'enom'
 The 'enom' protocol is used by DNS services offered by www.enom.com and their resellers.
 Configuration variables applicable to the 'enom' protocol are:
-  protocol=enom                ## 
+  protocol=enom                ##
   server=fqdn.of.service       ## defaults to dynamic.name-services.com
   login=domain.name            ## base domain name
   password=domain-password     ## the domain password registered with the service
@@ -7760,6 +7769,8 @@ sub nic_infomaniak_examples {
 
 o 'infomaniak'
 
+**Note** The 'infomaniak' protocol is obsolete [*].
+
 The 'infomaniak' protocol is used by DNS services offered by www.infomaniak.com.
 
 Configuration variables applicable to the 'infomaniak' protocol are:
@@ -7776,6 +7787,17 @@ Example ${program}.conf file entries:
 
 For more information about how to create a dynamic DNS, see https://faq.infomaniak.com/2357.
 
+[*] Infomaniak DynDNS services (both IP discovery and update) can be used with the standard
+'dyndns2' protocol. See <https://faq.infomaniak.com/40>. Notice that a minimum number of HTTP
+redirections (usally 2) might be needed.
+
+Example ${program}.conf file entries:
+  protocol=dyndns2,                   \\
+  use=web, web=infomaniak.com/ip.php/ \\
+  login=my-username,                  \\
+  password=my-password                \\
+  redirect=2
+  my.address.com
 EoEXAMPLE
 }
 
