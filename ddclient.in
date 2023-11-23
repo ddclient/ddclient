@@ -1345,14 +1345,16 @@ sub update_nics {
             &$update(@hosts);
 
             # Backwards compatibility:
-            # If we only have 'use', we set 'wantipv4' or 'wantipv6' depending on the IP type of
-            # 'wantip'. Newer provider implementations such as cloudflare only check 'wantipv*'
-            # and set 'status-ipv*' accordingly, ignoring 'wantip' and 'status'.
-            # For these we then load back the 'status' from 'status-ipv*' to ensure correct
-            # caching and updating behaviour.
+            # The legacy 'use' parameter sets 'wantip' and the legacy providers process this and
+            # set 'ip', 'status' accordingly.
+            # The new 'usev*' parameters set 'wantipv*' and the new providers set 'ipv*' and 'status-ipv*'.
+            # To allow gradual transition, we make sure both the old 'status' and 'ip' are being set
+            # accordingly to what new providers returned in the new 'status-ipv*' and 'ipv*' fields respectively.
             foreach my $h (@hosts) {
                 $config{$h}{'status'} //= $config{$h}{'status-ipv4'};
                 $config{$h}{'status'} //= $config{$h}{'status-ipv6'};
+                $config{$h}{'ip'} //= $config{$h}{'ipv4'};
+                $config{$h}{'ip'} //= $config{$h}{'ipv6'};
             }
 
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);

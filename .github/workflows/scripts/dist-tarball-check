@@ -34,6 +34,7 @@ try git archive --format=tar --prefix=git-repo/ HEAD \
         .github \
         .gitignore \
         docs/ipv6-design-doc.md \
+        docs/ProviderGuidelines.md \
         shell.nix \
         ;
     # TODO: Delete this next line once support for Automake 1.11 is dropped and
