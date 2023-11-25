@@ -2603,7 +2603,9 @@ sub geturl {
     debug("server   = %s", $server);
     (my $_url = $url) =~ s%\?.*%?<redacted>%; #redact possible credentials
     debug("url      = %s", $_url);
-    debug("ip ver   = %s", $ipversion);
+    if ($ipversion != 0) {
+        debug("ip ver   = %s", $ipversion);
+    }
 
     if (!opt('exec')) {
         debug("skipped network connection");
@@ -2641,7 +2643,11 @@ sub geturl {
         verbose("RECEIVE:", "%s", $reply // "<undefined>");
         if (!$reply) {
             # don't include ${url} as that might expose login credentials
-            warning("curl cannot connect to %s://%s using IPv%s",${protocol},${server},$ipversion);
+            if ($ipversion != 0) {
+                warning("curl cannot connect to %s://%s using IPv%s",${protocol},${server},$ipversion);
+            } else {
+                warning("curl cannot connect to %s://%s",${protocol},${server});
+            }
         }
     }
 
