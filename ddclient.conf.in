@@ -197,10 +197,10 @@ ssl=yes					# use ssl-support.  Works with
 ## Gandi (gandi.net)
 ##
 ## Single host update
-# protocol=gandi,                      \
-# zone=example.com,                    \
-# password=my-gandi-api-key,           \
-# ttl=3h                               \
+# protocol=gandi
+# zone=example.com
+# password=my-gandi-api-key
+# ttl=10800 # optional
 # myhost.example.com
 
 ##
