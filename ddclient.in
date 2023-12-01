@@ -4264,14 +4264,21 @@ sub nic_noip_update {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
-        my $ip    = $config{$h}{'wantip'};
-        delete $config{$_}{'wantip'} foreach @hosts;
+        my $ipv4    = $config{$h}{'wantipv4'};
+        my $ipv6    = $config{$h}{'wantipv6'};
+        delete $config{$_}{'wantipv4'} foreach @hosts;
+        delete $config{$_}{'wantipv6'} foreach @hosts;
 
-        info("setting IP address to %s for %s", $ip, $hosts);
+        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
+        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
 
         my $url = "https://$config{$h}{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
-        $url .= $ip if $ip;
+        $url .= $ipv4 if $ipv4;
+        if ($ipv6) {
+            $url .= "," if $ipv4;
+            $url .= $ipv6;
+        }
 
         my $reply = geturl(
             proxy => opt('proxy'),
@@ -4297,22 +4304,34 @@ sub nic_noip_update {
             } elsif ($state =~ /^results/) {
                 $state = 'results2';
 
-                my ($status, $ip) = split / /, lc $line;
+                my ($status, $returnedips) = split / /, lc $line;
                 my $h = shift @hosts;
 
-                $config{$h}{'status'} = $status;
+                foreach my $ip (split_by_comma($returnedips)) {
+                    next if (!$ip);
+                    my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                    $config{$h}{"status-ipv$ipv"} = $status;
+                }
+
                 if ($status eq 'good') {
-                    $config{$h}{'ip'}     = $ip;
-                    $config{$h}{'mtime'}  = $now;
-                    success("updating %s: %s: IP address set to %s", $h, $status, $ip);
+                    $config{$h}{'mtime'} = $now;
+                    foreach my $ip (split_by_comma($returnedips)) {
+                        next if (!$ip);
+                        my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                        $config{$h}{"ipv$ipv"} = $ip;
+                        success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $ip);
+                    }
 
                 } elsif (exists $errors{$status}) {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                        $config{$h}{'ip'}     = $ip;
-                        $config{$h}{'mtime'}  = $now;
-                        $config{$h}{'status'} = 'good';
-
+                        $config{$h}{'mtime'} = $now;
+                        foreach my $ip (split_by_comma($returnedips)) {
+                            next if (!$ip);
+                            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                            $config{$h}{"ipv$ipv"} = $ip;
+                            $config{$h}{"status-ipv$ipv"} = 'good';
+                        }
                     } else {
                         failed("updating %s: %s: %s", $h, $status, $errors{$status});
                     }
