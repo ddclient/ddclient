@@ -2578,21 +2578,27 @@ sub geturl {
     my $reply;
     my $server;
     my $use_ssl = 0;
-    my $force_ssl = 0;
     my $protocol;
     my $timeout  = opt('timeout');
     my @curlopt = ();
     my @header_lines = ();
 
-    ## canonify proxy and url
-    $force_ssl = 1 if ($url =~ /^https:/);
+    ## canonify use_ssl, proxy and url
+    if ($url =~ /^https:/) {
+        $use_ssl = 1;
+    } elsif ($url =~ /^http:/) {
+        $use_ssl = 0;
+    } elsif ($globals{'ssl'} && !($params{ignore_ssl_option} // 0)) {
+        $use_ssl = 1;
+    } else {
+        $use_ssl = 0;
+    }
+
     $proxy  =~ s%^https?://%%i if defined($proxy);
     $url    =~ s%^https?://%%i;
     $server = $url;
     $server =~ s%[?/].*%%;
     $url    =~ s%^[^?/]*/?%%;
-
-    $use_ssl = 1 if ($force_ssl || ($globals{'ssl'} && !($params{ignore_ssl_option} // 0)));
 
     $protocol = ($use_ssl ? "https" : "http");
 
