@@ -5835,11 +5835,13 @@ www.mythic-beasts.com.
 
 Configuration variables applicable to the 'mythicdyn' protocol are:
   protocol=mythicdyn           ##
-  ipv6=no|yes                  ## whether to set an A record (default, ipv6=no)
-                               ## or AAAA record (ipv6=yes).
   login=service-login          ## the user name provided by the admin interface
   password=service-password    ## the password provided by the admin interface
   fully.qualified.host         ## the host registered with the service
+
+Note: this module examines the following v4 & v6 parameters:
+    cmdv[46] fwv[46] usev[46] ipv[46] & ifv[46]
+  and will set either or both V4 and/or V6 addresses as required
 
 Note: this service automatically sets the IP address to that from which the
 request comes, so the IP address detected by ddclient is only used to keep
@@ -5869,29 +5871,66 @@ sub nic_mythicdyn_update {
     foreach my $h (@_) {
         info("%s -- Setting IP address.", $h);
 
-        my $ipversion = $config{$h}{'ipv6'} ? '6' : '4';
+        foreach my $mythver ('v4','v6') {
+            my $ipversion = '0';
 
-        my $reply = geturl(
-            proxy     => opt('proxy'),
-            url       => "https://ipv$ipversion.$config{$h}{'server'}/dns/v2/dynamic/$h",
-            method    => 'POST',
-            login     => $config{$h}{'login'},
-            password  => $config{$h}{'password'},
-            ipversion => $ipversion,
-        );
-        unless ($reply) {
-            failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
-            next;
-        }
+            if ($mythver eq 'v4') {
+                info("Checking for IP%s configuration", $mythver);
+                debug("IP Ver : %s", $ipversion);
+                $ipversion = $config{$h}{'cmdv4'} ? '4' : $ipversion;
+                debug("IP Ver : %s    CMDV4 : %s", $ipversion, $config{$h}{'cmdv4'});
+                $ipversion = $config{$h}{'fwv4'} ? '4' : $ipversion;
+                debug("IP Ver : %s    FWV4  : %s", $ipversion, $config{$h}{'fwv4'});
+                $ipversion = $config{$h}{'usev4'} ? '4' : $ipversion;
+                debug("IP Ver : %s    USEV4 : %s", $ipversion, $config{$h}{'usev4'});
+                $ipversion = $config{$h}{'ipv4'} ? '4' : $ipversion;
+                debug("IP Ver : %s    IPV4  : %s", $ipversion, $config{$h}{'ipv4'});
+                $ipversion = $config{$h}{'ifv4'} ? '4' : $ipversion;
+                debug("IP Ver : %s    IFV4  : %s", $ipversion, $config{$h}{'ifv4'});
+            }
 
-        my $ok = header_ok($h, $reply);
-        if ($ok) {
-            $config{$h}{'mtime'}  = $now;
-            $config{$h}{'status'} = "good";
+            if ($mythver eq 'v6') {
+                info("Checking for IP%s configuration", $mythver);
+                debug("IP Ver : %s", $ipversion);
+                $ipversion = $config{$h}{'cmdv6'} ? '6' : $ipversion;
+                debug("IP Ver : %s    CMDV6 : %s", $ipversion, $config{$h}{'cmdv6'});
+                $ipversion = $config{$h}{'fwv6'} ? '6' : $ipversion;
+                debug("IP Ver : %s    FWV6  : %s", $ipversion, $config{$h}{'fwv6'});
+                $ipversion = $config{$h}{'usev6'} ? '6' : $ipversion;
+                debug("IP Ver : %s    USEV6 : %s", $ipversion, $config{$h}{'usev6'});
+                $ipversion = $config{$h}{'ipv6'} ? '6' : $ipversion;
+                debug("IP Ver : %s    IPV6  : %s", $ipversion, $config{$h}{'ipv6'});
+                $ipversion = $config{$h}{'ifv6'} ? '6' : $ipversion;
+                debug("IP Ver : %s    IFV6  : %s", $ipversion, $config{$h}{'ifv6'});
+            }
 
-            success("%s -- Updated successfully.", $h);
-        } else {
-            failed("%s -- Failed to update.", $h);
+              if ($ipversion ne '0') {
+                  info("Process configuration for IP%s --------", $mythver);
+                  my $reply = geturl(
+                      proxy     => opt('proxy'),
+                      url       => "https://ipv$ipversion.$config{$h}{'server'}/dns/v2/dynamic/$h",
+                      method    => 'POST',
+                      login     => $config{$h}{'login'},
+                      password  => $config{$h}{'password'},
+                      ipversion => $ipversion,
+                  );
+                  unless ($reply) {
+                      failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
+                      next;
+                  }
+
+                  my $ok = header_ok($h, $reply);
+                  if ($ok) {
+                      $config{$h}{'mtime'}  = $now;
+                      $config{$h}{'status'} = "good";
+
+                      success("%s -- Updated successfully.", $h);
+                  } else {
+                      failed("%s -- Failed to update.", $h);
+                  }
+              } else {
+                  info("No configuration for IP%s -------------", $mythver);
+            }
         }
     }
 }
