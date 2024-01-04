@@ -1619,10 +1619,15 @@ sub _read_config {
         ## remove comments
         s/#.*//;
 
-        ## handle continuation lines
+        ## Handle continuation lines
+        # Any line ending in a backslash gets concatenated together with the following line
+        # Note: Trailing whitespace after the backslash is allowed.
         $_ = "$continuation$_";
-        if (/\\$/) {
-            chop;
+        if (/\\\s*$/) {
+            # Remove the backslash and whitespace
+            s/\\\s*$//s;
+
+            # Store the current line to be prepended to the next line
             $continuation = $_;
             next;
         }
