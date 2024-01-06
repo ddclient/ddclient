@@ -125,6 +125,38 @@ start the first time by hand
 
     systemctl start ddclient.service
 
+## Known issues
+This is a list for quick referencing of known issues. For further details check out the linked issues and the changelog.
+
+Note that any issues prior to version v3.9.1 will not be listed here.
+If a fix is committed but not yet part of any tagged release, the notes here will reference the not-yet-released version number.
+
+### v3.11.2 - v3.9.1: SSL parameter breaks HTTP-only IP acquisition
+Workaround: Disable the SSL parameter
+
+Fix: v3.11.3 will use HTTP to connect to URLs starting with `http://`. See [here](https://github.com/ddclient/ddclient/pull/608) for more info.
+
+The `ssl` parameter forces all connections to use HTTPS. While technically working as expected, this behavior keeps coming up as a pain point when using HTTP-only IP querying sites such as http://checkip.dyndns.org. For the future (v3.11.3), the behavior is changed to respect `http://` in a URL. A separate parameter to disallow all HTTP connections or warn about them may be added later.
+
+### v3.10.0: Chunked encoding not corretly supported in IO::Socket HTTP code
+Workaround: Use curl for transfers by either setting `-curl` in the command line or by adding `curl=yes` in the config
+
+Fixed in v3.11.0 - IO::Socket has been deprecated there and curl has been made the standard.
+
+Refer to [this issue](https://github.com/ddclient/ddclient/issues/548) for more info.
+
+### v3.10.0: Spammed updates to some providers
+This issue arises when using the `use` parameter in the config and using one of these providers:
+- Cloudflare
+- Hetzner
+- Digitalocean
+- Infomaniak
+
+Fixed in v3.11.2
+
+Workaround: Use the `usev4`/`usev6` parameters instead of `use`.
+
+
 ## TROUBLESHOOTING
 
   1. enable debugging and verbose messages: ``$ ddclient -daemon=0 -debug -verbose -noquiet``
