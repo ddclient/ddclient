@@ -1326,8 +1326,10 @@ sub update_nics {
             # DNS service update functions should only have to handle 'wantipv4' and 'wantipv6'
             $config{$h}{'wantipv4'} = $ipv4 = $ip if (!$ipv4 && is_ipv4($ip));
             $config{$h}{'wantipv6'} = $ipv6 = $ip if (!$ipv6 && is_ipv6($ip));
-            # But we will set 'wantip' to the IPv4 so old functions continue to work until we update them all
+            # If we don't have 'wantip', we fill it from 'wantipv4' or 'wantipv6'
+            # so old provider implementations continue to work until we update them all.
             $config{$h}{'wantip'}   = $ipv4       if (!$ip && $ipv4);
+            $config{$h}{'wantip'}   = $ipv6       if (!$ip && !$ipv4 && $ipv6);
 
             if (!$ip && !$ipv4 && !$ipv6)
             {
