@@ -1295,6 +1295,30 @@ our %protocols = (
             'max-interval' => setv(T_DELAY, 0, 'inf', 0),
         },
     ),
+    'route53' => ddclient::Protocol->new(
+        'update'     => \&nic_route53_update,
+        'examples'   => \&nic_route53_examples,
+        'cfgvars'  => {
+            # Pretty all of these are ignored, but to ensure compatbility placing this here
+            %{$cfgvars{'protocol-common-defaults'}},
+            # nic_updateable() assumes that every service uses a username and password but that is
+            # not true for Route53. Silence warnings by redefining the username and password
+            # variables as non-required with a non-empty default. In addition, using AWS_SECRET_ACCESS_KEY
+            # and AWS_ACCESS_KEY_ID arbitraily mapped to login and password seem to create hidden complexity
+            'login' => setv(T_STRING, 0, 'unused', undef),
+            'password' => setv(T_STRING, 0, 'unused', undef),
+            # Hosted Zone Id (Required) found on the Hosted Zone you which to UPSERT onto within Route53 on AWS
+            'hosted-zone-id' => setv(T_STRING, 1, undef, undef),
+            # AWS Credentials (Required) (In the future may add STS support for more secure way to access)
+            # If these values are not within the config we will attempt to fetch them from the environment
+            'aws-secret-access-key' => setv(T_STRING, 1, undef, undef),
+            'aws-access-key-id' => setv(T_STRING, 1, undef, undef),
+            # Typically the 'global' region in AWS is interpreted as 'us-east-1' however it could change so
+            # please override if required
+            # AWS_REGION (Optional)
+            'aws-region' => setv(T_STRING, 0, 'us-east-1', undef)
+        }
+    ),
 );
 $cfgvars{'merged'} = {
     map({ %{$protocols{$_}{'cfgvars'}} } keys(%protocols)),
@@ -1475,7 +1499,6 @@ sub main {
         read_recap(opt('cache'));
         print_info() if opt('debug') && opt('verbose');
         $daemon = opt('daemon');
-
         update_nics();
 
         if ($daemon) {
@@ -2102,7 +2125,7 @@ sub init_config {
     # given?
 
     my @protos = map(opt('protocol', $_), keys(%config));
-    my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
+    my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn route53));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
@@ -2694,7 +2717,7 @@ sub load_sha1_support {
 Error loading the Perl module Digest::SHA needed for $protocol update.
 On Debian, the package libdigest-sha-perl must be installed.
 EOM
-    Digest::SHA->import(qw/sha1_hex/);
+    Digest::SHA->import(qw/sha1_hex sha256_hex hmac_sha256_hex hmac_sha256/);
 }
 
 ######################################################################
@@ -7642,6 +7665,408 @@ Example ${program}.conf file entries:
   protocol=emailonly
   host.example.com
 EoEXAMPLE
+}
+
+######################################################################
+## nic_route53_examples
+######################################################################
+sub nic_route53_examples {
+    return <<"EoEXAMPLE";
+
+o 'AWS Route53'
+
+The 'AWS Route53' protocol is used by Route53 service that AWS offers.
+
+The required variables AWS Credentials:
+    - AWS_SECRET_ACCESS_KEY
+    - AWS_ACCESS_KEY_ID
+
+These will default to your environment variables but can be passed as 
+variables as well.
+
+Configuration variables applicable to the 'route53' protocol are:
+  protocol=route53
+  hosted-zone-id=[hosted_zone_id]                 ## (Required) The id of the Hosted Zone (Can pull from environment please reference below)
+  ttl=[number]                                    ## TTL for record (Defaults to 300)
+  region=[aws region]                             ## AWS Region (Defaults to us-east-1)
+  aws-secret-access-key_env=AWS_SECRET_ACCESS_KEY ## (Required) You can pass directly in your config via _env as shown here
+  aws-access-key-id_env=AWS_ACCESS_KEY_ID         ## (Required) You can pass directly in your config via _env as show here
+  example.com                                     ## Domain name to update
+
+Example ${program}.conf file entries:
+  protocol=route53,       \\
+  hosted_zone_id=ZXXXXXXXXXXX
+  my.address.com
+
+EoEXAMPLE
+}
+
+sub append_zero {
+    my (
+        $input
+    ) = @_;
+    return sprintf("%02d", $input);
+}
+
+# Not create a whole package so discount version of a class I guess
+# Start Date object
+sub create_date {
+    my ($time) = @_;
+    my ($sec,$min,$hour,$mday,$mon,$year) = gmtime($time // time);
+
+    my %date = (
+        year => $year + 1900,
+        month => append_zero($mon + 1),
+        day => append_zero($mday),
+        hour => append_zero($hour),
+        min => append_zero($min),
+        sec => append_zero($sec)
+    );
+
+    return \%date;
+}
+
+sub to_iso_string {
+    my ($date) = @_;
+    return $date->{'year'}.$date->{'month'}.$date->{'day'}."T".$date->{'hour'}.$date->{'min'}.$date->{'sec'}."Z";
+}
+
+sub to_short_date {
+    my ($date) = @_;
+    return $date->{'year'}.$date->{'month'}.$date->{'day'};
+}
+
+# End date object
+
+sub get_encoded_query_string {
+    my ($query_parameter_map) = @_;
+
+    my @sorted_query_string_keys = sort(keys(%$query_parameter_map));
+    my $encoded_query_string = "";
+    foreach my $key (@sorted_query_string_keys) {
+        $encoded_query_string = $encoded_query_string.$key."=".%{%$query_parameter_map}{$key};
+        if ($key ne $sorted_query_string_keys[$#sorted_query_string_keys]) {
+            $encoded_query_string = $encoded_query_string."&";
+        }
+    }
+
+    return $encoded_query_string;
+}
+
+sub get_encoded_url {
+    my (
+        $protocol_cp,
+        $host_cp,
+        $path_cp,
+        $query_parameter_map
+    ) = @_;
+
+    my $query_string = $protocol_cp."://".$host_cp.$path_cp.get_encoded_query_string($query_parameter_map);
+
+    return $query_string;
+}
+
+# End URL object
+
+sub create_canonical_request_hash {
+    my (
+        $method,
+        $host_cp,
+        $path_cp,
+        $query_parameter_map,
+        $sent_payload,
+        $incoming_headers,
+        $date
+    ) = @_;
+
+    my $http_method = $method // "GET";
+    my $payload_to_hash = $sent_payload // "";
+    my $payload = lc sha256_hex($payload_to_hash);
+
+    my %generated_headers = (
+        host => $host_cp,
+        'x-amz-content-sha256' => $payload,
+        'x-amz-date' => to_iso_string($date)
+    );
+
+    my %finalized_headers = (%{$incoming_headers}, %generated_headers);
+
+    my $header_string = "";
+    my $signed_headers = "";
+    my @finalized_header_keys = sort keys %finalized_headers;
+    my %formatted_finalized_headers = ();
+    debug("\n");
+    for my $header_key (@finalized_header_keys) {
+        my $value = $finalized_headers{$header_key};
+        $value =~ s/^\s+|\s+$//g;
+        debug("Key: ".$header_key." | Value: ".$value."\n");
+        $header_string = $header_string.(lc $header_key).':'.($value)."\n";
+        $signed_headers = $signed_headers.(lc $header_key);
+
+        if ($header_key ne $finalized_header_keys[$#finalized_header_keys]) {
+            $signed_headers = $signed_headers.';';
+        }
+
+        $formatted_finalized_headers{lc $header_key} = $value;        
+    }
+    debug("\n");
+
+    my $canonical_query_string = get_encoded_query_string($query_parameter_map);
+    debug("\nPayload: ".$payload_to_hash."\n");
+    my $canonical_request = "$method\n$path_cp\n$canonical_query_string\n$header_string\n$signed_headers\n$payload";
+
+    debug("Canonical Request\n-------------\n$canonical_request\n-------------\n\n");
+
+    my %result = (
+        hash => lc sha256_hex($canonical_request),
+        signed_headers => $signed_headers,
+        finalized_headers => \%formatted_finalized_headers
+    );
+
+    return \%result;
+}
+
+my $ALGORITHM = "AWS4-HMAC-SHA256";
+
+sub create_string_to_sign {
+    my (
+        $hash,
+        $service,
+        $region,
+        $date
+    ) = @_;
+    
+    my $scope = to_short_date($date)."/$region/$service/aws4_request";
+    my %result = (
+        string => $ALGORITHM."\n".(to_iso_string($date))."\n$scope\n$hash",
+        scope => $scope
+    );
+
+    debug("String To Sign\n-------------\n".$result{"string"}."\n-------------\n");
+
+    return \%result;
+}
+    
+sub create_signature {
+    my (
+        $string_to_sign,
+        $secret_access_key,
+        $region,
+        $service,
+        $date
+    ) = @_;
+    debug("\n\nSecret: "."AWS4".$secret_access_key." | Short-Date: ".to_short_date($date)."\n\n");
+    debug("Region: ".$region." | Service: ".$service."\n\n");
+    my $k_date = hmac_sha256(to_short_date($date), "AWS4".$secret_access_key);
+    my $k_region = hmac_sha256($region, $k_date,);
+    my $k_service = hmac_sha256($service, $k_region);
+    my $k_signing = hmac_sha256("aws4_request", $k_service);
+    return lc hmac_sha256_hex($string_to_sign, $k_signing);
+}
+
+sub create_signed_request {
+    my %params = @_;
+    my $service = $params{"service"}; # In the future will likely parse this from the url
+    my $region = $params{'region'};
+    my $aws_secret_access_key = $params{'aws_secret_access_key'};
+    my $aws_access_key_id = $params{'aws_access_key_id'};
+    my $request_url_protocol = $params{'request_url_protocol'};
+    my $request_url_host = $params{'request_url_host'};
+    my $request_url_path = $params{'request_url_path'};
+    my $request_url_query_string = $params{'request_url_query_string'} // "";
+    my $request_method = $params{'request_method'} // "GET";
+    my $request_payload = $params{'request_payload'} // "";
+    my $request_headers = $params{'request_headers'} // {};
+
+    # Error will bubble up to primary update function done to prevent extra logic in
+    # main function required to parse different return types
+    my $parsed_query_string = $request_url_query_string;
+    my @seperated_query_params = split(/\&/,$parsed_query_string);
+    my %query_parameter_map = ();
+    foreach my $query_param (@seperated_query_params) {
+        my ($key, $value) = split("=", $query_param);
+        $key =~ s/([^A-Za-z0-9\-])/sprintf("%%%02X", ord($1))/seg;
+        $key =~ s/%2D/\-/g; # Correct unexpected encoding
+        if (defined $value) {
+            $value =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
+            $query_parameter_map{$key} = $value;
+        } else {
+            $query_parameter_map{$key} = sprintf("%%%02X", "");
+        }
+    }
+    my $date = create_date();
+
+    my $canonical_request = create_canonical_request_hash(
+        $request_method,
+        $request_url_host,
+        $request_url_path,
+        \%query_parameter_map,
+        $request_payload,
+        $request_headers,
+        $date
+    );
+
+    # Interesting so when pulling out by key if not within another variable the keys is pulled too....
+    my $canonical_request_hash = %$canonical_request{hash};
+    my $string_to_sign = create_string_to_sign($canonical_request_hash, $service, $region, $date);
+
+    my $result_string = %$string_to_sign{string};
+    my $signature = create_signature($result_string, $aws_secret_access_key, $region, $service, $date);
+
+    # curl subroutine above is expected headers to be a string
+    my $aws_authorization = $ALGORITHM." Credential=".$aws_access_key_id."/".%$string_to_sign{"scope"}.",SignedHeaders=".%$canonical_request{"signed_headers"}.",Signature=".$signature;
+
+    debug("\nAuthorization:".$aws_authorization."\n\n");
+    my $request_header_string = "";
+    my %compiled_headers = (%{%$canonical_request{"finalized_headers"}}, ( Authorization => $aws_authorization));
+    my @compiled_headers_key = sort keys %compiled_headers;
+    for my $header_key (@compiled_headers_key) {
+        $request_header_string = $request_header_string.(lc $header_key).":".($compiled_headers{$header_key});
+
+        if ($header_key ne $compiled_headers_key[$#compiled_headers_key]) {
+            $request_header_string = $request_header_string."\n";
+        }
+    }
+
+    my %curl_opts = (
+        url => get_encoded_url($request_url_protocol, $request_url_host, $request_url_path, \%query_parameter_map),
+        method => $request_method,
+        headers => $request_header_string
+    );
+
+    if ($request_method =~ "PUT|POST|PATCH") {
+        debug("Body: ".$request_payload."\n");
+        $curl_opts{data} = $request_payload;
+    }
+
+    return geturl(%curl_opts);
+}
+
+sub update_route53_one {
+    my (
+        $hosted_zone_id,
+        $h,
+        $resource_set_type,
+        $ip,
+        $ipv,
+        $resource_type,
+        $ttl,
+        $aws_access_key_id,
+        $aws_secret_access_key,
+        $aws_region
+    ) = @_;
+    my $ttl_to_use = $ttl // 300;
+
+    my $ROUTE53_NS = "https://route53.amazonaws.com/doc/2013-04-01/";
+    my $request_xml = <<"Route53Payload";
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<ChangeResourceRecordSetsRequest xmlns=\"$ROUTE53_NS\">
+    <ChangeBatch>
+        <Changes>
+            <Change>
+                <Action>UPSERT</Action>
+                <ResourceRecordSet>
+                    <Name>$h</Name>
+                    <Type>$resource_set_type</Type>
+                    <TTL>$ttl_to_use</TTL>
+                    <ResourceRecords>
+                        <ResourceRecord>
+                            <Value>$ip</Value>
+                        </ResourceRecord>
+                    </ResourceRecords>
+                </ResourceRecordSet>
+            </Change>
+        </Changes>
+    </ChangeBatch>
+</ChangeResourceRecordSetsRequest>"
+Route53Payload
+;
+    my $reply;
+    eval {
+        $reply = create_signed_request((
+            service => "route53",
+            region => $aws_region,
+            request_url_protocol => "https",
+            request_url_host => "route53.amazonaws.com",
+            request_url_path => "/2013-04-01/hostedzone/".$hosted_zone_id."/rrset/",
+            request_url_query_string => "", 
+            request_method => "POST",
+            request_headers => {
+                "content-type" => "application/xml",
+            },
+            request_payload => $request_xml,
+            aws_secret_access_key => $aws_secret_access_key,
+            aws_access_key_id => $aws_access_key_id
+        ));
+    };
+
+    if ($@) {
+        $config{$h}{"status"} = 'failed';
+        $config{$h}{"status-ip$ipv"} = 'failed';
+        failed("Error while making request: $@");
+        return;
+    }
+
+    # No response, declare as failed
+    if (!defined($reply) || !$reply) {
+        failed("Route53 updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+        $config{$h}{"status-ip$ipv"} = 'failed';
+        return;
+    }
+
+    if (header_ok($h, $reply)) {
+        $config{$h}{"ipv$ipv"}   = $ip;
+        $config{$h}{'mtime'} = $now;
+        $config{$h}{"status-ip$ipv"} = 'good';
+        success("updating %s: good: IP address set to %s", $h, $ip);
+    } else {
+        $config{$h}{"status-ip$ipv"} = 'failed';
+        failed("updating %s: Server said: '$reply'", $h);
+    }
+}
+
+######################################################################
+## nic_route53_update
+##
+## written by Chanceler Shaffer
+##
+## based on:
+##  - https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html
+##  - https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html
+##
+## needs the following to update:
+##  - AWS_SECRET_ACCESS_KEY
+##  - AWS_ACCESS_KEY_ID
+######################################################################
+sub nic_route53_update {
+    debug("\nnic_route53_update---------------------");
+
+    foreach my $h (@_) {
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        verbose("UPDATE:", "updating %s", $h);
+
+        foreach my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            info("setting IP address to %s for %s", $ip, $h);
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '') ? 'AAAA' : 'A');
+
+            # Only works for IPV4 at the moment
+            update_route53_one(
+                $config{$h}{'hosted-zone-id'},
+                $h,
+                $type,
+                $ip,
+                $ipv,
+                $type,
+                300,
+                $config{$h}{'aws-access-key-id'},   
+                $config{$h}{'aws-secret-access-key'},
+                $config{$h}{'aws-region'}
+            )
+        }
+    }
 }
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),

@@ -79,7 +79,8 @@ handwritten_tests = \
 	t/update_nics.pl \
 	t/use_web.pl \
 	t/variable_defaults.pl \
-	t/write_recap.pl
+	t/write_recap.pl \
+	t/aws_signed_request.pl
 generated_tests = \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
