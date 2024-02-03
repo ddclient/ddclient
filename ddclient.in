@@ -97,7 +97,7 @@ sub T_POSTS  { 'postscript' }
 my %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
-    'googledomains' => {'url' => 'https://domains.google.com/checkip'},
+    'googledomains' => {'url' => 'https://domains.google.com/checkip'}, #  Deprecated! See https://github.com/ddclient/ddclient/issues/622 for more details
     'he' => {'url' => 'https://checkip.dns.he.net/'},
     'ip4only.me' => {'url' => 'https://ip4only.me/api/'},
     'ip6only.me' => {'url' => 'https://ip6only.me/api/'},
@@ -433,9 +433,9 @@ my %variables = (
         'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,1, 0, '',                   undef),
-        'webv4'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv4'               => setv(T_STRING,0, 0, 'ipify-ipv4',         undef),
         'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
-        'webv6'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
         'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
         'fw-skip'             => setv(T_STRING,1, 0, '',                   undef),
@@ -489,9 +489,9 @@ my %variables = (
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
         'web-skip'            => setv(T_STRING,0, 0, '',                   undef),
         'web-ssl-validate'    => setv(T_BOOL,  0, 0, 1,                    undef),
-        'webv4'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv4'               => setv(T_STRING,0, 0, 'ipify-ipv4',         undef),
         'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
-        'webv6'               => setv(T_STRING,0, 0, 'googledomains',      undef),
+        'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
         'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
         'fw-skip'             => setv(T_STRING,0, 0, '',                   undef),
@@ -2733,6 +2733,8 @@ sub get_ip {
         $skip = opt('web-skip', $h) // '';
 
         if (exists $builtinweb{$url}) {
+            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url == 'googledomains');
+
             $skip = $builtinweb{$url}->{'skip'} unless $skip;
             $url  = $builtinweb{$url}->{'url'};
         }
@@ -3175,6 +3177,8 @@ sub get_ipv4 {
         $url = $arg;
         $skip = opt('webv4-skip', $h) // '';
         if (exists $builtinweb{$url}) {
+            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
+
             $skip = $builtinweb{$url}->{'skip'} unless $skip;
             $url  = $builtinweb{$url}->{'url'};
             $arg  = $url;
@@ -3323,6 +3327,8 @@ sub get_ipv6 {
         $url = $arg;
         $skip = opt('webv6-skip', $h) // '';
         if (exists $builtinweb{$url}) {
+            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url == 'googledomains');
+
             $skip = $builtinweb{$url}->{'skip'} unless $skip;
             $url  = $builtinweb{$url}->{'url'};
             $arg  = $url;
