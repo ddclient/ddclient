@@ -7178,35 +7178,34 @@ sub nic_porkbun_update {
     debug("\nnic_porkbun_update -------------------");
 
     foreach my $host (@_) {
+        my ($sub_domain, $domain);
+        if ($config{$host}{'root-domain'} ne '') {
+            # Process 'root-domain' option
+            $domain = $config{$host}{'root-domain'};
+            $sub_domain = $host;
+            $sub_domain =~ s/\.$domain//;
+
+            if (!defined($sub_domain)) {
+                error("'root-domain' (%s) is not part of the full domain (%s)!", $domain, $host);
+                next;
+            }
+            warning("%s has both 'root-domain' and 'on-root-domain' defined. The latter is ignored") if $config{$host}{'on-root-domain'};
+        } elsif ($config{$host}{'on-root-domain'}) {
+            # Process legacy 'on-root-domain' option
+            $sub_domain = '';
+            $domain = $host;
+        } else {
+            # Default to the subdomain/domain being split at the first dot
+            ($sub_domain, $domain) = split(/\./, $host, 2);
+        }
+        verbose("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain != '';
+
         foreach my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$host}{"want$ipv"};
             if (!$ip) {
                 next;
             }
             my $rrset_type = is_ipv6($ip) ? "AAAA" : "A";
-
-            my ($sub_domain, $domain);
-            if ($config{$host}{'root-domain'} ne '') {
-                # Process 'root-domain' option
-                $domain = $config{$host}{'root-domain'};
-                $sub_domain = $host;
-                $sub_domain =~ s/\.$domain//;
-
-                if (!defined($sub_domain)) {
-                    error("'root-domain' (%s) is not part of the full domain (%s)!", $domain, $host);
-                    next;
-                }
-                warning("%s has both 'root-domain' and 'on-root-domain' defined. The latter is ignored") if $config{$host}{'on-root-domain'};
-            }
-            else {
-                # Process legacy 'on-root-domain' option
-                if ($config{$host}{'on-root-domain'}) {
-                    $sub_domain = '';
-                    $domain = $host;
-                } else {
-                    ($sub_domain, $domain) = split(/\./, $host, 2);
-                }
-            }
 
             info("setting %s address to %s for %s", $ipv, $ip, $host);
             verbose("UPDATE:","updating %s", $host);
