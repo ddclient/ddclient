@@ -869,6 +869,7 @@ my %services = (
         'variables'  => {
             'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
             'secretapikey'   => setv(T_PASSWD, 1, 0, '',         undef),
+            'root-domain'    => setv(T_OFQDN,  0, 0, '',         undef),
             'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
             'login'          => setv(T_LOGIN,  0, 0, 'unused',   undef),
             'password'       => setv(T_PASSWD, 0, 0, 'unused',   undef),
@@ -7114,6 +7115,7 @@ https://kb.porkbun.com/article/190-getting-started-with-the-porkbun-api
 Available configuration variables:
   * apikey (required): API Key of Porkbun API
   * secretapikey (required): Secret API Key of Porkbun API
+  * root-domain: The root domain of the specified domain name.
   * on-root-domain=yes or no (default: no): Indicates whether the specified domain name (FQDN) is
     an unnamed record (Zone APEX) in a zone.
     It is useful to specify it as a local variable as shown in the example.
@@ -7168,12 +7170,28 @@ sub nic_porkbun_update {
             my $rrset_type = is_ipv6($ip) ? "AAAA" : "A";
 
             my ($sub_domain, $domain);
-            if ($config{$host}{'on-root-domain'}) {
-                $sub_domain = '';
-                $domain = $host;
-            } else {
-                ($sub_domain, $domain) = split(/\./, $host, 2);
+            if ($config{$host}{'root-domain'} ne '') {
+                # Process 'root-domain' option
+                $domain = $config{$host}{'root-domain'};
+                $sub_domain = $host;
+                $sub_domain =~ s/\.$domain//;
+
+                if (!defined($sub_domain)) {
+                    error("'root-domain' (%s) is not part of the full domain (%s)!", $domain, $host);
+                    next;
+                }
+                warning("%s has both 'root-domain' and 'on-root-domain' defined. The latter is ignored") if $config{$host}{'on-root-domain'};
             }
+            else {
+                # Process legacy 'on-root-domain' option
+                if ($config{$host}{'on-root-domain'}) {
+                    $sub_domain = '';
+                    $domain = $host;
+                } else {
+                    ($sub_domain, $domain) = split(/\./, $host, 2);
+                }
+            }
+
             info("setting %s address to %s for %s", $ipv, $ip, $host);
             verbose("UPDATE:","updating %s", $host);
 
