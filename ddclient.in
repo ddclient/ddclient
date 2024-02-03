@@ -1125,6 +1125,7 @@ sub main {
         print "$program version $version\n";
         print "  originally written by Paul Burry, paul+ddclient\@burry.ca\n";
         print "  project now maintained on https://github.com/ddclient/ddclient\n";
+        exit 0;
     }
 
     ## read config file because 'daemon' mode may be defined there.
