@@ -7451,24 +7451,25 @@ Description of Gandi's LiveDNS API can be found at:
     https://api.gandi.net/docs/livedns/
 
 Available configuration variables:
-  * password: The Gandi API key. If you don’t have one yet, you can generate
-    your production API key from the API Key Page (in the Security section).
+  * password: The Gandi API key or personal access token. If you don’t have one
+    yet, you can generate your keys and personal access tokens from
+    https://accounts.gandi.net. To use a token, prefix the password with 'pat:'.
     Required.
   * zone: The DNS zone to be updated. Required.
   * ttl: The time-to-live value associated with the updated DNS record.
     Optional; uses Gandi's default (10800) if unset.
 
 Example ${program}.conf file entries:
-  ## Single host update.
+  ## Single host update with API key.
   protocol=gandi
   zone=example.com
   password=my-gandi-api-key
   host.example.com
 
-  ## Multiple host update.
+  ## Multiple host update with Bearer token.
   protocol=gandi
   zone=example.com
-  password=my-gandi-api-key
+  password=pat:my-personal-access-token
   ttl=3600 # optional
   hosta.example.com,hostb.sub.example.com
 EoEXAMPLE
@@ -7492,10 +7493,13 @@ sub nic_gandi_update {
 
             my $headers;
             $headers  = "Content-Type: application/json\n";
-            $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
-
-
-
+            my $password = $config{$h}{'password'};
+            # If password starts with 'pat:', use Bearer authentication.
+            if ($password =~ s/^pat://) {
+                $headers .= "Authorization: Bearer $password\n";
+            } else {
+                $headers .= "Authorization: Apikey $password\n";
+            }
             my $rrset_type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
             my $url;
             $url  = "https://$config{$h}{'server'}$config{$h}{'script'}";
