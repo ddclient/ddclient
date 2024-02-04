@@ -7451,9 +7451,8 @@ Description of Gandi's LiveDNS API can be found at:
     https://api.gandi.net/docs/livedns/
 
 Available configuration variables:
-  * password: The Gandi API key. If you don’t have one yet, you can generate
-    your production API key from the API Key Page (in the Security section).
-    Required.
+  * password: The Gandi access token. If you don’t have one yet, you can generate
+    your production access token from the Gandi Admin application. Required.
   * zone: The DNS zone to be updated. Required.
   * ttl: The time-to-live value associated with the updated DNS record.
     Optional; uses Gandi's default (10800) if unset.
@@ -7462,13 +7461,13 @@ Example ${program}.conf file entries:
   ## Single host update.
   protocol=gandi
   zone=example.com
-  password=my-gandi-api-key
+  password=my-gandi-access-token
   host.example.com
 
   ## Multiple host update.
   protocol=gandi
   zone=example.com
-  password=my-gandi-api-key
+  password=my-gandi-access-token
   ttl=3600 # optional
   hosta.example.com,hostb.sub.example.com
 EoEXAMPLE
@@ -7492,7 +7491,7 @@ sub nic_gandi_update {
 
             my $headers;
             $headers  = "Content-Type: application/json\n";
-            $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
+            $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
 
 
 
