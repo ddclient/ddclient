@@ -2733,7 +2733,7 @@ sub get_ip {
         $skip = opt('web-skip', $h) // '';
 
         if (exists $builtinweb{$url}) {
-            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url == 'googledomains');
+            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
 
             $skip = $builtinweb{$url}->{'skip'} unless $skip;
             $url  = $builtinweb{$url}->{'url'};
@@ -3327,7 +3327,7 @@ sub get_ipv6 {
         $url = $arg;
         $skip = opt('webv6-skip', $h) // '';
         if (exists $builtinweb{$url}) {
-            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url == 'googledomains');
+            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
 
             $skip = $builtinweb{$url}->{'skip'} unless $skip;
             $url  = $builtinweb{$url}->{'url'};
