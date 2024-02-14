@@ -7609,7 +7609,7 @@ sub nic_keysystems_update {
    my $url = "http://$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
 
    # Try to get URL
-   my $reply = geturl(opt('proxy'), $url);
+   my $reply = geturl(proxy => opt('proxy'), url => $url) // '';
 
    # No response, declare as failed
    if (!defined($reply) || !$reply) {
