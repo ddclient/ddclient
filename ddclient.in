@@ -5764,7 +5764,7 @@ sub nic_godaddy_update {
 
                     failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
                 } elsif (defined($response->{code})) {
-                    verbose("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
+                    verbose("VERBOSE:", "%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
                 }
                 if ($ok) {
                     # read data
@@ -7189,10 +7189,14 @@ sub nic_porkbun_update {
             # Process 'root-domain' option
             $domain = $config{$host}{'root-domain'};
             $sub_domain = $host;
-            $sub_domain =~ s/\.$domain//;
-
-            if (!defined($sub_domain)) {
-                error("'root-domain' (%s) is not part of the full domain (%s)!", $domain, $host);
+            if ($host eq $domain) {
+                $sub_domain = '';
+            } else {
+                $sub_domain =~ s/\.$domain//;
+            }
+            # Not valid if not an exact match and the root domain not stripped
+            if ($sub_domain eq $host) {
+                failed("'root-domain' (%s) is not part of the full host name (%s)!", $domain, $host);
                 next;
             }
             warning("%s has both 'root-domain' and 'on-root-domain' defined. The latter is ignored") if $config{$host}{'on-root-domain'};
@@ -7204,7 +7208,7 @@ sub nic_porkbun_update {
             # Default to the subdomain/domain being split at the first dot
             ($sub_domain, $domain) = split(/\./, $host, 2);
         }
-        verbose("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain != '';
+        verbose("VERBOSE:", "subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
 
         foreach my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$host}{"want$ipv"};
@@ -7960,7 +7964,7 @@ sub nic_infomaniak_update {
                 next;
             }
 
-            verbose("setting IP address to %s for %s", $ip, $h);
+            verbose("VERBOSE:", "setting IP address to %s for %s", $ip, $h);
             info("updating %s", $h);
 
             # No change in IP => nochg <w.x.y.z>
@@ -7990,7 +7994,7 @@ sub nic_infomaniak_update {
             my $reply;
 
             foreach my $url ($url1, $url2) {
-                verbose("trying update with %s", $url);
+                verbose("VERBOSE:", "trying update with %s", $url);
                 $reply = geturl(proxy => opt('proxy'), url => $url);
                 if (!defined($reply) || !$reply) {
                     info("could not update %s using url %s, trying next one", $h, $url);
