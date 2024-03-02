@@ -727,13 +727,14 @@ my %services = (
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
             %{$variables{'service-common-defaults'}},
-            'min-interval' => setv(T_DELAY,  0, 0, 0,               interval('5m')),
-            'server'       => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
-            'script'       => setv(T_STRING, 1, 1, '/v5',           undef),
-            'ttl'          => setv(T_DELAY,  0, 0, undef,           interval('5m')),
-            'zone'         => setv(T_FQDN,   1, 0, undef,           undef),
+            'min-interval'              => setv(T_DELAY,  0, 0, 0,               interval('5m')),
+            'server'                    => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
+            'script'                    => setv(T_STRING, 1, 1, '/v5',           undef),
+            'use-personal-access-token' => setv(T_BOOL, 0, 0, 0, undef),
+            'ttl'                       => setv(T_DELAY,  0, 0, undef,           interval('5m')),
+            'zone'                      => setv(T_FQDN,   1, 0, undef,           undef),
             # Unused variables.
-            'login'        => setv(T_STRING, 0, 0, 'unused', undef),
+            'login'                     => setv(T_STRING, 0, 0, 'unused', undef),
         }
     },
     'godaddy' => {
@@ -7455,18 +7456,29 @@ Description of Gandi's LiveDNS API can be found at:
     https://api.gandi.net/docs/livedns/
 
 Available configuration variables:
-  * password: The Gandi API key. If you don’t have one yet, you can generate
-    your production API key from the API Key Page (in the Security section).
-    Required.
+  * password: The Gandi API key or personal access token. If you don’t have
+    one yet, you can generate a production API key from the API Key Page
+    (in the Security section) or a personal access token from the Gandi
+    Admin application. Required.
+  * use-personal-access-token: Whether the password value is a API key or a
+    personal access token. Defaults to API key. Note that API keys are
+    deprecated by Gandi.
   * zone: The DNS zone to be updated. Required.
   * ttl: The time-to-live value associated with the updated DNS record.
     Optional; uses Gandi's default (10800) if unset.
 
 Example ${program}.conf file entries:
-  ## Single host update.
+  ## Single host update using API key.
   protocol=gandi
   zone=example.com
   password=my-gandi-api-key
+  host.example.com
+
+  ## Single host update using Personal access token
+  protocol=gandi
+  zone=example.com
+  password=my-gandi-personal-access-token
+  use-personal-access-token=yes
   host.example.com
 
   ## Multiple host update.
@@ -7496,7 +7508,13 @@ sub nic_gandi_update {
 
             my $headers;
             $headers  = "Content-Type: application/json\n";
-            $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
+            if ($config{$h}{'use-personal-access-token'} == 1) {
+                $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
+            }
+            else
+            {
+                $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
+            }
 
 
 

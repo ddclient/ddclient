@@ -199,7 +199,8 @@ ssl=yes					# use ssl-support.  Works with
 ## Single host update
 # protocol=gandi
 # zone=example.com
-# password=my-gandi-api-key
+# password=my-gandi-access-token
+# use-personal-access-token=yes
 # ttl=10800 # optional
 # myhost.example.com
 
