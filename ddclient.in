@@ -7986,7 +7986,7 @@ The required variables AWS Credentials:
 These will default to your environment variables but can be passed as 
 variables as well.
 
-Configuration variables applicable to the 'infomaniak' protocol are:
+Configuration variables applicable to the 'route53' protocol are:
   protocol=route53
   hosted_zone_id=hosted_zone_id                 ## The id of the Hosted Zone
   ttl=[number]                                  ## TTL for record (Defaults to 300)
@@ -8016,7 +8016,8 @@ sub append_zero {
 # Not create a whole package so discount version of a class I guess
 # Start Date object
 sub create_date {
-    my ($sec,$min,$hour,$mday,$mon,$year) = gmtime(time);
+    my ($time) = @_;
+    my ($sec,$min,$hour,$mday,$mon,$year) = gmtime($time // time);
 
     my %date = (
         year => $year + 1900,
@@ -8042,66 +8043,13 @@ sub to_short_date {
 
 # End date object
 
-# Start URL object
-sub parse_url {
-    my ($url) = @_;
-    my $originalURL = $url;
-    my (
-        $protocol_cp,
-        $host_cp,
-        $port_cp,
-        $path_cp,
-        $query_string_cp
-    ) = $url =~ /([a-z]+):\/\/([\w\.\-]+)\:?(\d+)?([^?]+)(?:\?(.+))?/;
-
-    my $parsed_query_string = $query_string_cp // "";
-    my @seperated_query_params = split(/\&/,$parsed_query_string);
-    my %query_parameters = ();
-    foreach my $query_param (@seperated_query_params) {
-        my ($key, $value) = split("=", $query_param);
-        $key =~ s/([^A-Za-z0-9\-])/sprintf("%%%02X", ord($1))/seg;
-        $key =~ s/%2D/\-/g; # Correct unexpected encoding
-        if (defined $value) {
-            $value =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
-            $query_parameters{$key} = $value;
-        } else {
-            $query_parameters{$key} = sprintf("%%%02X", "");
-        }
-    }
-
-    if (!(defined $protocol_cp) && !(defined $host_cp)) {
-        die "Invalid URL: Missing both protocol and host";
-    }
-
-    my $protocol = $protocol_cp // "";
-    my $host = $host_cp // "";
-    my $port = $port_cp // "";
-    my $path = $path_cp // "/";
-    my $query_string = $query_string_cp // "";
-
-    debug("\n".$protocol."|".$host."|".$port."|".$path."|".$query_string."\n");
-    debug("\nOriginal: ".$originalURL."\nHost: ".$host."\n");
-
-    my %completeUrl = (
-        url => $originalURL,
-        protocol => $protocol,
-        host => $host,
-        port => $port,
-        path => $path,
-        query_string => $query_string,
-        query_string_map => \%query_parameters
-    );
-
-    return \%completeUrl;
-}
-
 sub get_encoded_query_string {
-    my ($url_obj) = @_;
+    my ($query_parameter_map) = @_;
 
-    my @sorted_query_string_keys = sort(keys(%{%$url_obj{"query_string_map"}}));
+    my @sorted_query_string_keys = sort(keys(%$query_parameter_map));
     my $encoded_query_string = "";
     foreach my $key (@sorted_query_string_keys) {
-        $encoded_query_string = $encoded_query_string.$key."=".%{%$url_obj{"query_string_map"}}{$key};
+        $encoded_query_string = $encoded_query_string.$key."=".%{%$query_parameter_map}{$key};
         if ($key ne $sorted_query_string_keys[$#sorted_query_string_keys]) {
             $encoded_query_string = $encoded_query_string."&";
         }
@@ -8111,9 +8059,14 @@ sub get_encoded_query_string {
 }
 
 sub get_encoded_url {
-    my ($url_obj) = @_;
+    my (
+        $protocol_cp,
+        $host_cp,
+        $path_cp,
+        $query_parameter_map
+    ) = @_;
 
-    my $query_string = %$url_obj{'protocol'}."://".%$url_obj{'host'}.%$url_obj{'path'}.get_encoded_query_string($url_obj);
+    my $query_string = $protocol_cp."://".$host_cp.$path_cp.get_encoded_query_string($query_parameter_map);
 
     return $query_string;
 }
@@ -8123,7 +8076,9 @@ sub get_encoded_url {
 sub create_canonical_request_hash {
     my (
         $method,
-        $url,
+        $host_cp,
+        $path_cp,
+        $query_parameter_map,
         $sent_payload,
         $incoming_headers,
         $date
@@ -8133,9 +8088,8 @@ sub create_canonical_request_hash {
     my $payload_to_hash = $sent_payload // "";
     my $payload = lc sha256_hex($payload_to_hash);
 
-    my $parsed_host = %$url{"host"};
     my %generated_headers = (
-        host => $parsed_host,
+        host => $host_cp,
         'x-amz-content-sha256' => $payload,
         'x-amz-date' => to_iso_string($date)
     );
@@ -8162,10 +8116,9 @@ sub create_canonical_request_hash {
     }
     debug("\n");
 
-    my $canonical_uri = %$url{"path"};
-    my $canonical_query_string = get_encoded_query_string($url);
+    my $canonical_query_string = get_encoded_query_string($query_parameter_map);
     debug("\nPayload: ".$payload_to_hash."\n");
-    my $canonical_request = "$method\n$canonical_uri\n$canonical_query_string\n$header_string\n$signed_headers\n$payload";
+    my $canonical_request = "$method\n$path_cp\n$canonical_query_string\n$header_string\n$signed_headers\n$payload";
 
     debug("Canonical Request\n-------------\n$canonical_request\n-------------\n\n");
 
@@ -8224,19 +8177,37 @@ sub create_signed_request {
     my $region = $params{'region'} // $ENV{"AWS_REGION"} // "us-east-1";
     my $aws_secret_access_key = $params{'aws_secret_access_key'} // $ENV{"AWS_SECRET_ACCESS_KEY"};
     my $aws_access_key_id = $params{'aws_access_key_id'} // $ENV{"AWS_ACCESS_KEY_ID"};
-    my $request_url = $params{'request_url'};
+    my $request_url_protocol = $params{'request_url_protocol'};
+    my $request_url_host = $params{'request_url_host'};
+    my $request_url_path = $params{'request_url_path'};
+    my $request_url_query_string = $params{'request_url_query_string'} // "";
     my $request_method = $params{'request_method'} // "GET";
     my $request_payload = $params{'request_payload'} // "";
     my $request_headers = $params{'request_headers'} // {};
 
     # Error will bubble up to primary update function done to prevent extra logic in
     # main function required to parse different return types
-    my $url = parse_url($request_url);
+    my $parsed_query_string = $request_url_query_string;
+    my @seperated_query_params = split(/\&/,$parsed_query_string);
+    my %query_parameter_map = ();
+    foreach my $query_param (@seperated_query_params) {
+        my ($key, $value) = split("=", $query_param);
+        $key =~ s/([^A-Za-z0-9\-])/sprintf("%%%02X", ord($1))/seg;
+        $key =~ s/%2D/\-/g; # Correct unexpected encoding
+        if (defined $value) {
+            $value =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
+            $query_parameter_map{$key} = $value;
+        } else {
+            $query_parameter_map{$key} = sprintf("%%%02X", "");
+        }
+    }
     my $date = create_date();
 
     my $canonical_request = create_canonical_request_hash(
         $request_method,
-        $url,
+        $request_url_host,
+        $request_url_path,
+        \%query_parameter_map,
         $request_payload,
         $request_headers,
         $date
@@ -8265,7 +8236,7 @@ sub create_signed_request {
     }
 
     my %curl_opts = (
-        url => get_encoded_url($url),
+        url => get_encoded_url($request_url_protocol, $request_url_host, $request_url_path, \%query_parameter_map),
         method => $request_method,
         headers => $request_header_string
     );
@@ -8278,35 +8249,19 @@ sub create_signed_request {
     return geturl(%curl_opts);
 }
 
-my $AWS_ROUTE53_BASE = "https://route53.amazonaws.com/2013-04-01/";
-sub get_route53_api_url {
-    my (
-        $resource,
-        $query_parameters
-    ) = @_;
-
-    my $api_request_url = $AWS_ROUTE53_BASE.$resource;
-
-    if (defined($query_parameters)) {
-        $api_request_url .= "?".$query_parameters
-    }
-
-    return $api_request_url;
-}
-
 sub update_route53_one {
     my (
         $hosted_zone_id,
         $h,
         $resource_set_type,
         $ip,
+        $ipv,
+        $resource_type,
         $ttl,
         $aws_access_key_id,
         $aws_secret_access_key,
         $aws_region
     ) = @_;
-
-    my $resource_type = $resource_set_type // ($ip =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/ ? "A" : "AAAA");
     my $ttl_to_use = $ttl // 300;
 
     my $ROUTE53_NS = "https://route53.amazonaws.com/doc/2013-04-01/";
@@ -8338,7 +8293,10 @@ sub update_route53_one {
         $reply = create_signed_request((
             service => "route53",
             region => $region,
-            request_url => get_route53_api_url("hostedzone/".$hosted_zone_id."/rrset/"),
+            request_url_protocol => "https",
+            request_url_host => "route53.amazonaws.com",
+            request_url_path => "/2013-04-01/hostedzone/".$hosted_zone_id."/rrset/",
+            request_url_query_string => "", 
             request_method => "POST",
             request_headers => {
                 "content-type" => "application/xml",
@@ -8349,9 +8307,9 @@ sub update_route53_one {
         ));
     };
 
-    my $type = $resource_type eq "AAAA" ? "ipv6" : "ipv4";
     if ($@) {
-        $config{$h}{"status-$type"} = 'failed';
+        $config{$h}{"status"} = 'failed';
+        $config{$h}{"status-ip$ipv"} = 'failed';
         failed("Error while making request: $@");
         return;
     }
@@ -8359,7 +8317,8 @@ sub update_route53_one {
     # No response, declare as failed
     if (!defined($reply) || !$reply) {
         failed("Route53 updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-        $config{$h}{"status-$type"} = 'failed';
+        $config{$h}{"status"} = 'failed';
+        $config{$h}{"status-ip$ipv"} = 'failed';
         return;
     }
 
@@ -8369,12 +8328,14 @@ sub update_route53_one {
     my ($protocol,$status) = split(/\s/, $top);
     
     if ($status == '200') {
-        $config{$h}{'ip'}   = $ip;
+        $config{$h}{"ipv$ipv"}   = $ip;
+        $config{$h}{'status'} = 'good';
         $config{$h}{'mtime'} = $now;
-        $config{$h}{"status-$type"} = 'good';
+        $config{$h}{"status-ip$ipv"} = 'good';
         success("updating %s: good: IP address set to %s", $h, $ip);
     } else {
-        $config{$h}{"status-$type"} = 'failed';
+        $config{$h}{'status'} = 'failed';
+        $config{$h}{"status-ip$ipv"} = 'failed';
         failed("updating %s: Server said: '$reply'", $h);
     }
 }
@@ -8400,30 +8361,20 @@ sub nic_route53_update {
         my $ipv6 = delete $config{$h}{'wantipv6'};
         verbose("UPDATE:", "updating %s", $h);
 
-        if ($ipv4) {
-            info("setting IP address to %s for %s", $ipv4, $h);
+        foreach my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            info("setting IP address to %s for %s", $ip, $h);
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '') ? 'AAAA' : 'A');
 
             # Only works for IPV4 at the moment
             update_route53_one(
                 $config{$h}{'hosted-zone-id'},
                 $h,
-                "A",
-                $ipv4,
-                300,
-                $config{$h}{'aws-access-key-id'},   
-                $config{$h}{'aws-secret-access-key'},
-                $config{$h}{'aws-region'}
-            )
-        }
-
-        if ($ipv6) {
-            info("setting IP address to %s for %s", $ipv6, $h);
-
-            update_route53_one(
-                $config{$h}{'hosted-zone-id'},
-                $h,
-                "AAAA",
-                $ipv6,
+                $type,
+                $ip,
+                $ipv,
+                $type,
                 300,
                 $config{$h}{'aws-access-key-id'},   
                 $config{$h}{'aws-secret-access-key'},
