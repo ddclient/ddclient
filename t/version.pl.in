@@ -4,6 +4,59 @@ use version;
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
 
+ok(ddclient::parse_version($ddclient::VERSION),
+   "module's Perl version string is in opinionated form");
+
+my $n = qr/0|[1-9]\d{0,2}/;
+like($ddclient::version, qr/^$n\.$n\.$n(?:~alpha|~beta$n|~rc$n|r$n)?$/,
+     "human-readable version is in opinionated form");
+
+my @tcs = (
+    ['v1.0_0', '1~alpha'],
+    ['v1.0.0_0', '1.0~alpha'],
+    ['v1.2.3.0_0', '1.2.3~alpha'],
+    ['v1.2.3.4.0_0', '1.2.3.4~alpha'],
+    ['v1.0_1', '1~beta1'],
+    ['v1.0.0_1', '1.0~beta1'],
+    ['v1.2.3.0_1', '1.2.3~beta1'],
+    ['v1.2.3.4.0_1', '1.2.3.4~beta1'],
+    ['v1.2.3.0_899', '1.2.3~beta899'],
+    ['v1.0_901', '1~rc1'],
+    ['v1.0.0_901', '1.0~rc1'],
+    ['v1.2.3.0_901', '1.2.3~rc1'],
+    ['v1.2.3.4.0_901', '1.2.3.4~rc1'],
+    ['v1.2.3.0_998', '1.2.3~rc98'],
+    ['v1.999', '1'],
+    ['v1.0.999', '1.0'],
+    ['v1.2.3.999', '1.2.3'],
+    ['v1.2.3.4.999', '1.2.3.4'],
+    ['v1.999.1', '1r1'],
+    ['v1.0.999.1', '1.0r1'],
+    ['v1.2.3.999.1', '1.2.3r1'],
+    ['v1.2.3.4.999.1', '1.2.3.4r1'],
+    ['v1.2.3.999.999', '1.2.3r999'],
+    [$ddclient::VERSION, $ddclient::version],
+);
+
+subtest 'humanize_version' => sub {
+    for my $tc (@tcs) {
+        my ($pv, $want) = @$tc;
+        is(ddclient::humanize_version($pv), $want, "$pv -> $want");
+    }
+};
+
+subtest 'human-readable version can be translated back to Perl version' => sub {
+    for my $tc (@tcs) {
+        my ($want, $hv) = @$tc;
+        my $pv = "v$hv";
+        $pv =~ s/^(?!.*~)(.*?)(?:r(\d+))?$/"$1.999" . (defined($2) ? ".$2" : "")/e;
+        $pv =~ s/~alpha$/.0_0/;
+        $pv =~ s/~beta(\d+)$/.0_$1/;
+        $pv =~ s/~rc(\d+)$/'.0_' . (900 + $1)/e;
+        is($pv, $want, "$hv -> $want");
+    }
+};
+
 is($ddclient::version, '@PACKAGE_VERSION@', "version matches version in Autoconf");
 
 done_testing();
