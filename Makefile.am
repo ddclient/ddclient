@@ -76,6 +76,7 @@ generated_tests = \
 TESTS = $(handwritten_tests) $(generated_tests)
 $(TESTS): ddclient
 EXTRA_DIST += $(handwritten_tests) \
+	.autom4te.cfg \
 	t/lib/Devel/Autoflush.pm \
 	t/lib/Test/Builder.pm \
 	t/lib/Test/Builder/Formatter.pm \
