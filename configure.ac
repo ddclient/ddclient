@@ -1,5 +1,14 @@
 AC_PREREQ([2.63])
-AC_INIT([ddclient], [3.11.3_0])
+# Get the version from ddclient.in so that the same version string
+# doesn't have to be maintained in two places.  The m4_dquote macro is
+# used instead of quote characters to ensure that the command is only
+# run once.  The command outputs quote characters to prevent
+# incidental expansion (the m4_esyscmd macro does not quote the
+# command output itself, so the command output is subject to
+# expansion).
+AC_INIT([ddclient], m4_dquote(m4_esyscmd([printf '[%s]' "$(./ddclient.in --version=short)"])))
+# Needed because of the above invocation of ddclient.in.
+AC_SUBST([CONFIGURE_DEPENDENCIES], ['$(top_srcdir)/ddclient.in'])
 AC_CONFIG_SRCDIR([ddclient.in])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
