@@ -1007,6 +1007,17 @@ $opt{'list-web-services'} = sub {
     printf("%s %s\n", $_, $builtinweb{$_}{url}) for sort(keys(%builtinweb));
     exit(0);
 };
+$opt{'version'} = sub {
+    my (undef, $arg) = @_;
+    if ($arg eq "short") {
+        print("$version\n");
+    } else {
+        print("$program version $version\n");
+        print("  originally written by Paul Burry, paul+ddclient\@burry.ca\n");
+        print("  project now maintained on https://github.com/ddclient/ddclient\n");
+    }
+    exit(0);
+};
 
 my @opt = (
     "usage: ${program} [options]",
@@ -1089,7 +1100,7 @@ my @opt = (
     ["verbose",           "!",  "--{no}verbose          : print {no} verbose information"],
     ["quiet",             "!",  "--{no}quiet            : print {no} messages for unnecessary updates"],
     ["help",              "",   "--help                 : display this message and exit"],
-    ["version",           "",   "--version              : display version information and exit"],
+    ["version",           ":s", "--version[=short]      : display version information and exit"],
     ["postscript",        "",   "--postscript           : script to run after updating ddclient, has new IP as param"],
     ["query",             "!",  "--{no}query            : print {no} ip addresses and exit"],
     ["fw-banlocal",       "!",  ""], ## deprecated
@@ -1099,10 +1110,6 @@ my @opt = (
     ["redirect",          "=i", "--redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
-    # Note: These lines are copied below to the -version argument implementation
-    "$program version $version",
-    "  originally written by Paul Burry, paul+ddclient\@burry.ca",
-    "  project now maintained on https://github.com/ddclient/ddclient"
 );
 
 sub main {
@@ -1116,15 +1123,7 @@ sub main {
 
     if (opt('help')) {
         printf "%s\n", $opt_usage;
-        exit 0;
-    }
-
-    if (opt('version')) {
-        # Note: Manual copy from the @opt array above!
-        print "$program version $version\n";
-        print "  originally written by Paul Burry, paul+ddclient\@burry.ca\n";
-        print "  project now maintained on https://github.com/ddclient/ddclient\n";
-        exit 0;
+        $opt{'version'}('', '');
     }
 
     ## read config file because 'daemon' mode may be defined there.
