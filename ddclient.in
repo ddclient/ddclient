@@ -375,8 +375,6 @@ my %ipv4_strategies = (
     'ifv4'        => ": obtain IPv4 from the -ifv4 {interface}",
     'cmdv4'       => ": obtain IPv4 from the -cmdv4 {external-command}",
     'fwv4'        => ": obtain IPv4 from the firewall specified by -fwv4 {type|address}",
-    'ciscov4'     => ": obtain IPv4 from Cisco FW at the -fwv4 {address}",
-    'cisco-asav4' => ": obtain IPv4 from Cisco ASA at the -fwv4 {address}",
     map { $_ => sprintf ": obtain IPv4 from %s at the -fwv4 {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
 );
 sub ipv4_strategies_usage {
@@ -395,9 +393,6 @@ my %ipv6_strategies = (
     'cmd'         => ": deprecated, use 'cmdv6'",
     'cmdv6'       => ": obtain IPv6 from the -cmdv6 {external-command}",
     'fwv6'        => ": obtain IPv6 from the firewall specified by -fwv6 {type|address}",
-    'ciscov6'     => ": obtain IPv6 from Cisco FW at the -fwv6 {address}",
-    'cisco-asav6' => ": obtain IPv6 from Cisco ASA at the -fwv6 {address}",
-    map { $_ => sprintf ": obtain IPv6 from %s at the -fwv6 {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
 );
 sub ipv6_strategies_usage {
     return map { sprintf("    -usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
