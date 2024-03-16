@@ -2893,15 +2893,14 @@ sub get_ip {
         ## This is a no-op... Do not get an IP address for this host/service
         $reply = '';
 
-    } else {
+    } elsif ($use eq 'fw' || defined(my $fw = $builtinfw{$use})) {
         # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
         $arg = opt('fw', $h) // '';
         $url = $arg;
         $skip = opt('fw-skip', $h);
-
-        if (exists $builtinfw{$use}) {
-            $skip //= $builtinfw{$use}->{'skip'};
-            $url  = "http://${url}" . $builtinfw{$use}->{'url'} unless $url =~ /\//;
+        if ($fw) {
+            $skip //= $fw->{'skip'};
+            $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
         }
 
         if ($url) {
@@ -2913,6 +2912,9 @@ sub get_ip {
                 ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
         }
+
+    } else {
+        warning("ignoring unsupported '--use=$use'");
     }
     if (!defined $reply) {
         $reply = '';
@@ -3321,7 +3323,7 @@ sub get_ipv4 {
         ## This is a no-op... Do not get an IPv4 address for this host/service
         $reply = '';
 
-    } else {
+    } elsif ($usev4 eq 'fwv4' || defined(my $fw = $builtinfw{$usev4})) {
         warning("'--fw' is deprecated for '--usev4=$usev4'; use '--fwv4' instead")
             if (!defined(opt('fwv4', $h)) && defined(opt('fw', $h)));
         warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
@@ -3330,10 +3332,9 @@ sub get_ipv4 {
         $arg = opt('fwv4', $h) // opt('fw', $h) // '';
         $url = $arg;
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
-
-        if (exists $builtinfw{$usev4}) {
-            $skip //= $builtinfw{$usev4}->{'skip'};
-            $url  = "http://${url}" . $builtinfw{$usev4}->{'url'} unless $url =~ /\//;
+        if ($fw) {
+            $skip //= $fw->{'skip'};
+            $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
         }
         if ($url) {
             $reply = geturl(
@@ -3345,6 +3346,9 @@ sub get_ipv4 {
                 ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
         }
+
+    } else {
+        warning("ignoring unsupported '--usev4=$usev4'");
     }
 
     ## Set to loopback address if no text set yet
@@ -3438,9 +3442,11 @@ sub get_ipv6 {
     } elsif ($usev6 eq 'disabled') {
         $reply = '';
 
-    } else {
+    } elsif ($usev6 eq 'fwv6' || defined($builtinfw{$usev6})) {
         warning("'--usev6=%s' is not implemented and does nothing", $usev6);
-        $reply = '';
+
+    } else {
+        warning("ignoring unsupported '--usev6=$usev6'");
 
     }
 
