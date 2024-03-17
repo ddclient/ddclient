@@ -350,52 +350,52 @@ my %builtinfw = (
 );
 
 my %ip_strategies = (
-    'no'        => ": deprecated, see 'usev4' and 'usev6'",
-    'ip'        => ": deprecated, see 'usev4' and 'usev6'",
-    'web'       => ": deprecated, see 'usev4' and 'usev6'",
-    'fw'        => ": deprecated, see 'usev4' and 'usev6'",
-    'if'        => ": deprecated, see 'usev4' and 'usev6'",
-    'cmd'       => ": deprecated, see 'usev4' and 'usev6'",
-    'cisco'     => ": deprecated, see 'usev4' and 'usev6'",
-    'cisco-asa' => ": deprecated, see 'usev4' and 'usev6'",
-    map({ $_ => sprintf(": Built-in firewall %s deprecated, see 'usev4' and 'usev6'",
+    'no'        => ": deprecated, see '--usev4' and '--usev6'",
+    'ip'        => ": deprecated, see '--usev4' and '--usev6'",
+    'web'       => ": deprecated, see '--usev4' and '--usev6'",
+    'fw'        => ": deprecated, see '--usev4' and '--usev6'",
+    'if'        => ": deprecated, see '--usev4' and '--usev6'",
+    'cmd'       => ": deprecated, see '--usev4' and '--usev6'",
+    'cisco'     => ": deprecated, see '--usev4' and '--usev6'",
+    'cisco-asa' => ": deprecated, see '--usev4' and '--usev6'",
+    map({ $_ => sprintf(": Built-in firewall %s deprecated, see '--usev4' and '--usev6'",
                         $builtinfw{$_}->{'name'}) }
         keys(%builtinfw)),
 );
 
 sub ip_strategies_usage {
-    return map({ sprintf("    -use=%-22s %s.", $_, $ip_strategies{$_}) }
+    return map({ sprintf("    --use=%-22s %s.", $_, $ip_strategies{$_}) }
                ('ip', 'web', 'if', 'cmd', 'fw', sort('cisco', 'cisco-asa', keys(%builtinfw))));
 }
 
 my %ipv4_strategies = (
     'disabled'    => ": do not obtain an IPv4 address for this host",
-    'ipv4'        => ": obtain IPv4 from -ipv4=<address>",
+    'ipv4'        => ": obtain IPv4 from --ipv4=<address>",
     'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
-    'ifv4'        => ": obtain IPv4 from the -ifv4=<interface>",
-    'cmdv4'       => ": obtain IPv4 from the -cmdv4=<external-command>",
-    'fwv4'        => ": obtain IPv4 from the firewall specified by -fwv4=<type|address>",
-    map { $_ => sprintf ": obtain IPv4 from %s at the -fwv4=<address>", $builtinfw{$_}->{'name'} } keys %builtinfw,
+    'ifv4'        => ": obtain IPv4 from the --ifv4=<interface>",
+    'cmdv4'       => ": obtain IPv4 from the --cmdv4=<external-command>",
+    'fwv4'        => ": obtain IPv4 from the firewall specified by --fwv4=<type|address>",
+    map { $_ => sprintf ": obtain IPv4 from %s at the --fwv4=<address>", $builtinfw{$_}->{'name'} } keys %builtinfw,
 );
 sub ipv4_strategies_usage {
-    return map { sprintf("    -usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
+    return map { sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
 }
 
 my %ipv6_strategies = (
-    'no'          => ": deprecated, use 'disabled'",
+    'no'          => ": deprecated, use '--usev6=disabled'",
     'disabled'    => ": do not obtain an IPv6 address for this host",
-    'ip'          => ": deprecated, use 'ipv6'",
-    'ipv6'        => ": obtain IPv6 from -ipv6=<address>",
-    'web'         => ": deprecated, use 'webv6'",
+    'ip'          => ": deprecated, use '--usev6=ipv6'",
+    'ipv6'        => ": obtain IPv6 from --ipv6=<address>",
+    'web'         => ": deprecated, use '--usev6=webv6'",
     'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
-    'if'          => ": deprecated, use 'ifv6'",
-    'ifv6'        => ": obtain IPv6 from the -if=<interface>",
-    'cmd'         => ": deprecated, use 'cmdv6'",
-    'cmdv6'       => ": obtain IPv6 from the -cmdv6=<external-command>",
-    'fwv6'        => ": obtain IPv6 from the firewall specified by -fwv6=<type|address>",
+    'if'          => ": deprecated, use '--usev6=ifv6'",
+    'ifv6'        => ": obtain IPv6 from the --if=<interface>",
+    'cmd'         => ": deprecated, use '--usev6=cmdv6'",
+    'cmdv6'       => ": obtain IPv6 from the --cmdv6=<external-command>",
+    'fwv6'        => ": obtain IPv6 from the firewall specified by --fwv6=<type|address>",
 );
 sub ipv6_strategies_usage {
-    return map { sprintf("    -usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
+    return map { sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
 }
 
 sub setv {
@@ -1009,92 +1009,92 @@ $opt{'list-web-services'} = sub {
 my @opt = (
     "usage: ${program} [options]",
     "options are:",
-    ["daemon",            "=s", "-daemon=<delay>       : run as a daemon, specify <delay> as an interval"],
-    ["foreground",        "!",  "-foreground           : do not fork"],
-    ["proxy",             "=s", "-proxy=<host>         : use <host> as the HTTP proxy"],
-    ["server",            "=s", "-server=<host>        : update DNS information on <host>"],
-    ["protocol",          "=s", "-protocol=<type>      : update protocol used"],
-    ["list-protocols",    "",   "-list-protocols       : print a machine-readable list of supported update protocols and exit. Format: one per line"],
-    ["file",              "=s", "-file=<path>          : load configuration information from <path>"],
-    ["cache",             "=s", "-cache=<path>         : record address used in <path>"],
-    ["pid",               "=s", "-pid=<path>           : record process id in <path> if daemonized"],
+    ["daemon",            "=s", "--daemon=<delay>       : run as a daemon, specify <delay> as an interval"],
+    ["foreground",        "!",  "--foreground           : do not fork"],
+    ["proxy",             "=s", "--proxy=<host>         : use <host> as the HTTP proxy"],
+    ["server",            "=s", "--server=<host>        : update DNS information on <host>"],
+    ["protocol",          "=s", "--protocol=<type>      : update protocol used"],
+    ["list-protocols",    "",   "--list-protocols       : print a machine-readable list of supported update protocols and exit. Format: one per line"],
+    ["file",              "=s", "--file=<path>          : load configuration information from <path>"],
+    ["cache",             "=s", "--cache=<path>         : record address used in <path>"],
+    ["pid",               "=s", "--pid=<path>           : record process id in <path> if daemonized"],
     "",
-    ["use",               "=s", "-use=<which>          : deprecated, see 'usev4' and 'usev6'"],
+    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6'"],
     &ip_strategies_usage(),
-    ["usev4",             "=s", "-usev4=<which>        : how the should IPv4 address be obtained."],
+    ["usev4",             "=s", "--usev4=<which>        : how the should IPv4 address be obtained."],
     &ipv4_strategies_usage(),
-    ["usev6",             "=s", "-usev6=<which>        : how the should IPv6 address be obtained."],
+    ["usev6",             "=s", "--usev6=<which>        : how the should IPv6 address be obtained."],
     &ipv6_strategies_usage(),
     "",
-    "  Options that apply to 'use=ip':",
-    ["ip",                "=s", "-ip=<address>         : deprecated, use 'ipv4' or 'ipv6'"],
-    ["ipv4",              "=s", "-ipv4=<address>       : set the IPv4 address to <address>"],
-    ["ipv6",              "=s", "-ipv6=<address>       : set the IPv6 address to <address>"],
+    "  Options that apply to '--use=ip':",
+    ["ip",                "=s", "--ip=<address>         : deprecated, use '--ipv4' or '--ipv6'"],
+    ["ipv4",              "=s", "--ipv4=<address>       : set the IPv4 address to <address>"],
+    ["ipv6",              "=s", "--ipv6=<address>       : set the IPv6 address to <address>"],
     "",
-    "  Options that apply to 'use=if':",
-    ["if",                "=s", "-if=<interface>       : deprecated, use 'ifv4' or 'ifv6'"],
-    ["ifv4",              "=s", "-ifv4=<interface>     : obtain IPv4 address from <interface>"],
-    ["ifv6",              "=s", "-ifv6=<interface>     : obtain IPv6 address from <interface>"],
+    "  Options that apply to '--use=if':",
+    ["if",                "=s", "--if=<interface>       : deprecated, use '--ifv4' or '--ifv6'"],
+    ["ifv4",              "=s", "--ifv4=<interface>     : obtain IPv4 address from <interface>"],
+    ["ifv6",              "=s", "--ifv6=<interface>     : obtain IPv6 address from <interface>"],
     "",
-    "  Options that apply to 'use=web':",
-    ["web",               "=s", "-web=<service|url>    : deprecated, use 'webv4' or 'webv6'"],
-    ["web-skip",          "=s", "-web-skip=<pattern>   : deprecated, use 'webv4-skip' or 'webv6-skip'"],
-    ["webv4",             "=s", "-webv4=<service|url>  : obtain IPv4 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
-    ["webv4-skip",        "=s", "-webv4-skip=<pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
-    ["webv6",             "=s", "-webv6=<service|url>  : obtain IPv6 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
-    ["webv6-skip",        "=s", "-webv6-skip=<pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
-    ["list-web-services", "",   "-list-web-services    : print a machine-readable list of web-based IP discovery services for use with 'web=<service>' and exit. Format: one service per line, each line has the form '<service> <url>'"],
+    "  Options that apply to '--use=web':",
+    ["web",               "=s", "--web=<service|url>    : deprecated, use '--webv4' or '--webv6'"],
+    ["web-skip",          "=s", "--web-skip=<pattern>   : deprecated, use '--webv4-skip' or '--webv6-skip'"],
+    ["webv4",             "=s", "--webv4=<service|url>  : obtain IPv4 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
+    ["webv4-skip",        "=s", "--webv4-skip=<pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
+    ["webv6",             "=s", "--webv6=<service|url>  : obtain IPv6 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
+    ["webv6-skip",        "=s", "--webv6-skip=<pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
+    ["list-web-services", "",   "--list-web-services    : print a machine-readable list of web-based IP discovery services for use with 'web=<service>' and exit. Format: one service per line, each line has the form '<service> <url>'"],
     "",
-    "  Options that apply to 'use=fw' and 'use=<device>':",
-    ["fw",                "=s", "-fw=<address|url>     : deprecated, use 'fwv4' or 'fwv6'"],
-    ["fw-skip",           "=s", "-fw-skip=<pattern>    : deprecated, use 'fwv4-skip' or 'fwv6-skip'"],
-    ["fwv4",              "=s", "-fwv4=<address|url>   : obtain IPv4 address from device with IP address <address> or URL <url>"],
-    ["fwv4-skip",         "=s", "-fwv4-skip=<pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
-    ["fwv6",              "=s", "-fwv6=<address|url>   : obtain IPv6 address from device with IP address <address> or URL <url>"],
-    ["fwv6-skip",         "=s", "-fwv6-skip=<pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
-    ["fw-login",          "=s", "-fw-login=<login>     : use <login> when getting the IP from the device"],
-    ["fw-password",       "=s", "-fw-password=<secret> : use password <secret> when getting the IP from the device"],
-    ["list-devices",      "",   "-list-devices         : print a machine-readable list of supported firewall/router devices and exit. Format: one device per line, each line has the form '<device> <description>'"],
+    "  Options that apply to '--use=fw' and '--use=<device>':",
+    ["fw",                "=s", "--fw=<address|url>     : deprecated, use '--fwv4' or '--fwv6'"],
+    ["fw-skip",           "=s", "--fw-skip=<pattern>    : deprecated, use '--fwv4-skip' or '--fwv6-skip'"],
+    ["fwv4",              "=s", "--fwv4=<address|url>   : obtain IPv4 address from device with IP address <address> or URL <url>"],
+    ["fwv4-skip",         "=s", "--fwv4-skip=<pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
+    ["fwv6",              "=s", "--fwv6=<address|url>   : obtain IPv6 address from device with IP address <address> or URL <url>"],
+    ["fwv6-skip",         "=s", "--fwv6-skip=<pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
+    ["fw-login",          "=s", "--fw-login=<login>     : use <login> when getting the IP from the device"],
+    ["fw-password",       "=s", "--fw-password=<secret> : use password <secret> when getting the IP from the device"],
+    ["list-devices",      "",   "--list-devices         : print a machine-readable list of supported firewall/router devices and exit. Format: one device per line, each line has the form '<device> <description>'"],
     "",
-    "  Options that apply to 'use=cmd':",
-    ["cmd",               "=s", "-cmd=<command>        : deprecated, use 'cmdv4' or 'cmdv6'"],
-    ["cmd-skip",          "=s", "-cmd-skip=<pattern>   : deprecated, filter in program wrapper script"],
-    ["cmdv4",             "=s", "-cmdv4=<command>      : obtain IPv4 address from the output of <command>"],
-    ["cmdv6",             "=s", "-cmdv6=<command>      : obtain IPv6 address from the output of <command>"],
+    "  Options that apply to '--use=cmd':",
+    ["cmd",               "=s", "--cmd=<command>        : deprecated, use '--cmdv4' or '--cmdv6'"],
+    ["cmd-skip",          "=s", "--cmd-skip=<pattern>   : deprecated, filter in program wrapper script"],
+    ["cmdv4",             "=s", "--cmdv4=<command>      : obtain IPv4 address from the output of <command>"],
+    ["cmdv6",             "=s", "--cmdv6=<command>      : obtain IPv6 address from the output of <command>"],
     "",
-    ["login",             "=s", "-login=<user>         : log in to the dynamic DNS service as <user>"],
-    ["password",          "=s", "-password=<secret>    : log in to the dynamic DNS service with password <secret>"],
-    ["host",              "=s", "-host=<host>          : update DNS information for <host>"],
+    ["login",             "=s", "--login=<user>         : log in to the dynamic DNS service as <user>"],
+    ["password",          "=s", "--password=<secret>    : log in to the dynamic DNS service with password <secret>"],
+    ["host",              "=s", "--host=<host>          : update DNS information for <host>"],
     "",
-    ["options",           "=s", "-options=<opt>=<val>[,<opt>=<val>,...]\n                        : optional per-service arguments (see below)"],
+    ["options",           "=s", "--options=<opt>=<val>[,<opt>=<val>,...]\n                         : optional per-service arguments (see below)"],
     "",
-    ["ssl",               "!",  "-{no}ssl              : do updates over encrypted SSL connection"],
-    ["ssl_ca_dir",        "=s", "-ssl_ca_dir=<dir>     : look in <dir> for certificates of trusted certificate authorities (default: auto-detect)"],
-    ["ssl_ca_file",       "=s", "-ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
-    ["fw-ssl-validate",   "!",  "-{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
-    ["web-ssl-validate",  "!",  "-{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
-    ["retry",             "!",  "-{no}retry            : retry failed updates"],
-    ["force",             "!",  "-{no}force            : force an update even if the update may be unnecessary"],
-    ["timeout",           "=i", "-timeout=<max>        : when fetching a URL, wait at most <max> seconds for a response"],
-    ["syslog",            "!",  "-{no}syslog           : log messages to syslog"],
-    ["facility",          "=s", "-facility=<type>      : log messages to syslog to facility <type>"],
-    ["priority",          "=s", "-priority=<pri>       : log messages to syslog with priority <pri>"],
-    ["max-warn",          "=i", "-max-warn=<max>       : log at most <max> warning messages for undefined IP address"],
-    ["mail",              "=s", "-mail=<address>       : e-mail messages to <address>"],
-    ["mail-failure",      "=s", "-mail-failure=<addr>  : e-mail messages for failed updates to <addr>"],
-    ["exec",              "!",  "-{no}exec             : do {not} execute; just show what would be done"],
-    ["debug",             "!",  "-{no}debug            : print {no} debugging information"],
-    ["verbose",           "!",  "-{no}verbose          : print {no} verbose information"],
-    ["quiet",             "!",  "-{no}quiet            : print {no} messages for unnecessary updates"],
-    ["help",              "",   "-help                 : display this message and exit"],
-    ["version",           "",   "-version              : display version information and exit"],
-    ["postscript",        "",   "-postscript           : script to run after updating ddclient, has new IP as param"],
-    ["query",             "!",  "-{no}query            : print {no} ip addresses and exit"],
+    ["ssl",               "!",  "--{no}ssl              : do updates over encrypted SSL connection"],
+    ["ssl_ca_dir",        "=s", "--ssl_ca_dir=<dir>     : look in <dir> for certificates of trusted certificate authorities (default: auto-detect)"],
+    ["ssl_ca_file",       "=s", "--ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
+    ["fw-ssl-validate",   "!",  "--{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
+    ["web-ssl-validate",  "!",  "--{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
+    ["retry",             "!",  "--{no}retry            : retry failed updates"],
+    ["force",             "!",  "--{no}force            : force an update even if the update may be unnecessary"],
+    ["timeout",           "=i", "--timeout=<max>        : when fetching a URL, wait at most <max> seconds for a response"],
+    ["syslog",            "!",  "--{no}syslog           : log messages to syslog"],
+    ["facility",          "=s", "--facility=<type>      : log messages to syslog to facility <type>"],
+    ["priority",          "=s", "--priority=<pri>       : log messages to syslog with priority <pri>"],
+    ["max-warn",          "=i", "--max-warn=<max>       : log at most <max> warning messages for undefined IP address"],
+    ["mail",              "=s", "--mail=<address>       : e-mail messages to <address>"],
+    ["mail-failure",      "=s", "--mail-failure=<addr>  : e-mail messages for failed updates to <addr>"],
+    ["exec",              "!",  "--{no}exec             : do {not} execute; just show what would be done"],
+    ["debug",             "!",  "--{no}debug            : print {no} debugging information"],
+    ["verbose",           "!",  "--{no}verbose          : print {no} verbose information"],
+    ["quiet",             "!",  "--{no}quiet            : print {no} messages for unnecessary updates"],
+    ["help",              "",   "--help                 : display this message and exit"],
+    ["version",           "",   "--version              : display version information and exit"],
+    ["postscript",        "",   "--postscript           : script to run after updating ddclient, has new IP as param"],
+    ["query",             "!",  "--{no}query            : print {no} ip addresses and exit"],
     ["fw-banlocal",       "!",  ""], ## deprecated
     ["if-skip",           "=s", ""], ## deprecated
     ["test",              "!",  ""], ## hidden
     ["geturl",            "=s", ""], ## hidden
-    ["redirect",          "=i", "-redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
+    ["redirect",          "=i", "--redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
     # Note: These lines are copied below to the -version argument implementation
@@ -1170,10 +1170,10 @@ sub main {
         read_cache(opt('cache'), \%cache);
         print_info() if opt('debug') && opt('verbose');
 
-        fatal("invalid argument '-use=%s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
+        fatal("invalid argument '--use=%s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
             unless exists $ip_strategies{lc opt('use')};
         if (defined($opt{'usev6'})) {
-            usage("invalid argument '-usev6=%s'; possible values are:\n%s", $opt{'usev6'}, join("\n",ipv6_strategies_usage()))
+            usage("invalid argument '--usev6=%s'; possible values are:\n%s", $opt{'usev6'}, join("\n",ipv6_strategies_usage()))
                 unless exists $ipv6_strategies{lc opt('usev6')};
         }
 
@@ -1305,7 +1305,7 @@ sub update_nics {
                          # And if it is valid, remember it...
                         $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4} = $ipv4;
                     } else {
-                        warning("%s: unable to determine IPv4 address with strategy usev4=%s", $h, $usev4)
+                        warning("$h: unable to determine IPv4 address with strategy '--usev4=$usev4'")
                             if !$daemon || opt('verbose');
                     }
                 }
@@ -1324,7 +1324,7 @@ sub update_nics {
                         # And if it is valid, remember it...
                         $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6} = $ipv6;
                     } else {
-                        warning("%s: unable to determine IPv6 address with strategy usev6=%s", $h, $usev6)
+                        warning("$h: unable to determine IPv6 address with strategy '--usev6=$usev6'")
                             if !$daemon || opt('verbose');
                     }
                 }
@@ -1357,9 +1357,9 @@ sub update_nics {
             &$update(@hosts);
 
             # Backwards compatibility:
-            # The legacy 'use' parameter sets 'wantip' and the legacy providers process this and
+            # The legacy '--use' parameter sets 'wantip' and the legacy providers process this and
             # set 'ip', 'status' accordingly.
-            # The new 'usev*' parameters set 'wantipv*' and the new providers set 'ipv*' and 'status-ipv*'.
+            # The new '--usev*' parameters set 'wantipv*' and the new providers set 'ipv*' and 'status-ipv*'.
             # To allow gradual transition, we make sure both the old 'status' and 'ip' are being set
             # accordingly to what new providers returned in the new 'status-ipv*' and 'ipv*' fields respectively.
             foreach my $h (@hosts) {
@@ -3162,12 +3162,12 @@ sub get_ipv4 {
 
     } elsif ($usev4 eq 'ifv4') {
         ## Obtain IPv4 address from interface mamed in "ifv4=<if>"
-        warning("'if-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('if-skip', $h));
+        warning("'--if-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('if-skip', $h));
         $ipv4 = get_ip_from_interface($arg,4);
 
     } elsif ($usev4 eq 'cmdv4') {
         ## Obtain IPv4 address by executing the command in "cmdv4=<command>"
-        warning("'cmd-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('cmd-skip', $h));
+        warning("'--cmd-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('cmd-skip', $h));
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
@@ -3197,9 +3197,9 @@ sub get_ipv4 {
         # Stuff added to support Cisco router ip http or ASA https daemon
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
-        warning("'if' does nothing for IPv4. Use 'ifv4'") if (opt('if', $h));
-        warning("'fw' does nothing for IPv4. Use 'fwv4'") if (opt('fw', $h));
-        warning("'fw-skip' does nothing for IPv4. Use 'fwv4-skip'") if (opt('fw-skip', $h));
+        warning("'--if' does nothing for IPv4. Use '--ifv4'") if (opt('if', $h));
+        warning("'--fw' does nothing for IPv4. Use '--fwv4'") if (opt('fw', $h));
+        warning("'--fw-skip' does nothing for IPv4. Use '--fwv4-skip'") if (opt('fw-skip', $h));
         my $queryif = opt('ifv4', $h) // opt('if', $h);
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
         # Convert slashes to protected value "\/"
@@ -3226,8 +3226,8 @@ sub get_ipv4 {
         $reply = '';
 
     } else {
-        warning("'fw' does nothing for IPv4. Use 'fwv4'") if (opt('fw', $h));
-        warning("'fw-skip' does nothing for IPv4. Use 'fwv4-skip'") if (opt('fw-skip', $h));
+        warning("'--fw' does nothing for IPv4. Use '--fwv4'") if (opt('fw', $h));
+        warning("'--fw-skip' does nothing for IPv4. Use '--fwv4-skip'") if (opt('fw-skip', $h));
         $url  = opt('fwv4', $h) // opt('fw', $h) // '';
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
 
@@ -3279,7 +3279,7 @@ sub get_ipv6 {
     if ($usev6 eq 'ipv6' || $usev6 eq 'ip') {
         ## Static IPv6 address is provided in "ipv6=<address>"
         if ($usev6 eq 'ip') {
-            warning("'usev6=ip' is deprecated. Use 'usev6=ipv6'");
+            warning("'--usev6=ip' is deprecated. Use '--usev6=ipv6'");
             $usev6 = 'ipv6';
             ## If there is a value for ipv6= use that, else use value for ip=
             $arg = opt($usev6, $h) // $arg;
@@ -3294,23 +3294,23 @@ sub get_ipv6 {
     } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if' ) {
         ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
         if ($usev6 eq 'if') {
-            warning("'usev6=if' is deprecated. Use 'usev6=ifv6'");
+            warning("'--usev6=if' is deprecated. Use '--usev6=ifv6'");
             $usev6 = 'ifv6';
             ## If there is a value for ifv6= use that, else use value for if=
             $arg = opt($usev6, $h) // $arg;
         }
-        warning("'if-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('if-skip', $h));
+        warning("'--if-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('if-skip', $h));
         $ipv6 = get_ip_from_interface($arg,6);
 
     }  elsif ($usev6 eq 'cmdv6' || $usev6 eq 'cmd') {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
         if ($usev6 eq 'cmd') {
-            warning("'usev6=cmd' is deprecated. Use 'usev6=cmdv6'");
+            warning("'--usev6=cmd' is deprecated. Use '--usev6=cmdv6'");
             $usev6 = 'cmdv6';
             ## If there is a value for cmdv6= use that, else use value for cmd=
             $arg = opt($usev6, $h) // $arg;
         }
-        warning("'cmd-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('cmd-skip', $h));
+        warning("'--cmd-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('cmd-skip', $h));
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
@@ -3320,12 +3320,12 @@ sub get_ipv6 {
     } elsif ($usev6 eq 'webv6' || $usev6 eq 'web') {
         ## Obtain IPv6 address by accessing website at url in "webv6=<url>"
         if ($usev6 eq 'web') {
-            warning("'usev6=web' is deprecated. Use 'usev6=webv6'");
+            warning("'--usev6=web' is deprecated. Use '--usev6=webv6'");
             $usev6 = 'webv6';
             ## If there is a value for webv6= use that, else use value for web=
             $arg = opt($usev6, $h) // $arg;
         }
-        warning("'web-skip' does nothing for IPv6. Use 'webv6-skip'") if (opt('web-skip', $h));
+        warning("'--web-skip' does nothing for IPv6. Use '--webv6-skip'") if (opt('web-skip', $h));
         $url = $arg;
         $skip = opt('webv6-skip', $h) // '';
         if (exists $builtinweb{$url}) {
@@ -3345,16 +3345,16 @@ sub get_ipv6 {
         }
 
     } elsif ($usev6 eq 'cisco' || $usev6 eq 'cisco-asa') {
-        warning("'usev6=cisco' and 'usev6=cisco-asa' are not implemented and do nothing");
+        warning("'--usev6=cisco' and '--usev6=cisco-asa' are not implemented and do nothing");
         $reply = '';
 
     } elsif ($usev6 eq 'disabled') {
         ## This is a no-op... Do not get an IPv6 address for this host/service
-        warning("'usev6=no' is deprecated. Use 'usev6=disabled'") if ($usev6 eq 'no');
+        warning("'--usev6=no' is deprecated. Use '--usev6=disabled'") if ($usev6 eq 'no');
         $reply = '';
 
     } else {
-        warning("'usev6=%s' is not implemented and does nothing", $usev6);
+        warning("'--usev6=%s' is not implemented and does nothing", $usev6);
         $reply = '';
 
     }
@@ -3548,7 +3548,7 @@ sub nic_updateable {
 
     } elsif ( ($use ne 'disabled')
            && ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
-        ## Check whether to update IP address for the "use" method"
+        ## Check whether to update IP address for the "--use" method"
         if (($cache{$host}{'status'} eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
@@ -3593,7 +3593,7 @@ sub nic_updateable {
 
     } elsif ( ($usev4 ne 'disabled')
            && ((!exists($cache{$host}{'ipv4'})) || ("$cache{$host}{'ipv4'}" ne "$ipv4"))) {
-        ## Check whether to update IPv4 address for the "usev4" method"
+        ## Check whether to update IPv4 address for the "--usev4" method"
         if (($cache{$host}{'status-ipv4'} eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
@@ -3638,7 +3638,7 @@ sub nic_updateable {
 
     } elsif ( ($usev6 ne 'disabled')
            && ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
-        ## Check whether to update IPv6 address for the "usev6" method"
+        ## Check whether to update IPv6 address for the "--usev6" method"
         if (($cache{$host}{'status-ipv6'} eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
