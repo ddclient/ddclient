@@ -358,9 +358,7 @@ my %ip_strategies = (
     'cmd'       => ": deprecated, see '--usev4' and '--usev6'",
     'cisco'     => ": deprecated, see '--usev4' and '--usev6'",
     'cisco-asa' => ": deprecated, see '--usev4' and '--usev6'",
-    map({ $_ => sprintf(": Built-in firewall %s deprecated, see '--usev4' and '--usev6'",
-                        $builtinfw{$_}->{'name'}) }
-        keys(%builtinfw)),
+    map({ $_ => ": deprecated, see '--usev4' and '--usev6'"; } keys(%builtinfw)),
 );
 
 sub ip_strategies_usage {
@@ -370,12 +368,15 @@ sub ip_strategies_usage {
 
 my %ipv4_strategies = (
     'disabled'    => ": do not obtain an IPv4 address for this host",
-    'ipv4'        => ": obtain IPv4 from --ipv4=<address>",
+    'ipv4'        => ": obtain IPv4 from the address given by --ipv4=<address>",
     'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
-    'ifv4'        => ": obtain IPv4 from the --ifv4=<interface>",
-    'cmdv4'       => ": obtain IPv4 from the --cmdv4=<external-command>",
-    'fwv4'        => ": obtain IPv4 from the firewall specified by --fwv4=<type|address>",
-    map { $_ => sprintf ": obtain IPv4 from %s at the --fwv4=<address>", $builtinfw{$_}->{'name'} } keys %builtinfw,
+    'ifv4'        => ": obtain IPv4 from the interface given by --ifv4=<interface>",
+    'cmdv4'       => ": obtain IPv4 from the command given by --cmdv4=<command>",
+    'fwv4'        => ": obtain IPv4 from the URL given by --fwv4=<URL>",
+    map({
+        my $fw = $builtinfw{$_};
+        $_ => ": obtain IPv4 from $fw->{'name'} at the host or URL given by --fwv4=<host|URL>";
+    } keys(%builtinfw)),
 );
 sub ipv4_strategies_usage {
     return map { sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
@@ -385,14 +386,14 @@ my %ipv6_strategies = (
     'no'          => ": deprecated, use '--usev6=disabled'",
     'disabled'    => ": do not obtain an IPv6 address for this host",
     'ip'          => ": deprecated, use '--usev6=ipv6'",
-    'ipv6'        => ": obtain IPv6 from --ipv6=<address>",
+    'ipv6'        => ": obtain IPv6 from the address given by --ipv6=<address>",
     'web'         => ": deprecated, use '--usev6=webv6'",
     'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
     'if'          => ": deprecated, use '--usev6=ifv6'",
-    'ifv6'        => ": obtain IPv6 from the --if=<interface>",
+    'ifv6'        => ": obtain IPv6 from the interface given by --ifv6=<interface>",
     'cmd'         => ": deprecated, use '--usev6=cmdv6'",
-    'cmdv6'       => ": obtain IPv6 from the --cmdv6=<external-command>",
-    'fwv6'        => ": obtain IPv6 from the firewall specified by --fwv6=<type|address>",
+    'cmdv6'       => ": obtain IPv6 from the command given by --cmdv6=<command>",
+    'fwv6'        => ": obtain IPv6 from the URL given by --fwv6=<URL>",
 );
 sub ipv6_strategies_usage {
     return map { sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
@@ -1021,22 +1022,22 @@ my @opt = (
     "",
     ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6'"],
     &ip_strategies_usage(),
-    ["usev4",             "=s", "--usev4=<which>        : how the should IPv4 address be obtained."],
+    ["usev4",             "=s", "--usev4=<which>        : how the IPv4 address should be obtained"],
     &ipv4_strategies_usage(),
-    ["usev6",             "=s", "--usev6=<which>        : how the should IPv6 address be obtained."],
+    ["usev6",             "=s", "--usev6=<which>        : how the IPv6 address should be obtained"],
     &ipv6_strategies_usage(),
     "",
-    "  Options that apply to '--use=ip':",
+    "  Options related to '--use=ip', '--usev4=ipv4', '--usev6=ipv6', and '--usev6=ip':",
     ["ip",                "=s", "--ip=<address>         : deprecated, use '--ipv4' or '--ipv6'"],
     ["ipv4",              "=s", "--ipv4=<address>       : set the IPv4 address to <address>"],
     ["ipv6",              "=s", "--ipv6=<address>       : set the IPv6 address to <address>"],
     "",
-    "  Options that apply to '--use=if':",
+    "  Options related to '--use=if', '--usev4=ifv4', '--usev6=ifv6', and '--usev6=if':",
     ["if",                "=s", "--if=<interface>       : deprecated, use '--ifv4' or '--ifv6'"],
     ["ifv4",              "=s", "--ifv4=<interface>     : obtain IPv4 address from <interface>"],
     ["ifv6",              "=s", "--ifv6=<interface>     : obtain IPv6 address from <interface>"],
     "",
-    "  Options that apply to '--use=web':",
+    "  Options related to '--use=web', '--usev4=webv4', '--usev6=webv6', and '--usev6=web':",
     ["web",               "=s", "--web=<service|url>    : deprecated, use '--webv4' or '--webv6'"],
     ["web-skip",          "=s", "--web-skip=<pattern>   : deprecated, use '--webv4-skip' or '--webv6-skip'"],
     ["webv4",             "=s", "--webv4=<service|url>  : obtain IPv4 address from a web-based IP discovery service, either a known <service> or a custom <url>"],
@@ -1045,8 +1046,8 @@ my @opt = (
     ["webv6-skip",        "=s", "--webv6-skip=<pattern> : skip any IP addresses before <pattern> in the output of 'ip address show dev <interface>' (or 'ifconfig <interface>')"],
     ["list-web-services", "",   "--list-web-services    : print a machine-readable list of web-based IP discovery services for use with 'web=<service>' and exit. Format: one service per line, each line has the form '<service> <url>'"],
     "",
-    "  Options that apply to '--use=fw' and '--use=<device>':",
-    ["fw",                "=s", "--fw=<address|url>     : deprecated, use '--fwv4' or '--fwv6'"],
+    "  Options related to '--use=fw', '--usev4=fwv4', '--usev6=fwv6', and '--usev6=fw'",
+    "  as well as '--use=<device>', '--usev4=<device>', and '--usev6=<device>':",
     ["fw-skip",           "=s", "--fw-skip=<pattern>    : deprecated, use '--fwv4-skip' or '--fwv6-skip'"],
     ["fwv4",              "=s", "--fwv4=<address|url>   : obtain IPv4 address from device with IP address <address> or URL <url>"],
     ["fwv4-skip",         "=s", "--fwv4-skip=<pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
@@ -1056,7 +1057,7 @@ my @opt = (
     ["fw-password",       "=s", "--fw-password=<secret> : use password <secret> when getting the IP from the device"],
     ["list-devices",      "",   "--list-devices         : print a machine-readable list of supported firewall/router devices and exit. Format: one device per line, each line has the form '<device> <description>'"],
     "",
-    "  Options that apply to '--use=cmd':",
+    "  Options related to '--use=cmd', '--usev4=cmdv4', '--usev6=cmdv6', and '--usev6=cmd':",
     ["cmd",               "=s", "--cmd=<command>        : deprecated, use '--cmdv4' or '--cmdv6'"],
     ["cmd-skip",          "=s", "--cmd-skip=<pattern>   : deprecated, filter in program wrapper script"],
     ["cmdv4",             "=s", "--cmdv4=<command>      : obtain IPv4 address from the output of <command>"],
