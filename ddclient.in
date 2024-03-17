@@ -453,6 +453,8 @@ my %ipv4_strategies = (
     'ifv4'        => ": obtain IPv4 from the interface given by --ifv4=<interface>",
     'cmdv4'       => ": obtain IPv4 from the command given by --cmdv4=<command>",
     'fwv4'        => ": obtain IPv4 from the URL given by --fwv4=<URL>",
+    'cisco'       => ": obtain IPv4 from Cisco FW at the host given by --fwv4=<host> and interface given by --ifv4=<interface>",
+    'cisco-asa'   => ": obtain IPv4 from Cisco ASA at the host given by --fwv4=<host> and interface given by --ifv4=<interface>",
     map({
         my $fw = $builtinfw{$_};
         $_ => ": obtain IPv4 from $fw->{'name'} at the host or URL given by --fwv4=<host|URL>";
