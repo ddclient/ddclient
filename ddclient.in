@@ -370,12 +370,12 @@ sub ip_strategies_usage {
 
 my %ipv4_strategies = (
     'disabled'    => ": do not obtain an IPv4 address for this host",
-    'ipv4'        => ": obtain IPv4 from -ipv4 {address}",
+    'ipv4'        => ": obtain IPv4 from -ipv4 <address>",
     'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
-    'ifv4'        => ": obtain IPv4 from the -ifv4 {interface}",
-    'cmdv4'       => ": obtain IPv4 from the -cmdv4 {external-command}",
-    'fwv4'        => ": obtain IPv4 from the firewall specified by -fwv4 {type|address}",
-    map { $_ => sprintf ": obtain IPv4 from %s at the -fwv4 {address}", $builtinfw{$_}->{'name'} } keys %builtinfw,
+    'ifv4'        => ": obtain IPv4 from the -ifv4 <interface>",
+    'cmdv4'       => ": obtain IPv4 from the -cmdv4 <external-command>",
+    'fwv4'        => ": obtain IPv4 from the firewall specified by -fwv4 <type|address>",
+    map { $_ => sprintf ": obtain IPv4 from %s at the -fwv4 <address>", $builtinfw{$_}->{'name'} } keys %builtinfw,
 );
 sub ipv4_strategies_usage {
     return map { sprintf("    -usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
@@ -385,14 +385,14 @@ my %ipv6_strategies = (
     'no'          => ": deprecated, use 'disabled'",
     'disabled'    => ": do not obtain an IPv6 address for this host",
     'ip'          => ": deprecated, use 'ipv6'",
-    'ipv6'        => ": obtain IPv6 from -ipv6 {address}",
+    'ipv6'        => ": obtain IPv6 from -ipv6 <address>",
     'web'         => ": deprecated, use 'webv6'",
     'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
     'if'          => ": deprecated, use 'ifv6'",
-    'ifv6'        => ": obtain IPv6 from the -if {interface}",
+    'ifv6'        => ": obtain IPv6 from the -if <interface>",
     'cmd'         => ": deprecated, use 'cmdv6'",
-    'cmdv6'       => ": obtain IPv6 from the -cmdv6 {external-command}",
-    'fwv6'        => ": obtain IPv6 from the firewall specified by -fwv6 {type|address}",
+    'cmdv6'       => ": obtain IPv6 from the -cmdv6 <external-command>",
+    'fwv6'        => ": obtain IPv6 from the firewall specified by -fwv6 <type|address>",
 );
 sub ipv6_strategies_usage {
     return map { sprintf("    -usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
@@ -3788,7 +3788,7 @@ Configuration variables applicable to the 'dyndns1' protocol are:
   server=fqdn.of.service       ## defaults to members.dyndns.org
   backupmx=no|yes              ## indicates that this host is the primary MX for the domain.
   mx=any.host.domain           ## a host MX'ing for this host definition.
-  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to {host}
+  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   fully.qualified.host         ## the host registered with the service.
@@ -3909,7 +3909,7 @@ Configuration variables applicable to the 'dyndns2' protocol are:
   static=no|yes                ## indicates that this host has a static IP address.
   custom=no|yes                ## indicates that this host is a 'custom' top-level domain name.
   mx=any.host.domain           ## a host MX'ing for this host definition.
-  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to {host}
+  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   fully.qualified.host         ## the host registered with the service.
@@ -4739,7 +4739,7 @@ Configuration variables applicable to the 'easydns' protocol are:
   backupmx=no|yes              ## indicates that EasyDNS should be the secondary MX
                                ## for this domain or host.
   mx=any.host.domain           ## a host MX'ing for this host or domain.
-  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to {host}
+  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   fully.qualified.host         ## the host registered with the service.
@@ -6714,7 +6714,7 @@ Configuration variables applicable to the 'woima' protocol are:
   static=no|yes                ## indicates that this host has a static IP address.
   custom=no|yes                ## indicates that this host is a 'custom' top-level domain name.
   mx=any.host.domain           ## a host MX'ing for this host definition.
-  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to {host}
+  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
   login=service-login          ## login name and password  registered with the service
   password=service-password    ##
   fully.qualified.host         ## the host registered with the service.
