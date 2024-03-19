@@ -200,6 +200,7 @@ ssl=yes					# use ssl-support.  Works with
 # protocol=gandi
 # zone=example.com
 # password=my-gandi-access-token
+# use-personal-access-token=yes
 # ttl=10800 # optional
 # myhost.example.com
 
