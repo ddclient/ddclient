@@ -72,6 +72,7 @@ generated_tests = \
 	t/geturl_connectivity.pl \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
+$(TESTS): ddclient
 EXTRA_DIST += $(handwritten_tests) \
 	t/lib/Devel/Autoflush.pm \
 	t/lib/Test/Builder.pm \
