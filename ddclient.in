@@ -1852,6 +1852,9 @@ sub init_config {
     ## make sure config entries have all defaults and they meet minimums
     ## first the globals...
     foreach my $k (keys %globals) {
+        # Make sure any _env suffixed variables look at their original entry
+        $k = $1 if $k =~ /^(.*)_env$/;
+
         my $def    = $variables{'merged'}{$k};
         my $ovalue = $globals{$k} // $def->{'default'};
         my $value  = check_value($ovalue, $def);
@@ -1881,6 +1884,9 @@ sub init_config {
             my $conf  = { 'protocol' => $proto };
 
             foreach my $k (keys %$svars) {
+                # Make sure any _env suffixed variables look at their original entry
+                $k = $1 if $k =~ /^(.*)_env$/;
+
                 my $def    = $svars->{$k};
                 my $ovalue = $config{$h}{$k} // $def->{'default'};
                 my $value  = check_value($ovalue, $def);
