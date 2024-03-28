@@ -6935,7 +6935,7 @@ sub nic_dondominio_update {
 
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
-        if ($returned =~ /OK/) {
+        if ($returned =~ /OK/ || $returned =~ /IP:$ip/) {
             $config{$h}{'ip'}     = $ip;
             $config{$h}{'mtime'}  = $now;
             $config{$h}{'status'} = 'good';
