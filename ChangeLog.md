@@ -41,6 +41,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The second and subsequent lines in a multi-line log message are now prefixed
     with a `|` character.
     [#676](https://github.com/ddclient/ddclient/pull/676)
+  * `emailonly`: New `protocol` option that simply emails you when your IP
+    address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
 
 ### Bug fixes
 
