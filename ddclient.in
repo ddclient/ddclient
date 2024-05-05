@@ -2803,14 +2803,15 @@ sub get_ip {
         $reply = '';
 
     } else {
-        $url = opt('fw', $h) // '';
+        # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
+        $arg = opt('fw', $h) // '';
+        $url = $arg;
         $skip = opt('fw-skip', $h) // '';
 
         if (exists $builtinfw{$use}) {
             $skip = $builtinfw{$use}->{'skip'} unless $skip;
             $url  = "http://${url}" . $builtinfw{$use}->{'url'} unless $url =~ /\//;
         }
-        $arg = $url;
 
         if ($url) {
             $reply = geturl(
@@ -3234,14 +3235,15 @@ sub get_ipv4 {
             if (!defined(opt('fwv4', $h)) && defined(opt('fw', $h)));
         warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
             if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
-        $url  = opt('fwv4', $h) // opt('fw', $h) // '';
+        # Note that --usev4=firewallname uses --fwv4=arg (or --fw=arg), not --firewallname=arg.
+        $arg = opt('fwv4', $h) // opt('fw', $h) // '';
+        $url = $arg;
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
 
         if (exists $builtinfw{$usev4}) {
             $skip = $builtinfw{$usev4}->{'skip'} unless $skip;
             $url  = "http://${url}" . $builtinfw{$usev4}->{'url'} unless $url =~ /\//;
         }
-        $arg = $url;
         if ($url) {
             $reply = geturl(
                 url => $url,
