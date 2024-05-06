@@ -189,6 +189,32 @@ our %builtinweb = (
     'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
+
+sub query_cisco {
+    my ($h, $asa, $v4) = @_;
+    warning("'--if' is deprecated for '--usev4=ifv4; use '--ifv4' instead")
+        if ($v4 && !defined(opt('ifv4')) && defined(opt('if', $h)));
+    warning("'--fw' is deprecated for '--usev4=fwv4; use '--fwv4' instead")
+        if ($v4 && !defined(opt('fwv4')) && defined(opt('fw', $h)));
+    my $if = ($v4 ? opt('ifv4', $h) : undef) // opt('if', $h);
+    my $fw = ($v4 ? opt('fwv4', $h) : undef) // opt('fw', $h);
+    # Convert slashes to protected value "\/"
+    $if =~ s%\/%\\\/%g;
+    # Protect special HTML characters (like '?')
+    $if =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
+    my $url = ($asa)
+        ? "https://$fw/exec/show%20interface%20$if"
+        : "http://$fw/level/1/exec/show/ip/interface/brief/$if/CR";
+    my $reply = geturl(
+        url => $url,
+        login => opt('fw-login', $h),
+        password => opt('fw-password', $h),
+        ignore_ssl_option => 1,
+        ssl_validate => opt('fw-ssl-validate', $h),
+    ) // '';
+    return ($url, $reply);
+}
+
 our %builtinfw = (
     '2wire' => {
         'name' => '2Wire 1701HG Gateway',
@@ -229,6 +255,18 @@ our %builtinfw = (
         'name' => 'Cayman 3220-H DSL',
         'url'  => '/shell/show+ip+interfaces',
         'skip' => '.*inet',
+    },
+    'cisco' => {
+        'name' => 'Cisco FW',
+        'query' => sub { return query_cisco($_[0], 0, 0); },
+        'queryv4' => sub { return query_cisco($_[0], 0, 1); },
+        'help' => sub { return " at the host given by --fw$_[0]=<host> and interface given by --if$_[0]=<interface>"; },
+    },
+    'cisco-asa' => {
+        'name' => 'Cisco ASA',
+        'query' => sub { return query_cisco($_[0], 1, 0); },
+        'queryv4' => sub { return query_cisco($_[0], 1, 1); },
+        'help' => sub { return " at the host given by --fw$_[0]=<host> and interface given by --if$_[0]=<interface>"; },
     },
     'dlink-524' => {
         'name' => 'D-Link DI-524',
@@ -435,8 +473,6 @@ my %ip_strategies = (
     'fw'        => ": deprecated, see '--usev4=fwv4' and '--usev6=fwv6'",
     'if'        => ": deprecated, see '--usev4=ifv4' and '--usev6=ifv6'",
     'cmd'       => ": deprecated, see '--usev4=cmdv4' and '--usev6=cmdv6'",
-    'cisco'     => ": deprecated, see '--usev4=cisco'",
-    'cisco-asa' => ": deprecated, see '--usev4=cisco-asa'",
     map({
         my $fw = $builtinfw{$_};
         $_ => ": deprecated, see '--usev4=$_'" .
@@ -446,8 +482,7 @@ my %ip_strategies = (
 
 sub ip_strategies_usage {
     return map({ sprintf("    --use=%-22s %s.", $_, $ip_strategies{$_}) }
-               'disabled', 'no', 'ip', 'web', 'if', 'cmd', 'fw',
-               sort('cisco', 'cisco-asa', keys(%builtinfw)));
+               'disabled', 'no', 'ip', 'web', 'if', 'cmd', 'fw', sort(keys(%builtinfw)));
 }
 
 my %ipv4_strategies = (
@@ -457,8 +492,6 @@ my %ipv4_strategies = (
     'ifv4'        => ": obtain IPv4 from the interface given by --ifv4=<interface>",
     'cmdv4'       => ": obtain IPv4 from the command given by --cmdv4=<command>",
     'fwv4'        => ": obtain IPv4 from the URL given by --fwv4=<URL>",
-    'cisco'       => ": obtain IPv4 from Cisco FW at the host given by --fwv4=<host> and interface given by --ifv4=<interface>",
-    'cisco-asa'   => ": obtain IPv4 from Cisco ASA at the host given by --fwv4=<host> and interface given by --ifv4=<interface>",
     map({
         my $fw = $builtinfw{$_};
         $_ => defined($fw->{queryv4})
@@ -2855,52 +2888,6 @@ sub get_ip {
             ) // '';
         }
 
-    } elsif (($use eq 'cisco')) {
-        # Stuff added to support Cisco router ip http daemon
-        # User fw-login should only have level 1 access to prevent
-        # password theft.  This is pretty harmless.
-        my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h);
-
-        # Convert slashes to protected value "\/"
-        $queryif =~ s%\/%\\\/%g;
-
-        # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
-
-        $url = "http://" . opt('fw', $h) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
-        $reply = geturl(
-            url => $url,
-            login => opt('fw-login', $h),
-            password => opt('fw-password', $h),
-            ignore_ssl_option => 1,
-            ssl_validate => opt('fw-ssl-validate', $h),
-        ) // '';
-        $arg = $url;
-
-    } elsif (($use eq 'cisco-asa')) {
-        # Stuff added to support Cisco ASA ip https daemon
-        # User fw-login should only have level 1 access to prevent
-        # password theft.  This is pretty harmless.
-        my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h);
-
-        # Convert slashes to protected value "\/"
-        $queryif =~ s%\/%\\\/%g;
-
-        # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
-
-        $url = "https://" . opt('fw', $h) . "/exec/show%20interface%20${queryif}";
-        $reply = geturl(
-            url => $url,
-            login => opt('fw-login', $h),
-            password => opt('fw-password', $h),
-            ignore_ssl_option => 1,
-            ssl_validate => opt('fw-ssl-validate', $h),
-        ) // '';
-        $arg = $url;
-
     } elsif ($use eq 'disabled') {
         ## This is a no-op... Do not get an IP address for this host/service
         $reply = '';
@@ -3304,37 +3291,6 @@ sub get_ipv4 {
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
         }
-
-    } elsif ($usev4 eq 'cisco' || $usev4 eq 'cisco-asa') {
-        # Stuff added to support Cisco router ip http or ASA https daemon
-        # User fw-login should only have level 1 access to prevent
-        # password theft.  This is pretty harmless.
-        warning("'--if' is deprecated for '--usev4=$usev4'; use '--ifv4' instead")
-            if (!defined(opt('ifv4', $h)) && defined(opt('if', $h)));
-        warning("'--fw' is deprecated for '--usev4=$usev4'; use '--fwv4' instead")
-            if (!defined(opt('fwv4', $h)) && defiend(opt('fw', $h)));
-        warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
-            if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
-        my $queryif = opt('ifv4', $h) // opt('if', $h);
-        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
-        # Convert slashes to protected value "\/"
-        $queryif =~ s%\/%\\\/%g;
-        # Protect special HTML characters (like '?')
-        $queryif =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
-        if ($usev4 eq 'cisco') {
-            $url = "http://" . (opt('fwv4', $h) // opt('fw', $h)) . "/level/1/exec/show/ip/interface/brief/${queryif}/CR";
-        } else {
-            $url = "https://" . (opt('fwv4', $h) // opt('fw', $h))  . "/exec/show%20interface%20${queryif}";
-        }
-        $arg = $url;
-        $reply = geturl(
-            url => $url,
-            login => opt('fw-login', $h),
-            password => opt('fw-password', $h),
-            ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
-            ignore_ssl_option => 1,
-            ssl_validate => opt('fw-ssl-validate', $h),
-        ) // '';
 
     } elsif ($usev4 eq 'disabled') {
         ## This is a no-op... Do not get an IPv4 address for this host/service
