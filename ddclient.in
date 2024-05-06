@@ -437,7 +437,11 @@ my %ip_strategies = (
     'cmd'       => ": deprecated, see '--usev4=cmdv4' and '--usev6=cmdv6'",
     'cisco'     => ": deprecated, see '--usev4=cisco'",
     'cisco-asa' => ": deprecated, see '--usev4=cisco-asa'",
-    map({ $_ => ": deprecated, see '--usev4=$_'"; } keys(%builtinfw)),
+    map({
+        my $fw = $builtinfw{$_};
+        $_ => ": deprecated, see '--usev4=$_'" .
+            (defined($fw->{queryv6}) ? " and '--usev6=$_'" : '');
+    } keys(%builtinfw)),
 );
 
 sub ip_strategies_usage {
@@ -457,7 +461,9 @@ my %ipv4_strategies = (
     'cisco-asa'   => ": obtain IPv4 from Cisco ASA at the host given by --fwv4=<host> and interface given by --ifv4=<interface>",
     map({
         my $fw = $builtinfw{$_};
-        $_ => ": obtain IPv4 from $fw->{'name'} at the host or URL given by --fwv4=<host|URL>";
+        $_ => defined($fw->{queryv4})
+            ? ": obtain IPv4 from $fw->{name}@{[($fw->{help} // sub {})->('v4') // '']}"
+            : ": obtain IPv4 from $fw->{name} at the host or URL given by --fwv4=<host|URL>";
     } keys(%builtinfw)),
 );
 sub ipv4_strategies_usage {
@@ -477,11 +483,17 @@ my %ipv6_strategies = (
     'cmdv6'       => ": obtain IPv6 from the command given by --cmdv6=<command>",
     'cmd'         => ": deprecated, use '--usev6=cmdv6'",
     'fwv6'        => ": obtain IPv6 from the URL given by --fwv6=<URL>",
+    map({
+        my $fw = $builtinfw{$_};
+        defined($fw->{queryv6})
+            ? ($_ => ": obtain IPv6 from $fw->{name}@{[($fw->{help} // sub {})->('v6') // '']}")
+            : ();
+    } keys(%builtinfw)),
 );
 sub ipv6_strategies_usage {
     return map({ sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) }
                'disabled', 'no', 'ipv6', 'ip', 'webv6', 'web', 'ifv6', 'if', 'cmdv6', 'cmd',
-               'fwv6');
+               'fwv6', sort(map({exists($ipv6_strategies{$_}) ? ($_) : ()} keys(%builtinfw))));
 }
 
 sub setv {
@@ -2900,7 +2912,12 @@ sub get_ip {
         $skip = opt('fw-skip', $h);
         if ($fw) {
             $skip //= $fw->{'skip'};
-            $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
+            if (defined(my $query = $fw->{'query'})) {
+                $url = undef;
+                ($arg, $reply) = $query->($h);
+            } else {
+                $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
+            }
         }
 
         if ($url) {
@@ -3334,7 +3351,12 @@ sub get_ipv4 {
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
         if ($fw) {
             $skip //= $fw->{'skip'};
-            $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
+            if (defined(my $query = $fw->{'queryv4'})) {
+                $url = undef;
+                ($arg, $reply) = $query->($h);
+            } else {
+                $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
+            }
         }
         if ($url) {
             $reply = geturl(
@@ -3442,8 +3464,14 @@ sub get_ipv6 {
     } elsif ($usev6 eq 'disabled') {
         $reply = '';
 
-    } elsif ($usev6 eq 'fwv6' || defined($builtinfw{$usev6})) {
-        warning("'--usev6=%s' is not implemented and does nothing", $usev6);
+    } elsif ($usev6 eq 'fwv6' || defined(my $fw = $builtinfw{$usev6})) {
+        $skip = opt('fwv6-skip', $h) // $fw->{'skip'};
+        if ($fw && defined(my $query = $fw->{'queryv6'})) {
+            $skip //= $fw->{'skip'};
+            ($arg, $reply) = $query->($h);
+        } else {
+            warning("'--usev6=%s' is not implemented and does nothing", $usev6);
+        }
 
     } else {
         warning("ignoring unsupported '--usev6=$usev6'");

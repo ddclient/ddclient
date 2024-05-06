@@ -62,6 +62,7 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-I'$(abs_top_srcdir)'/t/lib \
 	-MDevel::Autoflush
 handwritten_tests = \
+	t/builtinfw_query.pl \
 	t/get_ip_from_if.pl \
 	t/geturl_connectivity.pl \
 	t/is-and-extract-ipv4.pl \
