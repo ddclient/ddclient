@@ -1592,8 +1592,9 @@ sub _read_config {
     if ($mode & 077 && -o FD) {
         if (-f FD && (chmod 0600, $file)) {
             warning("file $file must be accessible only by its owner (fixed).");
+        } else {
+            warning("file $file must be accessible only by its owner.");
         }
-        warning("file $file must be accessible only by its owner.");
     } elsif (! -o FD && -w FD) {
         warning("file $file should be owned only by ddclient or not be writable.");
     }
@@ -2802,14 +2803,15 @@ sub get_ip {
         $reply = '';
 
     } else {
-        $url = opt('fw', $h) // '';
+        # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
+        $arg = opt('fw', $h) // '';
+        $url = $arg;
         $skip = opt('fw-skip', $h) // '';
 
         if (exists $builtinfw{$use}) {
             $skip = $builtinfw{$use}->{'skip'} unless $skip;
             $url  = "http://${url}" . $builtinfw{$use}->{'url'} unless $url =~ /\//;
         }
-        $arg = $url;
 
         if ($url) {
             $reply = geturl(
@@ -3163,12 +3165,11 @@ sub get_ipv4 {
 
     } elsif ($usev4 eq 'ifv4') {
         ## Obtain IPv4 address from interface mamed in "ifv4=<if>"
-        warning("'--if-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('if-skip', $h));
         $ipv4 = get_ip_from_interface($arg,4);
 
     } elsif ($usev4 eq 'cmdv4') {
         ## Obtain IPv4 address by executing the command in "cmdv4=<command>"
-        warning("'--cmd-skip' is deprecated and does nothing for IPv4") if (opt('verbose') && opt('cmd-skip', $h));
+        warning("'--cmd-skip' ignored for '--usev4=$usev4'") if (opt('verbose') && opt('cmd-skip', $h));
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
@@ -3198,9 +3199,12 @@ sub get_ipv4 {
         # Stuff added to support Cisco router ip http or ASA https daemon
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
-        warning("'--if' does nothing for IPv4. Use '--ifv4'") if (opt('if', $h));
-        warning("'--fw' does nothing for IPv4. Use '--fwv4'") if (opt('fw', $h));
-        warning("'--fw-skip' does nothing for IPv4. Use '--fwv4-skip'") if (opt('fw-skip', $h));
+        warning("'--if' is deprecated for '--usev4=$usev4'; use '--ifv4' instead")
+            if (!defined(opt('ifv4', $h)) && defined(opt('if', $h)));
+        warning("'--fw' is deprecated for '--usev4=$usev4'; use '--fwv4' instead")
+            if (!defined(opt('fwv4', $h)) && defiend(opt('fw', $h)));
+        warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
+            if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
         my $queryif = opt('ifv4', $h) // opt('if', $h);
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
         # Convert slashes to protected value "\/"
@@ -3227,16 +3231,19 @@ sub get_ipv4 {
         $reply = '';
 
     } else {
-        warning("'--fw' does nothing for IPv4. Use '--fwv4'") if (opt('fw', $h));
-        warning("'--fw-skip' does nothing for IPv4. Use '--fwv4-skip'") if (opt('fw-skip', $h));
-        $url  = opt('fwv4', $h) // opt('fw', $h) // '';
+        warning("'--fw' is deprecated for '--usev4=$usev4'; use '--fwv4' instead")
+            if (!defined(opt('fwv4', $h)) && defined(opt('fw', $h)));
+        warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
+            if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
+        # Note that --usev4=firewallname uses --fwv4=arg (or --fw=arg), not --firewallname=arg.
+        $arg = opt('fwv4', $h) // opt('fw', $h) // '';
+        $url = $arg;
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
 
         if (exists $builtinfw{$usev4}) {
             $skip = $builtinfw{$usev4}->{'skip'} unless $skip;
             $url  = "http://${url}" . $builtinfw{$usev4}->{'url'} unless $url =~ /\//;
         }
-        $arg = $url;
         if ($url) {
             $reply = geturl(
                 url => $url,
@@ -3281,9 +3288,7 @@ sub get_ipv6 {
         ## Static IPv6 address is provided in "ipv6=<address>"
         if ($usev6 eq 'ip') {
             warning("'--usev6=ip' is deprecated. Use '--usev6=ipv6'");
-            $usev6 = 'ipv6';
-            ## If there is a value for ipv6= use that, else use value for ip=
-            $arg = opt($usev6, $h) // $arg;
+            $arg = opt('ipv6', $h) // $arg;
         }
         $ipv6 = $arg;
         if (!is_ipv6($ipv6)) {
@@ -3296,22 +3301,17 @@ sub get_ipv6 {
         ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
         if ($usev6 eq 'if') {
             warning("'--usev6=if' is deprecated. Use '--usev6=ifv6'");
-            $usev6 = 'ifv6';
-            ## If there is a value for ifv6= use that, else use value for if=
-            $arg = opt($usev6, $h) // $arg;
+            $arg = opt('ifv6', $h) // $arg;
         }
-        warning("'--if-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('if-skip', $h));
         $ipv6 = get_ip_from_interface($arg,6);
 
     }  elsif ($usev6 eq 'cmdv6' || $usev6 eq 'cmd') {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
         if ($usev6 eq 'cmd') {
             warning("'--usev6=cmd' is deprecated. Use '--usev6=cmdv6'");
-            $usev6 = 'cmdv6';
-            ## If there is a value for cmdv6= use that, else use value for cmd=
-            $arg = opt($usev6, $h) // $arg;
+            $arg = opt('cmdv6', $h) // $arg;
         }
-        warning("'--cmd-skip' is deprecated and does nothing for IPv6") if (opt('verbose') && opt('cmd-skip', $h));
+        warning("'--cmd-skip' ignored for '--usev6=$usev6'") if (opt('verbose') && opt('cmd-skip', $h));
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
@@ -3322,11 +3322,10 @@ sub get_ipv6 {
         ## Obtain IPv6 address by accessing website at url in "webv6=<url>"
         if ($usev6 eq 'web') {
             warning("'--usev6=web' is deprecated. Use '--usev6=webv6'");
-            $usev6 = 'webv6';
-            ## If there is a value for webv6= use that, else use value for web=
-            $arg = opt($usev6, $h) // $arg;
+            $arg = opt('webv6', $h) // $arg;
         }
-        warning("'--web-skip' does nothing for IPv6. Use '--webv6-skip'") if (opt('web-skip', $h));
+        warning("'--web-skip' ignored for '--usev6=$usev6'; use '--webv6-skip' instead")
+            if (!defined(opt('webv6-skip', $h)) && defined(opt('web-skip', $h)));
         $url = $arg;
         $skip = opt('webv6-skip', $h) // '';
         if (exists $builtinweb{$url}) {
@@ -3345,13 +3344,7 @@ sub get_ipv6 {
             ) // '';
         }
 
-    } elsif ($usev6 eq 'cisco' || $usev6 eq 'cisco-asa') {
-        warning("'--usev6=cisco' and '--usev6=cisco-asa' are not implemented and do nothing");
-        $reply = '';
-
     } elsif ($usev6 eq 'disabled') {
-        ## This is a no-op... Do not get an IPv6 address for this host/service
-        warning("'--usev6=no' is deprecated. Use '--usev6=disabled'") if ($usev6 eq 'no');
         $reply = '';
 
     } else {
@@ -3369,7 +3362,7 @@ sub get_ipv6 {
     ## If $ipv6 not set yet look for IPv6 address in the $reply text
     $ipv6 //= extract_ipv6($reply);
     ## Return undef for loopback address unless statically assigned by "ipv6=::"
-    $ipv6 = undef if (($usev6 ne 'ipv6') && (($ipv6 // '') eq '::'));
+    $ipv6 = undef if (($usev6 ne 'ipv6') && ($usev6 ne 'ip') && (($ipv6 // '') eq '::'));
     debug("get_ipv6: using (%s, %s) reports %s", $usev6, $arg, $ipv6 // "<undefined>");
     return $ipv6;
 }
