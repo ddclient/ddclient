@@ -63,13 +63,13 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-MDevel::Autoflush
 handwritten_tests = \
 	t/get_ip_from_if.pl \
+	t/geturl_connectivity.pl \
 	t/is-and-extract-ipv4.pl \
 	t/is-and-extract-ipv6.pl \
 	t/is-and-extract-ipv6-global.pl \
 	t/parse_assignments.pl \
 	t/write_cache.pl
 generated_tests = \
-	t/geturl_connectivity.pl \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
 $(TESTS): ddclient
