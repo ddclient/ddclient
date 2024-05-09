@@ -1,8 +1,11 @@
-# Copied from https://metacpan.org/pod/release/MASAKI/Test-Fake-HTTPD-0.08/lib/Test/Fake/HTTPD.pm
+# Copied from https://metacpan.org/release/MASAKI/Test-Fake-HTTPD-0.09/source/lib/Test/Fake/HTTPD.pm
 # and modified as follows:
-#   * Patched with https://github.com/masaki/Test-Fake-HTTPD/pull/4 to add IPv6 support.
+#   * Added this comment block.
+#   * Patched with https://github.com/masaki/Test-Fake-HTTPD/pull/6 to fix server exit if TLS
+#     negotiation fails.
 #   * Changed package name to ddclient::Test::Fake::HTTPD.
 #
+# Copyright: 2011-2020 NAKAGAWA Masaki <masaki@cpan.org>
 # License: This library is free software; you can redistribute it and/or modify it under the same
 # terms as Perl itself.
 
@@ -20,7 +23,7 @@ use Scalar::Util qw(blessed weaken);
 use Carp qw(croak);
 use Exporter qw(import);
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 $VERSION = eval $VERSION;
 
 our @EXPORT = qw(
@@ -101,9 +104,10 @@ sub run {
                           $self->port || '<default>',
                           $@ eq '' ? '' : ": $@")) unless $d;
 
-            $d->accept; # wait for port check from parent process
-
-            while (my $c = $d->accept) {
+            while (1) {
+                # accept can return undef if TLS handshake fails (e.g., port test or client rejects
+                # cert).
+                my $c = $d->accept or next;
                 while (my $req = $c->get_request) {
                     my $res = $self->_to_http_res($app->($req));
                     $c->send_response($res);
@@ -143,7 +147,7 @@ sub endpoint {
     my $self = shift;
     my $uri = URI->new($self->scheme . ':');
     my $host = $self->host;
-    $host = 'localhost' if !defined($host) || $host eq '0.0.0.0' || $host eq '::';
+    $host = 'localhost' if !defined($host) || $host eq '' || $host eq '0.0.0.0' || $host eq '::';
     $uri->host($host);
     $uri->port($self->port);
     return $uri;
