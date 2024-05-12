@@ -95,7 +95,7 @@ sub T_IPV6   { 'ipv6' }
 sub T_POSTS  { 'postscript' }
 
 ## strategies for obtaining an ip address.
-my %builtinweb = (
+our %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
     'googledomains' => {'url' => 'https://domains.google.com/checkip'}, #  Deprecated! See https://github.com/ddclient/ddclient/issues/622 for more details
@@ -112,7 +112,7 @@ my %builtinweb = (
     'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
-my %builtinfw = (
+our %builtinfw = (
     '2wire' => {
         'name' => '2Wire 1701HG Gateway',
         'url'  => '/xslt?PAGE=B01',
@@ -429,21 +429,21 @@ my %variables = (
         'ifv4'                => setv(T_IF,    0, 0, 'default',            undef),
         'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
-        'web-skip'            => setv(T_STRING,1, 0, '',                   undef),
+        'web-skip'            => setv(T_STRING,0, 0, undef,                undef),
         'webv4'               => setv(T_STRING,0, 0, 'ipify-ipv4',         undef),
-        'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webv4-skip'          => setv(T_STRING,0, 0, undef,                undef),
         'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
-        'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webv6-skip'          => setv(T_STRING,0, 0, undef,                undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
-        'fw-skip'             => setv(T_STRING,1, 0, '',                   undef),
+        'fw-skip'             => setv(T_STRING,0, 0, undef,                undef),
         'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
-        'fwv4-skip'           => setv(T_STRING,1, 0, '',                   undef),
+        'fwv4-skip'           => setv(T_STRING,0, 0, undef,                undef),
         'fwv6'                => setv(T_ANY,   0, 0, '',                   undef),
-        'fwv6-skip'           => setv(T_STRING,1, 0, '',                   undef),
+        'fwv6-skip'           => setv(T_STRING,0, 0, undef,                undef),
         'fw-login'            => setv(T_LOGIN, 1, 0, '',                   undef),
         'fw-password'         => setv(T_PASSWD,1, 0, '',                   undef),
         'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
-        'cmd-skip'            => setv(T_STRING,1, 0, '',                   undef),
+        'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
         'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
         'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
 
@@ -484,23 +484,23 @@ my %variables = (
         'ifv4'                => setv(T_IF,    0, 0, 'default',            undef),
         'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
         'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
-        'web-skip'            => setv(T_STRING,0, 0, '',                   undef),
+        'web-skip'            => setv(T_STRING,0, 0, undef,                undef),
         'web-ssl-validate'    => setv(T_BOOL,  0, 0, 1,                    undef),
         'webv4'               => setv(T_STRING,0, 0, 'ipify-ipv4',         undef),
-        'webv4-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webv4-skip'          => setv(T_STRING,0, 0, undef,                undef),
         'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
-        'webv6-skip'          => setv(T_STRING,1, 0, '',                   undef),
+        'webv6-skip'          => setv(T_STRING,0, 0, undef,                undef),
         'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
-        'fw-skip'             => setv(T_STRING,0, 0, '',                   undef),
+        'fw-skip'             => setv(T_STRING,0, 0, undef,                undef),
         'fw-login'            => setv(T_LOGIN, 0, 0, '',                   undef),
         'fw-password'         => setv(T_PASSWD,0, 0, '',                   undef),
         'fw-ssl-validate'     => setv(T_BOOL,  0, 0, 1,                    undef),
         'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
-        'fwv4-skip'           => setv(T_STRING,1, 0, '',                   undef),
+        'fwv4-skip'           => setv(T_STRING,0, 0, undef,                undef),
         'fwv6'                => setv(T_ANY,   0, 0, '',                   undef),
-        'fwv6-skip'           => setv(T_STRING,1, 0, '',                   undef),
+        'fwv6-skip'           => setv(T_STRING,0, 0, undef,                undef),
         'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
-        'cmd-skip'            => setv(T_STRING,0, 0, '',                   undef),
+        'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
         'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
         'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
 
@@ -2728,19 +2728,19 @@ sub get_ip {
 
     } elsif ($use eq 'cmd') {
         if ($arg) {
-            $skip = opt('cmd-skip', $h) // '';
+            $skip = opt('cmd-skip', $h);
             $reply = `$arg`;
             $reply = '' if $?;
         }
 
     } elsif ($use eq 'web') {
         $url = opt('web', $h) // '';
-        $skip = opt('web-skip', $h) // '';
+        $skip = opt('web-skip', $h);
 
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
 
-            $skip = $builtinweb{$url}->{'skip'} unless $skip;
+            $skip //= $builtinweb{$url}->{'skip'};
             $url  = $builtinweb{$url}->{'url'};
         }
         $arg = $url;
@@ -2758,7 +2758,7 @@ sub get_ip {
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
         my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h) // '';
+        $skip = opt('fw-skip', $h);
 
         # Convert slashes to protected value "\/"
         $queryif =~ s%\/%\\\/%g;
@@ -2781,7 +2781,7 @@ sub get_ip {
         # User fw-login should only have level 1 access to prevent
         # password theft.  This is pretty harmless.
         my $queryif = opt('if', $h);
-        $skip = opt('fw-skip', $h) // '';
+        $skip = opt('fw-skip', $h);
 
         # Convert slashes to protected value "\/"
         $queryif =~ s%\/%\\\/%g;
@@ -2807,10 +2807,10 @@ sub get_ip {
         # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
         $arg = opt('fw', $h) // '';
         $url = $arg;
-        $skip = opt('fw-skip', $h) // '';
+        $skip = opt('fw-skip', $h);
 
         if (exists $builtinfw{$use}) {
-            $skip = $builtinfw{$use}->{'skip'} unless $skip;
+            $skip //= $builtinfw{$use}->{'skip'};
             $url  = "http://${url}" . $builtinfw{$use}->{'url'} unless $url =~ /\//;
         }
 
@@ -3152,7 +3152,7 @@ sub get_ipv4 {
     my $ipv4  = undef;      ## Found IPv4 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
-    my $skip  = '';         ## Regex of pattern to skip before looking for IP
+    my $skip  = undef;      ## Regex of pattern to skip before looking for IP
     my $arg   = opt($usev4, $h) // '';  ## Value assigned to the "usev4" method
 
     if ($usev4 eq 'ipv4') {
@@ -3180,11 +3180,11 @@ sub get_ipv4 {
     } elsif ($usev4 eq 'webv4') {
         ## Obtain IPv4 address by accessing website at url in "webv4=<url>"
         $url = $arg;
-        $skip = opt('webv4-skip', $h) // '';
+        $skip = opt('webv4-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
 
-            $skip = $builtinweb{$url}->{'skip'} unless $skip;
+            $skip //= $builtinweb{$url}->{'skip'};
             $url  = $builtinweb{$url}->{'url'};
             $arg  = $url;
         }
@@ -3207,7 +3207,7 @@ sub get_ipv4 {
         warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
             if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
         my $queryif = opt('ifv4', $h) // opt('if', $h);
-        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
+        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
         # Convert slashes to protected value "\/"
         $queryif =~ s%\/%\\\/%g;
         # Protect special HTML characters (like '?')
@@ -3239,10 +3239,10 @@ sub get_ipv4 {
         # Note that --usev4=firewallname uses --fwv4=arg (or --fw=arg), not --firewallname=arg.
         $arg = opt('fwv4', $h) // opt('fw', $h) // '';
         $url = $arg;
-        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h) // '';
+        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
 
         if (exists $builtinfw{$usev4}) {
-            $skip = $builtinfw{$usev4}->{'skip'} unless $skip;
+            $skip //= $builtinfw{$usev4}->{'skip'};
             $url  = "http://${url}" . $builtinfw{$usev4}->{'url'} unless $url =~ /\//;
         }
         if ($url) {
@@ -3282,7 +3282,7 @@ sub get_ipv6 {
     my $ipv6  = undef;      ## Found IPv6 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
-    my $skip  = '';         ## Regex of pattern to skip before looking for IP
+    my $skip  = undef;      ## Regex of pattern to skip before looking for IP
     my $arg   = opt($usev6, $h) // '';  ## Value assigned to the "usev6" method
 
     if ($usev6 eq 'ipv6' || $usev6 eq 'ip') {
@@ -3328,11 +3328,11 @@ sub get_ipv6 {
         warning("'--web-skip' ignored for '--usev6=$usev6'; use '--webv6-skip' instead")
             if (!defined(opt('webv6-skip', $h)) && defined(opt('web-skip', $h)));
         $url = $arg;
-        $skip = opt('webv6-skip', $h) // '';
+        $skip = opt('webv6-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
 
-            $skip = $builtinweb{$url}->{'skip'} unless $skip;
+            $skip //= $builtinweb{$url}->{'skip'};
             $url  = $builtinweb{$url}->{'url'};
             $arg  = $url;
         }

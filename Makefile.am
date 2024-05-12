@@ -68,6 +68,7 @@ handwritten_tests = \
 	t/is-and-extract-ipv6.pl \
 	t/is-and-extract-ipv6-global.pl \
 	t/parse_assignments.pl \
+	t/skip.pl \
 	t/ssl-validate.pl \
 	t/write_cache.pl
 generated_tests = \
