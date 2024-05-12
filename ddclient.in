@@ -21,8 +21,85 @@ use File::Temp;
 use Getopt::Long;
 use Sys::Hostname;
 
-use version 0.77; our $VERSION = version->declare('3.11.3_0');
-my $version = $VERSION->stringify();
+# Declare the ddclient version number.
+#
+# Perl's version strings do not support pre-release versions (alpha/development, beta, or release
+# candidate) very well.  The best it does is an optional underscore between arbitrary digits in the
+# final component (e.g., "v1.2.3_4").  The underscore doesn't behave as most developers expect; it
+# is treated as if it never existed (e.g., "v1.2.3_4" becomes "v1.2.34") except:
+#
+#   * $v->is_alpha() will return true
+#   * $v->is_strict() will return false
+#   * $v->stringify() preserves the underscore (in its original position)
+#
+# Note that version::normal and version::numify lose information because the underscore is
+# effectively removed.
+#
+# To work around Perl's limitations, human-readable versions are translated to/from Perl versions
+# as follows:
+#
+#     Human-readable    Perl version    Notes
+#     -------------------------------------------------------------------------------------------
+#     1.2.3~alpha       v1.2.3.0_0      compares equal to Perl version v1.2.3 (unfortunately)
+#     1.2.3~betaN       v1.2.3.0_N      1 <= N < 900; compares equal to Perl v1.2.3.N
+#     1.2.3~rcN         v1.2.3.0_M      1 <= N < 99; M = N + 900; compares equal to Perl v1.2.3.M
+#     1.2.3             v1.2.3.999      for releases; no underscore in Perl version string
+#     1.2.3rN           v1.2.3.999.N    1 <= N < 1000; for re-releases, if necessary (rare)
+#
+# A tilde is used to separate "alpha", "beta", and "rc" from the version numbers because it has
+# special meaning for the version comparison algorithms in RPM and Debian:
+# https://docs.fedoraproject.org/en-US/packaging-guidelines/Versioning/#_handling_non_sorting_versions_with_tilde_dot_and_caret
+# https://manpages.debian.org/bookworm/dpkg-dev/deb-version.7.en.html
+#
+# No period separator is required between "beta", "rc", or "r" and its adjacent number(s); both RPM
+# and Debian will compare the adjacent number numerically, not lexicographically ("~beta2" sorts
+# before "~beta10" as expected).
+#
+# The Perl version is declared first then converted to a human-readable form.  It would be nicer to
+# declare a human-readable version string and convert that to a Perl version string, but various
+# tools in the Perl ecosystem require the line of source code that defines the VERSION variable to
+# be self-contained (because they grep the source code and evaluate only that one line).
+#
+# For consistency and to match user expectations, the release part of the version is always three
+# components: MAJOR.MINOR.PATCH.
+use version 0.77; our $VERSION = version->declare('v3.11.3.0_0');
+
+sub parse_version {
+    my ($v) = @_;
+    # Matches a non-negative integer with 1-3 decimal digits (zero padding disallowed).
+    my $n = qr/0|[1-9]\d{0,2}/;
+    my $vre = qr/
+        ^
+        v                   # required "v" prefix
+        ((?:$n\.)*?$n)      # release version (e.g., 1.2, 1.2.3, or 1.2.3.4)
+        \.(?:               # release or pre-release suffix
+            0_(?!999)($n)|  # pre-release (alpha, beta, rc) revision
+            999(?:\.($n))?  # release with optional re-release revision
+        )
+        $
+    /x;
+    return $v =~ $vre;
+}
+
+sub humanize_version {
+    my ($v) = @_;
+    my ($r, $pr, $rr) = parse_version($v);
+    return $v if !defined($r);
+    $v = $r;
+    if (!defined($pr)) {
+        $v .= "r$rr" if defined($rr);
+    } elsif ($pr eq '0') {
+        $v .= '~alpha';
+    } elsif ($pr < 900) {
+        $v .= "~beta$pr";
+    } elsif ($pr < 999) {
+        $v .= '~rc' . ($pr - 900);
+    }
+    return $v;
+}
+
+our $version = humanize_version($VERSION);
+
 my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
@@ -1007,6 +1084,17 @@ $opt{'list-web-services'} = sub {
     printf("%s %s\n", $_, $builtinweb{$_}{url}) for sort(keys(%builtinweb));
     exit(0);
 };
+$opt{'version'} = sub {
+    my (undef, $arg) = @_;
+    if ($arg eq "short") {
+        print("$version\n");
+    } else {
+        print("$program version $version\n");
+        print("  originally written by Paul Burry, paul+ddclient\@burry.ca\n");
+        print("  project now maintained on https://github.com/ddclient/ddclient\n");
+    }
+    exit(0);
+};
 
 my @opt = (
     "usage: ${program} [options]",
@@ -1089,7 +1177,7 @@ my @opt = (
     ["verbose",           "!",  "--{no}verbose          : print {no} verbose information"],
     ["quiet",             "!",  "--{no}quiet            : print {no} messages for unnecessary updates"],
     ["help",              "",   "--help                 : display this message and exit"],
-    ["version",           "",   "--version              : display version information and exit"],
+    ["version",           ":s", "--version[=short]      : display version information and exit"],
     ["postscript",        "",   "--postscript           : script to run after updating ddclient, has new IP as param"],
     ["query",             "!",  "--{no}query            : print {no} ip addresses and exit"],
     ["fw-banlocal",       "!",  ""], ## deprecated
@@ -1099,10 +1187,6 @@ my @opt = (
     ["redirect",          "=i", "--redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
-    # Note: These lines are copied below to the -version argument implementation
-    "$program version $version",
-    "  originally written by Paul Burry, paul+ddclient\@burry.ca",
-    "  project now maintained on https://github.com/ddclient/ddclient"
 );
 
 sub main {
@@ -1116,15 +1200,7 @@ sub main {
 
     if (opt('help')) {
         printf "%s\n", $opt_usage;
-        exit 0;
-    }
-
-    if (opt('version')) {
-        # Note: Manual copy from the @opt array above!
-        print "$program version $version\n";
-        print "  originally written by Paul Burry, paul+ddclient\@burry.ca\n";
-        print "  project now maintained on https://github.com/ddclient/ddclient\n";
-        exit 0;
+        $opt{'version'}('', '');
     }
 
     ## read config file because 'daemon' mode may be defined there.
