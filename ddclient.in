@@ -62,7 +62,8 @@ local $lineno = '';
 $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin:/usr/bin:/etc:/usr/lib:";
 
 our %globals;
-my ($result, %config, %cache);
+our %config;
+my ($result, %cache);
 my $saved_cache;
 my %saved_opt;
 my $daemon;
@@ -3191,7 +3192,7 @@ sub get_ipv4 {
             $reply = geturl( proxy => opt('proxy', $h),
                 url => $url,
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
-                ssl_validate => opt('ssl-validate', $h),
+                ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
         }
 
@@ -3223,7 +3224,7 @@ sub get_ipv4 {
             password => opt('fw-password', $h),
             ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
             ignore_ssl_option => 1,
-            ssl_validate => opt('ssl-validate', $h),
+            ssl_validate => opt('fw-ssl-validate', $h),
         ) // '';
 
     } elsif ($usev4 eq 'disabled') {
@@ -3251,7 +3252,7 @@ sub get_ipv4 {
                 password => opt('fw-password', $h),
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ignore_ssl_option => 1,
-                ssl_validate => opt('ssl-validate', $h),
+                ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
         }
     }
@@ -3340,7 +3341,7 @@ sub get_ipv6 {
                 proxy => opt('proxy'),
                 url => $url,
                 ipversion => 6, # when using a URL to find IPv6 address we should force use of IPv6
-                ssl_validate => opt('ssl-validate', $h),
+                ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
         }
 
