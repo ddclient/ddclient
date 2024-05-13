@@ -459,24 +459,27 @@ my %ipv4_strategies = (
     } keys(%builtinfw)),
 );
 sub ipv4_strategies_usage {
-    return map { sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
+    return map({ sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) }
+               'disabled', 'ipv4', 'webv4', 'ifv4', 'cmdv4', 'fwv4', sort(keys(%builtinfw)));
 }
 
 my %ipv6_strategies = (
-    'no'          => ": deprecated, use '--usev6=disabled'",
     'disabled'    => ": do not obtain an IPv6 address for this host",
-    'ip'          => ": deprecated, use '--usev6=ipv6'",
+    'no'          => ": deprecated, use '--usev6=disabled'",
     'ipv6'        => ": obtain IPv6 from the address given by --ipv6=<address>",
-    'web'         => ": deprecated, use '--usev6=webv6'",
+    'ip'          => ": deprecated, use '--usev6=ipv6'",
     'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
-    'if'          => ": deprecated, use '--usev6=ifv6'",
+    'web'         => ": deprecated, use '--usev6=webv6'",
     'ifv6'        => ": obtain IPv6 from the interface given by --ifv6=<interface>",
-    'cmd'         => ": deprecated, use '--usev6=cmdv6'",
+    'if'          => ": deprecated, use '--usev6=ifv6'",
     'cmdv6'       => ": obtain IPv6 from the command given by --cmdv6=<command>",
+    'cmd'         => ": deprecated, use '--usev6=cmdv6'",
     'fwv6'        => ": obtain IPv6 from the URL given by --fwv6=<URL>",
 );
 sub ipv6_strategies_usage {
-    return map { sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
+    return map({ sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) }
+               'disabled', 'no', 'ipv6', 'ip', 'webv6', 'web', 'ifv6', 'if', 'cmdv6', 'cmd',
+               'fwv6');
 }
 
 sub setv {
