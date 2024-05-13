@@ -428,7 +428,8 @@ our %builtinfw = (
 );
 
 my %ip_strategies = (
-    'no'        => ": deprecated, see '--usev4' and '--usev6'",
+    'disabled'  => ": do not use a deprecated method to obtain an IP address for this host",
+    'no'        => ": deprecated, see '--use=disabled'",
     'ip'        => ": deprecated, see '--usev4' and '--usev6'",
     'web'       => ": deprecated, see '--usev4' and '--usev6'",
     'fw'        => ": deprecated, see '--usev4' and '--usev6'",
