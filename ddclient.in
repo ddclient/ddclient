@@ -442,7 +442,8 @@ my %ip_strategies = (
 
 sub ip_strategies_usage {
     return map({ sprintf("    --use=%-22s %s.", $_, $ip_strategies{$_}) }
-               ('ip', 'web', 'if', 'cmd', 'fw', sort('cisco', 'cisco-asa', keys(%builtinfw))));
+               'disabled', 'no', 'ip', 'web', 'if', 'cmd', 'fw',
+               sort('cisco', 'cisco-asa', keys(%builtinfw)));
 }
 
 my %ipv4_strategies = (
