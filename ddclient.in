@@ -447,7 +447,7 @@ sub ip_strategies_usage {
 }
 
 my %ipv4_strategies = (
-    'disabled'    => ": do not obtain an IPv4 address for this host",
+    'disabled'    => ": do not obtain an IPv4 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
     'ipv4'        => ": obtain IPv4 from the address given by --ipv4=<address>",
     'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
     'ifv4'        => ": obtain IPv4 from the interface given by --ifv4=<interface>",
@@ -464,7 +464,7 @@ sub ipv4_strategies_usage {
 }
 
 my %ipv6_strategies = (
-    'disabled'    => ": do not obtain an IPv6 address for this host",
+    'disabled'    => ": do not obtain an IPv6 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
     'no'          => ": deprecated, use '--usev6=disabled'",
     'ipv6'        => ": obtain IPv6 from the address given by --ipv6=<address>",
     'ip'          => ": deprecated, use '--usev6=ipv6'",
@@ -1114,7 +1114,7 @@ my @opt = (
     ["cache",             "=s", "--cache=<path>         : record address used in <path>"],
     ["pid",               "=s", "--pid=<path>           : record process id in <path> if daemonized"],
     "",
-    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6'"],
+    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6' (forced to 'disabled' if either '--usev4' or '--usev6' is enabled)"],
     &ip_strategies_usage(),
     ["usev4",             "=s", "--usev4=<which>        : how the IPv4 address should be obtained"],
     &ipv4_strategies_usage(),
