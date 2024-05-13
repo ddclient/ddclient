@@ -430,14 +430,14 @@ our %builtinfw = (
 my %ip_strategies = (
     'disabled'  => ": do not use a deprecated method to obtain an IP address for this host",
     'no'        => ": deprecated, see '--use=disabled'",
-    'ip'        => ": deprecated, see '--usev4' and '--usev6'",
-    'web'       => ": deprecated, see '--usev4' and '--usev6'",
-    'fw'        => ": deprecated, see '--usev4' and '--usev6'",
-    'if'        => ": deprecated, see '--usev4' and '--usev6'",
-    'cmd'       => ": deprecated, see '--usev4' and '--usev6'",
-    'cisco'     => ": deprecated, see '--usev4' and '--usev6'",
-    'cisco-asa' => ": deprecated, see '--usev4' and '--usev6'",
-    map({ $_ => ": deprecated, see '--usev4' and '--usev6'"; } keys(%builtinfw)),
+    'ip'        => ": deprecated, see '--usev4=ipv4' and '--usev6=ipv6'",
+    'web'       => ": deprecated, see '--usev4=webv4' and '--usev6=webv6'",
+    'fw'        => ": deprecated, see '--usev4=fwv4' and '--usev6=fwv6'",
+    'if'        => ": deprecated, see '--usev4=ifv4' and '--usev6=ifv6'",
+    'cmd'       => ": deprecated, see '--usev4=cmdv4' and '--usev6=cmdv6'",
+    'cisco'     => ": deprecated, see '--usev4=cisco'",
+    'cisco-asa' => ": deprecated, see '--usev4=cisco-asa'",
+    map({ $_ => ": deprecated, see '--usev4=$_'"; } keys(%builtinfw)),
 );
 
 sub ip_strategies_usage {
