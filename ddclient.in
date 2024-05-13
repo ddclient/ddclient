@@ -428,24 +428,26 @@ our %builtinfw = (
 );
 
 my %ip_strategies = (
-    'no'        => ": deprecated, see '--usev4' and '--usev6'",
-    'ip'        => ": deprecated, see '--usev4' and '--usev6'",
-    'web'       => ": deprecated, see '--usev4' and '--usev6'",
-    'fw'        => ": deprecated, see '--usev4' and '--usev6'",
-    'if'        => ": deprecated, see '--usev4' and '--usev6'",
-    'cmd'       => ": deprecated, see '--usev4' and '--usev6'",
-    'cisco'     => ": deprecated, see '--usev4' and '--usev6'",
-    'cisco-asa' => ": deprecated, see '--usev4' and '--usev6'",
-    map({ $_ => ": deprecated, see '--usev4' and '--usev6'"; } keys(%builtinfw)),
+    'disabled'  => ": do not use a deprecated method to obtain an IP address for this host",
+    'no'        => ": deprecated, see '--use=disabled'",
+    'ip'        => ": deprecated, see '--usev4=ipv4' and '--usev6=ipv6'",
+    'web'       => ": deprecated, see '--usev4=webv4' and '--usev6=webv6'",
+    'fw'        => ": deprecated, see '--usev4=fwv4' and '--usev6=fwv6'",
+    'if'        => ": deprecated, see '--usev4=ifv4' and '--usev6=ifv6'",
+    'cmd'       => ": deprecated, see '--usev4=cmdv4' and '--usev6=cmdv6'",
+    'cisco'     => ": deprecated, see '--usev4=cisco'",
+    'cisco-asa' => ": deprecated, see '--usev4=cisco-asa'",
+    map({ $_ => ": deprecated, see '--usev4=$_'"; } keys(%builtinfw)),
 );
 
 sub ip_strategies_usage {
     return map({ sprintf("    --use=%-22s %s.", $_, $ip_strategies{$_}) }
-               ('ip', 'web', 'if', 'cmd', 'fw', sort('cisco', 'cisco-asa', keys(%builtinfw))));
+               'disabled', 'no', 'ip', 'web', 'if', 'cmd', 'fw',
+               sort('cisco', 'cisco-asa', keys(%builtinfw)));
 }
 
 my %ipv4_strategies = (
-    'disabled'    => ": do not obtain an IPv4 address for this host",
+    'disabled'    => ": do not obtain an IPv4 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
     'ipv4'        => ": obtain IPv4 from the address given by --ipv4=<address>",
     'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
     'ifv4'        => ": obtain IPv4 from the interface given by --ifv4=<interface>",
@@ -457,24 +459,27 @@ my %ipv4_strategies = (
     } keys(%builtinfw)),
 );
 sub ipv4_strategies_usage {
-    return map { sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) } sort keys %ipv4_strategies;
+    return map({ sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) }
+               'disabled', 'ipv4', 'webv4', 'ifv4', 'cmdv4', 'fwv4', sort(keys(%builtinfw)));
 }
 
 my %ipv6_strategies = (
+    'disabled'    => ": do not obtain an IPv6 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
     'no'          => ": deprecated, use '--usev6=disabled'",
-    'disabled'    => ": do not obtain an IPv6 address for this host",
-    'ip'          => ": deprecated, use '--usev6=ipv6'",
     'ipv6'        => ": obtain IPv6 from the address given by --ipv6=<address>",
-    'web'         => ": deprecated, use '--usev6=webv6'",
+    'ip'          => ": deprecated, use '--usev6=ipv6'",
     'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
-    'if'          => ": deprecated, use '--usev6=ifv6'",
+    'web'         => ": deprecated, use '--usev6=webv6'",
     'ifv6'        => ": obtain IPv6 from the interface given by --ifv6=<interface>",
-    'cmd'         => ": deprecated, use '--usev6=cmdv6'",
+    'if'          => ": deprecated, use '--usev6=ifv6'",
     'cmdv6'       => ": obtain IPv6 from the command given by --cmdv6=<command>",
+    'cmd'         => ": deprecated, use '--usev6=cmdv6'",
     'fwv6'        => ": obtain IPv6 from the URL given by --fwv6=<URL>",
 );
 sub ipv6_strategies_usage {
-    return map { sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) } sort keys %ipv6_strategies;
+    return map({ sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) }
+               'disabled', 'no', 'ipv6', 'ip', 'webv6', 'web', 'ifv6', 'if', 'cmdv6', 'cmd',
+               'fwv6');
 }
 
 sub setv {
@@ -1109,7 +1114,7 @@ my @opt = (
     ["cache",             "=s", "--cache=<path>         : record address used in <path>"],
     ["pid",               "=s", "--pid=<path>           : record process id in <path> if daemonized"],
     "",
-    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6'"],
+    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6' (forced to 'disabled' if either '--usev4' or '--usev6' is enabled)"],
     &ip_strategies_usage(),
     ["usev4",             "=s", "--usev4=<which>        : how the IPv4 address should be obtained"],
     &ipv4_strategies_usage(),
