@@ -1168,7 +1168,7 @@ my @opt = (
     ["ssl_ca_file",       "=s", "--ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["fw-ssl-validate",   "!",  "--{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
     ["web-ssl-validate",  "!",  "--{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
-    ["retry",             "!",  "--{no}retry            : retry failed updates"],
+    ["retry",             "!",  "--{no}retry            : Initiate a one-time update attempt for hosts that have not been successfully updated (according to the cache).  Incompatible with '--daemon'"],
     ["force",             "!",  "--{no}force            : force an update even if the update may be unnecessary"],
     ["timeout",           "=i", "--timeout=<max>        : when fetching a URL, wait at most <max> seconds for a response"],
     ["syslog",            "!",  "--{no}syslog           : log messages to syslog"],
