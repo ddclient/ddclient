@@ -1283,7 +1283,7 @@ sub main {
             $result     = 0;
 
         } elsif (!scalar(%config)) {
-            warning("no hosts to update.") unless !opt('quiet') || opt('verbose') || !$daemon;
+            warning("no hosts to update.") if !opt('quiet');
             $result = 1;
 
         } else {
