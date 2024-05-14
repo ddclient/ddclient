@@ -157,13 +157,13 @@ This issue arises when using the `use` parameter in the config and using one of 
 
 ## TROUBLESHOOTING
 
-  1. enable debugging and verbose messages: ``$ ddclient -daemon=0 -debug -verbose -noquiet``
+  1. enable debugging and verbose messages: ``$ ddclient --daemon=0 --debug --verbose --noquiet``
 
   2. Do you need to specify a proxy?
      If so, just add a ``proxy=your.isp.proxy`` to the ddclient.conf file.
 
   3. Define the IP address of your router with ``fw=xxx.xxx.xxx.xxx`` in
-     ``/etc/ddclient/ddclient.conf`` and then try ``$ ddclient -daemon=0 -query`` to see if the router status web page can be understood.
+     ``/etc/ddclient/ddclient.conf`` and then try ``$ ddclient --daemon=0 --query`` to see if the router status web page can be understood.
 
   4. Need support for another router/firewall?
      Define the router status page yourself with: ``fw=url-to-your-router``'s-status-page ``fw-skip=any-string-preceding-your-IP-address``
@@ -177,10 +177,10 @@ This issue arises when using the `use` parameter in the config and using one of 
 
 OR
      Send me the output from:
-      ``$ ddclient -geturl {fw-ip-status-url} [-login login [-password password]]``
+      ``$ ddclient --geturl {fw-ip-status-url} [--login login [--password password]]``
      and I'll add it to the next release!
 
-ie. for my fw/router I used: ``$ ddclient -geturl 192.168.1.254/status.htm``
+ie. for my fw/router I used: ``$ ddclient --geturl 192.168.1.254/status.htm``
 
   5. Some broadband routers require the use of a password when ddclient
      accesses its status page to determine the router's WAN IP address.
@@ -229,7 +229,7 @@ In my case, it is named dhcpcd-eth0.exe and contains the lines:
 #!/bin/sh
 PATH=/usr/bin:/root/bin:${PATH}
 logger -t dhcpcd IP address changed to $1
-ddclient -proxy fasthttp.sympatico.ca -wildcard -ip $1 | logger -t ddclient
+ddclient --proxy fasthttp.sympatico.ca --wildcard --ip $1 | logger -t ddclient
 exit 0
 ```
 

@@ -1867,14 +1867,14 @@ sub init_config {
             }
             $options{$name} = $var;
         }
-        ## determine hosts specified with -host
+        ## determine hosts specified with --host
         my @hosts = ();
         if (exists $opt{'host'}) {
             foreach my $h (split_by_comma($opt{'host'})) {
                 push @hosts, $h;
             }
         }
-        ## and those in -options=...
+        ## and those in --options=...
         if (exists $options{'host'}) {
             foreach my $h (split_by_comma($options{'host'})) {
                 push @hosts, $h;
@@ -1901,7 +1901,7 @@ sub init_config {
 
     ## sanity check
     if (defined $opt{'host'} && defined $opt{'retry'}) {
-        fatal("options -retry and -host (or -option host=..) are mutually exclusive");
+        fatal("options --retry and --host (or --option host=..) are mutually exclusive");
     }
 
     ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
