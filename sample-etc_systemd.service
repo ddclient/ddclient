@@ -4,9 +4,8 @@ Wants=network-online.target
 After=network-online.target nss-lookup.target
 
 [Service]
-Type=forking
-PIDFile=/run/ddclient.pid
-ExecStart=/usr/bin/ddclient
+Type=exec
+ExecStart=/usr/bin/ddclient --daemon 5m --foreground
 
 [Install]
 WantedBy=multi-user.target
