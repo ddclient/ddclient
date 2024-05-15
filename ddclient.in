@@ -1168,7 +1168,7 @@ my @opt = (
     ["ssl_ca_file",       "=s", "--ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["fw-ssl-validate",   "!",  "--{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
     ["web-ssl-validate",  "!",  "--{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
-    ["retry",             "!",  "--{no}retry            : retry failed updates"],
+    ["retry",             "!",  "--{no}retry            : Initiate a one-time update attempt for hosts that have not been successfully updated (according to the cache).  Incompatible with '--daemon'"],
     ["force",             "!",  "--{no}force            : force an update even if the update may be unnecessary"],
     ["timeout",           "=i", "--timeout=<max>        : when fetching a URL, wait at most <max> seconds for a response"],
     ["syslog",            "!",  "--{no}syslog           : log messages to syslog"],
@@ -1283,7 +1283,7 @@ sub main {
             $result     = 0;
 
         } elsif (!scalar(%config)) {
-            warning("no hosts to update.") unless !opt('quiet') || opt('verbose') || !$daemon;
+            warning("no hosts to update.") if !opt('quiet');
             $result = 1;
 
         } else {
@@ -1903,6 +1903,7 @@ sub init_config {
     if (defined $opt{'host'} && defined $opt{'retry'}) {
         fatal("options --retry and --host (or --option host=..) are mutually exclusive");
     }
+    fatal("options --retry and --daemon cannot be used together") if (opt('retry') && opt('daemon'));
 
     ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
     my @hosts = keys %config;
