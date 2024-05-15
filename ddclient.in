@@ -1664,6 +1664,7 @@ sub _read_config {
     local *FD;
     if (!open(FD, "< $file")) {
         warning("Cannot open file '%s'. (%s)", $file, $!);
+        goto done;
     }
 
     # If file is owned by our effective uid, ensure that it has no access for group or others.
@@ -1809,6 +1810,7 @@ sub _read_config {
     warning("file ends while expecting a continuation line.")
         if $continuation;
 
+  done:
     %$globals = %globals;
     %$config  = %config;
 
