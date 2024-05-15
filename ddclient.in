@@ -3775,8 +3775,7 @@ sub nic_updateable {
 sub header_ok {
     my ($host, $line) = @_;
     $line =~ s/\r?\n.*//s;
-    # TODO: What is this leading /s*/?  Is it a typo of /\s*/?
-    my ($code, $msg) = ($line =~ qr%^s*HTTP/.*\s+(\d+)\s*(?:\s+([^\s].*))?$%i);
+    my ($code, $msg) = ($line =~ qr%^\s*HTTP/.*\s+(\d+)\s*(?:\s+([^\s].*))?$%i);
     if (!defined($code)) {
         failed('updating %s: unexpected HTTP response: %s', $host, $line);
         return 0;
