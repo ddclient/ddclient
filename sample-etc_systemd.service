@@ -5,7 +5,8 @@ After=network-online.target nss-lookup.target
 
 [Service]
 Type=exec
-ExecStart=/usr/bin/ddclient --daemon 5m --foreground
+Environment=daemon_interval=5m
+ExecStart=/usr/bin/ddclient --daemon ${daemon_interval} --foreground
 Restart=on-failure
 
 [Install]
