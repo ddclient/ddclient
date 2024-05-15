@@ -6,6 +6,7 @@ After=network-online.target nss-lookup.target
 [Service]
 Type=exec
 ExecStart=/usr/bin/ddclient --daemon 5m --foreground
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
