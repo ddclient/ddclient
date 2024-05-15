@@ -1226,8 +1226,7 @@ sub main {
         $SIG{'CHLD'} = 'IGNORE';
         my $pid = fork;
         if ($pid < 0) {
-            print STDERR "${program}: can not fork ($!)\n";
-            exit -1;
+            fatal("failed to fork: %s", $!);
         } elsif ($pid) {
             exit 0;
         }
@@ -2274,17 +2273,17 @@ sub pipecmd {
     ## execute the command.
     local *FD;
     if (!open(FD, $cmd)) {
-        printf STDERR "%s: cannot execute command %s.\n", $program, $cmd;
+        warning('cannot execute command %s.', $cmd);
 
     } elsif ($stdin && (!print FD "$stdin\n")) {
-        printf STDERR "%s: failed writting to %s.\n", $program, $cmd;
+        warning('failed writting to %s.', $cmd);
         close(FD);
 
     } elsif (!close(FD)) {
-        printf STDERR "%s: failed closing %s.(%s)\n", $program, $cmd, $@;
+        warning('failed closing %s. (%s)', $cmd, $@);
 
     } elsif (opt('exec') && $?) {
-        printf STDERR "%s: failed %s. (%s)\n", $program, $cmd, $@;
+        warning('failed %s. (%s)', $cmd, $@);
 
     } else {
         $ok = 1;
@@ -2391,6 +2390,7 @@ sub ynu {
 ## warning
 ## fatal
 ######################################################################
+my $_in_msg = 0;
 sub _msg {
     my $fh     = shift;
     my $log    = shift;
@@ -2413,7 +2413,11 @@ sub _msg {
     print $fh $buffer;
 
     $msgs .= $buffer if $log;
-    logger($buffer) if $log;
+    if ($log && !$_in_msg) {
+        ++$_in_msg;  # avoid infinite recursion if logger calls _msg
+        logger($buffer);
+        --$_in_msg;
+    }
 
 }
 sub msg     { _msg(*STDOUT, 0, '',         @_);                                   }
@@ -5205,7 +5209,7 @@ sub nic_nfsn_update {
 
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE", "updating %s", $h);
+        verbose("UPDATE:", "updating %s", $h);
 
         my $list_path = "/dns/$zone/listRRs";
         my $list_body = encode_www_form_urlencoded({name => $name, type => 'A'});
@@ -5843,7 +5847,7 @@ sub nic_godaddy_update {
 
                     failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
                 } elsif (defined($response->{code})) {
-                    verbose("VERBOSE:", "%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
+                    info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
                 }
                 if ($ok) {
                     # read data
@@ -7287,7 +7291,7 @@ sub nic_porkbun_update {
             # Default to the subdomain/domain being split at the first dot
             ($sub_domain, $domain) = split(/\./, $host, 2);
         }
-        verbose("VERBOSE:", "subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
+        info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
 
         foreach my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$host}{"want$ipv"};
@@ -8061,8 +8065,7 @@ sub nic_infomaniak_update {
                 next;
             }
 
-            verbose("VERBOSE:", "setting IP address to %s for %s", $ip, $h);
-            info("updating %s", $h);
+            info("setting IP address to %s for %s", $ip, $h);
 
             # No change in IP => nochg <w.x.y.z>
             # Bad auth => badauth
@@ -8091,7 +8094,7 @@ sub nic_infomaniak_update {
             my $reply;
 
             foreach my $url ($url1, $url2) {
-                verbose("VERBOSE:", "trying update with %s", $url);
+                info("trying update with %s", $url);
                 $reply = geturl(proxy => opt('proxy'), url => $url);
                 if (!defined($reply) || !$reply) {
                     info("could not update %s using url %s, trying next one", $h, $url);
