@@ -5274,10 +5274,12 @@ sub nic_njalla_update {
         # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         my $response = '';
+        my $status = 'bad';
         if ($quietreply) {
             $reply =~ qr/invalid host or key/mp;
             $response = ${^MATCH};
             if (!$response) {
+                $status = 'good';
                 success("updating %s: good: IP address set to %s", $h, $ip_output);
             }
             elsif ($response =~ /invalid host or key/) {
@@ -5296,12 +5298,19 @@ sub nic_njalla_update {
                 if ($response->{status} == 401 && $response->{message} =~ /invalid host or key/) {
                     failed("Invalid host or key");
                 } elsif ($response->{status} == 200 && $response->{message} =~ /record updated/) {
+                    $status = 'good';
                     success("updating %s: good: IP address set to %s", $h, $response->{value}->{A});
                 } else {
                     failed("Unknown response");
                 }
             }
         }
+        if ($status eq 'good') {
+            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+        }
+        $config{$h}{'status-ipv4'} = $status if $ipv4;
+        $config{$h}{'status-ipv6'} = $status if $ipv6;
     }
 }
 
