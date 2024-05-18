@@ -4237,10 +4237,12 @@ sub nic_dnsexit2_update {
 
             info("Going to update IPv$ipv address to %s for %s.", $ip, $h);
             $config{$h}{'status-ipv$ipv'} = 'failed';
-
-            # One key per ipv (4 or 6)
-            my %payload = (name => $h, type => $type, content => $ip, ttl => $config{$h}{'ttl'});
-            @total_payload{$ipv} = \%payload;
+            $total_payload{$ipv} = {
+                name => $h,
+                type => $type,
+                content => $ip,
+                ttl => $config{$h}{'ttl'},
+            };
         };
         # Set the URL of the API endpoint
         my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
