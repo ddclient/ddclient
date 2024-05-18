@@ -3775,24 +3775,21 @@ sub nic_updateable {
 sub header_ok {
     my ($host, $line) = @_;
     $line =~ s/\r?\n.*//s;
-    my $ok = 0;
-
-    if ($line =~ m%^s*HTTP/.*\s+(\d+)%i) {
-        my $result = $1;
-
-        if ($result =~ m/^2\d\d$/) {
-            $ok = 1;
-
-        } elsif ($result eq '401') {
-            failed("updating %s: authentication failed (%s)", $host, $line);
-        } elsif ($result eq '403') {
-            failed("updating %s: not authorized (%s)", $host, $line);
-        }
-
-    } else {
-        failed("updating %s: unexpected line (%s)", $host, $line);
+    # TODO: What is this leading /s*/?  Is it a typo of /\s*/?
+    my ($result) = ($line =~ qr%^s*HTTP/.*\s+(\d+)%i);
+    if (!defined($result)) {
+        failed('updating %s: unexpected HTTP response: %s', $host, $line);
+        return 0;
+    } elsif ($result eq '401') {
+        failed("updating %s: authentication failed (%s)", $host, $line);
+        return 0;
+    } elsif ($result eq '403') {
+        failed("updating %s: not authorized (%s)", $host, $line);
+        return 0;
+    } elsif ($result !~ qr/^2\d\d$/) {
+        return 0;
     }
-    return $ok;
+    return 1;
 }
 
 ######################################################################
