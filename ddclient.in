@@ -5609,6 +5609,8 @@ sub nic_1984_update {
             next;
         }
 
+        $config{$host}{'status'} = 'good';
+        $config{$host}{'ip'} = $ip;
         if ($response->{msg} =~ /unaltered/) {
             success("Updating %s: skipped: IP was already set to %s", $host, $response->{ip});
         } else {
