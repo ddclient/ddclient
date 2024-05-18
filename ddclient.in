@@ -4269,7 +4269,8 @@ sub nic_dnsexit2_update {
                 my ($status, $message, $srv_message, $srv_details) = @{ $status {$response->{'code'} } };
                 info("Status: %s -- Message: %s", $status, $message);
                 info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
-                $config{$h}{'status'} = $status;
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
 
                 # Handle statuses
                 if ($status eq 'good') {
