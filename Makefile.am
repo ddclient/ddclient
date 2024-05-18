@@ -68,6 +68,7 @@ handwritten_tests = \
 	t/geturl_connectivity.pl \
 	t/geturl_response.pl \
 	t/group_hosts_by.pl \
+	t/header_ok.pl \
 	t/interval_expired.pl \
 	t/is-and-extract-ipv4.pl \
 	t/is-and-extract-ipv6.pl \
