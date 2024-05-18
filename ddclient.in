@@ -5776,9 +5776,10 @@ sub nic_godaddy_update {
             my $msg;
             $reply =~ s/^.*?\n\n//s;
             my $response = eval {decode_json($reply)};
-            if (!defined($response) && $code != "200") {
+            if (!defined($response)) {
                 $$status = "bad";
                 failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
+                next;
             } elsif (defined($response->{code})) {
                 info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
             }
