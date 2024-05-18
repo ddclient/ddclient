@@ -5606,6 +5606,7 @@ sub nic_1984_update {
         }
         unless ($response->{ok}) {
             failed("%s", $response->{msg});
+            next;
         }
 
         if ($response->{msg} =~ /unaltered/) {
