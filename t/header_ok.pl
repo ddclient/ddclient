@@ -51,6 +51,12 @@ my @test_cases = (
         input => 'HTTP/1.1 456 bad',
         want => 0,
     },
+    {
+        desc => 'only first line is logged on error',
+        input => "HTTP/1.1 404 not found\n\nbody",
+        want => 0,
+        wantmsg => qr/(?!body)/,
+    },
 );
 
 for my $tc (@test_cases) {
