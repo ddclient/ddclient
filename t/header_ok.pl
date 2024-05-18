@@ -35,14 +35,14 @@ my @test_cases = (
         want => 1,
     },
     {
-        desc => '401 not OK',
-        input => 'HTTP/1.1 401 bad',
+        desc => '401 not OK, fallback message',
+        input => 'HTTP/1.1 401 ',
         want => 0,
         wantmsg => qr/authentication failed/,
     },
     {
-        desc => '403 not OK',
-        input => 'HTTP/1.1 403 bad',
+        desc => '403 not OK, fallback message',
+        input => 'HTTP/1.1 403 ',
         want => 0,
         wantmsg => qr/not authorized/,
     },
@@ -50,6 +50,7 @@ my @test_cases = (
         desc => 'other 4xx not OK',
         input => 'HTTP/1.1 456 bad',
         want => 0,
+        wantmsg => qr/bad/,
     },
     {
         desc => 'only first line is logged on error',
