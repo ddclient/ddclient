@@ -4053,7 +4053,6 @@ sub nic_dyndns2_update {
                 my ($status, $returnedips) = split / /, lc $line;
 
                 foreach my $h (@hosts) {
-                    $config{$h}{'status'} = $status;
                     $config{$h}{'status-ipv4'} = $status if $ipv4;
                     $config{$h}{'status-ipv6'} = $status if $ipv6;
                 }
@@ -4076,7 +4075,6 @@ sub nic_dyndns2_update {
                             $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
                             $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                             $config{$h}{'mtime'}  = $now;
-                            $config{$h}{'status'} = 'good';
                             $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                             $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                         }
@@ -6634,7 +6632,6 @@ sub nic_duckdns_update {
                 $config{$h}{'ipv4'}   = $ipv4 if $ipv4;
                 $config{$h}{'ipv6'}   = $ipv6 if $ipv6;
                 $config{$h}{'mtime'}  = $now;
-                $config{$h}{'status'} = 'good';
                 $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                 $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                 $state = 'result';
@@ -6642,7 +6639,6 @@ sub nic_duckdns_update {
                 success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
 
             } elsif ($line eq 'KO') {
-                $config{$h}{'status'} = 'failed';
                 $config{$h}{'status-ipv4'} = 'failed' if $ipv4;
                 $config{$h}{'status-ipv6'} = 'failed' if $ipv6;
                 $state = 'result';
@@ -8061,7 +8057,6 @@ sub nic_infomaniak_update {
                     info($msg);
                     $config{$h}{"ipv$v"} = $ip;
                     $config{$h}{'mtime'} = $config{$h}{'mtime'} // $now;
-                    $config{$h}{'status'} = 'good';
                     $config{$h}{"status-ipv$v"} = 'good';
                     next INFOMANIAK_IP_LOOP;
                 }
@@ -8070,7 +8065,6 @@ sub nic_infomaniak_update {
                 }
             }
 
-            $config{$h}{'status'} = $config{$h}{'status'} // 'failed';
             $config{$h}{"status-ipv$v"} = 'failed';
             failed("updating %s: could not update IP on Infomaniak", $h);
         }
