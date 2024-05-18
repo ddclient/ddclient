@@ -5790,12 +5790,12 @@ sub nic_godaddy_update {
                     next;
                 }
 
-                (my $status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
+                (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
                 my $ok = header_ok($host, $reply);
                 my $msg;
                 $reply =~ s/^.*?\n\n//s; # extract payload
                 my $response = eval {decode_json($reply)};
-                if (!defined($response) && $status != "200") {
+                if (!defined($response) && $code != "200") {
                     $config{$host}{'status'} = "bad";
 
                     failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
@@ -5808,26 +5808,26 @@ sub nic_godaddy_update {
                     $config{$host}{'mtime'} = $now;
                     $config{$host}{"status-ipv$ipversion"} = 'good';
 
-                    success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $status);
+                    success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
                     next;
-                } elsif ($status == "400") {
+                } elsif ($code == "400") {
                     $msg = 'GoDaddy API URL ($url) was malformed.';
-                } elsif ($status == "401") { # authentication error
+                } elsif ($code == "401") { # authentication error
                     if ($config{$host}{'login'} && $config{$host}{'login'}) {
                         $msg = 'login or password option incorrect.';
                     } else {
                         $msg = 'login or password option missing.';
                     }
                     $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
-                } elsif ($status == "403") {
+                } elsif ($code == "403") {
                     $msg = 'Customer identified by login and password options denied permission.';
-                } elsif ($status == "404") {
+                } elsif ($code == "404") {
                     $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
-                } elsif ($status == "422") {
+                } elsif ($code == "422") {
                     $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
-                } elsif ($status == "429") {
+                } elsif ($code == "429") {
                     $msg = 'Too many requests to GoDaddy within brief period.';
-                } elsif ($status == "503") {
+                } elsif ($code == "503") {
                     $msg = "\"${hostname}.${zone}\" is unavailable.";
                 } else {
                     $msg = 'Unexpected service response.';
