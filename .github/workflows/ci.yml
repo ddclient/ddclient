@@ -60,6 +60,8 @@ jobs:
           # aren't available, so those tests will be skipped.  I guess it's
           # still better than nothing.
           - registry.access.redhat.com/ubi7/ubi:latest
+          - registry.access.redhat.com/ubi8/ubi:latest
+          - registry.access.redhat.com/ubi9/ubi:latest
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
