@@ -771,7 +771,6 @@ my %services = (
         'variables' => {
             %{$variables{'service-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
-            'host' => setv(T_NUMBER, 1, 1, 0, undef),
         },
     },
     'domeneshop' => {
@@ -947,22 +946,9 @@ my %services = (
         'examples'   => \&nic_noip_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'atime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'host'                      => setv(T_STRING, 1, 1, '',              undef),
-            'ip'                        => setv(T_IP,     0, 1, undef,           undef),
-            'login'                     => setv(T_LOGIN,  1, 0, '',              undef),
-            'max-interval'              => setv(T_DELAY,  0, 0, interval('25d'), 0),
-            'min-error-interval'        => setv(T_DELAY,  0, 0, interval('5m'),  0),
-            'min-interval'              => setv(T_DELAY,  0, 0, interval('30s'), 0),
-            'mtime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
-            'password'                  => setv(T_PASSWD, 1, 0, '',              undef),
             'server'                    => setv(T_FQDNP,  1, 0, 'dynupdate.no-ip.com', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'status'                    => setv(T_ANY,    0, 1, '',              undef),
-            'warned-min-error-interval' => setv(T_ANY,    0, 1, 0,               undef),
-            'warned-min-interval'       => setv(T_ANY,    0, 1, 0,               undef),
-            'wtime'                     => setv(T_DELAY,  0, 1, 0,               interval('30s')),
         },
     },
     'nsupdate' => {
@@ -983,8 +969,6 @@ my %services = (
         'examples'   => \&nic_ovh_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login'    => setv(T_LOGIN,  1, 0, '',            undef),
-            'password' => setv(T_PASSWD, 1, 0, '',            undef),
             'script'   => setv(T_STRING, 1, 1, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
         },
