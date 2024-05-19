@@ -35,7 +35,7 @@ jobs:
               net-tools \
               make \
               ;
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: autogen
         run: ./autogen
       - name: configure
@@ -64,7 +64,11 @@ jobs:
     container:
       image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v2
+      - if: ${{ matrix.image != 'registry.access.redhat.com/ubi7/ubi:latest' }}
+        uses: actions/checkout@v4
+      # ubi7 is too old for checkout@v4.
+      - if: ${{ matrix.image == 'registry.access.redhat.com/ubi7/ubi:latest' }}
+        uses: actions/checkout@v3
       - name: install dependencies
         # The --skip-broken argument works around RedHat UBI's missing packages.
         # (They're only used for testing, so it's OK to not install them.)
