@@ -6,6 +6,7 @@ on:
 jobs:
   test-debian-like:
     strategy:
+      fail-fast: false
       matrix:
         image:
           - ubuntu:latest
@@ -54,6 +55,7 @@ jobs:
 
   test-fedora-like:
     strategy:
+      fail-fast: false
       matrix:
         image:
           - fedora:39
