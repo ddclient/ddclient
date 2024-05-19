@@ -1050,10 +1050,10 @@ my %services = (
         'updateable' => undef,
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
-        'variables' => merge(
-            $variables{'keysystems-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            %{$variables{'keysystems-common-defaults'}},
+        },
     },
     'dnsexit2' => {
         'updateable' => undef,
@@ -1072,10 +1072,10 @@ my %services = (
         'updateable' => undef,
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
-        'variables'  => merge(
-            $variables{'regfishde-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            %{$variables{'regfishde-common-defaults'}},
+        },
     },
     'enom' => {
         'updateable' => undef,
@@ -1816,7 +1816,7 @@ sub _read_config {
             my ($host, $login, $password) = @args;
 
             ## add in any globals..
-            %locals = %{merge(\%locals, \%globals)};
+            %locals = (%globals, %locals);
 
             ## override login and password if specified the old way.
             $locals{'login'}    = $login    if defined $login;
@@ -1826,7 +1826,7 @@ sub _read_config {
             foreach my $h (split_by_comma($host)) {
                 if ($config{$h}) {
                     ## host already defined, merging configs
-                    $config{$h} = { %{merge($config{$h}, \%locals)} };
+                    $config{$h} = {%locals, %{$config{$h}}};
                 } else {
                     ## save a copy of the current globals
                     $config{$h} = { %locals };
@@ -1916,11 +1916,11 @@ sub init_config {
         ## merge options into host definitions or globals
         if (@hosts) {
             foreach my $h (@hosts) {
-                $config{$h} = merge(\%options, $config{$h});
+                $config{$h} = {%{$config{$h}}, %options};
             }
             $opt{'host'} = join(',', @hosts);
         } else {
-            %globals = %{merge(\%options, \%globals)};
+            %globals = (%globals, %options);
         }
     }
 
@@ -2353,7 +2353,6 @@ sub sendmail {
 }
 ######################################################################
 ##  split_by_comma
-##  merge
 ##  default
 ##  minimum
 ##  opt
@@ -2363,15 +2362,6 @@ sub split_by_comma {
 
     return split /\s*[, ]\s*/, $string if defined $string;
     return ();
-}
-sub merge {
-    my %merged = ();
-    foreach my $h (@_) {
-        foreach my $k (keys %$h) {
-            $merged{$k} = $h->{$k} unless exists $merged{$k};
-        }
-    }
-    return \%merged;
 }
 sub default {
     my $v = shift;
