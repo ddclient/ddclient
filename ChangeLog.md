@@ -3,7 +3,69 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
-## 20XX-XX-XX v3.11.3_0 (WIP)
+## v3.11.3~alpha (unreleased work-in-progress)
+
+### Breaking changes
+
+  * Unencrypted (plain) HTTP is now used instead of encrypted (TLS) HTTP if the
+    URL uses `http://` instead of `https://`, even if the `--ssl` option is
+    enabled.  [#608](https://github.com/ddclient/ddclient/pull/608)
+  * The default web service for `--webv4` and `--webv6` has changed from Google
+    Domains (which is shutting down) to ipify.
+    [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
+
+### New features
+
+  * Simultaneous/separate updating of IPv4 (A) records and IPv6 (AAAA) records
+    is now supported in the following services: `gandi`
+    ([#558](https://github.com/ddclient/ddclient/pull/558)), `nsupdate`
+    ([#604](https://github.com/ddclient/ddclient/pull/604)), `noip`
+    ([#603](https://github.com/ddclient/ddclient/pull/603)), `mythicdyn`
+    ([#616](https://github.com/ddclient/ddclient/pull/616)), `godaddy`
+    ([#560](https://github.com/ddclient/ddclient/pull/560)).
+  * `porkbun`: Added support for subdomains.
+    [#624](https://github.com/ddclient/ddclient/pull/624)
+  * `gandi`: Added support for personal access tokens.
+    [#636](https://github.com/ddclient/ddclient/pull/636)
+  * Comments after the `\` line continuation character are now supported.
+    [3c522a7a](https://github.com/ddclient/ddclient/commit/3c522a7aa235f63ae0439e5674e7406e20c90956)
+  * Minor improvements to `--help` output.
+    [#659](https://github.com/ddclient/ddclient/pull/659),
+    [#665](https://github.com/ddclient/ddclient/pull/665)
+  * Improved formatting of ddclient's version number.
+    [#639](https://github.com/ddclient/ddclient/pull/639)
+  * Updated sample systemd service unit file to improve logging in the systemd
+    journal.  [#669](https://github.com/ddclient/ddclient/pull/669)
+
+### Bug fixes
+
+  * `noip`: Fixed failure to honor IP discovery settings in some circumstances.
+    [#591](https://github.com/ddclient/ddclient/pull/591)
+  * Fixed `--usev6` with providers that have not yet been updated to use the new
+    separate IPv4/IPv6 logic.
+    [ad854ab7](https://github.com/ddclient/ddclient/commit/ad854ab716922f5f25742421ebd4c27646b86619)
+  * HTTP redirects (301, 302) are now followed.
+    [#592](https://github.com/ddclient/ddclient/pull/592)
+  * `keysystems`: Fixed update URL.
+    [#629](https://github.com/ddclient/ddclient/pull/629)
+  * `dondominio`: Fixed response parsing.
+    [#646](https://github.com/ddclient/ddclient/pull/646)
+  * Fixed `--web-ssl-validate` and `--fw-ssl-validate` options, which were
+    ignored in some cases (defaulting to validate).
+    [#661](https://github.com/ddclient/ddclient/pull/661)
+  * Explicitly setting `--web-skip`, `--webv4-skip`, `--webv6-skip`,
+    `--fw-skip`, `--fwv4-skip`, and `--fwv6-skip` to the empty string now
+    disables any built-in default skip.  Before, setting to the empty string had
+    no effect.  [#662](https://github.com/ddclient/ddclient/pull/662)
+  * `--use=disabled` now works.
+    [#665](https://github.com/ddclient/ddclient/pull/665)
+  * `--retry` and `--daemon` are incompatible with each other; ddclient now
+    errors out if both are provided.
+    [#666](https://github.com/ddclient/ddclient/pull/666)
+  * `--usev4=cisco` and `--usev4=cisco-asa` now work.
+    [#664](https://github.com/ddclient/ddclient/pull/664)
+  * Fixed "Scalar value better written as" Perl warning.
+    [#667](https://github.com/ddclient/ddclient/pull/667)
 
 ## 2023-11-23 v3.11.2
 
