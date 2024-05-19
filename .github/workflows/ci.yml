@@ -48,8 +48,15 @@ jobs:
         run: ./.github/workflows/scripts/dist-tarball-check
 
   test-fedora:
+    strategy:
+      matrix:
+        image:
+          - fedora:39
+          - fedora:latest
+          - fedora:rawhide
     runs-on: ubuntu-latest
-    container: fedora
+    container:
+      image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
