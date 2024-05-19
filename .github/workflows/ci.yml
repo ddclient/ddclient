@@ -46,6 +46,11 @@ jobs:
         run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
       - name: distribution tarball is complete
         run: ./.github/workflows/scripts/dist-tarball-check
+      - if: ${{ matrix.image == 'debian:testing' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-tarball
+          path: ddclient-*.tar.gz
 
   test-fedora-like:
     strategy:
