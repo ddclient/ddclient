@@ -655,21 +655,6 @@ my %variables = (
         'static'              => setv(T_BOOL,  0, 1, 0,                    undef),
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
-    'keysystems-common-defaults' => {
-        'server'              => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
-        'login'               => setv(T_LOGIN, 0, 0, 0, 'unused',      undef),
-    },
-    'dnsexit2-common-defaults'       => {
-        'ssl'         => setv(T_BOOL,   0, 0, 1, undef),
-        'server'      => setv(T_FQDNP,  1, 0, 'api.dnsexit.com', undef),
-        'path'        => setv(T_STRING, 0, 0, '/dns/', undef),
-        'ttl'         => setv(T_NUMBER, 1, 0, 5, 0),
-        'zone'        => setv(T_STRING, 0, 0, undef, undef)
-    },
-    'regfishde-common-defaults' => {
-        'server'      => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
-        'login'       => setv(T_LOGIN, 0, 0, 0, 'unused', undef),
-    },
 );
 my %services = (
     '1984' => {
@@ -678,7 +663,7 @@ my %services = (
         'examples' => \&nic_1984_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login'  => setv(T_LOGIN, 0, 0, 'unused',      undef),
+            'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'api.1984.is', undef),
         },
     },
@@ -715,12 +700,9 @@ my %services = (
         'examples' => \&nic_cloudns_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
+            'login' => undef,
+            'password' => undef,
             'dynurl' => setv(T_STRING, 1, 0, undef, undef),
-            # nic_updateable() assumes that every service uses a username and password but that is
-            # not true for CloudNS. Silence warnings by redefining the username and password
-            # variables as non-required with a non-empty default.
-            'login'    => setv(T_STRING, 0, 0, 'unused', undef),
-            'password' => setv(T_STRING, 0, 0, 'unused', undef),
         },
     },
     'digitalocean' => {
@@ -729,9 +711,9 @@ my %services = (
         'examples' => \&nic_digitalocean_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
+            'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'api.digitalocean.com', undef),
             'zone'   => setv(T_FQDN,  1, 0, '',                     undef),
-            'login'  => setv(T_LOGIN, 0, 0, 'unused',               undef),
         },
     },
     'dinahosting' => {
@@ -771,7 +753,6 @@ my %services = (
         'variables' => {
             %{$variables{'service-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
-            'host' => setv(T_NUMBER, 1, 1, 0, undef),
         },
     },
     'domeneshop' => {
@@ -789,7 +770,7 @@ my %services = (
         'examples'   => \&nic_duckdns_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login'  => setv(T_LOGIN, 0, 0, 'unused',          undef),
+            'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'www.duckdns.org', undef),
         },
     },
@@ -843,7 +824,7 @@ my %services = (
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login'  => setv(T_LOGIN, 0, 0, 'unused',       undef),
+            'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'freemyip.com', undef),
         },
     },
@@ -853,14 +834,13 @@ my %services = (
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
             %{$variables{'service-common-defaults'}},
+            'login' => undef,
             'min-interval'              => setv(T_DELAY,  0, 0, 0,               interval('5m')),
             'server'                    => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
             'script'                    => setv(T_STRING, 1, 1, '/v5',           undef),
             'use-personal-access-token' => setv(T_BOOL, 0, 0, 0, undef),
             'ttl'                       => setv(T_DELAY,  0, 0, undef,           interval('5m')),
             'zone'                      => setv(T_FQDN,   1, 0, undef,           undef),
-            # Unused variables.
-            'login'                     => setv(T_STRING, 0, 0, 'unused', undef),
         }
     },
     'godaddy' => {
@@ -936,9 +916,9 @@ my %services = (
         'examples'   => \&nic_njalla_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login' => setv(T_STRING, 0, 0, 'unused', undef),
+            'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
-            'quietreply' => setv(T_BOOL, 0, 1, 0,      undef)
+            'quietreply' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
     'noip' => {
@@ -947,22 +927,9 @@ my %services = (
         'examples'   => \&nic_noip_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'atime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'host'                      => setv(T_STRING, 1, 1, '',              undef),
-            'ip'                        => setv(T_IP,     0, 1, undef,           undef),
-            'login'                     => setv(T_LOGIN,  1, 0, '',              undef),
-            'max-interval'              => setv(T_DELAY,  0, 0, interval('25d'), 0),
-            'min-error-interval'        => setv(T_DELAY,  0, 0, interval('5m'),  0),
-            'min-interval'              => setv(T_DELAY,  0, 0, interval('30s'), 0),
-            'mtime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
-            'password'                  => setv(T_PASSWD, 1, 0, '',              undef),
             'server'                    => setv(T_FQDNP,  1, 0, 'dynupdate.no-ip.com', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'status'                    => setv(T_ANY,    0, 1, '',              undef),
-            'warned-min-error-interval' => setv(T_ANY,    0, 1, 0,               undef),
-            'warned-min-interval'       => setv(T_ANY,    0, 1, 0,               undef),
-            'wtime'                     => setv(T_DELAY,  0, 1, 0,               interval('30s')),
         },
     },
     'nsupdate' => {
@@ -983,8 +950,6 @@ my %services = (
         'examples'   => \&nic_ovh_examples,
         'variables' => {
             %{$variables{'service-common-defaults'}},
-            'login'    => setv(T_LOGIN,  1, 0, '',            undef),
-            'password' => setv(T_PASSWD, 1, 0, '',            undef),
             'script'   => setv(T_STRING, 1, 1, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
         },
@@ -994,15 +959,13 @@ my %services = (
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
         'variables'  => {
+            %{$variables{'service-common-defaults'}},
+            'login' => undef,
+            'password' => undef,
             'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
             'secretapikey'   => setv(T_PASSWD, 1, 0, '',         undef),
             'root-domain'    => setv(T_OFQDN,  0, 0, '',         undef),
             'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
-            'login'          => setv(T_LOGIN,  0, 0, 'unused',   undef),
-            'password'       => setv(T_PASSWD, 0, 0, 'unused',   undef),
-            'use'            => setv(T_USE,    0, 0, 'disabled', undef),
-            'usev4'          => setv(T_USEV4,  0, 0, 'disabled', undef),
-            'usev6'          => setv(T_USEV6,  0, 0, 'disabled', undef),
         },
     },
     'sitelutions' => {
@@ -1020,25 +983,14 @@ my %services = (
         'update'     => \&nic_woima_update,
         'examples'   => \&nic_woima_examples,
         'variables' => {
-            'atime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
+            %{$variables{'service-common-defaults'}},
             'backupmx'                  => setv(T_BOOL,   0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'ip'                        => setv(T_IP,     0, 1, undef,           undef),
-            'login'                     => setv(T_LOGIN,  1, 0, '',              undef),
-            'max-interval'              => setv(T_DELAY,  0, 0, interval('25d'), 0),
-            'min-error-interval'        => setv(T_DELAY,  0, 0, interval('5m'),  0),
-            'min-interval'              => setv(T_DELAY,  0, 0, interval('30s'), 0),
-            'mtime'                     => setv(T_NUMBER, 0, 1, 0,               undef),
             'mx'                        => setv(T_OFQDN,  0, 1, '',              undef),
-            'password'                  => setv(T_PASSWD, 1, 0, '',              undef),
             'script'                    => setv(T_STRING, 1, 1, '/nic/update',   undef),
             'server'                    => setv(T_FQDNP,  1, 0, 'dyn.woima.fi',  undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'status'                    => setv(T_ANY,    0, 1, '',              undef),
-            'warned-min-error-interval' => setv(T_ANY,    0, 1, 0,               undef),
-            'warned-min-interval'       => setv(T_ANY,    0, 1, 0,               undef),
             'wildcard'                  => setv(T_BOOL,   0, 1, 0,               undef),
-            'wtime'                     => setv(T_DELAY,  0, 1, 0,               interval('30s')),
         },
     },
     'yandex' => {
@@ -1066,10 +1018,11 @@ my %services = (
         'updateable' => undef,
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
-        'variables' => merge(
-            $variables{'keysystems-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'login' => undef,
+            'server' => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
+        },
     },
     'dnsexit2' => {
         'updateable' => undef,
@@ -1077,21 +1030,23 @@ my %services = (
         'examples'   => \&nic_dnsexit2_examples,
         'variables'  => {
             %{$variables{'service-common-defaults'}},
-            %{$variables{'dnsexit2-common-defaults'}},
-            # nic_updateable() assumes that every service uses a username/login but that is
-            # not true for the DNSExit API. Silence warnings by redefining the username variable
-            # as non-required with value unused.
-            'login'  => setv(T_STRING, 0, 0, 'unused', undef),
+            'login' => undef,
+            'ssl' => setv(T_BOOL, 0, 0, 1, undef),
+            'server' => setv(T_FQDNP, 1, 0, 'api.dnsexit.com', undef),
+            'path' => setv(T_STRING, 0, 0, '/dns/', undef),
+            'ttl' => setv(T_NUMBER, 1, 0, 5, 0),
+            'zone' => setv(T_STRING, 0, 0, undef, undef),
         },
     },
     'regfishde' => {
         'updateable' => undef,
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
-        'variables'  => merge(
-            $variables{'regfishde-common-defaults'},
-            $variables{'service-common-defaults'},
-        ),
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'login' => undef,
+            'server' => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
+        },
     },
     'enom' => {
         'updateable' => undef,
@@ -1112,6 +1067,11 @@ my %services = (
         },
     },
 );
+# Delete undefined variables to make it easier to cancel previously defined variables.
+for my $svc (values(%services)) {
+    my $vars = $svc->{variables};
+    delete(@$vars{grep(!defined($vars->{$_}), keys(%$vars))});
+}
 $variables{'merged'} = {
     map({ %{$services{$_}{'variables'}} } keys(%services)),
     %{$variables{'dyndns-common-defaults'}},
@@ -1832,7 +1792,7 @@ sub _read_config {
             my ($host, $login, $password) = @args;
 
             ## add in any globals..
-            %locals = %{merge(\%locals, \%globals)};
+            %locals = (%globals, %locals);
 
             ## override login and password if specified the old way.
             $locals{'login'}    = $login    if defined $login;
@@ -1842,7 +1802,7 @@ sub _read_config {
             foreach my $h (split_by_comma($host)) {
                 if ($config{$h}) {
                     ## host already defined, merging configs
-                    $config{$h} = { %{merge($config{$h}, \%locals)} };
+                    $config{$h} = {%locals, %{$config{$h}}};
                 } else {
                     ## save a copy of the current globals
                     $config{$h} = { %locals };
@@ -1932,11 +1892,11 @@ sub init_config {
         ## merge options into host definitions or globals
         if (@hosts) {
             foreach my $h (@hosts) {
-                $config{$h} = merge(\%options, $config{$h});
+                $config{$h} = {%{$config{$h}}, %options};
             }
             $opt{'host'} = join(',', @hosts);
         } else {
-            %globals = %{merge(\%options, \%globals)};
+            %globals = (%globals, %options);
         }
     }
 
@@ -2369,7 +2329,6 @@ sub sendmail {
 }
 ######################################################################
 ##  split_by_comma
-##  merge
 ##  default
 ##  minimum
 ##  opt
@@ -2379,15 +2338,6 @@ sub split_by_comma {
 
     return split /\s*[, ]\s*/, $string if defined $string;
     return ();
-}
-sub merge {
-    my %merged = ();
-    foreach my $h (@_) {
-        foreach my $k (keys %$h) {
-            $merged{$k} = $h->{$k} unless exists $merged{$k};
-        }
-    }
-    return \%merged;
 }
 sub default {
     my $v = shift;
