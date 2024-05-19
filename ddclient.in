@@ -918,7 +918,7 @@ my %services = (
             %{$variables{'service-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
-            'quietreply' => setv(T_BOOL, 0, 1, 0,      undef)
+            'quietreply' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
     'noip' => {
