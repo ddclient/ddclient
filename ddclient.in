@@ -104,7 +104,7 @@ my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
 $program =~ s/d$//;
-my $now = time;
+our $now = time;
 my $hostname = hostname();
 
 # subst_var(subst, default) returns subst unless it looks like @foo@ in which case it returns
@@ -140,7 +140,8 @@ $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin
 
 our %globals;
 our %config;
-my ($result, %cache);
+our %cache;
+my $result;
 my $saved_cache;
 my %saved_opt;
 my $daemon;
@@ -2465,6 +2466,8 @@ sub interval {
         $value = $1 * 60*60;
     } elsif ($value =~ /^(\d+)(days|d)/i) {
         $value = $1 * 60*60*24;
+    } elsif ($value =~ qr/^(?:inf(?:init[ye])?|indefinite(?:ly)?|never|forever|always)$/i) {
+        $value = 'inf';
     } elsif ($value !~ /^\d+$/) {
         $value = undef;
     }
@@ -2473,6 +2476,7 @@ sub interval {
 sub interval_expired {
     my ($host, $time, $interval) = @_;
 
+    return 0 if ($config{$host}{$interval} // 0) == 'inf';
     return 1 if !exists $cache{$host};
     return 1 if !exists $cache{$host}{$time}      || !$cache{$host}{$time};
     return 1 if !exists $config{$host}{$interval} || !$config{$host}{$interval};
