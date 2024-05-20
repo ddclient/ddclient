@@ -6,6 +6,7 @@ on:
 jobs:
   test-debian-like:
     strategy:
+      fail-fast: false
       matrix:
         image:
           - ubuntu:latest
@@ -35,7 +36,7 @@ jobs:
               net-tools \
               make \
               ;
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: autogen
         run: ./autogen
       - name: configure
@@ -46,41 +47,50 @@ jobs:
         run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
       - name: distribution tarball is complete
         run: ./.github/workflows/scripts/dist-tarball-check
+      - if: ${{ matrix.image == 'debian:testing' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-tarball
+          path: ddclient-*.tar.gz
 
-  #test-centos8:
-  #  runs-on: ubuntu-latest
-  #  container: centos:8
-  #  steps:
-  #    - uses: actions/checkout@v2
-  #    - name: install dependencies
-  #      run: |
-  #        dnf --refresh --enablerepo=PowerTools install -y \
-  #            automake \
-  #            make \
-  #            perl-HTTP-Daemon \
-  #            perl-IO-Socket-INET6 \
-  #            perl-Test-Warnings \
-  #            perl-core \
-  #            ;
-  #    - name: autogen
-  #      run: ./autogen
-  #    - name: configure
-  #      run: ./configure
-  #    - name: check
-  #      run: make VERBOSE=1 AM_COLOR_TESTS=always check
-  #    - name: distcheck
-  #      run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
-
-  test-fedora:
+  test-fedora-like:
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - fedora:39
+          - fedora:latest
+          - fedora:rawhide
+          # RedHat UBI is mostly garbage due to a profound lack of basic
+          # packages.  It is tested anyway because it's the closest available
+          # approximation of RHEL.  Some of the packages needed for some tests
+          # aren't available, so those tests will be skipped.  I guess it's
+          # still better than nothing.
+          - registry.access.redhat.com/ubi7/ubi:latest
+          - registry.access.redhat.com/ubi8/ubi:latest
+          - registry.access.redhat.com/ubi9/ubi:latest
     runs-on: ubuntu-latest
-    container: fedora
+    container:
+      image: ${{ matrix.image }}
     steps:
-      - uses: actions/checkout@v2
+      - if: ${{ matrix.image != 'registry.access.redhat.com/ubi7/ubi:latest' }}
+        uses: actions/checkout@v4
+      # ubi7 is too old for checkout@v4.
+      - if: ${{ matrix.image == 'registry.access.redhat.com/ubi7/ubi:latest' }}
+        uses: actions/checkout@v3
       - name: install dependencies
+        # The --skip-broken argument works around RedHat UBI's missing packages.
+        # (They're only used for testing, so it's OK to not install them.)
         run: |
-          dnf --refresh install -y \
+          inst="dnf --refresh --skip-broken install -y"
+          case '${{ matrix.image }}' in
+              # RedHat UBI 7 (RHEL 7) doesn't have dnf.
+              *ubi7*) inst="yum --skip-broken install -y";;
+          esac
+          ${inst} \
               automake \
               findutils \
+              iproute \
               make \
               curl \
               perl \
@@ -91,33 +101,8 @@ jobs:
               perl-Test-MockModule \
               perl-Test-TCP \
               perl-Test-Warnings \
-              net-tools \
-              ;
-      - name: autogen
-        run: ./autogen
-      - name: configure
-        run: ./configure
-      - name: check
-        run: make VERBOSE=1 AM_COLOR_TESTS=always check
-      - name: distcheck
-        run: make VERBOSE=1 AM_COLOR_TESTS=always distcheck
-
-  test-redhat-ubi7:
-    runs-on: ubuntu-latest
-    # we use redhats univeral base image which is not available on docker hub
-    # https://catalog.redhat.com/software/containers/ubi7/ubi/5c3592dcd70cc534b3a37814
-    container: registry.access.redhat.com/ubi7/ubi
-    steps:
-      - uses: actions/checkout@v2
-      - name: install dependencies
-        run: |
-          yum install -y \
-              automake \
-              make \
-              perl-HTTP-Daemon \
-              perl-IO-Socket-INET6 \
               perl-core \
-              iproute \
+              net-tools \
               ;
       - name: autogen
         run: ./autogen
