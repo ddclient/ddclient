@@ -3541,13 +3541,7 @@ sub nic_updateable {
         warning("IPv6 address for %s valid: %s. Reset warning count", $host, $ipv6);
     }
 
-    if ($config{$host}{'login'} eq '') {
-        warning("null login name specified for host %s.", $host);
-
-    } elsif ($config{$host}{'password'} eq '') {
-        warning("null password specified for host %s.", $host);
-
-    } elsif ($opt{'force'}) {
+    if ($opt{'force'}) {
         info("forcing update of %s.", $host);
         $update = 1;
 
