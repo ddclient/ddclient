@@ -55,49 +55,49 @@ my @test_cases = (
     {
         desc => 'single-line prefix',
         args => [pfx => 'PFX:', 'foo'],
-        want => "PFX:      foo\n",
+        want => "PFX:       foo\n",
     },
     {
         desc => 'multi-line prefix',
         args => [pfx => 'PFX:', "foo\nbar"],
-        want => "PFX:      foo\nPFX:      bar\n",
+        want => "PFX:       foo\nPFX:     | bar\n",
     },
     {
         desc => 'single-line long prefix',
         args => [pfx => 'VERY LONG PREFIX:', 'foo'],
-        want => "VERY LONG PREFIX: foo\n",
+        want => "VERY LONG PREFIX:  foo\n",
     },
     {
         desc => 'multi-line long prefix',
         args => [pfx => 'VERY LONG PREFIX:', "foo\nbar"],
-        want => "VERY LONG PREFIX: foo\nVERY LONG PREFIX: bar\n",
+        want => "VERY LONG PREFIX:  foo\nVERY LONG PREFIX:| bar\n",
     },
     {
         desc => 'single line, no prefix, file',
         args => ['foo'],
         file => 'name',
-        want => "file name: foo\n",
+        want => "file name:  foo\n",
     },
     {
         desc => 'single line, no prefix, file, and line number',
         args => ['foo'],
         file => 'name',
         lineno => 42,
-        want => "file name, line 42: foo\n",
+        want => "file name, line 42:  foo\n",
     },
     {
         desc => 'single line, prefix, file, and line number',
         args => [pfx => 'PFX:', 'foo'],
         file => 'name',
         lineno => 42,
-        want => "PFX:      file name, line 42: foo\n",
+        want => "PFX:       file name, line 42:  foo\n",
     },
     {
         desc => 'multiple lines, prefix, file, and line number',
         args => [pfx => 'PFX:', "foo\nbar"],
         file => 'name',
         lineno => 42,
-        want => "PFX:      file name, line 42: foo\nPFX:      file name, line 42: bar\n",
+        want => "PFX:       file name, line 42:  foo\nPFX:       file name, line 42:| bar\n",
     },
 );
 
