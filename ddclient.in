@@ -2420,15 +2420,15 @@ sub logmsg {
         }
     }
 }
-sub msg     { logmsg(fh => *STDOUT,                                sprintf(shift, @_)); }
-sub verbose { logmsg(fh => *STDOUT, email => 1, pfx => pop,        sprintf(shift, @_)) if opt('verbose'); }
-sub info    { logmsg(fh => *STDOUT, email => 1, pfx => 'INFO:',    sprintf(shift, @_)) if opt('verbose'); }
-sub debug   { logmsg(fh => *STDOUT,             pfx => 'DEBUG:',   sprintf(shift, @_)) if opt('debug'); }
-sub debug2  { logmsg(fh => *STDOUT,             pfx => 'DEBUG:',   sprintf(shift, @_)) if opt('debug') && opt('verbose'); }
-sub warning { logmsg(               email => 1, pfx => 'WARNING:', sprintf(shift, @_)); }
-sub fatal   { logmsg(               email => 1, pfx => 'FATAL:',   sprintf(shift, @_)); sendmail(); exit(1); }
-sub success { logmsg(fh => *STDOUT, email => 1, pfx => 'SUCCESS:', sprintf(shift, @_)); }
-sub failed  { logmsg(               email => 1, pfx => 'FAILED:',  sprintf(shift, @_)); $result = 'FAILED'; }
+sub msg     { logmsg(                               sprintf(shift, @_)); }
+sub verbose { logmsg(email => 1, pfx => pop,        sprintf(shift, @_)) if opt('verbose'); }
+sub info    { logmsg(email => 1, pfx => 'INFO:',    sprintf(shift, @_)) if opt('verbose'); }
+sub debug   { logmsg(            pfx => 'DEBUG:',   sprintf(shift, @_)) if opt('debug'); }
+sub debug2  { logmsg(            pfx => 'DEBUG:',   sprintf(shift, @_)) if opt('debug') && opt('verbose'); }
+sub warning { logmsg(email => 1, pfx => 'WARNING:', sprintf(shift, @_)); }
+sub fatal   { logmsg(email => 1, pfx => 'FATAL:',   sprintf(shift, @_)); sendmail(); exit(1); }
+sub success { logmsg(email => 1, pfx => 'SUCCESS:', sprintf(shift, @_)); }
+sub failed  { logmsg(email => 1, pfx => 'FAILED:',  sprintf(shift, @_)); $result = 'FAILED'; }
 sub prettytime { return scalar(localtime(shift)); }
 
 sub prettyinterval {

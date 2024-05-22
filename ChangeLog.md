@@ -13,6 +13,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The default web service for `--webv4` and `--webv6` has changed from Google
     Domains (which is shutting down) to ipify.
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
+  * All log messages are now written to STDERR, not a mix of STDOUT and STDERR.
+    [#676](https://github.com/ddclient/ddclient/pull/676)
 
 ### New features
 
