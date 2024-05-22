@@ -125,8 +125,8 @@ if ($program =~ /test/i) {
     $savedir = 'URL';
 }
 
-my $msgs      = '';
-my $last_msgs = '';
+my $emailbody = '';
+my $last_emailbody = '';
 
 ## If run as *d (e.g., ddclientd) then daemonize by default (but allow
 ## flags and options to override).
@@ -2311,19 +2311,19 @@ sub sendmail {
     if (opt('mail-failure') && ($result ne 'OK' && $result ne '0')) {
         $recipients = opt('mail-failure');
     }
-    if ($msgs && $recipients && $msgs ne $last_msgs) {
+    if ($emailbody && $recipients && $emailbody ne $last_emailbody) {
         pipecmd("sendmail -oi $recipients",
                 "To: $recipients",
                 "Subject: status report from $program\@$hostname",
                 "\r\n",
-                $msgs,
+                $emailbody,
                 "",
                 "regards,",
                 "   $program\@$hostname (version $version)"
         );
     }
-    $last_msgs = $msgs;
-    $msgs      = '';
+    $last_emailbody = $emailbody;
+    $emailbody      = '';
 }
 ######################################################################
 ##  split_by_comma
@@ -2390,7 +2390,7 @@ sub ynu {
 my $_in_msg = 0;
 sub _msg {
     my $fh     = shift;
-    my $log    = shift;
+    my $email  = shift;
     my $prefix = shift;
     my $format = shift;
     my $buffer = sprintf $format, @_;
@@ -2409,11 +2409,13 @@ sub _msg {
     $buffer .= "\n";
     print $fh $buffer;
 
-    $msgs .= $buffer if $log;
-    if ($log && !$_in_msg) {
-        ++$_in_msg;  # avoid infinite recursion if logger calls _msg
-        logger($buffer);
-        --$_in_msg;
+    if ($email) {
+        $emailbody .= $buffer;
+        if (!$_in_msg) {
+            ++$_in_msg;  # avoid infinite recursion if logger calls _msg
+            logger($buffer);
+            --$_in_msg;
+        }
     }
 
 }
