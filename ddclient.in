@@ -2318,7 +2318,7 @@ sub sendmail {
                 "\r\n",
                 $emailbody,
                 "",
-                "regards,",
+                "-- ",  # https://en.wikipedia.org/wiki/Signature_block#Standard_delimiter
                 "   $program\@$hostname (version $version)"
         );
     }
