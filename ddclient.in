@@ -125,8 +125,8 @@ if ($program =~ /test/i) {
     $savedir = 'URL';
 }
 
-my $msgs      = '';
-my $last_msgs = '';
+our $emailbody = '';
+my $last_emailbody = '';
 
 ## If run as *d (e.g., ddclientd) then daemonize by default (but allow
 ## flags and options to override).
@@ -2311,19 +2311,19 @@ sub sendmail {
     if (opt('mail-failure') && ($result ne 'OK' && $result ne '0')) {
         $recipients = opt('mail-failure');
     }
-    if ($msgs && $recipients && $msgs ne $last_msgs) {
+    if ($emailbody && $recipients && $emailbody ne $last_emailbody) {
         pipecmd("sendmail -oi $recipients",
                 "To: $recipients",
                 "Subject: status report from $program\@$hostname",
                 "\r\n",
-                $msgs,
+                $emailbody,
                 "",
-                "regards,",
+                "-- ",  # https://en.wikipedia.org/wiki/Signature_block#Standard_delimiter
                 "   $program\@$hostname (version $version)"
         );
     }
-    $last_msgs = $msgs;
-    $msgs      = '';
+    $last_emailbody = $emailbody;
+    $emailbody      = '';
 }
 ######################################################################
 ##  split_by_comma
@@ -2382,50 +2382,55 @@ sub ynu {
     return $undef;
 }
 ######################################################################
-## msg
-## debug
-## warning
-## fatal
+## Logging
 ######################################################################
-my $_in_msg = 0;
-sub _msg {
-    my $fh     = shift;
-    my $log    = shift;
-    my $prefix = shift;
-    my $format = shift;
-    my $buffer = sprintf $format, @_;
+my $_in_logmsg = 0;
+sub logmsg {
+    my %args = (
+        msg => '',
+        pfx => '',
+        fh => *STDERR,
+        email => 0,  # If truthy, the message is also included in the next email.
+        (@_ % 2) ? (msg => pop) : (),
+        @_,
+    );
+    my $buffer = $args{msg};
     chomp($buffer);
 
-    $prefix = sprintf "%-9s ", $prefix if $prefix;
+    my $prefix = $args{pfx};
+    $prefix = sprintf "%-9s  ", $prefix if $prefix;
     if ($file) {
         $prefix .= "file $file";
         $prefix .= ", line $lineno" if $lineno;
-        $prefix .= ": ";
+        $prefix .= ":  ";
     }
     if ($prefix) {
         $buffer = "$prefix$buffer";
+        $prefix =~ s/  $/| /;
         $buffer =~ s/\n/\n$prefix/g;
     }
     $buffer .= "\n";
-    print $fh $buffer;
+    print({$args{fh}} $buffer);
 
-    $msgs .= $buffer if $log;
-    if ($log && !$_in_msg) {
-        ++$_in_msg;  # avoid infinite recursion if logger calls _msg
-        logger($buffer);
-        --$_in_msg;
+    if ($args{email}) {
+        $emailbody .= $buffer;
+        if (!$_in_logmsg) {
+            ++$_in_logmsg;  # avoid infinite recursion if logger calls logmsg
+            logger($buffer);
+            --$_in_logmsg;
+        }
     }
-
 }
-sub msg     { _msg(*STDOUT, 0, '',         @_);                                   }
-sub verbose { _msg(*STDOUT, 1, @_)             if opt('verbose');                 }
-sub info    { _msg(*STDOUT, 1, 'INFO:',    @_) if opt('verbose');                 }
-sub debug   { _msg(*STDOUT, 0, 'DEBUG:',   @_) if opt('debug');                   }
-sub debug2  { _msg(*STDOUT, 0, 'DEBUG:',   @_) if opt('debug') && opt('verbose'); }
-sub warning { _msg(*STDERR, 1, 'WARNING:', @_);                                   }
-sub fatal   { _msg(*STDERR, 1, 'FATAL:',   @_); sendmail(); exit(1);              }
-sub success { _msg(*STDOUT, 1, 'SUCCESS:', @_);                                   }
-sub failed  { _msg(*STDERR, 1, 'FAILED:',  @_); $result = 'FAILED';               }
+sub _logmsg_fmt { return (@_ > 1) ? sprintf(shift, @_) : shift; }
+sub msg     { logmsg(                               _logmsg_fmt(@_)); }
+sub verbose { logmsg(email => 1, pfx => shift,      _logmsg_fmt(@_)) if opt('verbose'); }
+sub info    { logmsg(email => 1, pfx => 'INFO:',    _logmsg_fmt(@_)) if opt('verbose'); }
+sub debug   { logmsg(            pfx => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug'); }
+sub debug2  { logmsg(            pfx => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug') && opt('verbose'); }
+sub warning { logmsg(email => 1, pfx => 'WARNING:', _logmsg_fmt(@_)); }
+sub fatal   { logmsg(email => 1, pfx => 'FATAL:',   _logmsg_fmt(@_)); sendmail(); exit(1); }
+sub success { logmsg(email => 1, pfx => 'SUCCESS:', _logmsg_fmt(@_)); }
+sub failed  { logmsg(email => 1, pfx => 'FAILED:',  _logmsg_fmt(@_)); $result = 'FAILED'; }
 sub prettytime { return scalar(localtime(shift)); }
 
 sub prettyinterval {

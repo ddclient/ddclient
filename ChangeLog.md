@@ -13,6 +13,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The default web service for `--webv4` and `--webv6` has changed from Google
     Domains (which is shutting down) to ipify.
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
+  * All log messages are now written to STDERR, not a mix of STDOUT and STDERR.
+    [#676](https://github.com/ddclient/ddclient/pull/676)
 
 ### New features
 
@@ -36,6 +38,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#639](https://github.com/ddclient/ddclient/pull/639)
   * Updated sample systemd service unit file to improve logging in the systemd
     journal.  [#669](https://github.com/ddclient/ddclient/pull/669)
+  * The second and subsequent lines in a multi-line log message are now prefixed
+    with a `|` character.
+    [#676](https://github.com/ddclient/ddclient/pull/676)
 
 ### Bug fixes
 
