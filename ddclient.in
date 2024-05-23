@@ -639,9 +639,9 @@ my %variables = (
         'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
         'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
         'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        'status'              => setv(T_ANY,   0, 1, '',                   undef),  #TODO remove from cache?
-        'status-ipv4'         => setv(T_ANY,   0, 1, '',                   undef),
-        'status-ipv6'         => setv(T_ANY,   0, 1, '',                   undef),
+        'status'              => setv(T_ANY,   0, 1, undef,                undef),  #TODO remove from cache?
+        'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
+        'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
         'min-interval'        => setv(T_DELAY, 0, 0, interval('30s'),      0),
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
@@ -1452,10 +1452,8 @@ sub update_nics {
             # To allow gradual transition, we make sure both the old 'status' and 'ip' are being set
             # accordingly to what new providers returned in the new 'status-ipv*' and 'ipv*' fields respectively.
             foreach my $h (@hosts) {
-                $config{$h}{'status'} //= $config{$h}{'status-ipv4'};
-                $config{$h}{'status'} //= $config{$h}{'status-ipv6'};
-                $config{$h}{'ip'} //= $config{$h}{'ipv4'};
-                $config{$h}{'ip'} //= $config{$h}{'ipv6'};
+                $config{$h}{'status'} //= $config{$h}{'status-ipv4'} // $config{$h}{'status-ipv6'};
+                $config{$h}{'ip'} //= $config{$h}{'ipv4'} // $config{$h}{'ipv6'};
             }
 
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
@@ -1919,7 +1917,7 @@ sub init_config {
         @hosts = split_by_comma($opt{'host'});
     }
     if (opt('retry')) {
-        @hosts = map { $_ if $cache{$_}{'status'} ne 'good' } keys %cache;
+        @hosts = map { $_ if ($cache{$_}{'status'} // '') ne 'good' } keys %cache;
     }
 
     ## remove any other hosts
@@ -3568,7 +3566,7 @@ sub nic_updateable {
     } elsif ( ($use ne 'disabled')
            && ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
         ## Check whether to update IP address for the "--use" method"
-        if (($cache{$host}{'status'} eq 'good') &&
+        if ((($cache{$host}{'status'} // '') eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
@@ -3582,7 +3580,7 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status'} ne 'good') &&
+        } elsif ((($cache{$host}{'status'} // '') ne 'good') &&
             !interval_expired($host, 'atime', 'min-error-interval')) {
 
             if ( opt('verbose')
@@ -3613,7 +3611,7 @@ sub nic_updateable {
     } elsif ( ($usev4 ne 'disabled')
            && ((!exists($cache{$host}{'ipv4'})) || ("$cache{$host}{'ipv4'}" ne "$ipv4"))) {
         ## Check whether to update IPv4 address for the "--usev4" method"
-        if (($cache{$host}{'status-ipv4'} eq 'good') &&
+        if ((($cache{$host}{'status-ipv4'} // '') eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
@@ -3627,7 +3625,7 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status-ipv4'} ne 'good') &&
+        } elsif ((($cache{$host}{'status-ipv4'} // '') ne 'good') &&
             !interval_expired($host, 'atime', 'min-error-interval')) {
 
             if ( opt('verbose')
@@ -3658,7 +3656,7 @@ sub nic_updateable {
     } elsif ( ($usev6 ne 'disabled')
            && ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
         ## Check whether to update IPv6 address for the "--usev6" method"
-        if (($cache{$host}{'status-ipv6'} eq 'good') &&
+        if ((($cache{$host}{'status-ipv6'} // '') eq 'good') &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
@@ -3672,7 +3670,7 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status-ipv6'} ne 'good') &&
+        } elsif ((($cache{$host}{'status-ipv6'} // '') ne 'good') &&
             !interval_expired($host, 'atime', 'min-error-interval')) {
 
             if ( opt('verbose')
@@ -3727,14 +3725,14 @@ sub nic_updateable {
         }
     }
 
-    $config{$host}{'status'} = $cache{$host}{'status'} // '';
-    $config{$host}{'status-ipv4'} = $cache{$host}{'status-ipv4'} // '';
-    $config{$host}{'status-ipv6'} = $cache{$host}{'status-ipv6'} // '';
+    $config{$host}{'status'} = $cache{$host}{'status'};
+    $config{$host}{'status-ipv4'} = $cache{$host}{'status-ipv4'};
+    $config{$host}{'status-ipv6'} = $cache{$host}{'status-ipv6'};
     $config{$host}{'update'} = $update;
     if ($update) {
-        $config{$host}{'status'}                    = 'noconnect';
-        $config{$host}{'status-ipv4'}               = 'noconnect';
-        $config{$host}{'status-ipv6'}               = 'noconnect';
+        $config{$host}{'status'}                    = undef;
+        $config{$host}{'status-ipv4'}               = undef;
+        $config{$host}{'status-ipv6'}               = undef;
         $config{$host}{'atime'}                     = $now;
         $config{$host}{'wtime'}                     = 0;
         $config{$host}{'warned-min-interval'}       = 0;
@@ -4055,7 +4053,6 @@ sub nic_dyndns2_update {
                 my ($status, $returnedips) = split / /, lc $line;
 
                 foreach my $h (@hosts) {
-                    $config{$h}{'status'} = $status;
                     $config{$h}{'status-ipv4'} = $status if $ipv4;
                     $config{$h}{'status-ipv6'} = $status if $ipv6;
                 }
@@ -4078,7 +4075,6 @@ sub nic_dyndns2_update {
                             $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
                             $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                             $config{$h}{'mtime'}  = $now;
-                            $config{$h}{'status'} = 'good';
                             $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                             $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                         }
@@ -4269,7 +4265,8 @@ sub nic_dnsexit2_update {
                 my ($status, $message, $srv_message, $srv_details) = @{ $status {$response->{'code'} } };
                 info("Status: %s -- Message: %s", $status, $message);
                 info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
-                $config{$h}{'status'} = $status;
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
 
                 # Handle statuses
                 if ($status eq 'good') {
@@ -5274,10 +5271,12 @@ sub nic_njalla_update {
         # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         my $response = '';
+        my $status = 'bad';
         if ($quietreply) {
             $reply =~ qr/invalid host or key/mp;
             $response = ${^MATCH};
             if (!$response) {
+                $status = 'good';
                 success("updating %s: good: IP address set to %s", $h, $ip_output);
             }
             elsif ($response =~ /invalid host or key/) {
@@ -5296,12 +5295,19 @@ sub nic_njalla_update {
                 if ($response->{status} == 401 && $response->{message} =~ /invalid host or key/) {
                     failed("Invalid host or key");
                 } elsif ($response->{status} == 200 && $response->{message} =~ /record updated/) {
+                    $status = 'good';
                     success("updating %s: good: IP address set to %s", $h, $response->{value}->{A});
                 } else {
                     failed("Unknown response");
                 }
             }
         }
+        if ($status eq 'good') {
+            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+        }
+        $config{$h}{'status-ipv4'} = $status if $ipv4;
+        $config{$h}{'status-ipv6'} = $status if $ipv6;
     }
 }
 
@@ -5597,8 +5603,11 @@ sub nic_1984_update {
         }
         unless ($response->{ok}) {
             failed("%s", $response->{msg});
+            next;
         }
 
+        $config{$host}{'status'} = 'good';
+        $config{$host}{'ip'} = $ip;
         if ($response->{msg} =~ /unaltered/) {
             success("Updating %s: skipped: IP was already set to %s", $host, $response->{ip});
         } else {
@@ -5751,6 +5760,7 @@ sub nic_godaddy_update {
                 verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
 
                 my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                my $status = \$config{$host}{"status-ipv$ipversion"};
                 my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
                 my $data = encode_json([ {
                     data => $ip,
@@ -5777,13 +5787,13 @@ sub nic_godaddy_update {
                     next;
                 }
 
-                (my $status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
+                (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
                 my $ok = header_ok($host, $reply);
                 my $msg;
                 $reply =~ s/^.*?\n\n//s; # extract payload
                 my $response = eval {decode_json($reply)};
-                if (!defined($response) && $status != "200") {
-                    $config{$host}{'status'} = "bad";
+                if (!defined($response) && $code != "200") {
+                    $$status = "bad";
 
                     failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
                 } elsif (defined($response->{code})) {
@@ -5793,34 +5803,34 @@ sub nic_godaddy_update {
                     # read data
                     $config{$host}{"ipv$ipversion"} = $ip;
                     $config{$host}{'mtime'} = $now;
-                    $config{$host}{"status-ipv$ipversion"} = 'good';
+                    $$status = 'good';
 
-                    success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $status);
+                    success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
                     next;
-                } elsif ($status == "400") {
+                } elsif ($code == "400") {
                     $msg = 'GoDaddy API URL ($url) was malformed.';
-                } elsif ($status == "401") { # authentication error
+                } elsif ($code == "401") { # authentication error
                     if ($config{$host}{'login'} && $config{$host}{'login'}) {
                         $msg = 'login or password option incorrect.';
                     } else {
                         $msg = 'login or password option missing.';
                     }
                     $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
-                } elsif ($status == "403") {
+                } elsif ($code == "403") {
                     $msg = 'Customer identified by login and password options denied permission.';
-                } elsif ($status == "404") {
+                } elsif ($code == "404") {
                     $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
-                } elsif ($status == "422") {
+                } elsif ($code == "422") {
                     $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
-                } elsif ($status == "429") {
+                } elsif ($code == "429") {
                     $msg = 'Too many requests to GoDaddy within brief period.';
-                } elsif ($status == "503") {
+                } elsif ($code == "503") {
                     $msg = "\"${hostname}.${zone}\" is unavailable.";
                 } else {
                     $msg = 'Unexpected service response.';
                 }
 
-                $config{$host}{"status-ipv$ipversion"} = 'bad';
+                $$status = 'bad';
                 failed("%s.%s -- %s", $hostname, $zone, $msg);
             }
         }
@@ -6622,7 +6632,6 @@ sub nic_duckdns_update {
                 $config{$h}{'ipv4'}   = $ipv4 if $ipv4;
                 $config{$h}{'ipv6'}   = $ipv6 if $ipv6;
                 $config{$h}{'mtime'}  = $now;
-                $config{$h}{'status'} = 'good';
                 $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                 $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                 $state = 'result';
@@ -6630,7 +6639,6 @@ sub nic_duckdns_update {
                 success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
 
             } elsif ($line eq 'KO') {
-                $config{$h}{'status'} = 'failed';
                 $config{$h}{'status-ipv4'} = 'failed' if $ipv4;
                 $config{$h}{'status-ipv6'} = 'failed' if $ipv6;
                 $state = 'result';
@@ -8049,7 +8057,6 @@ sub nic_infomaniak_update {
                     info($msg);
                     $config{$h}{"ipv$v"} = $ip;
                     $config{$h}{'mtime'} = $config{$h}{'mtime'} // $now;
-                    $config{$h}{'status'} = 'good';
                     $config{$h}{"status-ipv$v"} = 'good';
                     next INFOMANIAK_IP_LOOP;
                 }
@@ -8058,7 +8065,6 @@ sub nic_infomaniak_update {
                 }
             }
 
-            $config{$h}{'status'} = $config{$h}{'status'} // 'failed';
             $config{$h}{"status-ipv$v"} = 'failed';
             failed("updating %s: could not update IP on Infomaniak", $h);
         }
