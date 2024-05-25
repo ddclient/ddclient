@@ -104,7 +104,7 @@ my $programd = $0;
 $programd =~ s%^.*/%%;
 my $program = $programd;
 $program =~ s/d$//;
-my $now = time;
+our $now = time;
 my $hostname = hostname();
 
 # subst_var(subst, default) returns subst unless it looks like @foo@ in which case it returns
@@ -140,7 +140,8 @@ $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin
 
 our %globals;
 our %config;
-my ($result, %cache);
+our %cache;
+my $result;
 my $saved_cache;
 my %saved_opt;
 my $daemon;
@@ -1064,6 +1065,18 @@ my %services = (
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
             %{$variables{'service-common-defaults'}},
+        },
+    },
+    'emailonly' => {
+        'updateable' => undef,
+        'update'     => \&nic_emailonly_update,
+        'examples'   => \&nic_emailonly_examples,
+        'variables'  => {
+            %{$variables{'service-common-defaults'}},
+            'login' => undef,
+            'password' => undef,
+            # Change default to never re-notify if IP address has not changed.
+            'max-interval' => setv(T_DELAY, 0, 0, 'inf', 0),
         },
     },
 );
@@ -2465,6 +2478,8 @@ sub interval {
         $value = $1 * 60*60;
     } elsif ($value =~ /^(\d+)(days|d)/i) {
         $value = $1 * 60*60*24;
+    } elsif ($value =~ qr/^(?:inf(?:init[ye])?|indefinite(?:ly)?|never|forever|always)$/i) {
+        $value = 'inf';
     } elsif ($value !~ /^\d+$/) {
         $value = undef;
     }
@@ -2473,6 +2488,7 @@ sub interval {
 sub interval_expired {
     my ($host, $time, $interval) = @_;
 
+    return 0 if ($config{$host}{$interval} // 0) == 'inf';
     return 1 if !exists $cache{$host};
     return 1 if !exists $cache{$host}{$time}      || !$cache{$host}{$time};
     return 1 if !exists $config{$host}{$interval} || !$config{$host}{$interval};
@@ -8074,6 +8090,55 @@ sub nic_infomaniak_update {
             failed("updating %s: could not update IP on Infomaniak", $h);
         }
     }
+}
+
+######################################################################
+## nic_emailonly_update
+##
+## Written by Joel Croteau
+##
+## Do not update Dynamic DNS, only send status emails. Use if you do
+## not have a DDNS host, but still want to get emails when your IP
+## address changes. Note that you must set the "mail" config option
+## and configure sendmail for this to have an effect.  At least one
+## host must be specified; the host names are mentioned in the email.
+######################################################################
+sub nic_emailonly_update {
+    debug("\nnic_emailonly_update -------------------");
+    # Note: This is logged after $config{$_}{'max-interval'] even if the IP address hasn't changed,
+    # so it is best to avoid phrasing like, "IP address has changed."
+    logmsg(email => 1, join("\n", 'Host IP addresses:', map({
+        my $ipv4 = delete($config{$_}{'wantipv4'});
+        my $ipv6 = delete($config{$_}{'wantipv6'});
+        $config{$_}{'status-ipv4'} = 'good' if $ipv4;
+        $config{$_}{'status-ipv6'} = 'good' if $ipv6;
+        $config{$_}{'ipv4'} = $ipv4 if $ipv4;
+        $config{$_}{'ipv6'} = $ipv6 if $ipv6;
+        $config{$_}{'mtime'} = $now;
+        sprintf('%30s  %s', $_, join('  ', grep(defined($_), $ipv4, $ipv6)));
+    } @_)));
+}
+
+######################################################################
+## nic_emailonly_examples
+######################################################################
+sub nic_emailonly_examples {
+    return <<"EoEXAMPLE";
+o 'emailonly'
+
+The 'emailonly' protocol is a dummy protocol that will send status emails but
+not actually issue any dynamic DNS updates. You can use this if you don\'t
+have a DDNS host, but still want to get emails when your IP address changes.
+For this to have an effect, you must set the 'mail' config option, have
+sendmail properly configured on your machine, and specify at least one dummy
+hostname.
+
+Example ${program}.conf file entries:
+  ## single host update
+  mail=me\@example.com
+  protocol=emailonly
+  host.example.com
+EoEXAMPLE
 }
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),

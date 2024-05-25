@@ -391,3 +391,9 @@ ssl=yes					# use ssl-support.  Works with
 # password=ddns_password
 # redirect=2
 # example.com
+
+##
+## Email Only
+##
+# protocol=emailonly
+# host.example.com

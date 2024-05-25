@@ -65,6 +65,7 @@ handwritten_tests = \
 	t/builtinfw_query.pl \
 	t/get_ip_from_if.pl \
 	t/geturl_connectivity.pl \
+	t/interval_expired.pl \
 	t/is-and-extract-ipv4.pl \
 	t/is-and-extract-ipv6.pl \
 	t/is-and-extract-ipv6-global.pl \
