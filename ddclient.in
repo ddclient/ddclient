@@ -2673,7 +2673,7 @@ sub curl_cmd {
         print($tfh @params);
     }
     close($tfh);
-    my $reply = qx{ $system_curl --config $tmpfile 2>/dev/null; };
+    my $reply = qx{ $system_curl --config $tmpfile; };
     if ((my $rc = $?>>8) != 0) {
         warning("CURL error (%d) %s", $rc, $curl_codes{$rc} // "Unknown return code. Check $system_curl is installed and its manpage.");
     }
