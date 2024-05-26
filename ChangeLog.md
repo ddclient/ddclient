@@ -75,6 +75,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#667](https://github.com/ddclient/ddclient/pull/667)
   * Fixed unnecessary repeated updates for some services.
     [#670](https://github.com/ddclient/ddclient/pull/670)
+  * Fixed DNSExit provider when configured with a zone and non-identical
+    hostname.  [#673](https://github.com/ddclient/ddclient/issues/673)
 
 ## 2023-11-23 v3.11.2
 

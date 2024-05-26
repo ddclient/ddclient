@@ -104,10 +104,7 @@ subtest 'Testing nic_dnsexit2_update' => sub {
             }
         ]
     });
-    TODO: {
-        local $TODO = "https://github.com/ddclient/ddclient/issues/673";
-        is_deeply($data, $expected_data, 'Data is correct');
-    }
+    is_deeply($data, $expected_data, 'Data is correct');
     reset_test_data();
 };
 
@@ -139,10 +136,7 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
             }
         ]
     });
-    TODO: {
-        local $TODO = "https://github.com/ddclient/ddclient/issues/673";
-        is_deeply($data, $expected_data, 'Data is correct');
-    }
+    is_deeply($data, $expected_data, 'Data is correct');
     reset_test_data($ua);
 };
 
@@ -200,11 +194,8 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
     @requests = get_requests();
     for my $i (0..1) {
         my $data = decode_and_sort_array($requests[$i]->{content});
-        TODO: {
-            local $TODO = "https://github.com/ddclient/ddclient/issues/673";
-            is_deeply($data, $expected_data1, 'Data is correct for call host1') if $i == 0;
-            is_deeply($data, $expected_data2, 'Data is correct for call host2') if $i == 1;
-        }
+        is_deeply($data, $expected_data1, 'Data is correct for call host1') if $i == 0;
+        is_deeply($data, $expected_data2, 'Data is correct for call host2') if $i == 1;
     }
     reset_test_data();
 };

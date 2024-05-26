@@ -4140,6 +4140,8 @@ o 'dnsexit2'
 
 The 'dnsexit2' protocol is the updated protocol for the (free) dynamic hostname services
 of 'DNSExit' (www.dnsexit.com). Their API is accepting JSON payload.
+Note that we only update the record, it must already exist in the DNSExit system
+(A and/or AAAA records where applicable).
 
 Configuration variables applicable to the 'dnsexit2' protocol are:
   protocol=dnsexit2         ##
@@ -4173,10 +4175,19 @@ EoEXAMPLE
 ######################################################################
 sub nic_dnsexit2_update {
     debug("\nnic_dnsexit2_update -------------------");
-
-    # The DNSExit API does not support updating multiple hosts at a time.
+    # The DNSExit API does not support updating hosts with different zones at the same time,
+    # handling update per host.
     for my $h (@_) {
         $config{$h}{'zone'} //= $h;
+        my $name = $h;
+        # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
+        # set to the empty string; both have identical semantics.  For consistency, always
+        # remove the zone even if it means $name becomes the empty string.
+        if ($name =~ s/(?:^|\.)\Q$config{$h}{'zone'}\E$//) {
+            # The zone was successfully trimmed from $name.
+        } else {
+            fatal("Hostname %s does not end with the zone %s", $h, $config{$h}{'zone'});
+        }
         # The IPv4 and IPv6 addresses must be updated together in a single API call.
         my %ips;
         my @updates;
@@ -4186,7 +4197,7 @@ sub nic_dnsexit2_update {
             info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
             $config{$h}{"status-ipv$ipv"} = 'failed';
             push(@updates, {
-                name => $h,
+                name => $name,
                 type => ($ipv eq '6') ? 'AAAA' : 'A',
                 content => $ip,
                 ttl => $config{$h}{'ttl'},
