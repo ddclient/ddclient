@@ -80,6 +80,8 @@ m4_foreach_w([_m], [
     HTTP::Message::PSGI
     HTTP::Request
     HTTP::Response
+    JSON::PP
+    LWP::UserAgent
     Scalar::Util
     Test::MockModule
     Test::TCP
