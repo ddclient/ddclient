@@ -2635,7 +2635,7 @@ sub curl_cmd {
     my @params = @_;
     my $tmpfile;
     my $tfh;
-    my $system_curl = quotemeta(subst_var('@CURL@', 'curl'));
+    my $curl = subst_var('@CURL@', 'curl');
     my %curl_codes = (  ## Subset of error codes from https://curl.haxx.se/docs/manpage.html
          2 => "Failed to initialize. (Most likely a bug in ddclient, please open issue at https://github.com/ddclient/ddclient)",
          3 => "URL malformed. The syntax was not correct",
@@ -2653,11 +2653,11 @@ sub curl_cmd {
         67 => "The user name, password, or similar was not accepted and curl failed to log in.",
         77 => "Problem with reading the SSL CA cert (path? access rights?).",
         78 => "The resource referenced in the URL does not exist.",
-       127 => "$system_curl was not found",
+       127 => "$curl was not found",
     );
 
-    debug("CURL: %s", $system_curl);
-    fatal("curl not found") if ($system_curl eq '');
+    debug("CURL: %s", $curl);
+    fatal("curl not found") if ($curl eq '');
     return '' if (scalar(@params) == 0); ## no parameters provided
 
     # Hard code to /tmp rather than use system TMPDIR to protect from malicious
@@ -2673,9 +2673,13 @@ sub curl_cmd {
         print($tfh @params);
     }
     close($tfh);
-    my $reply = qx{ $system_curl --config $tmpfile; };
+    # Use open's list form (as opposed to qx, backticks, or the scalar form of open) to avoid the
+    # shell and reduce the risk of a shell injection vulnerability.
+    open(my $cfh, '-|', $curl, '--config', $tmpfile) or fatal("failed to run curl ($curl): $!");
+    my $reply = do { local $/; <$cfh>; };
+    close($cfh);  # Closing $cfh waits for the process to exit and sets $?.
     if ((my $rc = $?>>8) != 0) {
-        warning("CURL error (%d) %s", $rc, $curl_codes{$rc} // "Unknown return code. Check $system_curl is installed and its manpage.");
+        warning("CURL error (%d) %s", $rc, $curl_codes{$rc} // "Unknown return code. Check $curl is installed and its manpage.");
     }
     return $reply;
 }
