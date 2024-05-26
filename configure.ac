@@ -36,7 +36,18 @@ AC_PROG_MKDIR_P
 AC_PATH_PROG([FIND], [find])
 AS_IF([test -z "${FIND}"], [AC_MSG_ERROR(['find' utility not found])])
 
-AC_PATH_PROG([CURL], [curl])
+AC_ARG_WITH([curl],
+  [AS_HELP_STRING([[--with-curl[=CURL]]], [use CURL as absolute path to curl executable])],
+  [],
+  [with_curl=yes])
+AS_CASE([${with_curl}],
+  [[yes]], [AC_PATH_PROG([CURL], [curl])],
+  [[no]], [CURL=],
+  [
+    AC_MSG_CHECKING([for curl])
+    CURL=${with_curl}
+    AC_MSG_RESULT([${CURL}])
+  ]);
 AS_IF([test -z "${CURL}"], [AC_MSG_ERROR([curl not found])])
 
 AX_WITH_PROG([PERL], perl)
