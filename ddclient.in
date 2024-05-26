@@ -125,6 +125,7 @@ if ($program =~ /test/i) {
     $cachedir = '.';
     $savedir = 'URL';
 }
+our @curl = (subst_var('@CURL@', 'curl'));
 
 our $emailbody = '';
 my $last_emailbody = '';
@@ -2635,7 +2636,7 @@ sub curl_cmd {
     my @params = @_;
     my $tmpfile;
     my $tfh;
-    my $curl = subst_var('@CURL@', 'curl');
+    my $curl = join(' ', @curl);
     my %curl_codes = (  ## Subset of error codes from https://curl.haxx.se/docs/manpage.html
          2 => "Failed to initialize. (Most likely a bug in ddclient, please open issue at https://github.com/ddclient/ddclient)",
          3 => "URL malformed. The syntax was not correct",
@@ -2657,7 +2658,7 @@ sub curl_cmd {
     );
 
     debug("CURL: %s", $curl);
-    fatal("curl not found") if ($curl eq '');
+    fatal("curl not found") if ($curl[0] eq '');
     return '' if (scalar(@params) == 0); ## no parameters provided
 
     # Hard code to /tmp rather than use system TMPDIR to protect from malicious
@@ -2674,8 +2675,15 @@ sub curl_cmd {
     }
     close($tfh);
     # Use open's list form (as opposed to qx, backticks, or the scalar form of open) to avoid the
-    # shell and reduce the risk of a shell injection vulnerability.
-    open(my $cfh, '-|', $curl, '--config', $tmpfile) or fatal("failed to run curl ($curl): $!");
+    # shell and reduce the risk of a shell injection vulnerability.  ':raw' mode is used because
+    # HTTP is defined in terms of octets (bytes), not characters.  In raw mode, each byte from curl
+    # is mapped to a same-valued codepoint (byte value 0x78 becomes character U+0078, 0xff becomes
+    # U+00ff).  The caller is responsible for decoding the byte sequence if necessary.
+    open(my $cfh, '-|:raw', @curl, '--config', $tmpfile)
+        or fatal("failed to run curl ($curl): $!");
+    # According to <https://perldoc.perl.org/PerlIO#Alternatives-to-raw>, adding ':raw' to the open
+    # mode is buggy with Perl < v5.14.  Call binmode on the filehandle just in case.
+    binmode($cfh) or fatal("binmode failed: $!");
     my $reply = do { local $/; <$cfh>; };
     close($cfh);  # Closing $cfh waits for the process to exit and sets $?.
     if ((my $rc = $?>>8) != 0) {
