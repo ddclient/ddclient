@@ -4176,14 +4176,14 @@ sub nic_dnsexit2_update {
     for my $h (@_) {
         # All the known status
         my %status = (
-             '0'        => [ 'good',    'Success! Actions got executed successfully.' ],
-             '1'        => [ 'warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.' ],
-             '2'        => [ 'badauth', 'API Key Authentication Error. The API Key is missing or wrong.' ],
-             '3'        => [ 'error',   'Missing Required Definitions. Your JSON file may missing some required definitions.' ],
-             '4'        => [ 'error',   'JSON Data Syntax Error. Your JSON file has syntax error.' ],
-             '5'        => [ 'error',   'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.' ],
-             '6'        => [ 'error',   'System Error. Our system problem. May not be your problem. Contact our support if you got such error.' ],
-             '7'        => [ 'error',   'Error getting post data. Our server has problem to receive your JSON posting.' ],
+            '0' => ['good', 'Success! Actions got executed successfully.'],
+            '1' => ['warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.'],
+            '2' => ['badauth', 'API Key Authentication Error. The API Key is missing or wrong.'],
+            '3' => ['error', 'Missing Required Definitions. Your JSON file may missing some required definitions.'],
+            '4' => ['error', 'JSON Data Syntax Error. Your JSON file has syntax error.'],
+            '5' => ['error', 'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.'],
+            '6' => ['error', 'System Error. Our system problem. May not be your problem. Contact our support if you got such error.'],
+            '7' => ['error', 'Error getting post data. Our server has problem to receive your JSON posting.'],
         );
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
@@ -4191,9 +4191,9 @@ sub nic_dnsexit2_update {
         # Updates for ipv4 and ipv6 need to be combined in a single API call, create Hash of Arrays for tracking
         my %total_payload;
 
-        for my $ip ($ipv4, $ipv6){
+        for my $ip ($ipv4, $ipv6) {
             next if (!$ip);
-            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
             my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
 
             info("Going to update IPv$ipv address to %s for %s.", $ip, $h);
@@ -4212,7 +4212,7 @@ sub nic_dnsexit2_update {
         my $header = "Content-Type: application/json\nAccept: application/json";
 
         # Set the zone if empty
-        if ( not defined $config{$h}{'zone'}){
+        if (not defined $config{$h}{'zone'}) {
             debug("Zone not defined, setting to default hostname: %s", $h);
             $config{$h}{'zone'} = $h
         } else {
@@ -4229,15 +4229,15 @@ sub nic_dnsexit2_update {
 
         # Make the call
         my $reply = geturl(
-            proxy     => opt('proxy'),
-            url       => $url,
-            headers   => $header,
-            method    => 'POST',
-            data      => $data
+            proxy => opt('proxy'),
+            url => $url,
+            headers => $header,
+            method => 'POST',
+            data => $data
         );
 
         # No reply, declare as failed
-        unless ($reply && header_ok($h, $reply)){
+        unless ($reply && header_ok($h, $reply)) {
             failed("updating %s: Could not connect to %s%s.", $h, $config{$h}{'server'}, $config{$h}{'path'});
             last;
         };
@@ -4249,7 +4249,7 @@ sub nic_dnsexit2_update {
         debug("HTTP response code: %s", $http_status);
 
         # If not 200, bail
-        if ( $http_status ne '200' ){
+        if ($http_status ne '200') {
             failed("Failed to update Host\n%s", $h);
             failed("HTTP response code\n%s", $http_status);
             failed("Full reply\n%s", $reply) unless opt('verbose');
@@ -4262,8 +4262,7 @@ sub nic_dnsexit2_update {
         debug("%s", $strip_status);
         if ($strip_status) {
             debug("HTTP headers are stripped.");
-        }
-        else {
+        } else {
             warning("Unexpected: no HTTP headers stripped!");
         }
 
@@ -4274,16 +4273,16 @@ sub nic_dnsexit2_update {
         if (defined($response->{'code'}) and defined($response->{'message'})) {
             if (exists $status{$response->{'code'}}) {
                 # Add the server response data to the applicable array
-                push( @{ $status {$response->{'code'} } }, $response->{'message'});
+                push(@{$status{$response->{'code'}}}, $response->{'message'});
                 if (defined($response->{'details'})) {
-                    push ( @{ $status {$response->{'code'} } }, $response->{'details'}[0]);
+                    push(@{$status{$response->{'code'}}}, $response->{'details'}[0]);
                 } else {
                     # Keep it symmetrical for simplicity
-                    push ( @{ $status {$response->{'code'} } }, "no details received");
+                    push(@{$status{$response->{'code'}}}, "no details received");
                 }
 
                 # Set data from array
-                my ($status, $message, $srv_message, $srv_details) = @{ $status {$response->{'code'} } };
+                my ($status, $message, $srv_message, $srv_details) = @{$status{$response->{'code'}}};
                 info("Status: %s -- Message: %s", $status, $message);
                 info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
                 $config{$h}{'status-ipv4'} = $status if $ipv4;
@@ -4291,9 +4290,9 @@ sub nic_dnsexit2_update {
 
                 # Handle statuses
                 if ($status eq 'good') {
-                    $config{$h}{'mtime'}  = $now;
+                    $config{$h}{'mtime'} = $now;
                     my $tracked_ipv;
-                    for $tracked_ipv ( keys %total_payload ){
+                    for $tracked_ipv (keys %total_payload) {
                         $config{$h}{"ipv$tracked_ipv"} = $total_payload{$tracked_ipv}{content};
                         $config{$h}{"status-ipv$tracked_ipv"} = 'good';
                         success("%s", $message);
@@ -4318,6 +4317,7 @@ sub nic_dnsexit2_update {
         }
     }
 }
+
 ######################################################################
 ## nic_noip_update
 ## Note: uses same features as nic_dyndns2_update, less return codes
