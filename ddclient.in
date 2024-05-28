@@ -4172,12 +4172,12 @@ EoEXAMPLE
 sub nic_dnsexit2_update {
     debug("\nnic_dnsexit2_update -------------------");
 
-    ## Update each configured host (hosts cannot be grouped on this API)
+    # The DNSExit API does not support updating multiple hosts at a time.
     for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
 
-        # Updates for ipv4 and ipv6 need to be combined in a single API call, create Hash of Arrays for tracking
+        # The IPv4 and IPv6 addresses must be updated together in a single API call.
         my %total_payload;
 
         for my $ip ($ipv4, $ipv6) {
