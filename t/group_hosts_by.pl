@@ -60,13 +60,11 @@ my @test_cases = (
         desc => 'falsy values',
         groupby => [qw(falsy)],
         want => [[$h1], [$h2], [$h3]],
-        todo => 'support for undef not yet added',
     },
     {
         desc => 'set, unset, undef',
         groupby => [qw(maybeunset)],
         want => [[$h1], [$h2], [$h3]],
-        todo => 'support for unset and undef not yet added',
     },
     {
         desc => 'missing attribute',
@@ -85,11 +83,8 @@ for my $tc (@test_cases) {
         }
         return @$a <=> @$b;
     } map({ [sort(@$_)]; } values(%got)));
-    TODO: {
-        local $TODO = $tc->{todo};
-        is_deeply(\@got, $tc->{want}, $tc->{desc})
-            or diag(Data::Dumper->Dump([\@got, $tc->{want}], [qw(got want)]));
-    }
+    is_deeply(\@got, $tc->{want}, $tc->{desc})
+        or diag(Data::Dumper->Dump([\@got, $tc->{want}], [qw(got want)]));
 }
 
 done_testing();

@@ -15,6 +15,7 @@ package ddclient;
 require v5.10.1;
 use strict;
 use warnings;
+use Data::Dumper;
 use File::Basename;
 use File::Path qw(make_path);
 use File::Temp;
@@ -3425,8 +3426,10 @@ sub group_hosts_by {
     my %attrs = map({ ($_ => 1) } @$attributes);
     my @attrs = sort(keys(%attrs));
     my %groups = ();
+    my $d = Data::Dumper->new([])->Indent(0)->Sortkeys(1)->Terse(1)->Useqq(1);
     for my $h (@$hosts) {
-        my $sig = join(',', map({ sprintf("%s=%s", $_, $config{$h}{$_} // '') } @attrs));
+        my %cfg = map({ ($_ => $config{$h}{$_}); } grep(exists($config{$h}{$_}), @attrs));
+        my $sig = $d->Reset()->Values([\%cfg])->Dump();
         push @{$groups{$sig}}, $h;
     }
     return %groups;
