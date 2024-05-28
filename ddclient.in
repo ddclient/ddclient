@@ -3979,7 +3979,7 @@ sub nic_dyndns2_update {
     debug("\nnic_dyndns2_update -------------------");
 
     ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantip)]);
+    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
 
     my %errors = (
        'badauth'  => 'Bad authorization (username or password)',
@@ -4274,7 +4274,7 @@ sub nic_noip_update {
     debug("\nnic_noip_update -------------------");
 
     ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantip)]);
+    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
 
     my %errors = (
         'badauth'  => 'Invalid username or password',
@@ -5708,7 +5708,7 @@ sub nic_godaddy_update {
     debug("\nnic_godaddy_update --------------------");
 
     ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(server login password zone wantip)]);
+    my %groups = group_hosts_by(\@_, [qw(server login password zone wantipv4 wantipv6)]);
 
     ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
@@ -6025,7 +6025,7 @@ sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
 
     ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server zone wantip)]);
+    my %groups = group_hosts_by(\@_, [qw(login password server zone wantipv4 wantipv6)]);
 
     ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
@@ -6142,7 +6142,7 @@ sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
 
     ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantip)]);
+    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
 
     ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
@@ -6290,7 +6290,7 @@ sub nic_hetzner_update {
     debug("\nnic_hetzner_update -------------------");
 
     ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantip)]);
+    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
 
     ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
