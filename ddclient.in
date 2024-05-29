@@ -4196,7 +4196,7 @@ sub nic_dnsexit2_update {
             my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
             my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
 
-            info("Going to update IPv$ipv address to %s for %s.", $ip, $h);
+            info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
             $config{$h}{'status-ipv$ipv'} = 'failed';
             $total_payload{$ipv} = {
                 name => $h,
@@ -4295,7 +4295,7 @@ sub nic_dnsexit2_update {
                         $config{$h}{"ipv$ipv"} = $total_payload{$ipv}{content};
                         $config{$h}{"status-ipv$ipv"} = 'good';
                         success("%s", $message);
-                        success("Updated %s successfully to IPv$ipv address %s at time %s", $h, $total_payload{$ipv}{content}, prettytime($config{$h}{'mtime'}));
+                        success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $total_payload{$ipv}{content}, prettytime($config{$h}{'mtime'}));
                     }
                 } elsif ($status eq 'warning') {
                     warning("%s", $message);
