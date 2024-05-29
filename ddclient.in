@@ -4200,14 +4200,14 @@ sub nic_dnsexit2_update {
         my $data = encode_json({
             apikey => $config{$h}{'password'},
             domain => $config{$h}{'zone'},
-            update => \@payload_values
+            update => \@payload_values,
         });
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
             headers => $header,
             method => 'POST',
-            data => $data
+            data => $data,
         );
         unless ($reply && header_ok($h, $reply)) {
             failed("updating %s: Could not connect to %s%s.", $h, $config{$h}{'server'}, $config{$h}{'path'});
