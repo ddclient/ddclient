@@ -4174,8 +4174,7 @@ sub nic_dnsexit2_update {
 
     ## Update each configured host (hosts cannot be grouped on this API)
     for my $h (@_) {
-        # All the known status
-        my %status = (
+        my %codemeaning = (
             '0' => ['good', 'Success! Actions got executed successfully.'],
             '1' => ['warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.'],
             '2' => ['badauth', 'API Key Authentication Error. The API Key is missing or wrong.'],
@@ -4276,11 +4275,11 @@ sub nic_dnsexit2_update {
             failed("%s", $response);
             next;
         }
-        if (!exists($status{$response->{'code'}})) {
+        if (!exists($codemeaning{$response->{'code'}})) {
             failed("Status code %s is unknown!", $response->{'code'});
             next;
         }
-        my ($status, $message) = @{$status{$response->{'code'}}};
+        my ($status, $message) = @{$codemeaning{$response->{'code'}}};
         info("Status: %s -- Message: %s", $status, $message);
         info("Server Message: %s -- Server Details: %s", $response->{'message'},
              defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
