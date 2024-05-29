@@ -4210,7 +4210,7 @@ sub nic_dnsexit2_update {
             data => $data,
         );
         unless ($reply && header_ok($h, $reply)) {
-            failed("updating %s: Could not connect to %s%s.", $h, $config{$h}{'server'}, $config{$h}{'path'});
+            failed("updating %s: Could not connect to %s%s.", $h, $url);
             last;
         };
         debug("%s", $reply);
