@@ -4175,18 +4175,20 @@ sub nic_dnsexit2_update {
     # The DNSExit API does not support updating multiple hosts at a time.
     for my $h (@_) {
         # The IPv4 and IPv6 addresses must be updated together in a single API call.
-        my %total_payload;
+        my %ips;
+        my @updates;
         for my $ipv ('4', '6') {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            $ips{$ipv} = $ip;
             my $type = ($ipv eq '6') ? 'AAAA' : 'A';
             info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
             $config{$h}{'status-ipv$ipv'} = 'failed';
-            $total_payload{$ipv} = {
+            push(@updates, {
                 name => $h,
                 type => $type,
                 content => $ip,
                 ttl => $config{$h}{'ttl'},
-            };
+            });
         };
         my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
         my $header = "Content-Type: application/json\nAccept: application/json";
@@ -4196,11 +4198,10 @@ sub nic_dnsexit2_update {
         } else {
             debug("Zone is: %s", $config{$h}{'zone'});
         }
-        my @payload_values = values %total_payload;
         my $data = encode_json({
             apikey => $config{$h}{'password'},
             domain => $config{$h}{'zone'},
-            update => \@payload_values,
+            update => \@updates,
         });
         my $reply = geturl(
             proxy => opt('proxy'),
@@ -4257,8 +4258,8 @@ sub nic_dnsexit2_update {
         info("Status: %s -- Message: %s", $status, $message);
         info("Server Message: %s -- Server Details: %s", $response->{'message'},
              defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
-        $config{$h}{'status-ipv4'} = $status if $total_payload{'4'};
-        $config{$h}{'status-ipv6'} = $status if $total_payload{'6'};
+        $config{$h}{'status-ipv4'} = $status if $ips{'4'};
+        $config{$h}{'status-ipv6'} = $status if $ips{'6'};
         if ($status ne 'good') {
             if ($status eq 'warning') {
                 warning("%s", $message);
@@ -4273,10 +4274,11 @@ sub nic_dnsexit2_update {
         }
         success("%s", $message);
         $config{$h}{'mtime'} = $now;
-        for my $ipv (keys %total_payload) {
-            $config{$h}{"ipv$ipv"} = $total_payload{$ipv}{content};
+        keys(%ips);  # Reset internal iterator.
+        while (my ($ipv, $ip) = each(%ips)) {
+            $config{$h}{"ipv$ipv"} = $ip;
             $config{$h}{"status-ipv$ipv"} = 'good';
-            success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $total_payload{$ipv}{content}, prettytime($config{$h}{'mtime'}));
+            success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $ip, prettytime($config{$h}{'mtime'}));
         }
     }
 }
