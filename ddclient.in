@@ -4280,19 +4280,10 @@ sub nic_dnsexit2_update {
             failed("Status code %s is unknown!", $response->{'code'});
             next;
         }
-        # Add the server response data to the applicable array
-        push(@{$status{$response->{'code'}}}, $response->{'message'});
-        if (defined($response->{'details'})) {
-            push(@{$status{$response->{'code'}}}, $response->{'details'}[0]);
-        } else {
-            # Keep it symmetrical for simplicity
-            push(@{$status{$response->{'code'}}}, "no details received");
-        }
-
-        # Set data from array
-        my ($status, $message, $srv_message, $srv_details) = @{$status{$response->{'code'}}};
+        my ($status, $message) = @{$status{$response->{'code'}}};
         info("Status: %s -- Message: %s", $status, $message);
-        info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
+        info("Server Message: %s -- Server Details: %s", $response->{'message'},
+             defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
         $config{$h}{'status-ipv4'} = $status if $ipv4;
         $config{$h}{'status-ipv6'} = $status if $ipv6;
 
@@ -4300,10 +4291,10 @@ sub nic_dnsexit2_update {
         if ($status ne 'good') {
             if ($status eq 'warning') {
                 warning("%s", $message);
-                warning("Server response: %s", $srv_message);
+                warning("Server response: %s", $response->{'message'});
             } elsif ($status =~ m'^(badauth|error)$') {
                 failed("%s", $message);
-                failed("Server response: %s", $srv_message);
+                failed("Server response: %s", $response->{'message'});
             } else {
                 failed("This should not be possible");
             }
