@@ -4194,29 +4194,20 @@ sub nic_dnsexit2_update {
                 ttl => $config{$h}{'ttl'},
             };
         };
-        # Set the URL of the API endpoint
         my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
-
-        # Set additional headers
         my $header = "Content-Type: application/json\nAccept: application/json";
-
-        # Set the zone if empty
         if (not defined $config{$h}{'zone'}) {
             debug("Zone not defined, setting to default hostname: %s", $h);
             $config{$h}{'zone'} = $h
         } else {
             debug("Zone is: %s", $config{$h}{'zone'});
         }
-
-        # Build total JSON payload
         my @payload_values = values %total_payload;
         my $data = encode_json({
             apikey => $config{$h}{'password'},
             domain => $config{$h}{'zone'},
             update => \@payload_values
         });
-
-        # Make the call
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
@@ -4224,20 +4215,13 @@ sub nic_dnsexit2_update {
             method => 'POST',
             data => $data
         );
-
-        # No reply, declare as failed
         unless ($reply && header_ok($h, $reply)) {
             failed("updating %s: Could not connect to %s%s.", $h, $config{$h}{'server'}, $config{$h}{'path'});
             last;
         };
-
-        # Reply found
         debug("%s", $reply);
-        # Extract the HTTP response code
         (my $http_status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
         debug("HTTP response code: %s", $http_status);
-
-        # If not 200, bail
         if ($http_status ne '200') {
             failed("Failed to update Host\n%s", $h);
             failed("HTTP response code\n%s", $http_status);
@@ -4254,11 +4238,7 @@ sub nic_dnsexit2_update {
         } else {
             warning("Unexpected: no HTTP headers stripped!");
         }
-
-        # Decode the remaining reply, it should be JSON.
         my $response = decode_json($reply);
-
-        # It should at least have a 'code' and 'message'.
         if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected \"code\" and \"message\" keys in server response.");
             failed("Response:");
@@ -4285,8 +4265,6 @@ sub nic_dnsexit2_update {
              defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
         $config{$h}{'status-ipv4'} = $status if $ipv4;
         $config{$h}{'status-ipv6'} = $status if $ipv6;
-
-        # Handle statuses
         if ($status ne 'good') {
             if ($status eq 'warning') {
                 warning("%s", $message);
