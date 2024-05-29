@@ -4097,54 +4097,55 @@ EoEXAMPLE
 ######################################################################
 sub nic_dnsexit2_update {
     my $self = shift;
-    # The DNSExit API does not support updating hosts with different zones at the same time,
-    # handling update per host.
     for my $h (@_) {
         $config{$h}{'zone'} = $h if !defined(opt('zone', $h));
-        dnsexit2_update_host($h);
     }
+    dnsexit2_update_hostgroup($_) for group_hosts_by(\@_, qw(password path server ssl zone));
 }
 
-sub dnsexit2_update_host {
-    my ($h) = @_;
-    local $_l = pushlogctx($h);
-    my $name = $h;
-    # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
-    # set to the empty string; both have identical semantics.  For consistency, always
-    # remove the zone even if it means $name becomes the empty string.
-    my $zone = opt('zone', $h);
-    if ($name =~ s/(?:^|\.)\Q$zone\E$//) {
-        # The zone was successfully trimmed from $name.
-    } else {
-        fatal("hostname does not end with the zone: " . opt('zone', $h));
-    }
-    # The IPv4 and IPv6 addresses must be updated together in a single API call.
-    my %ips;
+sub dnsexit2_update_hostgroup {
+    my ($group) = @_;
+    return unless @{$group->{hosts}} > 0;
+    local $_l = pushlogctx(join(', ', @{$group->{hosts}}));
+    my %hostips;
     my @updates;
-    for my $ipv ('4', '6') {
-        my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
-        $ips{$ipv} = $ip;
-        info("updating IPv$ipv address to $ip");
-        $recap{$h}{"status-ipv$ipv"} = 'failed';
-        push(@updates, {
-            name => $name,
-            type => ($ipv eq '6') ? 'AAAA' : 'A',
-            content => $ip,
-            ttl => opt('ttl', $h),
-        });
-    };
-    my $url = opt('server', $h) . opt('path', $h);
+    for my $h (@{$group->{hosts}}) {
+        local $_l = pushlogctx($h) if @{$group->{hosts}} > 1;
+        my $name = $h;
+        # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
+        # set to the empty string; both have identical semantics.  For consistency, always
+        # remove the zone even if it means $name becomes the empty string.
+        if ($name =~ s/(?:^|\.)\Q$group->{cfg}{'zone'}\E$//) {
+            # The zone was successfully trimmed from $name.
+        } else {
+            fatal("hostname does not end with the zone: $group->{cfg}{'zone'}");
+        }
+        # The IPv4 and IPv6 addresses must be updated together in a single API call.
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            $hostips{$h}{$ipv} = $ip;
+            info("updating IPv$ipv address to $ip");
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+            push(@updates, {
+                name => $name,
+                type => ($ipv eq '6') ? 'AAAA' : 'A',
+                content => $ip,
+                ttl => opt('ttl', $h),
+            });
+        }
+    }
+    return unless @updates > 0;
     my $reply = geturl(
         proxy => opt('proxy'),
-        url => $url,
+        url => $group->{cfg}{'server'} . $group->{cfg}{'path'},
         headers => [
             'Content-Type: application/json',
             'Accept: application/json',
         ],
         method => 'POST',
         data => encode_json({
-            apikey => opt('password', $h),
-            domain => $zone,
+            apikey => $group->{cfg}{'password'},
+            domain => $group->{cfg}{'zone'},
             update => \@updates,
         }),
     );
@@ -4191,12 +4192,15 @@ sub dnsexit2_update_host {
         return;
     }
     success($message);
-    $recap{$h}{'mtime'} = $now;
-    keys(%ips);  # Reset internal iterator.
-    while (my ($ipv, $ip) = each(%ips)) {
-        $recap{$h}{"ipv$ipv"} = $ip;
-        $recap{$h}{"status-ipv$ipv"} = 'good';
-        success("updated IPv$ipv address to $ip");
+    keys(%hostips);  # Reset internal iterator.
+    while (my ($h, $ips) = each(%hostips)) {
+        $recap{$h}{'mtime'} = $now;
+        keys(%$ips);  # Reset internal iterator.
+        while (my ($ipv, $ip) = each(%$ips)) {
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("updated IPv$ipv address to $ip");
+        }
     }
 }
 

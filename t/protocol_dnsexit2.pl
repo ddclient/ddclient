@@ -165,12 +165,6 @@ my @test_cases = (
                         ttl => 5,
                         type => 'A',
                     },
-                ],
-            },
-            {
-                apikey => 'key',
-                domain => 'example.com',
-                update => [
                     {
                         content => '2001:db8::1',
                         name => 'host2',
