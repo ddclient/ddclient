@@ -4174,16 +4174,6 @@ sub nic_dnsexit2_update {
 
     ## Update each configured host (hosts cannot be grouped on this API)
     for my $h (@_) {
-        my %codemeaning = (
-            '0' => ['good', 'Success! Actions got executed successfully.'],
-            '1' => ['warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.'],
-            '2' => ['badauth', 'API Key Authentication Error. The API Key is missing or wrong.'],
-            '3' => ['error', 'Missing Required Definitions. Your JSON file may missing some required definitions.'],
-            '4' => ['error', 'JSON Data Syntax Error. Your JSON file has syntax error.'],
-            '5' => ['error', 'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.'],
-            '6' => ['error', 'System Error. Our system problem. May not be your problem. Contact our support if you got such error.'],
-            '7' => ['error', 'Error getting post data. Our server has problem to receive your JSON posting.'],
-        );
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
 
@@ -4275,6 +4265,16 @@ sub nic_dnsexit2_update {
             failed("%s", $response);
             next;
         }
+        my %codemeaning = (
+            '0' => ['good', 'Success! Actions got executed successfully.'],
+            '1' => ['warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.'],
+            '2' => ['badauth', 'API Key Authentication Error. The API Key is missing or wrong.'],
+            '3' => ['error', 'Missing Required Definitions. Your JSON file may missing some required definitions.'],
+            '4' => ['error', 'JSON Data Syntax Error. Your JSON file has syntax error.'],
+            '5' => ['error', 'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.'],
+            '6' => ['error', 'System Error. Our system problem. May not be your problem. Contact our support if you got such error.'],
+            '7' => ['error', 'Error getting post data. Our server has problem to receive your JSON posting.'],
+        );
         if (!exists($codemeaning{$response->{'code'}})) {
             failed("Status code %s is unknown!", $response->{'code'});
             next;
