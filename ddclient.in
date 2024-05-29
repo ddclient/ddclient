@@ -4290,11 +4290,11 @@ sub nic_dnsexit2_update {
 
                 # Handle statuses
                 if ($status eq 'good') {
+                    success("%s", $message);
                     $config{$h}{'mtime'} = $now;
                     for my $ipv (keys %total_payload) {
                         $config{$h}{"ipv$ipv"} = $total_payload{$ipv}{content};
                         $config{$h}{"status-ipv$ipv"} = 'good';
-                        success("%s", $message);
                         success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $total_payload{$ipv}{content}, prettytime($config{$h}{'mtime'}));
                     }
                 } elsif ($status eq 'warning') {
