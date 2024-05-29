@@ -4270,49 +4270,51 @@ sub nic_dnsexit2_update {
         my $response = decode_json($reply);
 
         # It should at least have a 'code' and 'message'.
-        if (defined($response->{'code'}) and defined($response->{'message'})) {
-            if (exists $status{$response->{'code'}}) {
-                # Add the server response data to the applicable array
-                push(@{$status{$response->{'code'}}}, $response->{'message'});
-                if (defined($response->{'details'})) {
-                    push(@{$status{$response->{'code'}}}, $response->{'details'}[0]);
-                } else {
-                    # Keep it symmetrical for simplicity
-                    push(@{$status{$response->{'code'}}}, "no details received");
-                }
-
-                # Set data from array
-                my ($status, $message, $srv_message, $srv_details) = @{$status{$response->{'code'}}};
-                info("Status: %s -- Message: %s", $status, $message);
-                info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
-                $config{$h}{'status-ipv4'} = $status if $ipv4;
-                $config{$h}{'status-ipv6'} = $status if $ipv6;
-
-                # Handle statuses
-                if ($status eq 'good') {
-                    success("%s", $message);
-                    $config{$h}{'mtime'} = $now;
-                    for my $ipv (keys %total_payload) {
-                        $config{$h}{"ipv$ipv"} = $total_payload{$ipv}{content};
-                        $config{$h}{"status-ipv$ipv"} = 'good';
-                        success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $total_payload{$ipv}{content}, prettytime($config{$h}{'mtime'}));
-                    }
-                } elsif ($status eq 'warning') {
-                    warning("%s", $message);
-                    warning("Server response: %s", $srv_message);
-                } elsif ($status =~ m'^(badauth|error)$') {
-                    failed("%s", $message);
-                    failed("Server response: %s", $srv_message);
-                } else {
-                    failed("This should not be possible");
-                }
-            } else {
-                failed("Status code %s is unknown!", $response->{'code'});
-            }
-        } else {
+        if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected \"code\" and \"message\" keys in server response.");
             failed("Response:");
             failed("%s", $response);
+            next;
+        }
+        if (!exists($status{$response->{'code'}})) {
+            failed("Status code %s is unknown!", $response->{'code'});
+            next;
+        }
+        # Add the server response data to the applicable array
+        push(@{$status{$response->{'code'}}}, $response->{'message'});
+        if (defined($response->{'details'})) {
+            push(@{$status{$response->{'code'}}}, $response->{'details'}[0]);
+        } else {
+            # Keep it symmetrical for simplicity
+            push(@{$status{$response->{'code'}}}, "no details received");
+        }
+
+        # Set data from array
+        my ($status, $message, $srv_message, $srv_details) = @{$status{$response->{'code'}}};
+        info("Status: %s -- Message: %s", $status, $message);
+        info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
+        $config{$h}{'status-ipv4'} = $status if $ipv4;
+        $config{$h}{'status-ipv6'} = $status if $ipv6;
+
+        # Handle statuses
+        if ($status ne 'good') {
+            if ($status eq 'warning') {
+                warning("%s", $message);
+                warning("Server response: %s", $srv_message);
+            } elsif ($status =~ m'^(badauth|error)$') {
+                failed("%s", $message);
+                failed("Server response: %s", $srv_message);
+            } else {
+                failed("This should not be possible");
+            }
+            next;
+        }
+        success("%s", $message);
+        $config{$h}{'mtime'} = $now;
+        for my $ipv (keys %total_payload) {
+            $config{$h}{"ipv$ipv"} = $total_payload{$ipv}{content};
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $total_payload{$ipv}{content}, prettytime($config{$h}{'mtime'}));
         }
     }
 }
