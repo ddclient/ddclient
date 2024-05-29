@@ -4291,8 +4291,7 @@ sub nic_dnsexit2_update {
                 # Handle statuses
                 if ($status eq 'good') {
                     $config{$h}{'mtime'} = $now;
-                    my $tracked_ipv;
-                    for $tracked_ipv (keys %total_payload) {
+                    for my $tracked_ipv (keys %total_payload) {
                         $config{$h}{"ipv$tracked_ipv"} = $total_payload{$tracked_ipv}{content};
                         $config{$h}{"status-ipv$tracked_ipv"} = 'good';
                         success("%s", $message);
