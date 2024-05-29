@@ -4180,35 +4180,32 @@ sub nic_dnsexit2_update {
         for my $ipv ('4', '6') {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             $ips{$ipv} = $ip;
-            my $type = ($ipv eq '6') ? 'AAAA' : 'A';
             info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
             $config{$h}{'status-ipv$ipv'} = 'failed';
             push(@updates, {
                 name => $h,
-                type => $type,
+                type => ($ipv eq '6') ? 'AAAA' : 'A',
                 content => $ip,
                 ttl => $config{$h}{'ttl'},
             });
         };
         my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
-        my $header = "Content-Type: application/json\nAccept: application/json";
         if (not defined $config{$h}{'zone'}) {
             debug("Zone not defined, setting to default hostname: %s", $h);
             $config{$h}{'zone'} = $h
         } else {
             debug("Zone is: %s", $config{$h}{'zone'});
         }
-        my $data = encode_json({
-            apikey => $config{$h}{'password'},
-            domain => $config{$h}{'zone'},
-            update => \@updates,
-        });
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            headers => $header,
+            headers => "Content-Type: application/json\nAccept: application/json",
             method => 'POST',
-            data => $data,
+            data => encode_json({
+                apikey => $config{$h}{'password'},
+                domain => $config{$h}{'zone'},
+                update => \@updates,
+            }),
         );
         unless ($reply && header_ok($h, $reply)) {
             failed("updating %s: Could not connect to %s%s.", $h, $url);
