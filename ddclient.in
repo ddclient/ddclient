@@ -4203,7 +4203,7 @@ sub nic_dnsexit2_update {
             }),
         );
         unless ($reply && header_ok($h, $reply)) {
-            failed("updating %s: Could not connect to %s%s.", $h, $url);
+            failed("updating %s: Could not connect to %s", $h, $url);
             last;
         };
         debug("%s", $reply);
