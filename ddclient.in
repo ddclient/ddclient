@@ -4215,17 +4215,14 @@ sub nic_dnsexit2_update {
             failed("Full reply\n%s", $reply) unless opt('verbose');
             next;
         }
-
-        # Strip HTTP response headers
-        (my $strip_status) = ($reply =~ s/^[\s\S]*?(?=\{"code":)//);
-        debug("strip_status");
-        debug("%s", $strip_status);
-        if ($strip_status) {
+        my $body = ($reply =~ s/^.*?\r?\n\r?\n//sr);
+        debug("body\n%s", $body);
+        if ($body ne $reply) {
             debug("HTTP headers are stripped.");
         } else {
             warning("Unexpected: no HTTP headers stripped!");
         }
-        my $response = decode_json($reply);
+        my $response = decode_json($body);
         if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected \"code\" and \"message\" keys in server response.");
             failed("Response:");
