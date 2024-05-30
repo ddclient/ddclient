@@ -4216,12 +4216,6 @@ sub nic_dnsexit2_update {
             next;
         }
         my $body = ($reply =~ s/^.*?\r?\n\r?\n//sr);
-        debug("body\n%s", $body);
-        if ($body ne $reply) {
-            debug("HTTP headers are stripped.");
-        } else {
-            warning("Unexpected: no HTTP headers stripped!");
-        }
         my $response = decode_json($body);
         if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected \"code\" and \"message\" keys in server response.");
