@@ -4190,7 +4190,7 @@ sub nic_dnsexit2_update {
                 ttl => $config{$h}{'ttl'},
             });
         };
-        my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
+        my $url = $config{$h}{'server'} . $config{$h}{'path'};
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
@@ -4203,7 +4203,7 @@ sub nic_dnsexit2_update {
             }),
         );
         unless ($reply && header_ok($h, $reply)) {
-            failed("updating %s: Could not connect to %s%s.", $h, $url);
+            failed("updating %s: Could not connect to %s", $h, $url);
             last;
         };
         debug("%s", $reply);
@@ -4250,8 +4250,6 @@ sub nic_dnsexit2_update {
         info("Status: %s -- Message: %s", $status, $message);
         info("Server Message: %s -- Server Details: %s", $response->{'message'},
              defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
-        $config{$h}{'status-ipv4'} = $status if $ips{'4'};
-        $config{$h}{'status-ipv6'} = $status if $ips{'6'};
         if ($status ne 'good') {
             if ($status eq 'warning') {
                 warning("%s", $message);
@@ -4260,7 +4258,7 @@ sub nic_dnsexit2_update {
                 failed("%s", $message);
                 failed("Server response: %s", $response->{'message'});
             } else {
-                failed("This should not be possible");
+                failed("Unexpected status: %s", $status);
             }
             next;
         }
