@@ -4216,7 +4216,11 @@ sub nic_dnsexit2_update {
             next;
         }
         my $body = ($reply =~ s/^.*?\r?\n\r?\n//sr);
-        my $response = decode_json($body);
+        my $response = eval { decode_json($body); };
+        if (!$response) {
+            failed("failed to parse response: $@");
+            next;
+        }
         if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected \"code\" and \"message\" keys in server response.");
             failed("Response:");
