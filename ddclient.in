@@ -4223,7 +4223,7 @@ sub nic_dnsexit2_update {
         }
         if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected 'code' and 'message' keys in server response:\n%s",
-                $response);
+                $body);
             next;
         }
         my %codemeaning = (
