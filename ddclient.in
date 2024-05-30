@@ -4190,7 +4190,7 @@ sub nic_dnsexit2_update {
                 ttl => $config{$h}{'ttl'},
             });
         };
-        my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
+        my $url = $config{$h}{'server'} . $config{$h}{'path'};
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
