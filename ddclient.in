@@ -4174,6 +4174,12 @@ sub nic_dnsexit2_update {
 
     # The DNSExit API does not support updating multiple hosts at a time.
     for my $h (@_) {
+        if (not defined $config{$h}{'zone'}) {
+            debug("Zone not defined, setting to default hostname: %s", $h);
+            $config{$h}{'zone'} = $h
+        } else {
+            debug("Zone is: %s", $config{$h}{'zone'});
+        }
         # The IPv4 and IPv6 addresses must be updated together in a single API call.
         my %ips;
         my @updates;
@@ -4190,12 +4196,6 @@ sub nic_dnsexit2_update {
             });
         };
         my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
-        if (not defined $config{$h}{'zone'}) {
-            debug("Zone not defined, setting to default hostname: %s", $h);
-            $config{$h}{'zone'} = $h
-        } else {
-            debug("Zone is: %s", $config{$h}{'zone'});
-        }
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
