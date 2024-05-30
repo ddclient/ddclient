@@ -1343,12 +1343,12 @@ sub update_nics {
     my %ipv4list = ();
     my %ipv6list = ();
 
-    foreach my $s (sort keys %services) {
+    for my $s (sort keys %services) {
         my (@hosts, %ipsv4, %ipsv6) = ();
         my $updateable = $services{$s}{'updateable'};
         my $update     = $services{$s}{'update'};
 
-        foreach my $h (sort keys %config) {
+        for my $h (sort keys %config) {
             next if $config{$h}{'protocol'} ne lc($s);
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
@@ -1464,7 +1464,7 @@ sub update_nics {
             # The new '--usev*' parameters set 'wantipv*' and the new providers set 'ipv*' and 'status-ipv*'.
             # To allow gradual transition, we make sure both the old 'status' and 'ip' are being set
             # accordingly to what new providers returned in the new 'status-ipv*' and 'ipv*' fields respectively.
-            foreach my $h (@hosts) {
+            for my $h (@hosts) {
                 $config{$h}{'status'} //= $config{$h}{'status-ipv4'} // $config{$h}{'status-ipv6'};
                 $config{$h}{'ip'} //= $config{$h}{'ipv4'} // $config{$h}{'ipv6'};
             }
@@ -1472,7 +1472,7 @@ sub update_nics {
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
         }
     }
-    foreach my $h (sort keys %config) {
+    for my $h (sort keys %config) {
         if (!exists $examined{$h}) {
             failed("%s was not updated because protocol %s is not supported.",
                    $h, $config{$h}{'protocol'} // '<undefined>');
@@ -1515,7 +1515,7 @@ sub write_cache {
     my ($file) = @_;
 
     ## merge the updated host entries into the cache.
-    foreach my $h (keys %config) {
+    for my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
             map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
         } else {
@@ -1525,7 +1525,7 @@ sub write_cache {
 
     ## construct the cache file.
     my $cache = "";
-    foreach my $h (sort keys %cache) {
+    for my $h (sort keys %cache) {
         my $opt = join(',', map { "$_=" . ($cache{$h}{$_} // '') } sort keys %{$cache{$h}});
 
         $cache .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
@@ -1573,9 +1573,9 @@ sub read_cache {
         $saved_cache = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
         %opt         = %saved;
 
-        foreach my $h (keys %cache) {
+        for my $h (keys %cache) {
             if (exists $config->{$h}) {
-                foreach (qw(atime mtime wtime ip status)) {
+                for (qw(atime mtime wtime ip status)) {
                     $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
                 }
             }
@@ -1757,7 +1757,7 @@ sub _read_config {
         my @args = split;
 
         ## verify that keywords are valid...and check the value
-        foreach my $k (keys %locals) {
+        for my $k (keys %locals) {
             # Handle '_env' keyword suffix
             if ($k =~ /(.*)_env$/)
             {
@@ -1810,7 +1810,7 @@ sub _read_config {
             $locals{'password'} = $password if defined $password;
 
             ## allow {host} to be a comma separated list of hosts
-            foreach my $h (split_by_comma($host)) {
+            for my $h (split_by_comma($host)) {
                 if ($config{$h}) {
                     ## host already defined, merging configs
                     $config{$h} = {%locals, %{$config{$h}}};
@@ -1878,7 +1878,7 @@ sub init_config {
     if (exists $opt{'options'} && defined $opt{'options'}) {
         ## collect cmdline configuration options.
         my %options = ();
-        foreach my $opt (split_by_comma($opt{'options'})) {
+        for my $opt (split_by_comma($opt{'options'})) {
             my ($name, $var) = split /\s*=\s*/, $opt;
             if ($name eq 'fw-banlocal' || $name eq 'if-skip') {
                 warning("'$name' is deprecated and does nothing");
@@ -1889,20 +1889,20 @@ sub init_config {
         ## determine hosts specified with --host
         my @hosts = ();
         if (exists $opt{'host'}) {
-            foreach my $h (split_by_comma($opt{'host'})) {
+            for my $h (split_by_comma($opt{'host'})) {
                 push @hosts, $h;
             }
         }
         ## and those in --options=...
         if (exists $options{'host'}) {
-            foreach my $h (split_by_comma($options{'host'})) {
+            for my $h (split_by_comma($options{'host'})) {
                 push @hosts, $h;
             }
             delete $options{'host'};
         }
         ## merge options into host definitions or globals
         if (@hosts) {
-            foreach my $h (@hosts) {
+            for my $h (@hosts) {
                 $config{$h} = {%{$config{$h}}, %options};
             }
             $opt{'host'} = join(',', @hosts);
@@ -1912,7 +1912,7 @@ sub init_config {
     }
 
     ## override global options with those on the command-line.
-    foreach my $o (keys %opt) {
+    for my $o (keys %opt) {
         if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
             $globals{$o} = $opt{$o};
         }
@@ -1939,9 +1939,9 @@ sub init_config {
     map { delete $config{$_} unless exists $hosts{$_} } keys %config;
 
     ## collect the cacheable variables.
-    foreach my $proto (keys %services) {
+    for my $proto (keys %services) {
         my @cacheable = ();
-        foreach my $k (keys %{$services{$proto}{'variables'}}) {
+        for my $k (keys %{$services{$proto}{'variables'}}) {
             push @cacheable, $k if $services{$proto}{'variables'}{$k}{'cache'};
         }
         $services{$proto}{'cacheable'} = [ @cacheable ];
@@ -1950,7 +1950,7 @@ sub init_config {
     ## sanity check..
     ## make sure config entries have all defaults and they meet minimums
     ## first the globals...
-    foreach my $k (keys %globals) {
+    for my $k (keys %globals) {
         # Make sure any _env suffixed variables look at their original entry
         $k = $1 if $k =~ /^(.*)_env$/;
 
@@ -1966,7 +1966,7 @@ sub init_config {
 
     ## now the host definitions...
   HOST:
-    foreach my $h (keys %config) {
+    for my $h (keys %config) {
         my $proto;
         $proto = $config{$h}{'protocol'};
         $proto = opt('protocol') if !defined($proto);
@@ -1982,7 +1982,7 @@ sub init_config {
             my $svars = $services{$proto}{'variables'};
             my $conf  = { 'protocol' => $proto };
 
-            foreach my $k (keys %$svars) {
+            for my $k (keys %$svars) {
                 # Make sure any _env suffixed variables look at their original entry
                 $k = $1 if $k =~ /^(.*)_env$/;
 
@@ -2010,7 +2010,7 @@ sub process_args {
     my @spec  = ();
     my $usage = "";
 
-    foreach (@_) {
+    for (@_) {
         if (ref $_) {
             my ($key, $specifier, $arg_usage) = @$_;
             my $value = default($key);
@@ -2068,14 +2068,14 @@ sub test_possible_ip {
                    `command -v ifconfig >/dev/null && ifconfig -a`) if $? || !@ifs;
         @ifs = () if $?;
         warning("failed to get list of interfaces") if !@ifs;
-        foreach my $if (@ifs) {
+        for my $if (@ifs) {
             local $opt{'if'} = $if;
             printf "use=if, if=%s address is %s\n", opt('if'), get_ip('if') // 'NOT FOUND';
         }
     }
     if (opt('fw')) {
         if (opt('fw') !~ m%/%) {
-            foreach my $fw (sort keys %builtinfw) {
+            for my $fw (sort keys %builtinfw) {
                 local $opt{'use'} = $fw;
                 printf "use=%s address is %s\n", $fw, get_ip($fw) // 'NOT FOUND';
             }
@@ -2087,7 +2087,7 @@ sub test_possible_ip {
     }
     {
         local $opt{'use'} = 'web';
-        foreach my $web (sort keys %builtinweb) {
+        for my $web (sort keys %builtinweb) {
             local $opt{'web'} = $web;
             printf "use=web, web=%s address is %s\n", $web, get_ip('web') // 'NOT FOUND';
         }
@@ -2113,14 +2113,14 @@ sub test_possible_ip {
                    `command -v ifconfig >/dev/null && ifconfig -a`) if $? || !@ifs;
         @ifs = () if $?;
         warning("failed to get list of interfaces") if !@ifs;
-        foreach my $if (@ifs) {
+        for my $if (@ifs) {
             local $opt{'ifv4'} = $if;
             printf "use=ifv4, ifv4=%s address is %s\n", opt('ifv4'), get_ipv4('ifv4') // 'NOT FOUND';
         }
     }
     {
         local $opt{'usev4'} = 'webv4';
-        foreach my $web (sort keys %builtinweb) {
+        for my $web (sort keys %builtinweb) {
             local $opt{'webv4'} = $web;
             printf "use=webv4, webv4=$web address is %s\n", get_ipv4('webv4') // 'NOT FOUND'
                 if ($web !~ "6")  ## Don't bother if web site only supports IPv6;
@@ -2147,14 +2147,14 @@ sub test_possible_ip {
                    `command -v ifconfig >/dev/null && ifconfig -a`) if $? || !@ifs;
         @ifs = () if $?;
         warning("failed to get list of interfaces") if !@ifs;
-        foreach my $if (@ifs) {
+        for my $if (@ifs) {
             local $opt{'ifv6'} = $if;
             printf "use=ifv6, ifv6=%s address is %s\n", opt('ifv6'), get_ipv6('ifv6') // 'NOT FOUND';
         }
     }
     {
         local $opt{'usev6'} = 'webv6';
-        foreach my $web (sort keys %builtinweb) {
+        for my $web (sort keys %builtinweb) {
             local $opt{'webv6'} = $web;
             printf "use=webv6, webv6=$web address is %s\n", get_ipv6('webv6') // 'NOT FOUND'
                 if ($web !~ "4");  ## Don't bother if web site only supports IPv4
@@ -2247,7 +2247,7 @@ sub _print_hash {
     if (!defined($ptr)) {
         $value = "<undefined>";
     } elsif (ref $ptr eq 'HASH') {
-        foreach my $key (sort keys %$ptr) {
+        for my $key (sort keys %$ptr) {
             if (($key eq "login") || ($key eq "password")) {
                $value = "<redacted>";
             } else {
@@ -2366,14 +2366,14 @@ sub opt {
 }
 sub min {
     my $min = shift;
-    foreach my $arg (@_) {
+    for my $arg (@_) {
         $min = $arg if $arg < $min;
     }
     return $min;
 }
 sub max {
     my $max = shift;
-    foreach my $arg (@_) {
+    for my $arg (@_) {
         $max = $arg if $arg > $max;
     }
     return $max;
@@ -2386,10 +2386,10 @@ sub ynu {
 
     return $no if !($value // '');
     return $yes if $value eq '1';
-    foreach (qw(yes true)) {
+    for (qw(yes true)) {
         return $yes if $_ =~ /^$value/i;
     }
-    foreach (qw(no false)) {
+    for (qw(no false)) {
         return $no if $_ =~ /^$value/i;
     }
     return $undef;
@@ -2765,7 +2765,7 @@ sub geturl {
 
         # Each header line is added individually
         @header_lines = split('\n', $headers);
-        $_ = "header=\"".escape_curl_param($_).'"' foreach (@header_lines);
+        $_ = "header=\"".escape_curl_param($_).'"' for (@header_lines);
         push(@curlopt, @header_lines);
 
         # Add in the data if any was provided (for POST/PATCH)
@@ -2780,7 +2780,7 @@ sub geturl {
         # don't include ${url} as that might expose login credentials
         $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
         verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
-        verbose("SENDING:", "%s", $_) foreach (@curlopt);
+        verbose("SENDING:", "%s", $_) for (@curlopt);
 
         $reply = curl_cmd(@curlopt);
         verbose("RECEIVE:", "%s", $reply // "<undefined>");
@@ -3079,7 +3079,7 @@ sub get_default_interface {
     debug("Default routes found for IPv%s :\n%s", $ipver, join("\n",@list));
 
     # now check each interface to make sure it is global (not loopback).
-    foreach my $line (@list) {
+    for my $line (@list) {
         ## Interface will be after "dev" or the last word in the line. Must accept blank spaces
         ## at the end.  Interface name may not have any whitespace or forward slash.
         $line =~ /\bdev\b\s*\K[^\s\/]+|\b[^\s\/]+(?=[\s\/]*$)/;
@@ -3426,7 +3426,7 @@ sub group_hosts_by {
     my %attrs = (map({ ($_ => 1) } @$attributes), 'wantip' => 1);
     my @attrs = sort(keys(%attrs));
     my %groups = ();
-    foreach my $h (@$hosts) {
+    for my $h (@$hosts) {
         my $sig = join(',', map({ sprintf("%s=%s", $_, $config{$h}{$_} // '') } @attrs));
         push @{$groups{$sig}}, $h;
     }
@@ -3442,7 +3442,7 @@ sub encode_www_form_urlencoded {
     my $must_encode = qr'[<>"#%{}|\\^~\[\]`;/?:=&+]';
     my $encoded;
     my $i = 0;
-    foreach my $k (keys %$formdata) {
+    for my $k (keys %$formdata) {
         my $kenc = $k;
         my $venc = $formdata->{$k};
 
@@ -3468,7 +3468,7 @@ sub encode_www_form_urlencoded {
 sub nic_examples {
     my $examples  = "";
     my $separator = "";
-    foreach my $s (sort keys %services) {
+    for my $s (sort keys %services) {
         my $subr = $services{$s}{'examples'};
         my $example;
 
@@ -3852,7 +3852,7 @@ EoEXAMPLE
 sub nic_dyndns1_update {
     debug("\nnic_dyndns1_update -------------------");
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -3883,7 +3883,7 @@ sub nic_dyndns1_update {
 
         my @reply = split /\n/, $reply;
         my ($title, $return_code, $error_code) = ('', '', '');
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             $title       = $1 if $line =~ m%<TITLE>\s*(.*)\s*</TITLE>%i;
             $return_code = $1 if $line =~ m%^return\s+code\s*:\s*(.*)\s*$%i;
             $error_code  = $1 if $line =~ m%^error\s+code\s*:\s*(.*)\s*$%i;
@@ -4002,14 +4002,14 @@ sub nic_dyndns2_update {
     );
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
         my $ipv4  = $config{$h}{'wantipv4'};
         my $ipv6  = $config{$h}{'wantipv6'};
-        delete $config{$_}{'wantipv4'} foreach @hosts;
-        delete $config{$_}{'wantipv6'} foreach @hosts;
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
 
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
@@ -4059,7 +4059,7 @@ sub nic_dyndns2_update {
         my @reply      = split /\n/, $reply;
         my $state      = 'header';
 
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             if ($state eq 'header') {
                 $state = 'body';
 
@@ -4073,13 +4073,13 @@ sub nic_dyndns2_update {
                 # we can't use the returned IP
                 my ($status, $returnedips) = split / /, lc $line;
 
-                foreach my $h (@hosts) {
+                for my $h (@hosts) {
                     $config{$h}{'status-ipv4'} = $status if $ipv4;
                     $config{$h}{'status-ipv6'} = $status if $ipv6;
                 }
 
                 if ($status eq 'good') {
-                    foreach my $h (@hosts) {
+                    for my $h (@hosts) {
                         $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
                         $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                         $config{$h}{'mtime'} = $now;
@@ -4092,7 +4092,7 @@ sub nic_dyndns2_update {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
 
-                        foreach my $h (@hosts) {
+                        for my $h (@hosts) {
                             $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
                             $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
                             $config{$h}{'mtime'}  = $now;
@@ -4113,7 +4113,7 @@ sub nic_dyndns2_update {
                     ($scale, $units) = (60*60, 'hours') if $units eq 'h';
 
                     $sec = $wait * $scale;
-                    foreach my $h (@hosts) {
+                    for my $h (@hosts) {
                         $config{$h}{'wtime'} = $now + $sec;
                     }
 
@@ -4172,84 +4172,44 @@ EoEXAMPLE
 sub nic_dnsexit2_update {
     debug("\nnic_dnsexit2_update -------------------");
 
-    ## Update each configured host (hosts cannot be grouped on this API)
-    foreach my $h (@_) {
-        # All the known status
-        my %status = (
-             '0'        => [ 'good',    'Success! Actions got executed successfully.' ],
-             '1'        => [ 'warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.' ],
-             '2'        => [ 'badauth', 'API Key Authentication Error. The API Key is missing or wrong.' ],
-             '3'        => [ 'error',   'Missing Required Definitions. Your JSON file may missing some required definitions.' ],
-             '4'        => [ 'error',   'JSON Data Syntax Error. Your JSON file has syntax error.' ],
-             '5'        => [ 'error',   'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.' ],
-             '6'        => [ 'error',   'System Error. Our system problem. May not be your problem. Contact our support if you got such error.' ],
-             '7'        => [ 'error',   'Error getting post data. Our server has problem to receive your JSON posting.' ],
-        );
-        my $ipv4 = delete $config{$h}{'wantipv4'};
-        my $ipv6 = delete $config{$h}{'wantipv6'};
-
-        # Updates for ipv4 and ipv6 need to be combined in a single API call, create Hash of Arrays for tracking
-        my %total_payload;
-
-        foreach my $ip ($ipv4, $ipv6){
-            next if (!$ip);
-            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
-            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
-
-            info("Going to update IPv$ipv address to %s for %s.", $ip, $h);
-            $config{$h}{'status-ipv$ipv'} = 'failed';
-            $total_payload{$ipv} = {
+    # The DNSExit API does not support updating multiple hosts at a time.
+    for my $h (@_) {
+        $config{$h}{'zone'} //= $h;
+        # The IPv4 and IPv6 addresses must be updated together in a single API call.
+        my %ips;
+        my @updates;
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            $ips{$ipv} = $ip;
+            info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
+            $config{$h}{"status-ipv$ipv"} = 'failed';
+            push(@updates, {
                 name => $h,
-                type => $type,
+                type => ($ipv eq '6') ? 'AAAA' : 'A',
                 content => $ip,
                 ttl => $config{$h}{'ttl'},
-            };
+            });
         };
-        # Set the URL of the API endpoint
         my $url = "https://$config{$h}{'server'}$config{$h}{'path'}";
-
-        # Set additional headers
-        my $header = "Content-Type: application/json\nAccept: application/json";
-
-        # Set the zone if empty
-        if ( not defined $config{$h}{'zone'}){
-            debug("Zone not defined, setting to default hostname: %s", $h);
-            $config{$h}{'zone'} = $h
-        } else {
-            debug("Zone is: %s", $config{$h}{'zone'});
-        }
-
-        # Build total JSON payload
-        my @payload_values = values %total_payload;
-        my $data = encode_json({
-            apikey => $config{$h}{'password'},
-            domain => $config{$h}{'zone'},
-            update => \@payload_values
-        });
-
-        # Make the call
         my $reply = geturl(
-            proxy     => opt('proxy'),
-            url       => $url,
-            headers   => $header,
-            method    => 'POST',
-            data      => $data
+            proxy => opt('proxy'),
+            url => $url,
+            headers => "Content-Type: application/json\nAccept: application/json",
+            method => 'POST',
+            data => encode_json({
+                apikey => $config{$h}{'password'},
+                domain => $config{$h}{'zone'},
+                update => \@updates,
+            }),
         );
-
-        # No reply, declare as failed
-        unless ($reply && header_ok($h, $reply)){
-            failed("updating %s: Could not connect to %s%s.", $h, $config{$h}{'server'}, $config{$h}{'path'});
+        unless ($reply && header_ok($h, $reply)) {
+            failed("updating %s: Could not connect to %s%s.", $h, $url);
             last;
         };
-
-        # Reply found
         debug("%s", $reply);
-        # Extract the HTTP response code
         (my $http_status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
         debug("HTTP response code: %s", $http_status);
-
-        # If not 200, bail
-        if ( $http_status ne '200' ){
+        if ($http_status ne '200') {
             failed("Failed to update Host\n%s", $h);
             failed("HTTP response code\n%s", $http_status);
             failed("Full reply\n%s", $reply) unless opt('verbose');
@@ -4262,62 +4222,59 @@ sub nic_dnsexit2_update {
         debug("%s", $strip_status);
         if ($strip_status) {
             debug("HTTP headers are stripped.");
-        }
-        else {
+        } else {
             warning("Unexpected: no HTTP headers stripped!");
         }
-
-        # Decode the remaining reply, it should be JSON.
         my $response = decode_json($reply);
-
-        # It should at least have a 'code' and 'message'.
-        if (defined($response->{'code'}) and defined($response->{'message'})) {
-            if (exists $status{$response->{'code'}}) {
-                # Add the server response data to the applicable array
-                push( @{ $status {$response->{'code'} } }, $response->{'message'});
-                if (defined($response->{'details'})) {
-                    push ( @{ $status {$response->{'code'} } }, $response->{'details'}[0]);
-                } else {
-                    # Keep it symmetrical for simplicity
-                    push ( @{ $status {$response->{'code'} } }, "no details received");
-                }
-
-                # Set data from array
-                my ($status, $message, $srv_message, $srv_details) = @{ $status {$response->{'code'} } };
-                info("Status: %s -- Message: %s", $status, $message);
-                info("Server Message: %s -- Server Details: %s", $srv_message, $srv_details);
-                $config{$h}{'status-ipv4'} = $status if $ipv4;
-                $config{$h}{'status-ipv6'} = $status if $ipv6;
-
-                # Handle statuses
-                if ($status eq 'good') {
-                    $config{$h}{'mtime'}  = $now;
-                    my $tracked_ipv;
-                    foreach $tracked_ipv ( keys %total_payload ){
-                        $config{$h}{"ipv$tracked_ipv"} = $total_payload{$tracked_ipv}{content};
-                        $config{$h}{"status-ipv$tracked_ipv"} = 'good';
-                        success("%s", $message);
-                        success("Updated %s successfully to IPv$tracked_ipv address %s at time %s", $h, $total_payload{$tracked_ipv}{content}, prettytime($config{$h}{'mtime'}));
-                    }
-                } elsif ($status eq 'warning') {
-                    warning("%s", $message);
-                    warning("Server response: %s", $srv_message);
-                } elsif ($status =~ m'^(badauth|error)$') {
-                    failed("%s", $message);
-                    failed("Server response: %s", $srv_message);
-                } else {
-                    failed("This should not be possible");
-                }
-            } else {
-                failed("Status code %s is unknown!", $response->{'code'});
-            }
-        } else {
+        if (!defined($response->{'code'}) || !defined($response->{'message'})) {
             failed("Did not receive expected \"code\" and \"message\" keys in server response.");
             failed("Response:");
             failed("%s", $response);
+            next;
+        }
+        my %codemeaning = (
+            '0' => ['good', 'Success! Actions got executed successfully.'],
+            '1' => ['warning', 'Some execution problems. May not indicate actions failures. Some action may got executed fine and some may have problems.'],
+            '2' => ['badauth', 'API Key Authentication Error. The API Key is missing or wrong.'],
+            '3' => ['error', 'Missing Required Definitions. Your JSON file may missing some required definitions.'],
+            '4' => ['error', 'JSON Data Syntax Error. Your JSON file has syntax error.'],
+            '5' => ['error', 'JSON Defined Record Type not Supported. Your JSON may try to update some record type not supported by our system.'],
+            '6' => ['error', 'System Error. Our system problem. May not be your problem. Contact our support if you got such error.'],
+            '7' => ['error', 'Error getting post data. Our server has problem to receive your JSON posting.'],
+        );
+        if (!exists($codemeaning{$response->{'code'}})) {
+            failed("Status code %s is unknown!", $response->{'code'});
+            next;
+        }
+        my ($status, $message) = @{$codemeaning{$response->{'code'}}};
+        info("Status: %s -- Message: %s", $status, $message);
+        info("Server Message: %s -- Server Details: %s", $response->{'message'},
+             defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
+        $config{$h}{'status-ipv4'} = $status if $ips{'4'};
+        $config{$h}{'status-ipv6'} = $status if $ips{'6'};
+        if ($status ne 'good') {
+            if ($status eq 'warning') {
+                warning("%s", $message);
+                warning("Server response: %s", $response->{'message'});
+            } elsif ($status =~ m'^(badauth|error)$') {
+                failed("%s", $message);
+                failed("Server response: %s", $response->{'message'});
+            } else {
+                failed("This should not be possible");
+            }
+            next;
+        }
+        success("%s", $message);
+        $config{$h}{'mtime'} = $now;
+        keys(%ips);  # Reset internal iterator.
+        while (my ($ipv, $ip) = each(%ips)) {
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $ip, prettytime($config{$h}{'mtime'}));
         }
     }
 }
+
 ######################################################################
 ## nic_noip_update
 ## Note: uses same features as nic_dyndns2_update, less return codes
@@ -4340,14 +4297,14 @@ sub nic_noip_update {
     );
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
         my $ipv4    = $config{$h}{'wantipv4'};
         my $ipv6    = $config{$h}{'wantipv6'};
-        delete $config{$_}{'wantipv4'} foreach @hosts;
-        delete $config{$_}{'wantipv6'} foreach @hosts;
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
 
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
@@ -4374,7 +4331,7 @@ sub nic_noip_update {
 
         my @reply = split /\n/, $reply;
         my $state = 'header';
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             if ($state eq 'header') {
                 $state = 'body';
 
@@ -4387,7 +4344,7 @@ sub nic_noip_update {
                 my ($status, $returnedips) = split / /, lc $line;
                 my $h = shift @hosts;
 
-                foreach my $ip (split_by_comma($returnedips)) {
+                for my $ip (split_by_comma($returnedips)) {
                     next if (!$ip);
                     my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                     $config{$h}{"status-ipv$ipv"} = $status;
@@ -4395,7 +4352,7 @@ sub nic_noip_update {
 
                 if ($status eq 'good') {
                     $config{$h}{'mtime'} = $now;
-                    foreach my $ip (split_by_comma($returnedips)) {
+                    for my $ip (split_by_comma($returnedips)) {
                         next if (!$ip);
                         my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                         $config{$h}{"ipv$ipv"} = $ip;
@@ -4406,7 +4363,7 @@ sub nic_noip_update {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $h, $status, $errors{$status});
                         $config{$h}{'mtime'} = $now;
-                        foreach my $ip (split_by_comma($returnedips)) {
+                        for my $ip (split_by_comma($returnedips)) {
                             next if (!$ip);
                             my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                             $config{$h}{"ipv$ipv"} = $ip;
@@ -4499,7 +4456,7 @@ EoEXAMPLE
 sub nic_dslreports1_update {
     debug("\nnic_dslreports1_update -------------------");
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -4524,7 +4481,7 @@ sub nic_dslreports1_update {
 
         my @reply = split /\n/, $reply;
         my $return_code = '';
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             $return_code = $1 if $line =~ m%^return\s+code\s*:\s*(.*)\s*$%i;
         }
 
@@ -4581,7 +4538,7 @@ sub nic_domeneshop_update {
 
     ## update each configured host
     ## should improve to update in one pass
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "Updating %s", $h);
@@ -4676,12 +4633,12 @@ sub nic_zoneedit1_update {
     my %groups = group_hosts_by([ @_ ], [ qw(login password server zone) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
         my $ip    = $config{$h}{'wantip'};
-        delete $config{$_}{'wantip'} foreach @hosts;
+        delete $config{$_}{'wantip'} for @hosts;
 
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
@@ -4705,7 +4662,7 @@ sub nic_zoneedit1_update {
         next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
                 my ($left, %var) = parse_assignments($assignments);
@@ -4823,14 +4780,14 @@ sub nic_easydns_update {
     );
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $h     = $hosts[0];
         my $ipv4  = $config{$h}{'wantipv4'};
         my $ipv6  = $config{$h}{'wantipv6'};
-        delete $config{$_}{'wantipv4'} foreach @hosts;
-        delete $config{$_}{'wantipv6'} foreach @hosts;
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
 
         info("setting IP address to %s %s for %s", $ipv4, $ipv6, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
@@ -4842,7 +4799,7 @@ sub nic_easydns_update {
         $url .= "hostname=$hosts";
         $url .= "&myip=";
         $url .= $ipv4 if $ipv4;
-        foreach my $ipv6a ($ipv6) {
+        for my $ipv6a ($ipv6) {
             $url .= "&myip=";
             $url .= $ipv6a
         }
@@ -4867,7 +4824,7 @@ sub nic_easydns_update {
 
         my @reply = split /\n/, $reply;
         my $state = 'header';
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             if ($state eq 'header') {
                 $state = 'body';
 
@@ -4958,7 +4915,7 @@ sub nic_namecheap_update {
     debug("\nnic_namecheap1_update -------------------");
 
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -5150,7 +5107,7 @@ sub nic_nfsn_update {
     debug("\nnic_nfsn_update -------------------");
 
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $zone = $config{$h}{'zone'};
         my $name;
 
@@ -5264,7 +5221,7 @@ EoEXAMPLE
 sub nic_njalla_update {
     debug("\nnic_njalla_update -------------------");
 
-    foreach my $h (@_) {
+    for my $h (@_) {
         # Read input params
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
@@ -5274,7 +5231,7 @@ sub nic_njalla_update {
         # Build url
         my $url = "https://$config{$h}{'server'}/update/?h=$h&k=$config{$h}{'password'}";
         my $auto = 1;
-        foreach my $ip ($ipv4, $ipv6) {
+        for my $ip ($ipv4, $ipv6) {
             next if (!$ip);
             $auto = 0;
             my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
@@ -5375,7 +5332,7 @@ sub nic_sitelutions_update {
     debug("\nnic_sitelutions_update -------------------");
 
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -5498,7 +5455,7 @@ sub nic_freedns_update {
         $record_list_error = "failed to get record list from $url_tmpl";
     }
 
-    foreach my $h (@_) {
+    for my $h (@_) {
         next if (!$h);
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
@@ -5511,7 +5468,7 @@ sub nic_freedns_update {
         }
 
         # IPv4 and IPv6 handling are similar enough to do in a loop...
-        foreach my $ip ($ipv4, $ipv6) {
+        for my $ip ($ipv4, $ipv6) {
             next if (!$ip);
             my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
             my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
@@ -5594,7 +5551,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_1984_update {
     debug("\nnic_1984_update -------------------");
-    foreach my $host (@_) {
+    for my $host (@_) {
         my $ip = delete $config{$host}{'wantip'};
         info("setting IP address to %s for %s", $ip, $host);
         verbose("UPDATE:", "updating %s", $host);
@@ -5678,7 +5635,7 @@ sub nic_changeip_update {
     debug("\nnic_changeip_update -------------------");
 
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -5763,7 +5720,7 @@ sub nic_godaddy_update {
     my %groups = group_hosts_by([ @_ ], [ qw(server login password zone) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
 
         # Update each set configured host.
@@ -5774,7 +5731,7 @@ sub nic_godaddy_update {
             my $zone = $config{$host}{'zone'};
             (my $hostname = $host) =~ s/\.\Q$zone\E$//;
 
-            foreach my $ip ($ipv4, $ipv6) {
+            for my $ip ($ipv4, $ipv6) {
                 next if (!$ip);
 
                 info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
@@ -5900,7 +5857,7 @@ sub nic_googledomains_update {
     my %groups = group_hosts_by([ @_ ], [ qw(server login password) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $key   = $hosts[0];
         my $ip    = $config{$key}{'wantip'};
@@ -5985,10 +5942,10 @@ sub nic_mythicdyn_update {
     debug("\nnic_mythicdyn_update --------------------");
 
     # Update each configured host.
-    foreach my $h (@_) {
+    for my $h (@_) {
         info("%s -- Setting IP address.", $h);
 
-        foreach my $mythver ('4','6') {
+        for my $mythver ('4','6') {
             my $ip = $config{$h}{"wantipv$mythver"};
 
             if (defined($ip)) {
@@ -6080,7 +6037,7 @@ sub nic_nsupdate_update {
     my %groups = group_hosts_by([ @_ ], [ qw(login password server zone) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts   = @{$groups{$sig}};
         my $hosts   = join(',', @hosts);
         my $h       = $hosts[0];
@@ -6092,8 +6049,8 @@ sub nic_nsupdate_update {
         my $zone       = $config{$h}{'zone'};
         my $ipv4       = $config{$h}{'wantipv4'};
         my $ipv6       = $config{$h}{'wantipv6'};
-        delete $config{$_}{'wantipv4'} foreach @hosts;
-        delete $config{$_}{'wantipv6'} foreach @hosts;
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
 
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if ($ipv4);
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if ($ipv6);
@@ -6104,8 +6061,8 @@ sub nic_nsupdate_update {
 server $server
 zone $zone.
 EoINSTR1
-        foreach (@hosts) {
-            foreach my $ip ($ipv4, $ipv6) {
+        for (@hosts) {
+            for my $ip ($ipv4, $ipv6) {
                 next if (!$ip);
                 my $type  = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
                 $instructions .= <<"EoINSTR2";
@@ -6125,9 +6082,9 @@ EoINSTR4
 
         my $status = pipecmd($command, $instructions);
         if ($status eq 1) {
-            foreach (@hosts) {
+            for (@hosts) {
                 $config{$_}{'mtime'} = $now;
-                foreach my $ip ($ipv4, $ipv6) {
+                for my $ip ($ipv4, $ipv6) {
                     next if (!$ip);
                     my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
                     $config{$_}{"ipv$ipv"}  = $ip;
@@ -6136,7 +6093,7 @@ EoINSTR4
                 }
             }
         } else {
-            foreach (@hosts) {
+            for (@hosts) {
                 failed("updating %s", $_);
             }
         }
@@ -6197,7 +6154,7 @@ sub nic_cloudflare_update {
     my %groups = group_hosts_by([ @_ ], [ qw(ssh login password server wildcard mx backupmx zone) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $key   = $hosts[0];
@@ -6248,7 +6205,7 @@ sub nic_cloudflare_update {
 
 
             # IPv4 and IPv6 handling are similar enough to do in a loop...
-            foreach my $ip ($ipv4, $ipv6) {
+            for my $ip ($ipv4, $ipv6) {
                 next if (!$ip);
                 my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
                 my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
@@ -6345,7 +6302,7 @@ sub nic_hetzner_update {
     my %groups = group_hosts_by([ @_ ], [ qw(ssh login password server wildcard mx backupmx zone) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
         my $key   = $hosts[0];
@@ -6391,7 +6348,7 @@ sub nic_hetzner_update {
 
 
             # IPv4 and IPv6 handling are similar enough to do in a loop...
-            foreach my $ip ($ipv4, $ipv6) {
+            for my $ip ($ipv4, $ipv6) {
                 next if (!$ip);
                 my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
                 my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
@@ -6502,7 +6459,7 @@ sub nic_yandex_update {
     my %groups = group_hosts_by([ @_ ], [ qw(server login pasword) ]);
 
     ## update each set of hosts that had similar configurations
-    foreach my $sig (keys %groups) {
+    for my $sig (keys %groups) {
         my @hosts   = @{$groups{$sig}};
         my $key     = $hosts[0];
         my $ip      = $config{$key}{'wantip'};
@@ -6617,7 +6574,7 @@ sub nic_duckdns_update {
 
     ## update each configured host
     ## should improve to update in one pass
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
         info("setting IPv4 address to %s for %s", $ipv4, $h) if $ipv4;
@@ -6648,7 +6605,7 @@ sub nic_duckdns_update {
         my $state = 'noresult';
         my $line = '';
 
-        foreach $line (@reply) {
+        for $line (@reply) {
             if ($line eq 'OK') {
                 $config{$h}{'ipv4'}   = $ipv4 if $ipv4;
                 $config{$h}{'ipv6'}   = $ipv6 if $ipv6;
@@ -6707,7 +6664,7 @@ EoEXAMPLE
 sub nic_freemyip_update {
     debug("\nnic_freemyip_update -------------------");
 
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -6864,7 +6821,7 @@ sub nic_woima_update {
         my $state      = 'header';
         my $returnedip = $ip;
 
-        foreach my $line (@reply) {
+        for my $line (@reply) {
             if ($state eq 'header') {
                 $state = 'body';
 
@@ -6950,7 +6907,7 @@ sub nic_dondominio_update {
 
     ## update each configured host
     ## should improve to update in one pass
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
@@ -7040,7 +6997,7 @@ sub nic_dnsmadeeasy_update {
 
     ## update each configured host
     ## should improve to update in one pass
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "Updating %s", $h);
@@ -7114,7 +7071,7 @@ sub nic_ovh_update {
 
     ## update each configured host
     ## should improve to update in one pass
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
@@ -7235,7 +7192,7 @@ EoEXAMPLE
 sub nic_porkbun_update {
     debug("\nnic_porkbun_update -------------------");
 
-    foreach my $host (@_) {
+    for my $host (@_) {
         my ($sub_domain, $domain);
         if ($config{$host}{'root-domain'} ne '') {
             # Process 'root-domain' option
@@ -7262,7 +7219,7 @@ sub nic_porkbun_update {
         }
         info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
 
-        foreach my $ipv ('ipv4', 'ipv6') {
+        for my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$host}{"want$ipv"};
             if (!$ip) {
                 next;
@@ -7547,8 +7504,8 @@ EoEXAMPLE
 sub nic_gandi_update {
     debug("\nnic_gandi_update -------------------");
     # Update each set configured host.
-    foreach my $h (@_) {
-        foreach my $ipv ('ipv4', 'ipv6') {
+    for my $h (@_) {
+        for my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$h}{"want$ipv"};
             if(!$ip) {
                 next;
@@ -7676,7 +7633,7 @@ sub nic_keysystems_update {
 
  ## update each configured host
  ## should improve to update in one pass
- foreach my $h (@_) {
+ for my $h (@_) {
    my $ip = delete $config{$h}{'wantip'};
    info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
 
@@ -7812,7 +7769,7 @@ EoEXAMPLE
 sub nic_enom_update {
     debug("\nenom_update -------------------");
     ## update each configured host
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:","updating %s", $h);
@@ -7956,7 +7913,7 @@ sub nic_digitalocean_update_one {
 sub nic_digitalocean_update {
     debug("\nnic_digitalocean_update -------------------");
 
-    foreach my $h (@_) {
+    for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
 
@@ -8024,9 +7981,9 @@ EoEXAMPLE
 sub nic_infomaniak_update {
     debug("\nnic_infomaniak_update -------------------");
 
-    foreach my $h (@_) {
+    for my $h (@_) {
         INFOMANIAK_IP_LOOP:
-        foreach my $v (4, 6) {
+        for my $v (4, 6) {
             my $ip = delete $config{$h}{"wantipv$v"};
 
             if (!defined $ip) {
@@ -8062,7 +8019,7 @@ sub nic_infomaniak_update {
 
             my $reply;
 
-            foreach my $url ($url1, $url2) {
+            for my $url ($url1, $url2) {
                 info("trying update with %s", $url);
                 $reply = geturl(proxy => opt('proxy'), url => $url);
                 if (!defined($reply) || !$reply) {
