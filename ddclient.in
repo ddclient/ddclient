@@ -4181,7 +4181,7 @@ sub nic_dnsexit2_update {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             $ips{$ipv} = $ip;
             info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
-            $config{$h}{'status-ipv$ipv'} = 'failed';
+            $config{$h}{"status-ipv$ipv"} = 'failed';
             push(@updates, {
                 name => $h,
                 type => ($ipv eq '6') ? 'AAAA' : 'A',
