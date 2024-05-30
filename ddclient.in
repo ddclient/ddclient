@@ -4258,7 +4258,7 @@ sub nic_dnsexit2_update {
                 failed("%s", $message);
                 failed("Server response: %s", $response->{'message'});
             } else {
-                failed("This should not be possible");
+                failed("Unexpected status: %s", $status);
             }
             next;
         }
