@@ -4217,7 +4217,7 @@ sub nic_dnsexit2_update {
         );
         unless ($reply && header_ok($h, $reply)) {
             failed("updating %s: Could not connect to %s", $h, $url);
-            last;
+            next;
         };
         debug("%s", $reply);
         (my $http_status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
