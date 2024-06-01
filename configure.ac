@@ -49,6 +49,7 @@ AC_SUBST([PERL])
 # package doesn't depend on all of them, so their availability can't
 # be assumed.
 m4_foreach_w([_m], [
+    Data::Dumper
     File::Basename
     File::Path
     File::Temp
@@ -63,7 +64,6 @@ m4_foreach_w([_m], [
 # then some tests will fail. Only prints a warning if not installed.
 m4_foreach_w([_m], [
     B
-    Data::Dumper
     File::Spec::Functions
     File::Temp
   ], [AX_PROG_PERL_MODULES([_m], [],
