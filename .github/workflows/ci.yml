@@ -33,6 +33,7 @@ jobs:
               libtest-tcp-perl \
               libtest-warnings-perl \
               liburi-perl \
+              libwww-perl \
               net-tools \
               make \
               ;
@@ -102,6 +103,7 @@ jobs:
               perl-Test-TCP \
               perl-Test-Warnings \
               perl-core \
+              perl-libwww-perl \
               net-tools \
               ;
       - name: autogen
