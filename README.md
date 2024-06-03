@@ -33,6 +33,7 @@ Dynamic DNS services currently supported include:
 * [Gandi](https://gandi.net)
 * [GoDaddy](https://www.godaddy.com)
 * [Google](https://domains.google)
+* [Hurricane Electric](https://dns.he.net)
 * [Infomaniak](https://faq.infomaniak.com/2376)
 * [Loopia](https://www.loopia.se)
 * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
