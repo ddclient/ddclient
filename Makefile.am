@@ -66,6 +66,7 @@ handwritten_tests = \
 	t/dnsexit2.pl \
 	t/get_ip_from_if.pl \
 	t/geturl_connectivity.pl \
+	t/geturl_response.pl \
 	t/group_hosts_by.pl \
 	t/interval_expired.pl \
 	t/is-and-extract-ipv4.pl \
