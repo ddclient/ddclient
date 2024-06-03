@@ -223,6 +223,13 @@ ssl=yes					# use ssl-support.  Works with
 # my.domain.tld, otherhost.domain.tld
 
 ##
+## Hurricane Electric (dns.he.net)
+##
+# protocol=he.net,                      \
+# password=my-genereated-password       \
+# myhost.example.com
+
+##
 ## Duckdns (http://www.duckdns.org/)
 ##
 #

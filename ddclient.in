@@ -915,6 +915,17 @@ our %protocols = (
             'server'       => setv(T_FQDNP, 0, 0, 'domains.google.com', undef),
         },
     },
+    'he.net' => {
+        'updateable' => undef,
+        'update' => \&nic_henet_update,
+        'examples' => \&nic_henet_examples,
+        'variables' => {
+            %{$variables{'protocol-common-defaults'}},
+            'login' => undef,
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0),
+            'server' => setv(T_FQDNP, 0, 0, 'dyn.dns.he.net', undef),
+        },
+    },
     'hetzner' => {
         'force_update' => undef,
         'update'     => \&nic_hetzner_update,
@@ -5859,6 +5870,84 @@ sub nic_googledomains_update {
         $config{$host}{'ip'} = $ip;
         $config{$host}{'mtime'} = $now;
         $config{$host}{'status'} = 'good';
+    }
+}
+
+######################################################################
+## nic_henet_examples
+##
+## written by Indrajit Raychaudhuri
+##
+######################################################################
+sub nic_henet_examples {
+    return <<"EoEXAMPLE";
+o 'he.net'
+
+The 'he.net' protocol is used by DNS service offered by dns.he.net.
+
+Configuration variables applicable to the 'he.net' protocol are:
+  protocol=he.net              ##
+  password=service-password    ## the password provided by the admin interface
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=he.net,                                             \\
+  password=my-genereated-password                              \\
+  myhost.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_henet_update
+######################################################################
+sub nic_henet_update {
+    debug("\nnic_henet_update -------------------");
+
+    my %errors = (
+       'badauth' => 'Bad authorization (username or password)',
+       'badsys' => 'The system parameter given was not valid',
+       'nohost' => 'The hostname specified does not exist in the database',
+       'abuse' => 'The hostname specified is blocked for abuse',
+       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+    );
+
+    for my $h (@_) {
+        # The IPv4 and IPv6 addresses must be updated in separate API call.
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            info("Setting IPv%s address to %s for %s", $ipv, $ip, $h);
+            verbose("UPDATE:", "updating %s", $h);
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => "https://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
+                login => $h,
+                password => $config{$h}{'password'},
+            ) // '';
+            if ($reply eq '') {
+                failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+                next;
+            }
+            next if !header_ok($h, $reply);
+            # dyn.dns.he.net can return 200 OK even if there is an error (e.g., bad authentication,
+            # updates too frequent) so the body of the response must also be checked.
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my ($line) = split(/\n/, $body, 2);
+            my ($status, $returnedip) = split(/ /, lc($line));
+            $status = 'good' if $status eq 'nochg';
+            $config{$h}{"status-ipv$ipv"} = $status;
+            if ($status ne 'good') {
+                if (exists($errors{$status})) {
+                    failed("updating %s: %s: %s", $h, $status, $errors{$status});
+                } else {
+                    failed("updating %s: unexpected status: %s", $h, $line);
+                }
+                next;
+            }
+            success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $returnedip);
+            $config{$h}{"ipv$ipv"} = $returnedip;
+            $config{$h}{'mtime'} = $now;
+        }
     }
 }
 

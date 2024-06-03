@@ -47,6 +47,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#676](https://github.com/ddclient/ddclient/pull/676)
   * `emailonly`: New `protocol` option that simply emails you when your IP
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
+  * `he.net`: Added support for updating Hurricane Electric records.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
 
 ### Bug fixes
 
@@ -150,7 +152,7 @@ Refer to [v3.11 release plan discussions](https://github.com/ddclient/ddclient/i
 
   * Added support for domaindiscount24.com
   * Added support for njal.la
- 
+
 ## 2022-05-15 v3.10.0_2
 
 ### Bug fixes
