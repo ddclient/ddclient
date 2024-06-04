@@ -15,6 +15,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
   * All log messages are now written to STDERR, not a mix of STDOUT and STDERR.
     [#676](https://github.com/ddclient/ddclient/pull/676)
+  * For `--protocol=freedns` and `--protocol=nfsn`, the core module
+    `Digest::SHA` is now required.  Previously, `Digest::SHA1` was used (if
+    available) as an alternative to `Digest::SHA`.
+    [#685](https://github.com/ddclient/ddclient/pull/685)
 
 ### New features
 
