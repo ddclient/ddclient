@@ -2612,13 +2612,9 @@ EOM
 ## load_json_support
 ######################################################################
 sub load_json_support {
-    my $why = shift;
-    my $json_loaded = eval { require JSON::PP };
-    unless ($json_loaded) {
-        fatal("%s", <<"EOM");
-Error loading the Perl module JSON::PP needed for $why update.
-EOM
-    }
+    my ($protocol) = @_;
+    eval { require JSON::PP; }
+        or fatal("Error loading the Perl module JSON::PP needed for $protocol update.");
     JSON::PP->import(qw/decode_json encode_json/);
 }
 
