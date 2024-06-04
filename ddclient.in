@@ -2610,9 +2610,9 @@ On Debian, the package libdigest-sha1-perl or libdigest-sha-perl must be install
 EOM
     }
     if ($sha1_loaded) {
-        import Digest::SHA1 (qw/sha1_hex/);
+        Digest::SHA1->import(qw/sha1_hex/);
     } elsif ($sha_loaded) {
-        import Digest::SHA (qw/sha1_hex/);
+        Digest::SHA->import(qw/sha1_hex/);
     }
 }
 ######################################################################
@@ -2626,7 +2626,7 @@ sub load_json_support {
 Error loading the Perl module JSON::PP needed for $why update.
 EOM
     }
-    import JSON::PP (qw/decode_json encode_json/);
+    JSON::PP->import(qw/decode_json encode_json/);
 }
 
 ######################################################################
