@@ -2609,10 +2609,10 @@ Error loading the Perl module Digest::SHA1 or Digest::SHA needed for $why update
 On Debian, the package libdigest-sha1-perl or libdigest-sha-perl must be installed.
 EOM
     }
-    if ($sha1_loaded) {
-        Digest::SHA1->import(qw/sha1_hex/);
-    } elsif ($sha_loaded) {
+    if ($sha_loaded) {
         Digest::SHA->import(qw/sha1_hex/);
+    } elsif ($sha1_loaded) {
+        Digest::SHA1->import(qw/sha1_hex/);
     }
 }
 ######################################################################
