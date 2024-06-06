@@ -3774,24 +3774,20 @@ sub nic_updateable {
 ######################################################################
 sub header_ok {
     my ($host, $line) = @_;
-    my $ok = 0;
-
-    if ($line =~ m%^s*HTTP/.*\s+(\d+)%i) {
-        my $result = $1;
-
-        if ($result =~ m/^2\d\d$/) {
-            $ok = 1;
-
-        } elsif ($result eq '401') {
-            failed("updating %s: authentication failed (%s)", $host, $line);
-        } elsif ($result eq '403') {
-            failed("updating %s: not authorized (%s)", $host, $line);
-        }
-
-    } else {
-        failed("updating %s: unexpected line (%s)", $host, $line);
+    $line =~ s/\r?\n.*//s;
+    my ($code, $msg) = ($line =~ qr%^\s*HTTP/.*\s+(\d+)\s*(?:\s+([^\s].*))?$%i);
+    if (!defined($code)) {
+        failed('updating %s: unexpected HTTP response: %s', $host, $line);
+        return 0;
+    } elsif ($code !~ qr/^2\d\d$/) {
+        my %msgs = (
+            '401' => 'authentication failed',
+            '403' => 'not authorized',
+        );
+        failed('updating %s: %s %s', $host, $code, $msg // $msgs{$code} // '');
+        return 0;
     }
-    return $ok;
+    return 1;
 }
 
 ######################################################################
