@@ -2600,33 +2600,22 @@ sub encode_base64 ($;$) {
 ## load_sha1_support
 ######################################################################
 sub load_sha1_support {
-    my $why         = shift;
-    my $sha1_loaded = eval { require Digest::SHA1 };
-    my $sha_loaded  = eval { require Digest::SHA };
-    unless ($sha1_loaded || $sha_loaded) {
-        fatal("%s", <<"EOM");
-Error loading the Perl module Digest::SHA1 or Digest::SHA needed for $why update.
-On Debian, the package libdigest-sha1-perl or libdigest-sha-perl must be installed.
+    my ($protocol) = @_;
+    eval { require Digest::SHA; } or fatal(<<"EOM");
+Error loading the Perl module Digest::SHA needed for $protocol update.
+On Debian, the package libdigest-sha-perl must be installed.
 EOM
-    }
-    if ($sha1_loaded) {
-        import Digest::SHA1 (qw/sha1_hex/);
-    } elsif ($sha_loaded) {
-        import Digest::SHA (qw/sha1_hex/);
-    }
+    Digest::SHA->import(qw/sha1_hex/);
 }
+
 ######################################################################
 ## load_json_support
 ######################################################################
 sub load_json_support {
-    my $why = shift;
-    my $json_loaded = eval { require JSON::PP };
-    unless ($json_loaded) {
-        fatal("%s", <<"EOM");
-Error loading the Perl module JSON::PP needed for $why update.
-EOM
-    }
-    import JSON::PP (qw/decode_json encode_json/);
+    my ($protocol) = @_;
+    eval { require JSON::PP; }
+        or fatal("Error loading the Perl module JSON::PP needed for $protocol update.");
+    JSON::PP->import(qw/decode_json encode_json/);
 }
 
 ######################################################################
