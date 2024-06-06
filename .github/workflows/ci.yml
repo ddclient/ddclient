@@ -62,14 +62,14 @@ jobs:
           - fedora:39
           - fedora:latest
           - fedora:rawhide
+          - almalinux:8
+          - almalinux:latest
           # RedHat UBI is mostly garbage due to a profound lack of basic
           # packages.  It is tested anyway because it's the closest available
-          # approximation of RHEL.  Some of the packages needed for some tests
-          # aren't available, so those tests will be skipped.  I guess it's
-          # still better than nothing.
+          # approximation of RHEL, aside from AlmaLinux.  Some of the packages
+          # needed for some tests aren't available, so those tests will be
+          # skipped.  I guess it's still better than nothing.
           - registry.access.redhat.com/ubi7/ubi:latest
-          - registry.access.redhat.com/ubi8/ubi:latest
-          - registry.access.redhat.com/ubi9/ubi:latest
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
@@ -79,6 +79,16 @@ jobs:
       # ubi7 is too old for checkout@v4.
       - if: ${{ matrix.image == 'registry.access.redhat.com/ubi7/ubi:latest' }}
         uses: actions/checkout@v3
+      - name: enable repositories (AlmaLinux 8)
+        if: ${{ matrix.image == 'almalinux:8' }}
+        run: |
+          dnf --refresh install -y 'dnf-command(config-manager)' epel-release &&
+          dnf config-manager --set-enabled powertools
+      - name: enable repositories (AlmaLinux latest)
+        if: ${{ matrix.image == 'almalinux:latest' }}
+        run: |
+          dnf --refresh install -y 'dnf-command(config-manager)' epel-release &&
+          dnf config-manager --set-enabled crb
       - name: install dependencies
         # The --skip-broken argument works around RedHat UBI's missing packages.
         # (They're only used for testing, so it's OK to not install them.)
