@@ -2873,7 +2873,7 @@ sub geturl {
         push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
 
         # Each header line is added individually
-        @header_lines = split('\n', $headers);
+        @header_lines = ref($headers) eq 'ARRAY' ? @$headers : split('\n', $headers);
         $_ = "header=\"".escape_curl_param($_).'"' for (@header_lines);
         push(@curlopt, @header_lines);
 
