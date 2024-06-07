@@ -5777,24 +5777,24 @@ sub nic_godaddy_update {
             }
             if (!$ok) {
                 my $msg;
-                if ($code == "400") {
+                if ($code eq "400") {
                     $msg = 'GoDaddy API URL ($url) was malformed.';
-                } elsif ($code == "401") {
+                } elsif ($code eq "401") {
                     if ($config{$h}{'login'} && $config{$h}{'login'}) {
                         $msg = 'login or password option incorrect.';
                     } else {
                         $msg = 'login or password option missing.';
                     }
                     $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
-                } elsif ($code == "403") {
+                } elsif ($code eq "403") {
                     $msg = 'Customer identified by login and password options denied permission.';
-                } elsif ($code == "404") {
+                } elsif ($code eq "404") {
                     $msg = "\"$h\" not found at GoDaddy, please check zone option and login/password.";
-                } elsif ($code == "422") {
+                } elsif ($code eq "422") {
                     $msg = "\"$h\" has invalid domain or lacks A/AAAA record.";
-                } elsif ($code == "429") {
+                } elsif ($code eq "429") {
                     $msg = 'Too many requests to GoDaddy within brief period.';
-                } elsif ($code == "503") {
+                } elsif ($code eq "503") {
                     $msg = "\"$h\" is unavailable.";
                 } else {
                     $msg = 'Unexpected service response.';
