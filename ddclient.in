@@ -5738,13 +5738,10 @@ EoEXAMPLE
 sub nic_godaddy_update {
     debug("\nnic_godaddy_update --------------------");
     for my $h (@_) {
-        my $ipv4 = delete $config{$h}{'wantipv4'};
-        my $ipv6 = delete $config{$h}{'wantipv6'};
         my $zone = $config{$h}{'zone'};
         (my $hostname = $h) =~ s/\.\Q$zone\E$//;
-        for my $ip ($ipv4, $ipv6) {
-            next if (!$ip);
-            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             info("$h: Setting IPv$ipv address to $ip");
             my $rrset_type = ($ipv eq '6') ? 'AAAA' : 'A';
             my $data = encode_json([{
