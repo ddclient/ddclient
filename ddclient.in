@@ -5744,22 +5744,22 @@ sub nic_godaddy_update {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             info("$h: Setting IPv$ipv address to $ip");
             my $rrset_type = ($ipv eq '6') ? 'AAAA' : 'A';
-            my $data = encode_json([{
-                data => $ip,
-                defined($config{$h}{'ttl'}) ? (ttl => $config{$h}{'ttl'}) : (),
-                name => $hostname,
-                type => $rrset_type,
-            }]);
             my $url = "https://$config{$h}{'server'}/$zone/records/$rrset_type/$hostname";
-            my $header = "Content-Type: application/json\n";
-            $header .= "Accept: application/json\n";
-            $header .= "Authorization: sso-key $config{$h}{'login'}:$config{$h}{'password'}\n";
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
-                headers => $header,
+                headers => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                    "Authorization: sso-key $config{$h}{'login'}:$config{$h}{'password'}",
+                ],
                 method => 'PUT',
-                data => $data,
+                data => encode_json([{
+                    data => $ip,
+                    defined($config{$h}{'ttl'}) ? (ttl => $config{$h}{'ttl'}) : (),
+                    name => $hostname,
+                    type => $rrset_type,
+                }]),
             );
             unless ($reply) {
                 failed("$h: Could not connect to $config{$h}{'server'}");
