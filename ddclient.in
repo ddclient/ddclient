@@ -3758,13 +3758,12 @@ sub nic_dyndns1_update {
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("updating %s: %s", $h, $title);
-
-        } else {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
-            success("updating %s: %s: IP address set to %s (%s)", $h, $return_code, $ip, $title);
+            next;
         }
+        $config{$h}{'ip'} = $ip;
+        $config{$h}{'mtime'} = $now;
+        $config{$h}{'status'} = 'good';
+        success("updating %s: %s: IP address set to %s (%s)", $h, $return_code, $ip, $title);
     }
 }
 
