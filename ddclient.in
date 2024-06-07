@@ -5740,29 +5740,23 @@ sub nic_godaddy_update {
     for my $host (@_) {
         my $ipv4 = delete $config{$host}{'wantipv4'};
         my $ipv6 = delete $config{$host}{'wantipv6'};
-
         my $zone = $config{$host}{'zone'};
         (my $hostname = $host) =~ s/\.\Q$zone\E$//;
-
         for my $ip ($ipv4, $ipv6) {
             next if (!$ip);
-
             info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
             verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
-
             my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
             my $status = \$config{$host}{"status-ipv$ipversion"};
             my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
-            my $data = encode_json([ {
+            my $data = encode_json([{
                 data => $ip,
                 defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
                 name => $hostname,
                 type => $rrset_type,
-            } ]);
-
+            }]);
             my $url = "https://$config{$host}{'server'}";
             $url .= "/${zone}/records/${rrset_type}/${hostname}";
-
             my $header = "Content-Type: application/json\n";
             $header .= "Accept: application/json\n";
             $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
@@ -5777,7 +5771,6 @@ sub nic_godaddy_update {
                 failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
                 next;
             }
-
             (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
             my $ok = header_ok($host, $reply);
             my $msg;
@@ -5785,7 +5778,6 @@ sub nic_godaddy_update {
             my $response = eval {decode_json($reply)};
             if (!defined($response) && $code != "200") {
                 $$status = "bad";
-
                 failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
             } elsif (defined($response->{code})) {
                 info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
@@ -5794,7 +5786,6 @@ sub nic_godaddy_update {
                 $config{$host}{"ipv$ipversion"} = $ip;
                 $config{$host}{'mtime'} = $now;
                 $$status = 'good';
-
                 success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
                 next;
             } elsif ($code == "400") {
@@ -5819,7 +5810,6 @@ sub nic_godaddy_update {
             } else {
                 $msg = 'Unexpected service response.';
             }
-
             $$status = 'bad';
             failed("%s.%s -- %s", $hostname, $zone, $msg);
         }
