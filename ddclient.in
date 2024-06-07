@@ -5746,7 +5746,6 @@ sub nic_godaddy_update {
             next if (!$ip);
             my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
             info("$host: Setting IPv$ipversion address to $ip");
-            my $status = \$config{$host}{"status-ipv$ipversion"};
             my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
             my $data = encode_json([{
                 data => $ip,
@@ -5776,7 +5775,6 @@ sub nic_godaddy_update {
             $reply =~ s/^.*?\n\n//s;
             my $response = eval {decode_json($reply)};
             if (!defined($response)) {
-                $$status = "bad";
                 failed("$host: Unexpected or empty service response, cannot parse data");
                 next;
             } elsif (defined($response->{code})) {
@@ -5785,7 +5783,7 @@ sub nic_godaddy_update {
             if ($ok) {
                 $config{$host}{"ipv$ipversion"} = $ip;
                 $config{$host}{'mtime'} = $now;
-                $$status = 'good';
+                $config{$host}{"status-ipv$ipversion"} = 'good';
                 success("$host: Updated successfully to $ip (status: $code)");
                 next;
             } elsif ($code == "400") {
@@ -5810,7 +5808,6 @@ sub nic_godaddy_update {
             } else {
                 $msg = 'Unexpected service response.';
             }
-            $$status = 'bad';
             failed("$host: $msg");
         }
     }
