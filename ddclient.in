@@ -5744,9 +5744,8 @@ sub nic_godaddy_update {
         (my $hostname = $host) =~ s/\.\Q$zone\E$//;
         for my $ip ($ipv4, $ipv6) {
             next if (!$ip);
-            info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
-            verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
             my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            info("$host: Setting IPv$ipversion address to $ip");
             my $status = \$config{$host}{"status-ipv$ipversion"};
             my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
             my $data = encode_json([{
@@ -5768,7 +5767,7 @@ sub nic_godaddy_update {
                 data => $data,
             );
             unless ($reply) {
-                failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
+                failed("$host: Could not connect to $config{$host}{'server'}");
                 next;
             }
             (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
@@ -5778,16 +5777,16 @@ sub nic_godaddy_update {
             my $response = eval {decode_json($reply)};
             if (!defined($response)) {
                 $$status = "bad";
-                failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
+                failed("$host: Unexpected or empty service response, cannot parse data");
                 next;
             } elsif (defined($response->{code})) {
-                info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
+                info("$host: $response->{code} - $response->{message}");
             }
             if ($ok) {
                 $config{$host}{"ipv$ipversion"} = $ip;
                 $config{$host}{'mtime'} = $now;
                 $$status = 'good';
-                success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
+                success("$host: Updated successfully to $ip (status: $code)");
                 next;
             } elsif ($code == "400") {
                 $msg = 'GoDaddy API URL ($url) was malformed.';
@@ -5801,18 +5800,18 @@ sub nic_godaddy_update {
             } elsif ($code == "403") {
                 $msg = 'Customer identified by login and password options denied permission.';
             } elsif ($code == "404") {
-                $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
+                $msg = "\"$host\" not found at GoDaddy, please check zone option and login/password.";
             } elsif ($code == "422") {
-                $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
+                $msg = "\"$host\" has invalid domain or lacks A/AAAA record.";
             } elsif ($code == "429") {
                 $msg = 'Too many requests to GoDaddy within brief period.';
             } elsif ($code == "503") {
-                $msg = "\"${hostname}.${zone}\" is unavailable.";
+                $msg = "\"$host\" is unavailable.";
             } else {
                 $msg = 'Unexpected service response.';
             }
             $$status = 'bad';
-            failed("%s.%s -- %s", $hostname, $zone, $msg);
+            failed("$host: $msg");
         }
     }
 }
