@@ -5750,8 +5750,7 @@ sub nic_godaddy_update {
                 name => $hostname,
                 type => $rrset_type,
             }]);
-            my $url = "https://$config{$h}{'server'}";
-            $url .= "/${zone}/records/${rrset_type}/${hostname}";
+            my $url = "https://$config{$h}{'server'}/$zone/records/$rrset_type/$hostname";
             my $header = "Content-Type: application/json\n";
             $header .= "Accept: application/json\n";
             $header .= "Authorization: sso-key $config{$h}{'login'}:$config{$h}{'password'}\n";
