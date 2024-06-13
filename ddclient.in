@@ -1372,15 +1372,12 @@ sub update_nics {
 
         for my $h (sort keys %config) {
             local $_l = pushlogctx($h);
-            next if $config{$h}{'protocol'} ne lc($p);
+            next if $config{$h}{'protocol'} ne $p;
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
-            my $use = opt('use', $h) // 'disabled';
-            my $usev4 = opt('usev4', $h) // 'disabled';
-            my $usev6 = opt('usev6', $h) // 'disabled';
-            $use = 'disabled' if ($use eq 'no'); # backward compatibility
-            $usev6 = 'disabled' if ($usev6 eq 'no'); # backward compatibility
-            $use = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
+            my $use = opt('use', $h);
+            my $usev4 = opt('usev4', $h);
+            my $usev6 = opt('usev6', $h);
             my $arg_ip    = opt('ip',    $h) // '';
             my $arg_ipv4  = opt('ipv4',  $h) // '';
             my $arg_ipv6  = opt('ipv6',  $h) // '';
@@ -2041,6 +2038,8 @@ sub init_config {
     ## now the host definitions...
   HOST:
     for my $h (keys %config) {
+        $config{$h}{use} = 'disabled'
+            if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
         my $proto = opt('protocol', $h);
         load_sha1_support($proto) if (grep($_ eq $proto, ("freedns", "nfsn")));
         load_json_support($proto) if (grep($_ eq $proto, ("1984", "cloudflare", "digitalocean", "directnic", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
@@ -2606,6 +2605,7 @@ sub check_value {
 
     } elsif ($type eq T_USE) {
         $value = lc $value;
+        $value = 'disabled' if $value eq 'no';  # backwards compatibility
         return undef if !exists $ip_strategies{$value};
 
     } elsif ($type eq T_USEV4) {
@@ -2614,6 +2614,7 @@ sub check_value {
 
     } elsif ($type eq T_USEV6) {
         $value = lc $value;
+        $value = 'disabled' if $value eq 'no';  # backwards compatibility
         return undef if !exists $ipv6_strategies{$value};
 
     } elsif ($type eq T_FILE) {
@@ -2842,9 +2843,7 @@ sub geturl {
 ## get_ip
 ######################################################################
 sub get_ip {
-    my $use = lc shift;
-    $use = 'disabled' if ($use eq 'no');  # backward compatibility
-    my $h = shift;
+    my ($use, $h) = @_;
     my ($ip, $reply, $url, $skip) = (undef, '');
     my $argvar = $use;
     # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
@@ -3239,8 +3238,7 @@ sub get_ip_from_interface {
 ## get_ipv4
 ######################################################################
 sub get_ipv4 {
-    my $usev4 = lc(shift);  ## Method to obtain IP address
-    my $h     = shift;      ## Host/service making the request
+    my ($usev4, $h) = @_;
     my $ipv4  = undef;      ## Found IPv4 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
@@ -3349,9 +3347,7 @@ sub get_ipv4 {
 ## get_ipv6
 ######################################################################
 sub get_ipv6 {
-    my $usev6 = lc(shift);  ## Method to obtain IP address
-    $usev6    = 'disabled' if ($usev6 eq 'no'); # backward compatibility
-    my $h     = shift;      ## Host/service making the request
+    my ($usev6, $h) = @_;
     my $ipv6  = undef;      ## Found IPv6 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
@@ -3561,12 +3557,9 @@ sub nic_updateable {
     my $ip     = $config{$host}{'wantip'};
     my $ipv4   = $config{$host}{'wantipv4'};
     my $ipv6   = $config{$host}{'wantipv6'};
-    my $use    = opt('use',   $host) // 'disabled';
-    my $usev4  = opt('usev4', $host) // 'disabled';
-    my $usev6  = opt('usev6', $host) // 'disabled';
-    $use       = 'disabled' if ($use eq 'no');   # backward compatibility
-    $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
-    $use       = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
+    my $use    = opt('use',   $host);
+    my $usev4  = opt('usev4', $host);
+    my $usev6  = opt('usev6', $host);
     my $inv_ip_warn_count = opt('max-warn');
     my $previp = $recap{$host}{'ip'} || '<nothing>';
     my $previpv4 = $recap{$host}{'ipv4'} || '<nothing>';
