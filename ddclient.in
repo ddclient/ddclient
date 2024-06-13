@@ -2019,8 +2019,8 @@ sub init_config {
   HOST:
     for my $h (keys %config) {
         my $proto = opt('protocol', $h);
-        load_sha1_support($proto) if (grep(/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep(/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
+        load_sha1_support($proto) if (grep($_ eq $proto, ("freedns", "nfsn")));
+        load_json_support($proto) if (grep($_ eq $proto, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
 
         if (!exists($protocols{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
