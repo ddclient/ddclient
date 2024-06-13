@@ -2765,7 +2765,6 @@ sub get_ip {
     $use = 'disabled' if ($use eq 'no');  # backward compatibility
     my $h = shift;
     my ($ip, $arg, $reply, $url, $skip) = (undef, opt($use, $h), '');
-    $arg = '' unless $arg;
 
     if ($use eq 'ip') {
         $ip = opt('ip', $h);
@@ -2801,7 +2800,7 @@ sub get_ip {
         $reply = '';
     } elsif ($use eq 'fw' || defined(my $fw = $builtinfw{$use})) {
         # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
-        $arg = opt('fw', $h) // '';
+        $arg = opt('fw', $h);
         $url = $arg;
         $skip = opt('fw-skip', $h);
         if ($fw) {
@@ -2838,7 +2837,7 @@ sub get_ip {
         $ip = undef;
     }
 
-    debug("get_ip: using %s, %s reports %s", $use, $arg, $ip // "<undefined>");
+    debug("get_ip: using %s, %s reports %s", $use, $arg // '<undefined>', $ip // '<undefined>');
     return $ip;
 }
 
@@ -3153,7 +3152,7 @@ sub get_ipv4 {
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
     my $skip  = undef;      ## Regex of pattern to skip before looking for IP
-    my $arg   = opt($usev4, $h) // '';  ## Value assigned to the "usev4" method
+    my $arg = opt($usev4, $h);  ## Value assigned to the "usev4" method
 
     if ($usev4 eq 'ipv4') {
         ## Static IPv4 address is provided in "ipv4=<address>"
@@ -3199,7 +3198,7 @@ sub get_ipv4 {
         warning("'--fw-skip' is deprecated for '--usev4=$usev4'; use '--fwv4-skip' instead")
             if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
         # Note that --usev4=firewallname uses --fwv4=arg (or --fw=arg), not --firewallname=arg.
-        $arg = opt('fwv4', $h) // opt('fw', $h) // '';
+        $arg = opt('fwv4', $h) // opt('fw', $h);
         $url = $arg;
         $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
         if ($fw) {
@@ -3235,7 +3234,8 @@ sub get_ipv4 {
     $ipv4 //= extract_ipv4($reply);
     ## Return undef for loopback address unless statically assigned by "ipv4=0.0.0.0"
     $ipv4 = undef if (($usev4 ne 'ipv4') && (($ipv4 // '') eq '0.0.0.0'));
-    debug("get_ipv4: using (%s, %s) reports %s", $usev4, $arg, $ipv4 // "<undefined>");
+    debug("get_ipv4: using (%s, %s) reports %s",
+          $usev4, $arg // "<undefined>", $ipv4 // "<undefined>");
     return $ipv4;
 }
 
@@ -3250,7 +3250,7 @@ sub get_ipv6 {
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
     my $skip  = undef;      ## Regex of pattern to skip before looking for IP
-    my $arg   = opt($usev6, $h) // '';  ## Value assigned to the "usev6" method
+    my $arg = opt($usev6, $h);  ## Value assigned to the "usev6" method
 
     if ($usev6 eq 'ipv6' || $usev6 eq 'ip') {
         ## Static IPv6 address is provided in "ipv6=<address>"
@@ -3329,7 +3329,8 @@ sub get_ipv6 {
     $ipv6 //= extract_ipv6($reply);
     ## Return undef for loopback address unless statically assigned by "ipv6=::"
     $ipv6 = undef if (($usev6 ne 'ipv6') && ($usev6 ne 'ip') && (($ipv6 // '') eq '::'));
-    debug("get_ipv6: using (%s, %s) reports %s", $usev6, $arg, $ipv6 // "<undefined>");
+    debug("get_ipv6: using (%s, %s) reports %s",
+          $usev6, $arg // '<undefined>', $ipv6 // '<undefined>');
     return $ipv6;
 }
 
