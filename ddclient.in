@@ -216,17 +216,16 @@ sub query_cisco {
     $if =~ s%\/%\\\/%g;
     # Protect special HTML characters (like '?')
     $if =~ s/([\?&= ])/sprintf("%%%02x", ord($1))/ge;
-    my $url = ($asa)
-        ? "https://$fw/exec/show%20interface%20$if"
-        : "http://$fw/level/1/exec/show/ip/interface/brief/$if/CR";
     my $reply = geturl(
-        url => $url,
+        url => ($asa)
+            ? "https://$fw/exec/show%20interface%20$if"
+            : "http://$fw/level/1/exec/show/ip/interface/brief/$if/CR",
         login => opt('fw-login', $h),
         password => opt('fw-password', $h),
         ignore_ssl_option => 1,
         ssl_validate => opt('fw-ssl-validate', $h),
     ) // '';
-    return ($url, $reply);
+    return $reply;
 }
 
 our %builtinfw = (
@@ -2774,7 +2773,6 @@ sub get_ip {
             warning("'%s' is not a valid IPv4 or IPv6 address", $ip // '');
             $ip = undef;
         }
-        $arg = 'ip';
     } elsif ($use eq 'if') {
         $ip = get_ip_from_interface($arg);
     } elsif ($use eq 'cmd') {
@@ -2791,7 +2789,6 @@ sub get_ip {
             $skip //= $biw->{skip};
             $url = $biw->{url};
         }
-        $arg = $url;
         if ($url) {
             $reply = geturl(
                 proxy => opt('proxy', $h),
@@ -2811,7 +2808,7 @@ sub get_ip {
             $skip //= $fw->{'skip'};
             if (defined(my $query = $fw->{'query'})) {
                 $url = undef;
-                ($arg, $reply) = $query->($h);
+                $reply = $query->($h);
             } else {
                 $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
             }
@@ -3165,7 +3162,6 @@ sub get_ipv4 {
             warning("'%s' is not a valid IPv4", $ipv4 // '');
             $ipv4 = undef;
         }
-        $arg = 'ipv4';  # For debug message at end of function
     } elsif ($usev4 eq 'ifv4') {
         ## Obtain IPv4 address from interface mamed in "ifv4=<if>"
         $ipv4 = get_ip_from_interface($arg, 4);
@@ -3185,7 +3181,6 @@ sub get_ipv4 {
             warning("'--webv4=$url' is deprecated!  $biw->{deprecated}") if $biw->{deprecated};
             $skip //= $biw->{skip};
             $url = $biw->{url};
-            $arg  = $url;
         }
         if ($url) {
             $reply = geturl(
@@ -3211,7 +3206,7 @@ sub get_ipv4 {
             $skip //= $fw->{'skip'};
             if (defined(my $query = $fw->{'queryv4'})) {
                 $url = undef;
-                ($arg, $reply) = $query->($h);
+                $reply = $query->($h);
             } else {
                 $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
             }
@@ -3268,7 +3263,6 @@ sub get_ipv6 {
             warning("'%s' is not a valid IPv6", $ipv6 // '');
             $ipv6 = undef;
         }
-        $arg = 'ipv6';  # For debug message at end of function
     } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if') {
         ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
         if ($usev6 eq 'if') {
@@ -3302,7 +3296,6 @@ sub get_ipv6 {
             warning("'--webv6=$url' is deprecated!  $biw->{deprecated}") if $biw->{deprecated};
             $skip //= $biw->{skip};
             $url = $biw->{url};
-            $arg  = $url;
         }
         if ($url) {
             $reply = geturl(
@@ -3318,7 +3311,7 @@ sub get_ipv6 {
         $skip = opt('fwv6-skip', $h) // $fw->{'skip'};
         if ($fw && defined(my $query = $fw->{'queryv6'})) {
             $skip //= $fw->{'skip'};
-            ($arg, $reply) = $query->($h);
+            $reply = $query->($h);
         } else {
             warning("'--usev6=%s' is not implemented and does nothing", $usev6);
         }
