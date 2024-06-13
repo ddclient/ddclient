@@ -1577,10 +1577,9 @@ sub read_cache {
         %opt         = %saved;
 
         for my $h (keys %cache) {
-            if (exists $config->{$h}) {
-                for (qw(atime mtime wtime ip status)) {
-                    $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
-                }
+            next if !exists($config->{$h});
+            for (qw(atime mtime wtime ip status)) {
+                $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
             }
         }
     }
@@ -1764,65 +1763,63 @@ sub _read_config {
             # Handle '_env' keyword suffix
             if ($k =~ /(.*)_env$/) {
                 debug("Loading value for $1 from environment variable $locals{$k}.");
-                if (exists($ENV{$locals{$k}})) {
-                    # Set the value to the value of the environment variable
-                    $locals{$1} = $ENV{$locals{$k}};
-                    # Remove the '_env' suffix from the key
-                    $k = $1;
-                } else {
+                if (!exists($ENV{$locals{$k}})) {
                     warning("Environment variable '$locals{$k}' not set for keyword '$k' (ignored)");
                     delete $locals{$k};
                     next;
                 }
+                # Set the value to the value of the environment variable
+                $locals{$1} = $ENV{$locals{$k}};
+                # Remove the '_env' suffix from the key
+                $k = $1;
             }
 
             $locals{$k} = $passwords{$k} if defined $passwords{$k};
             if (!exists $variables{'merged'}{$k}) {
                 warning("unrecognized keyword '%s' (ignored)", $k);
                 delete $locals{$k};
-            } else {
-                my $def = $variables{'merged'}{$k};
-                my $value = check_value($locals{$k}, $def);
-                if (!defined($value)) {
-                    warning("Invalid Value for keyword '%s' = '%s'", $k, $locals{$k});
-                    delete $locals{$k};
-                } else {
-                    $locals{$k} = $value;
-                }
+                next;
             }
+            my $def = $variables{'merged'}{$k};
+            my $value = check_value($locals{$k}, $def);
+            if (!defined($value)) {
+                warning("Invalid Value for keyword '%s' = '%s'", $k, $locals{$k});
+                delete $locals{$k};
+                next;
+            }
+            $locals{$k} = $value;
         }
+        %passwords = ();
         if (exists($locals{'host'})) {
             $args[0] = @args ? "$args[0],$locals{host}" : "$locals{host}";
         }
         ## accumulate globals
         if ($#args < 0) {
             map { $globals{$_} = $locals{$_} } keys %locals;
+            next;
         }
 
         ## process this host definition
-        if (@args) {
-            my ($host, $login, $password) = @args;
+        my ($host, $login, $password) = @args;
 
-            ## add in any globals..
-            %locals = (%globals, %locals);
+        ## add in any globals..
+        %locals = (%globals, %locals);
 
-            ## override login and password if specified the old way.
-            $locals{'login'}    = $login    if defined $login;
-            $locals{'password'} = $password if defined $password;
+        ## override login and password if specified the old way.
+        $locals{'login'}    = $login    if defined $login;
+        $locals{'password'} = $password if defined $password;
 
-            ## allow {host} to be a comma separated list of hosts
-            for my $h (split_by_comma($host)) {
-                if ($config{$h}) {
-                    ## host already defined, merging configs
-                    $config{$h} = {%locals, %{$config{$h}}};
-                } else {
-                    ## save a copy of the current globals
-                    $config{$h} = {%locals};
-                    $config{$h}{'host'} = $h;
-                }
+        ## allow {host} to be a comma separated list of hosts
+        for my $h (split_by_comma($host)) {
+            if ($config{$h}) {
+                ## host already defined, merging configs
+                $config{$h} = {%locals, %{$config{$h}}};
+            } else {
+                ## save a copy of the current globals
+                $config{$h} = {%locals};
+                $config{$h}{'host'} = $h;
             }
         }
-        %passwords = ();
     }
     close(FD);
 
@@ -1978,29 +1975,28 @@ sub init_config {
         if (!exists($services{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
             delete $config{$h};
-
-        } else {
-            my $svars = $services{$proto}{'variables'};
-            my $conf = {'protocol' => $proto};
-
-            for my $k (keys %$svars) {
-                # Make sure any _env suffixed variables look at their original entry
-                $k = $1 if $k =~ /^(.*)_env$/;
-
-                my $def    = $svars->{$k};
-                my $ovalue = $config{$h}{$k} // $def->{'default'};
-                my $value  = check_value($ovalue, $def);
-                if ($def->{'required'} && !defined $value) {
-                    warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
-                    delete $config{$h};
-                    next HOST;
-                }
-                $conf->{$k} = $value;
-
-            }
-            $config{$h} = $conf;
-            $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
+            next;
         }
+
+        my $svars = $services{$proto}{'variables'};
+        my $conf = {'protocol' => $proto};
+
+        for my $k (keys %$svars) {
+            # Make sure any _env suffixed variables look at their original entry
+            $k = $1 if $k =~ /^(.*)_env$/;
+
+            my $def = $svars->{$k};
+            my $ovalue = $config{$h}{$k} // $def->{'default'};
+            my $value = check_value($ovalue, $def);
+            if ($def->{'required'} && !defined $value) {
+                warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
+                delete $config{$h};
+                next HOST;
+            }
+            $conf->{$k} = $value;
+        }
+        $config{$h} = $conf;
+        $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
     }
 }
 
