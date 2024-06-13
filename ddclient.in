@@ -2860,7 +2860,7 @@ sub get_ip {
     local $_l = pushlogctx("use=$use $argvar=" . ($arg // '<undefined>'));
 
     if ($use eq 'ip') {
-        $ip = opt('ip', $h);
+        $ip = $arg;
         if (!is_ipv4($ip) && !is_ipv6($ip)) {
             warning('not a valid IPv4 or IPv6 address');
             $ip = undef;
@@ -2874,7 +2874,7 @@ sub get_ip {
             $reply = '' if $?;
         }
     } elsif ($use eq 'web') {
-        $url = opt('web', $h) // '';
+        $url = $arg;
         $skip = opt('web-skip', $h);
         if (my $biw = $builtinweb{$url}) {
             warning("'$arg' is deprecated: $biw->{deprecated}") if $biw->{deprecated};
