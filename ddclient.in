@@ -2883,7 +2883,7 @@ sub get_ip {
         }
         if ($url) {
             $reply = geturl(
-                proxy => opt('proxy', $h),
+                proxy => opt('proxy'),
                 url => $url,
                 ssl_validate => opt('web-ssl-validate', $h),
             );
@@ -3287,7 +3287,7 @@ sub get_ipv4 {
         }
         if ($url) {
             $reply = geturl(
-                proxy => opt('proxy', $h),
+                proxy => opt('proxy'),
                 url => $url,
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ssl_validate => opt('web-ssl-validate', $h),
