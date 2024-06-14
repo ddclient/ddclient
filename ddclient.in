@@ -279,11 +279,11 @@ our %builtinweb = (
 );
 
 sub query_cisco {
-    my ($h, $asa, $v4) = @_;
+    my ($asa, $v4, %p) = @_;
     warning("'--if' is deprecated; use '--ifv4' instead")
-        if ($v4 && !defined(opt('ifv4', $h)) && defined(opt('if', $h)));
-    my $if = ($v4 ? opt('ifv4', $h) : undef) // opt('if', $h);
-    my $fw = ($v4 ? opt('fwv4', $h) : undef) // opt('fw', $h);
+        if ($v4 && !defined($p{'ifv4'}) && defined($p{'if'}));
+    my $if = ($v4 ? $p{'ifv4'} : undef) // $p{'if'};
+    my $fw = ($v4 ? $p{'fwv4'} : undef) // $p{'fw'};
     # Convert slashes to protected value "\/"
     $if =~ s%\/%\\\/%g;
     # Protect special HTML characters (like '?')
@@ -292,10 +292,10 @@ sub query_cisco {
         url => ($asa)
             ? "https://$fw/exec/show%20interface%20$if"
             : "http://$fw/level/1/exec/show/ip/interface/brief/$if/CR",
-        login => opt('fw-login', $h),
-        password => opt('fw-password', $h),
+        login => $p{'fw-login'},
+        password => $p{'fw-password'},
         ignore_ssl_option => 1,
-        ssl_validate => opt('fw-ssl-validate', $h),
+        ssl_validate => $p{'fw-ssl-validate'},
     );
     return undef if !header_ok($reply, \&warning);
     $reply =~ s/^.*?\n\n//s;
@@ -345,14 +345,18 @@ our %builtinfw = (
     },
     'cisco' => {
         'name' => 'Cisco FW',
-        'query' => sub { return query_cisco($_[0], 0, 0); },
-        'queryv4' => sub { return query_cisco($_[0], 0, 1); },
+        'query' => sub { return query_cisco(0, 0, @_); },
+        'inputs' => ['fw', 'if', 'fw-login', 'fw-password', 'fw-ssl-validate'],
+        'queryv4' => sub { return query_cisco(0, 1, @_); },
+        'inputsv4' => ['fwv4', 'fw', 'ifv4', 'if', 'fw-login', 'fw-password', 'fw-ssl-validate'],
         'help' => sub { return " at the host given by --fw$_[0]=<host> and interface given by --if$_[0]=<interface>"; },
     },
     'cisco-asa' => {
         'name' => 'Cisco ASA',
-        'query' => sub { return query_cisco($_[0], 1, 0); },
-        'queryv4' => sub { return query_cisco($_[0], 1, 1); },
+        'query' => sub { return query_cisco(1, 0, @_); },
+        'inputs' => ['fw', 'if', 'fw-login', 'fw-password', 'fw-ssl-validate'],
+        'queryv4' => sub { return query_cisco(1, 1, @_); },
+        'inputsv4' => ['fwv4', 'fw', 'ifv4', 'if', 'fw-login', 'fw-password', 'fw-ssl-validate'],
         'help' => sub { return " at the host given by --fw$_[0]=<host> and interface given by --if$_[0]=<interface>"; },
     },
     'dlink-524' => {
@@ -552,66 +556,109 @@ our %builtinfw = (
     },
 );
 
-my %ip_strategies = (
-    'disabled'  => ": do not use a deprecated method to obtain an IP address for this host",
-    'no'        => ": deprecated, see '--use=disabled'",
-    'ip'        => ": deprecated, see '--usev4=ipv4' and '--usev6=ipv6'",
-    'web'       => ": deprecated, see '--usev4=webv4' and '--usev6=webv6'",
-    'fw'        => ": deprecated, see '--usev4=fwv4' and '--usev6=fwv6'",
-    'if'        => ": deprecated, see '--usev4=ifv4' and '--usev6=ifv6'",
-    'cmd'       => ": deprecated, see '--usev4=cmdv4' and '--usev6=cmdv6'",
-    map({
-        my $fw = $builtinfw{$_};
-        $_ => ": deprecated, see '--usev4=$_'" .
-            (defined($fw->{queryv6}) ? " and '--usev6=$_'" : '');
-    } keys(%builtinfw)),
+sub builtinfw_strategy {
+    my ($n) = @_;
+    my $fw = $builtinfw{$n};
+    return ($n => {
+        help => ": deprecated, see '--usev4=$n'" .
+            (defined($fw->{queryv6}) ? " and '--usev6=$n'" : ''),
+        inputs => $fw->{inputs} // ['fw', 'fw-skip', 'fw-login', 'fw-password', 'fw-ssl-validate'],
+    });
+}
+
+our %ip_strategies = (
+    'disabled' => {help => ": do not use a deprecated method to obtain an IP address for this host",
+                   inputs => []},
+    'no'       => {help => ": deprecated, see '--use=disabled'",
+                   inputs => []},
+    'ip'       => {help => ": deprecated, see '--usev4=ipv4' and '--usev6=ipv6'",
+                   inputs => ['ip']},
+    'web'      => {help => ": deprecated, see '--usev4=webv4' and '--usev6=webv6'",
+                   inputs => ['web', 'web-skip', 'proxy', 'web-ssl-validate']},
+    'fw'       => {help => ": deprecated, see '--usev4=fwv4' and '--usev6=fwv6'",
+                   inputs => ['fw', 'fw-skip', 'fw-login', 'fw-password', 'fw-ssl-validate']},
+    'if'       => {help => ": deprecated, see '--usev4=ifv4' and '--usev6=ifv6'",
+                   inputs => ['if']},
+    'cmd'      => {help => ": deprecated, see '--usev4=cmdv4' and '--usev6=cmdv6'",
+                   inputs => ['cmd', 'cmd-skip']},
+    map(builtinfw_strategy($_), keys(%builtinfw)),
 );
 
 sub ip_strategies_usage {
-    return map({ sprintf("    --use=%-22s %s.", $_, $ip_strategies{$_}) }
+    return map({ sprintf("    --use=%-22s %s.", $_, $ip_strategies{$_}{help}); }
                'disabled', 'no', 'ip', 'web', 'if', 'cmd', 'fw', sort(keys(%builtinfw)));
 }
 
-my %ipv4_strategies = (
-    'disabled'    => ": do not obtain an IPv4 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
-    'ipv4'        => ": obtain IPv4 from the address given by --ipv4=<address>",
-    'webv4'       => ": obtain IPv4 from an IP discovery page on the web",
-    'ifv4'        => ": obtain IPv4 from the interface given by --ifv4=<interface>",
-    'cmdv4'       => ": obtain IPv4 from the command given by --cmdv4=<command>",
-    'fwv4'        => ": obtain IPv4 from the URL given by --fwv4=<URL>",
-    map({
-        my $fw = $builtinfw{$_};
-        $_ => defined($fw->{queryv4})
+sub builtinfwv4_strategy {
+    my ($n) = @_;
+    my $fw = $builtinfw{$n};
+    return ($n => {
+        help => defined($fw->{queryv4})
             ? ": obtain IPv4 from $fw->{name}@{[($fw->{help} // sub {})->('v4') // '']}"
-            : ": obtain IPv4 from $fw->{name} at the host or URL given by --fwv4=<host|URL>";
-    } keys(%builtinfw)),
+            : ": obtain IPv4 from $fw->{name} at the host or URL given by --fwv4=<host|URL>",
+        inputs => $fw->{inputsv4} // ['fwv4', 'fw', 'fwv4-skip', 'fw-skip', 'fw-login',
+                                      'fw-password', 'fw-ssl-validate'],
+    });
+}
+
+our %ipv4_strategies = (
+    'disabled' => {help => ": do not obtain an IPv4 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
+                   inputs => []},
+    'ipv4'     => {help => ": obtain IPv4 from the address given by --ipv4=<address>",
+                   inputs => ['ipv4']},
+    'webv4'    => {help => ": obtain IPv4 from an IP discovery page on the web",
+                   inputs => ['webv4', 'webv4-skip', 'proxy', 'web-ssl-validate']},
+    'ifv4'     => {help => ": obtain IPv4 from the interface given by --ifv4=<interface>",
+                   inputs => ['ifv4']},
+    'cmdv4'    => {help => ": obtain IPv4 from the command given by --cmdv4=<command>",
+                   inputs => ['cmdv4', 'cmd-skip']},
+    'fwv4'     => {help => ": obtain IPv4 from the URL given by --fwv4=<URL>",
+                   inputs => ['fwv4', 'fw', 'fwv4-skip', 'fw-skip', 'fw-login', 'fw-password', 'fw-ssl-validate']},
+    map(builtinfwv4_strategy($_), keys(%builtinfw)),
 );
 sub ipv4_strategies_usage {
-    return map({ sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}) }
+    return map({ sprintf("    --usev4=%-22s %s.", $_, $ipv4_strategies{$_}{help}) }
                'disabled', 'ipv4', 'webv4', 'ifv4', 'cmdv4', 'fwv4', sort(keys(%builtinfw)));
 }
 
-my %ipv6_strategies = (
-    'disabled'    => ": do not obtain an IPv6 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
-    'no'          => ": deprecated, use '--usev6=disabled'",
-    'ipv6'        => ": obtain IPv6 from the address given by --ipv6=<address>",
-    'ip'          => ": deprecated, use '--usev6=ipv6'",
-    'webv6'       => ": obtain IPv6 from an IP discovery page on the web",
-    'web'         => ": deprecated, use '--usev6=webv6'",
-    'ifv6'        => ": obtain IPv6 from the interface given by --ifv6=<interface>",
-    'if'          => ": deprecated, use '--usev6=ifv6'",
-    'cmdv6'       => ": obtain IPv6 from the command given by --cmdv6=<command>",
-    'cmd'         => ": deprecated, use '--usev6=cmdv6'",
-    'fwv6'        => ": obtain IPv6 from the URL given by --fwv6=<URL>",
-    map({
-        my $fw = $builtinfw{$_};
-        defined($fw->{queryv6})
-            ? ($_ => ": obtain IPv6 from $fw->{name}@{[($fw->{help} // sub {})->('v6') // '']}")
-            : ();
-    } keys(%builtinfw)),
+sub builtinfwv6_strategy {
+    my ($n) = @_;
+    my $fw = $builtinfw{$n};
+    return defined($fw->{queryv6})
+        ? ($n => {
+            help => ": obtain IPv6 from $fw->{name}@{[($fw->{help} // sub {})->('v6') // '']}",
+            inputs => $fw->{inputsv6} // ['fwv6', 'fwv6-skip'],
+        })
+        : ();
+}
+
+our %ipv6_strategies = (
+    'disabled' => {help => ": do not obtain an IPv6 address for this host (except possibly via the deprecated '--use' option, if it is enabled)",
+                   inputs => []},
+    'no'       => {help => ": deprecated, use '--usev6=disabled'",
+                   inputs => []},
+    'ipv6'     => {help => ": obtain IPv6 from the address given by --ipv6=<address>",
+                   inputs => ['ipv6', 'ip']},
+    'ip'       => {help => ": deprecated, use '--usev6=ipv6'",
+                   inputs => ['ipv6', 'ip']},
+    'webv6'    => {help => ": obtain IPv6 from an IP discovery page on the web",
+                   inputs => ['webv6', 'web', 'webv6-skip', 'web-skip', 'proxy', 'web-ssl-validate']},
+    'web'      => {help => ": deprecated, use '--usev6=webv6'",
+                   inputs => ['webv6', 'web', 'webv6-skip', 'web-skip', 'proxy', 'web-ssl-validate']},
+    'ifv6'     => {help => ": obtain IPv6 from the interface given by --ifv6=<interface>",
+                   inputs => ['ifv6', 'if']},
+    'if'       => {help => ": deprecated, use '--usev6=ifv6'",
+                   inputs => ['ifv6', 'if']},
+    'cmdv6'    => {help => ": obtain IPv6 from the command given by --cmdv6=<command>",
+                   inputs => ['cmdv6', 'cmd', 'cmd-skip']},
+    'cmd'      => {help => ": deprecated, use '--usev6=cmdv6'",
+                   inputs => ['cmdv6', 'cmd', 'cmd-skip']},
+    'fwv6'     => {help => ": obtain IPv6 from the URL given by --fwv6=<URL>",
+                   inputs => ['fwv6', 'fwv6-skip']},
+    map(builtinfwv6_strategy($_), keys(%builtinfw)),
 );
 sub ipv6_strategies_usage {
-    return map({ sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}) }
+    return map({ sprintf("    --usev6=%-22s %s.", $_, $ipv6_strategies{$_}{help}) }
                'disabled', 'no', 'ipv6', 'ip', 'webv6', 'web', 'ifv6', 'if', 'cmdv6', 'cmd',
                'fwv6', sort(map({exists($ipv6_strategies{$_}) ? ($_) : ()} keys(%builtinfw))));
 }
@@ -1525,7 +1572,7 @@ sub update_nics {
                     $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
                 } else {
                     # Else need to find the IP address...
-                    $ip = get_ip($use, $h);
+                    $ip = get_ip(strategy_inputs('use', $h));
                     if (is_ipv4($ip) || is_ipv6($ip)) {
                          # And if it is valid, remember it...
                         $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
@@ -1542,7 +1589,7 @@ sub update_nics {
                     $ipv4 = $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4};
                 } else {
                     # Else need to find the IPv4 address...
-                    $ipv4 = get_ipv4($usev4, $h);
+                    $ipv4 = get_ipv4(strategy_inputs('usev4', $h));
                     if (is_ipv4($ipv4)) {
                          # And if it is valid, remember it...
                         $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4} = $ipv4;
@@ -1559,7 +1606,7 @@ sub update_nics {
                     $ipv6 = $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6};
                 } else {
                     # Else need to find the IPv6 address...
-                    $ipv6 = get_ipv6($usev6, $h);
+                    $ipv6 = get_ipv6(strategy_inputs('usev6', $h));
                     if (is_ipv6($ipv6)) {
                         # And if it is valid, remember it...
                         $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6} = $ipv6;
@@ -2143,7 +2190,8 @@ sub test_possible_ip {
     printf "----- Test_possible_ip with 'get_ip' -----\n";
     if (defined(opt('ip'))) {
         local $opt{'use'} = 'ip';
-        printf "use=ip, ip=%s address is %s\n", opt('ip'), get_ip('ip') // 'NOT FOUND';
+        printf("use=ip, ip=%s address is %s\n",
+               opt('ip'), get_ip(strategy_inputs('use')) // 'NOT FOUND');
     }
     {
         local $opt{'use'} = 'if';
@@ -2157,18 +2205,21 @@ sub test_possible_ip {
         warning("failed to get list of interfaces") if !@ifs;
         for my $if (@ifs) {
             local $opt{'if'} = $if;
-            printf "use=if, if=%s address is %s\n", opt('if'), get_ip('if') // 'NOT FOUND';
+            printf("use=if, if=%s address is %s\n",
+                   opt('if'), get_ip(strategy_inputs('use')) // 'NOT FOUND');
         }
     }
     if (opt('fw')) {
         if (opt('fw') !~ m%/%) {
             for my $fw (sort keys %builtinfw) {
                 local $opt{'use'} = $fw;
-                printf "use=%s address is %s\n", $fw, get_ip($fw) // 'NOT FOUND';
+                printf("use=%s address is %s\n",
+                       $fw, get_ip(strategy_inputs('use')) // 'NOT FOUND');
             }
         }
         local $opt{'use'} = 'fw';
-        printf "use=fw, fw=%s address is %s\n", opt('fw'), get_ip('fw') // 'NOT FOUND'
+        printf("use=fw, fw=%s address is %s\n",
+               opt('fw'), get_ip(strategy_inputs('use')) // 'NOT FOUND')
             if !exists $builtinfw{opt('fw')};
 
     }
@@ -2176,21 +2227,25 @@ sub test_possible_ip {
         local $opt{'use'} = 'web';
         for my $web (sort keys %builtinweb) {
             local $opt{'web'} = $web;
-            printf "use=web, web=%s address is %s\n", $web, get_ip('web') // 'NOT FOUND';
+            printf("use=web, web=%s address is %s\n",
+                   $web, get_ip(strategy_inputs('use')) // 'NOT FOUND');
         }
-        printf "use=web, web=%s address is %s\n", opt('web'), get_ip('web') // 'NOT FOUND'
+        printf("use=web, web=%s address is %s\n",
+               opt('web'), get_ip(strategy_inputs('use')) // 'NOT FOUND')
             if !exists $builtinweb{opt('web')};
     }
     if (opt('cmd')) {
         local $opt{'use'} = 'cmd';
-        printf "use=cmd, cmd=%s address is %s\n", opt('cmd'), get_ip('cmd') // 'NOT FOUND';
+        printf("use=cmd, cmd=%s address is %s\n",
+               opt('cmd'), get_ip(strategy_inputs('use')) // 'NOT FOUND');
     }
 
     # Now force IPv4
     printf "----- Test_possible_ip with 'get_ipv4' ------\n";
     if (defined(opt('ipv4'))) {
         local $opt{'usev4'} = 'ipv4';
-        printf "usev4=ipv4, ipv4=%s address is %s\n", opt('ipv4'), get_ipv4('ipv4') // 'NOT FOUND';
+        printf("usev4=ipv4, ipv4=%s address is %s\n",
+               opt('ipv4'), get_ipv4(strategy_inputs('usev4')) // 'NOT FOUND');
     }
     {
         local $opt{'usev4'} = 'ifv4';
@@ -2204,29 +2259,34 @@ sub test_possible_ip {
         warning("failed to get list of interfaces") if !@ifs;
         for my $if (@ifs) {
             local $opt{'ifv4'} = $if;
-            printf "usev4=ifv4, ifv4=%s address is %s\n", opt('ifv4'), get_ipv4('ifv4') // 'NOT FOUND';
+            printf("usev4=ifv4, ifv4=%s address is %s\n",
+                   opt('ifv4'), get_ipv4(strategy_inputs('usev4')) // 'NOT FOUND');
         }
     }
     {
         local $opt{'usev4'} = 'webv4';
         for my $web (sort keys %builtinweb) {
             local $opt{'webv4'} = $web;
-            printf "usev4=webv4, webv4=$web address is %s\n", get_ipv4('webv4') // 'NOT FOUND'
+            printf("usev4=webv4, webv4=%s address is %s\n",
+                   $web, get_ipv4(strategy_inputs('usev4')) // 'NOT FOUND')
                 if ($web !~ "6")  ## Don't bother if web site only supports IPv6;
         }
-        printf "usev4=webv4, webv4=%s address is %s\n", opt('webv4'), get_ipv4('webv4') // 'NOT FOUND'
+        printf("usev4=webv4, webv4=%s address is %s\n",
+               opt('webv4'), get_ipv4(strategy_inputs('usev4')) // 'NOT FOUND')
             if ! exists $builtinweb{opt('webv4')};
     }
     if (opt('cmdv4')) {
         local $opt{'usev4'} = 'cmdv4';
-        printf "usev4=cmdv4, cmdv4=%s address is %s\n", opt('cmdv4'), get_ipv4('cmdv4') // 'NOT FOUND';
+        printf("usev4=cmdv4, cmdv4=%s address is %s\n",
+               opt('cmdv4'), get_ipv4(strategy_inputs('usev4')) // 'NOT FOUND');
     }
 
     # Now force IPv6
     printf "----- Test_possible_ip with 'get_ipv6' -----\n";
     if (defined(opt('ipv6'))) {
         local $opt{'usev6'} = 'ipv6';
-        printf "usev6=ipv6, ipv6=%s address is %s\n", opt('ipv6'), get_ipv6('ipv6') // 'NOT FOUND';
+        printf("usev6=ipv6, ipv6=%s address is %s\n",
+               opt('ipv6'), get_ipv6(strategy_inputs('usev6')) // 'NOT FOUND');
     }
     {
         local $opt{'usev6'} = 'ifv6';
@@ -2240,22 +2300,26 @@ sub test_possible_ip {
         warning("failed to get list of interfaces") if !@ifs;
         for my $if (@ifs) {
             local $opt{'ifv6'} = $if;
-            printf "usev6=ifv6, ifv6=%s address is %s\n", opt('ifv6'), get_ipv6('ifv6') // 'NOT FOUND';
+            printf("usev6=ifv6, ifv6=%s address is %s\n",
+                   opt('ifv6'), get_ipv6(strategy_inputs('usev6')) // 'NOT FOUND');
         }
     }
     {
         local $opt{'usev6'} = 'webv6';
         for my $web (sort keys %builtinweb) {
             local $opt{'webv6'} = $web;
-            printf "usev6=webv6, webv6=$web address is %s\n", get_ipv6('webv6') // 'NOT FOUND'
+            printf("usev6=webv6, webv6=%s address is %s\n",
+                   $web, get_ipv6(strategy_inputs('usev6')) // 'NOT FOUND')
                 if ($web !~ "4");  ## Don't bother if web site only supports IPv4
         }
-        printf "usev6=webv6, webv6=%s address is %s\n", opt('webv6'), get_ipv6('webv6') // 'NOT FOUND'
+        printf("usev6=webv6, webv6=%s address is %s\n",
+               opt('webv6'), get_ipv6(strategy_inputs('usev6')) // 'NOT FOUND')
             if ! exists $builtinweb{opt('webv6')};
     }
     if (opt('cmdv6')) {
         local $opt{'usev6'} = 'cmdv6';
-        printf "usev6=cmdv6, cmdv6=%s address is %s\n", opt('cmdv6'), get_ipv6('cmdv6') // 'NOT FOUND';
+        printf("usev6=cmdv6, cmdv6=%s address is %s\n",
+               opt('cmdv6'), get_ipv6(strategy_inputs('usev6')) // 'NOT FOUND');
     }
 
     exit 0 unless opt('debug');
@@ -2847,35 +2911,51 @@ sub geturl {
     return $reply;
 }
 
+# Collects and returns all configuration data that get_ip* needs to determine the IP address.  This
+# makes it possible to avoid redundant queries by comparing the configuration data for different
+# hosts.
+sub strategy_inputs {
+    my ($whichuse, $h) = @_;
+    my $use = opt($whichuse, $h);
+    my $strategies
+        = $whichuse eq 'use' ? \%ip_strategies
+        : $whichuse eq 'usev4' ? \%ipv4_strategies
+        : $whichuse eq 'usev6' ? \%ipv6_strategies
+        : undef;
+    my $s = $strategies->{$use};
+    my @v = @{$s->{inputs} // []};
+    return map({ $_ => opt($_, $h); } $whichuse, @v);
+}
+
 ######################################################################
 ## get_ip
 ######################################################################
 sub get_ip {
-    my ($use, $h) = @_;
+    my %p = @_;
     my ($ip, $reply, $url, $skip) = (undef, '');
-    my $argvar = $use;
+    my $argvar = $p{'use'};
     # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
-    $argvar = 'fw' if $builtinfw{$use};
-    my $arg = opt($argvar, $h);
-    local $_l = pushlogctx("use=$use $argvar=" . ($arg // '<undefined>'));
+    $argvar = 'fw' if $builtinfw{$p{'use'}};
+    my $arg = $p{$argvar};
+    local $_l = pushlogctx("use=$p{'use'} $argvar=" . ($arg // '<undefined>'));
 
-    if ($use eq 'ip') {
+    if ($p{'use'} eq 'ip') {
         $ip = $arg;
         if (!is_ipv4($ip) && !is_ipv6($ip)) {
             warning('not a valid IPv4 or IPv6 address');
             $ip = undef;
         }
-    } elsif ($use eq 'if') {
+    } elsif ($p{'use'} eq 'if') {
         $ip = get_ip_from_interface($arg);
-    } elsif ($use eq 'cmd') {
+    } elsif ($p{'use'} eq 'cmd') {
         if ($arg) {
-            $skip = opt('cmd-skip', $h);
+            $skip = $p{'cmd-skip'};
             $reply = `$arg`;
             $reply = '' if $?;
         }
-    } elsif ($use eq 'web') {
+    } elsif ($p{'use'} eq 'web') {
         $url = $arg;
-        $skip = opt('web-skip', $h);
+        $skip = $p{'web-skip'};
         if (my $biw = $builtinweb{$url}) {
             warning("'$arg' is deprecated: $biw->{deprecated}") if $biw->{deprecated};
             $skip //= $biw->{skip};
@@ -2885,7 +2965,7 @@ sub get_ip {
             $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
-                ssl_validate => opt('web-ssl-validate', $h),
+                ssl_validate => $p{'web-ssl-validate'},
             );
             if (header_ok($reply, \&warning)) {
                 $reply =~ s/^.*?\n\n//s;
@@ -2893,17 +2973,17 @@ sub get_ip {
                 $reply = undef;
             }
         }
-    } elsif ($use eq 'disabled') {
+    } elsif ($p{'use'} eq 'disabled') {
         ## This is a no-op... Do not get an IP address for this host/service
         $reply = '';
-    } elsif ($use eq 'fw' || defined(my $fw = $builtinfw{$use})) {
+    } elsif ($p{'use'} eq 'fw' || defined(my $fw = $builtinfw{$p{'use'}})) {
         $url = $arg;
-        $skip = opt('fw-skip', $h);
+        $skip = $p{'fw-skip'};
         if ($fw) {
             $skip //= $fw->{'skip'};
             if (defined(my $query = $fw->{'query'})) {
                 $url = undef;
-                $reply = $query->($h);
+                $reply = $query->(%p);
             } else {
                 $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
             }
@@ -2911,10 +2991,10 @@ sub get_ip {
         if ($url) {
             $reply = geturl(
                 url => $url,
-                login => opt('fw-login', $h),
-                password => opt('fw-password', $h),
+                login => $p{'fw-login'},
+                password => $p{'fw-password'},
                 ignore_ssl_option => 1,
-                ssl_validate => opt('fw-ssl-validate', $h),
+                ssl_validate => $p{'fw-ssl-validate'},
             );
             if (header_ok($reply, \&warning)) {
                 $reply =~ s/^.*?\n\n//s;
@@ -2923,7 +3003,7 @@ sub get_ip {
             }
         }
     } else {
-        warning("ignoring unsupported '--use' strategy: $use");
+        warning("ignoring unsupported '--use' strategy: $p{'use'}");
     }
     if (!defined $reply) {
         $reply = '';
@@ -2933,7 +3013,7 @@ sub get_ip {
         $reply =~ s/^.*?${skip}//is;
     }
     $ip //= extract_ipv4($reply) // extract_ipv6($reply);
-    if ($use ne 'ip' && ($ip // '') eq '0.0.0.0') {
+    if ($p{'use'} ne 'ip' && ($ip // '') eq '0.0.0.0') {
         $ip = undef;
     }
     warning('did not find an IPv4 or IPv6 address') if !defined($ip);
@@ -3246,40 +3326,41 @@ sub get_ip_from_interface {
 ## get_ipv4
 ######################################################################
 sub get_ipv4 {
-    my ($usev4, $h) = @_;
+    my %p = @_;
     my $ipv4  = undef;      ## Found IPv4 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
     my $skip  = undef;      ## Regex of pattern to skip before looking for IP
-    my $argvar = $usev4;
+    my $argvar = $p{'usev4'};
     # Note that --usev4=firewallname uses --fwv4=arg, not --firewallname=arg.
-    $argvar = (defined(opt('fwv4', $h)) || !defined(opt('fw', $h))) ? 'fwv4' : 'fw'
-        if $builtinfw{$usev4};
-    my $arg = opt($argvar, $h);
-    local $_l = pushlogctx("usev4=$usev4 $argvar=" . ($arg // '<undefined>'));
+    $argvar = (defined($p{'fwv4'}) || !defined($p{'fw'})) ? 'fwv4' : 'fw'
+        if $builtinfw{$p{'usev4'}};
+    my $arg = $p{$argvar};
+    local $_l = pushlogctx("usev4=$p{'usev4'} $argvar=" . ($arg // '<undefined>'));
 
-    if ($usev4 eq 'ipv4') {
+    if ($p{'usev4'} eq 'ipv4') {
         ## Static IPv4 address is provided in "ipv4=<address>"
         $ipv4 = $arg;
         if (!is_ipv4($ipv4)) {
             warning('not a valid IPv4 address');
             $ipv4 = undef;
         }
-    } elsif ($usev4 eq 'ifv4') {
+    } elsif ($p{'usev4'} eq 'ifv4') {
         ## Obtain IPv4 address from interface mamed in "ifv4=<if>"
         $ipv4 = get_ip_from_interface($arg, 4);
-    } elsif ($usev4 eq 'cmdv4') {
+    } elsif ($p{'usev4'} eq 'cmdv4') {
         ## Obtain IPv4 address by executing the command in "cmdv4=<command>"
-        warning("'--cmd-skip' ignored") if (opt('verbose') && opt('cmd-skip', $h));
+        warning("'--cmd-skip' ignored for '--usev4=$p{'usev4'}'")
+            if (opt('verbose') && $p{'cmd-skip'});
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
             $reply = '' if $?;
         }
-    } elsif ($usev4 eq 'webv4') {
+    } elsif ($p{'usev4'} eq 'webv4') {
         ## Obtain IPv4 address by accessing website at url in "webv4=<url>"
         $url = $arg;
-        $skip = opt('webv4-skip', $h);
+        $skip = $p{'webv4-skip'};
         if (my $biw = $builtinweb{$url}) {
             warning("'$arg' is deprecated: $biw->{deprecated}") if $biw->{deprecated};
             $skip //= $biw->{skip};
@@ -3290,7 +3371,7 @@ sub get_ipv4 {
                 proxy => opt('proxy'),
                 url => $url,
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
-                ssl_validate => opt('web-ssl-validate', $h),
+                ssl_validate => $p{'web-ssl-validate'},
             );
             if (header_ok($reply, \&warning)) {
                 $reply =~ s/^.*?\n\n//s;
@@ -3298,21 +3379,21 @@ sub get_ipv4 {
                 $reply = undef;
             }
         }
-    } elsif ($usev4 eq 'disabled') {
+    } elsif ($p{'usev4'} eq 'disabled') {
         ## This is a no-op... Do not get an IPv4 address for this host/service
         $reply = '';
-    } elsif ($usev4 eq 'fwv4' || defined(my $fw = $builtinfw{$usev4})) {
+    } elsif ($p{'usev4'} eq 'fwv4' || defined(my $fw = $builtinfw{$p{'usev4'}})) {
         warning("'--fw' is deprecated; use '--fwv4' instead")
-            if (!defined(opt('fwv4', $h)) && defined(opt('fw', $h)));
+            if (!defined($p{'fwv4'}) && defined($p{'fw'}));
         warning("'--fw-skip' is deprecated; use '--fwv4-skip' instead")
-            if (!defined(opt('fwv4-skip', $h)) && defined(opt('fw-skip', $h)));
+            if (!defined($p{'fwv4-skip'}) && defined($p{'fw-skip'}));
         $url = $arg;
-        $skip = opt('fwv4-skip', $h) // opt('fw-skip', $h);
+        $skip = $p{'fwv4-skip'} // $p{'fw-skip'};
         if ($fw) {
             $skip //= $fw->{'skip'};
             if (defined(my $query = $fw->{'queryv4'})) {
                 $url = undef;
-                $reply = $query->($h);
+                $reply = $query->(%p);
             } else {
                 $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
             }
@@ -3320,11 +3401,11 @@ sub get_ipv4 {
         if ($url) {
             $reply = geturl(
                 url => $url,
-                login => opt('fw-login', $h),
-                password => opt('fw-password', $h),
+                login => $p{'fw-login'},
+                password => $p{'fw-password'},
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ignore_ssl_option => 1,
-                ssl_validate => opt('fw-ssl-validate', $h),
+                ssl_validate => $p{'fw-ssl-validate'},
             );
             if (header_ok($reply, \&warning)) {
                 $reply =~ s/^.*?\n\n//s;
@@ -3333,7 +3414,7 @@ sub get_ipv4 {
             }
         }
     } else {
-        warning("ignoring unsupported '--usev4' strategy: $usev4");
+        warning("ignoring unsupported '--usev4' strategy: $p{'usev4'}");
     }
 
     ## Set to loopback address if no text set yet
@@ -3345,7 +3426,7 @@ sub get_ipv4 {
     ## If $ipv4 not set yet look for IPv4 address in the $reply text
     $ipv4 //= extract_ipv4($reply);
     ## Return undef for loopback address unless statically assigned by "ipv4=0.0.0.0"
-    $ipv4 = undef if (($usev4 ne 'ipv4') && (($ipv4 // '') eq '0.0.0.0'));
+    $ipv4 = undef if (($p{'usev4'} ne 'ipv4') && (($ipv4 // '') eq '0.0.0.0'));
     warning('did not find an IPv4 address') if !defined($ipv4);
     debug("found IPv4 address: $ipv4") if $ipv4;
     return $ipv4;
@@ -3355,46 +3436,46 @@ sub get_ipv4 {
 ## get_ipv6
 ######################################################################
 sub get_ipv6 {
-    my ($usev6, $h) = @_;
+    my %p = @_;
     my $ipv6  = undef;      ## Found IPv6 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
     my $skip  = undef;      ## Regex of pattern to skip before looking for IP
-    my $argvar = $usev6;
-    if (grep($usev6 eq $_, qw(ip if cmd web))) {
-        my $new = $usev6 . 'v6';
-        warning("'--usev6=$usev6' is deprecated; use '--usev6=$new'");
-        $argvar = $new if defined(opt($new, $h));
+    my $argvar = $p{'usev6'};
+    if (grep($p{'usev6'} eq $_, qw(ip if cmd web))) {
+        my $new = $p{'usev6'} . 'v6';
+        warning("'--usev6=$p{'usev6'}' is deprecated; use '--usev6=$new'");
+        $argvar = $new if defined($p{$new});
     }
     # Note that --usev6=firewallname uses --fwv6=arg, not --firewallname=arg.
-    $argvar = 'fwv6' if $builtinfw{$usev6};
-    my $arg = opt($argvar, $h);
-    local $_l = pushlogctx("usev6=$usev6 $argvar=" . ($arg // '<undefined>'));
+    $argvar = 'fwv6' if $builtinfw{$p{'usev6'}};
+    my $arg = $p{$argvar};
+    local $_l = pushlogctx("usev6=$p{'usev6'} $argvar=" . ($arg // '<undefined>'));
 
-    if ($usev6 eq 'ipv6' || $usev6 eq 'ip') {
+    if ($p{'usev6'} eq 'ipv6' || $p{'usev6'} eq 'ip') {
         ## Static IPv6 address is provided in "ipv6=<address>"
         $ipv6 = $arg;
         if (!is_ipv6($ipv6)) {
             warning('not a valid IPv6 address');
             $ipv6 = undef;
         }
-    } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if') {
+    } elsif ($p{'usev6'} eq 'ifv6' || $p{'usev6'} eq 'if') {
         ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
         $ipv6 = get_ip_from_interface($arg, 6);
-    }  elsif ($usev6 eq 'cmdv6' || $usev6 eq 'cmd') {
+    }  elsif ($p{'usev6'} eq 'cmdv6' || $p{'usev6'} eq 'cmd') {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
-        warning("'--cmd-skip' ignored") if (opt('verbose') && opt('cmd-skip', $h));
+        warning("'--cmd-skip' ignored") if opt('verbose') && p{'cmd-skip'};
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
             $reply = '' if $?;
         }
-    } elsif ($usev6 eq 'webv6' || $usev6 eq 'web') {
+    } elsif ($p{'usev6'} eq 'webv6' || $p{'usev6'} eq 'web') {
         ## Obtain IPv6 address by accessing website at url in "webv6=<url>"
         warning("'--web-skip' ignored; use '--webv6-skip' instead")
-            if (!defined(opt('webv6-skip', $h)) && defined(opt('web-skip', $h)));
+            if (!defined($p{'webv6-skip'}) && defined($p{'web-skip'}));
         $url = $arg;
-        $skip = opt('webv6-skip', $h);
+        $skip = $p{'webv6-skip'};
         if (my $biw = $builtinweb{$url}) {
             warning("'--webv6=$url' is deprecated!  $biw->{deprecated}") if $biw->{deprecated};
             $skip //= $biw->{skip};
@@ -3405,7 +3486,7 @@ sub get_ipv6 {
                 proxy => opt('proxy'),
                 url => $url,
                 ipversion => 6, # when using a URL to find IPv6 address we should force use of IPv6
-                ssl_validate => opt('web-ssl-validate', $h),
+                ssl_validate => $p{'web-ssl-validate'},
             );
             if (header_ok($reply, \&warning)) {
                 $reply =~ s/^.*?\n\n//s;
@@ -3413,18 +3494,18 @@ sub get_ipv6 {
                 $reply = undef;
             }
         }
-    } elsif ($usev6 eq 'disabled') {
+    } elsif ($p{'usev6'} eq 'disabled') {
         $reply = '';
-    } elsif ($usev6 eq 'fwv6' || defined(my $fw = $builtinfw{$usev6})) {
-        $skip = opt('fwv6-skip', $h) // $fw->{'skip'};
+    } elsif ($p{'usev6'} eq 'fwv6' || defined(my $fw = $builtinfw{$p{'usev6'}})) {
+        $skip = $p{'fwv6-skip'} // $fw->{'skip'};
         if ($fw && defined(my $query = $fw->{'queryv6'})) {
             $skip //= $fw->{'skip'};
-            $reply = $query->($h);
+            $reply = $query->(%p);
         } else {
             warning("not implemented (does nothing)");
         }
     } else {
-        warning("ignoring unsupported '--usev6' strategy: $usev6");
+        warning("ignoring unsupported '--usev6' strategy: $p{'usev6'}");
     }
 
     ## Set to loopback address if no text set yet
@@ -3436,7 +3517,7 @@ sub get_ipv6 {
     ## If $ipv6 not set yet look for IPv6 address in the $reply text
     $ipv6 //= extract_ipv6($reply);
     ## Return undef for loopback address unless statically assigned by "ipv6=::"
-    $ipv6 = undef if (($usev6 ne 'ipv6') && ($usev6 ne 'ip') && (($ipv6 // '') eq '::'));
+    $ipv6 = undef if (($p{'usev6'} ne 'ipv6') && ($p{'usev6'} ne 'ip') && (($ipv6 // '') eq '::'));
     warning('did not find an IPv6 address') if !defined($ipv6);
     debug("found IPv6 address: $ipv6") if $ipv6;
     return $ipv6;

@@ -22,6 +22,11 @@ $ddclient::builtinweb{$builtinwebv6} = {'url' => httpd('6')->endpoint(), 'skip' 
     if httpd('6');
 $ddclient::builtinfw{$builtinfw} = {name => 'test', skip => 'skip'};
 %ddclient::builtinfw if 0;  # suppress spurious warning "Name used only once: possible typo"
+%ddclient::ip_strategies = (%ddclient::ip_strategies, ddclient::builtinfw_strategy($builtinfw));
+%ddclient::ipv4_strategies =
+    (%ddclient::ipv4_strategies, ddclient::builtinfwv4_strategy($builtinfw));
+%ddclient::ipv6_strategies =
+    (%ddclient::ipv6_strategies, ddclient::builtinfwv6_strategy($builtinfw));
 
 sub run_test_case {
     my %tc = @_;
@@ -31,9 +36,12 @@ sub run_test_case {
         my $h = 't/skip.pl';
         $ddclient::config{$h} = $tc{cfg};
         %ddclient::config if 0;  # suppress spurious warning "Name used only once: possible typo"
-        is(ddclient::get_ip($tc{cfg}{use}, $h), $tc{want}, $tc{desc}) if ($tc{cfg}{use});
-        is(ddclient::get_ipv4($tc{cfg}{usev4}, $h), $tc{want}, $tc{desc}) if ($tc{cfg}{usev4});
-        is(ddclient::get_ipv6($tc{cfg}{usev6}, $h), $tc{want}, $tc{desc}) if ($tc{cfg}{usev6});
+        is(ddclient::get_ip(ddclient::strategy_inputs('use', $h)), $tc{want}, $tc{desc})
+            if ($tc{cfg}{use});
+        is(ddclient::get_ipv4(ddclient::strategy_inputs('usev4', $h)), $tc{want}, $tc{desc})
+            if ($tc{cfg}{usev4});
+        is(ddclient::get_ipv6(ddclient::strategy_inputs('usev6', $h)), $tc{want}, $tc{desc})
+            if ($tc{cfg}{usev6});
     }
 }
 

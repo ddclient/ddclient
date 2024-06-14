@@ -87,11 +87,11 @@ for my $tc (@test_cases) {
     SKIP: {
         skip("IPv6 not supported on this system", 1) if $tc->{ipv6} && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1) if $tc->{ipv6} && !$httpd_ipv6_supported;
-        is(ddclient::get_ip($tc->{cfg}{use}, $h), $tc->{want}, $tc->{desc})
+        is(ddclient::get_ip(ddclient::strategy_inputs('use', $h)), $tc->{want}, $tc->{desc})
             if $tc->{cfg}{use};
-        is(ddclient::get_ipv4($tc->{cfg}{usev4}, $h), $tc->{want}, $tc->{desc})
+        is(ddclient::get_ipv4(ddclient::strategy_inputs('usev4', $h)), $tc->{want}, $tc->{desc})
             if $tc->{cfg}{usev4};
-        is(ddclient::get_ipv6($tc->{cfg}{usev6}, $h), $tc->{want}, $tc->{desc})
+        is(ddclient::get_ipv6(ddclient::strategy_inputs('usev6', $h)), $tc->{want}, $tc->{desc})
             if $tc->{cfg}{usev6};
     }
 }
