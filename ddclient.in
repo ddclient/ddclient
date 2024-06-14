@@ -2127,7 +2127,7 @@ sub test_possible_ip {
             }
         }
         local $opt{'use'} = 'fw';
-        printf "use=fw, fw=%s address is %s\n", opt('fw'), get_ip(opt('fw')) // 'NOT FOUND'
+        printf "use=fw, fw=%s address is %s\n", opt('fw'), get_ip('fw') // 'NOT FOUND'
             if !exists $builtinfw{opt('fw')};
 
     }
