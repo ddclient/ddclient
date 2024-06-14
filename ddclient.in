@@ -2147,7 +2147,7 @@ sub test_possible_ip {
 
     # Now force IPv4
     printf "----- Test_possible_ip with 'get_ipv4' ------\n";
-    printf "use=ipv4, ipv4=%s address is %s\n", opt('ipv4'), get_ipv4('ipv4') // 'NOT FOUND'
+    printf "usev4=ipv4, ipv4=%s address is %s\n", opt('ipv4'), get_ipv4('ipv4') // 'NOT FOUND'
         if defined opt('ipv4');
 
     {
@@ -2161,27 +2161,27 @@ sub test_possible_ip {
         warning("failed to get list of interfaces") if !@ifs;
         for my $if (@ifs) {
             local $opt{'ifv4'} = $if;
-            printf "use=ifv4, ifv4=%s address is %s\n", opt('ifv4'), get_ipv4('ifv4') // 'NOT FOUND';
+            printf "usev4=ifv4, ifv4=%s address is %s\n", opt('ifv4'), get_ipv4('ifv4') // 'NOT FOUND';
         }
     }
     {
         local $opt{'usev4'} = 'webv4';
         for my $web (sort keys %builtinweb) {
             local $opt{'webv4'} = $web;
-            printf "use=webv4, webv4=$web address is %s\n", get_ipv4('webv4') // 'NOT FOUND'
+            printf "usev4=webv4, webv4=$web address is %s\n", get_ipv4('webv4') // 'NOT FOUND'
                 if ($web !~ "6")  ## Don't bother if web site only supports IPv6;
         }
-        printf "use=webv4, webv4=%s address is %s\n", opt('webv4'), get_ipv4('webv4') // 'NOT FOUND'
+        printf "usev4=webv4, webv4=%s address is %s\n", opt('webv4'), get_ipv4('webv4') // 'NOT FOUND'
             if ! exists $builtinweb{opt('webv4')};
     }
     if (opt('cmdv4')) {
         local $opt{'usev4'} = 'cmdv4';
-        printf "use=cmdv4, cmdv4=%s address is %s\n", opt('cmdv4'), get_ipv4('cmdv4') // 'NOT FOUND';
+        printf "usev4=cmdv4, cmdv4=%s address is %s\n", opt('cmdv4'), get_ipv4('cmdv4') // 'NOT FOUND';
     }
 
     # Now force IPv6
     printf "----- Test_possible_ip with 'get_ipv6' -----\n";
-    printf "use=ipv6, ipv6=%s address is %s\n", opt('ipv6'), get_ipv6('ipv6') // 'NOT FOUND'
+    printf "usev6=ipv6, ipv6=%s address is %s\n", opt('ipv6'), get_ipv6('ipv6') // 'NOT FOUND'
         if defined opt('ipv6');
 
     {
@@ -2195,22 +2195,22 @@ sub test_possible_ip {
         warning("failed to get list of interfaces") if !@ifs;
         for my $if (@ifs) {
             local $opt{'ifv6'} = $if;
-            printf "use=ifv6, ifv6=%s address is %s\n", opt('ifv6'), get_ipv6('ifv6') // 'NOT FOUND';
+            printf "usev6=ifv6, ifv6=%s address is %s\n", opt('ifv6'), get_ipv6('ifv6') // 'NOT FOUND';
         }
     }
     {
         local $opt{'usev6'} = 'webv6';
         for my $web (sort keys %builtinweb) {
             local $opt{'webv6'} = $web;
-            printf "use=webv6, webv6=$web address is %s\n", get_ipv6('webv6') // 'NOT FOUND'
+            printf "usev6=webv6, webv6=$web address is %s\n", get_ipv6('webv6') // 'NOT FOUND'
                 if ($web !~ "4");  ## Don't bother if web site only supports IPv4
         }
-        printf "use=webv6, webv6=%s address is %s\n", opt('webv6'), get_ipv6('webv6') // 'NOT FOUND'
+        printf "usev6=webv6, webv6=%s address is %s\n", opt('webv6'), get_ipv6('webv6') // 'NOT FOUND'
             if ! exists $builtinweb{opt('webv6')};
     }
     if (opt('cmdv6')) {
         local $opt{'usev6'} = 'cmdv6';
-        printf "use=cmdv6, cmdv6=%s address is %s\n", opt('cmdv6'), get_ipv6('cmdv6') // 'NOT FOUND';
+        printf "usev6=cmdv6, cmdv6=%s address is %s\n", opt('cmdv6'), get_ipv6('cmdv6') // 'NOT FOUND';
     }
 
     exit 0 unless opt('debug');
