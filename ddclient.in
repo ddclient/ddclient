@@ -1533,9 +1533,9 @@ sub runpostscript {
 ######################################################################
 sub update_nics {
     my %examined = ();
-    my %iplist   = ();
-    my %ipv4list = ();
-    my %ipv6list = ();
+    my %use_results;
+    my %usev4_results;
+    my %usev6_results;
 
     for my $p (sort keys %protocols) {
         my (@hosts, %ipsv4, %ipsv6) = ();
@@ -1547,74 +1547,44 @@ sub update_nics {
             my $use = opt('use', $h);
             my $usev4 = opt('usev4', $h);
             my $usev6 = opt('usev6', $h);
-            my $arg_ip    = opt('ip',    $h) // '';
-            my $arg_ipv4  = opt('ipv4',  $h) // '';
-            my $arg_ipv6  = opt('ipv6',  $h) // '';
-            my $arg_fw    = opt('fw',    $h) // '';
-            my $arg_fwv4  = opt('fwv4',  $h) // '';
-            my $arg_fwv6  = opt('fwv6',  $h) // '';
-            my $arg_if    = opt('if',    $h) // '';
-            my $arg_ifv4  = opt('ifv4',  $h) // '';
-            my $arg_ifv6  = opt('ifv6',  $h) // '';
-            my $arg_web   = opt('web',   $h) // '';
-            my $arg_webv4 = opt('webv4', $h) // '';
-            my $arg_webv6 = opt('webv6', $h) // '';
-            my $arg_cmd   = opt('cmd',   $h) // '';
-            my $arg_cmdv4 = opt('cmdv4', $h) // '';
-            my $arg_cmdv6 = opt('cmdv6', $h) // '';
             my $ip = undef;
             my $ipv4 = undef;
             my $ipv6 = undef;
 
             if ($use ne 'disabled') {
-                if (exists $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd}) {
-                    # If we have already done a get_ip() for this, don't do it again.
-                    $ip = $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd};
-                } else {
-                    # Else need to find the IP address...
-                    $ip = get_ip(strategy_inputs('use', $h));
-                    if (is_ipv4($ip) || is_ipv6($ip)) {
-                         # And if it is valid, remember it...
-                        $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
-                    } else {
-                        warning("unable to determine IP address with strategy '--use=$use'")
-                            if !$daemon || opt('verbose');
-                    }
+                my %inputs = strategy_inputs('use', $h);
+                my $sig = repr(\%inputs, Indent => 0);
+                $use_results{$sig} //= get_ip(%inputs);
+                if (!is_ipv4($use_results{$sig}) && !is_ipv6($use_results{$sig})) {
+                    warning("unable to determine IP address with strategy '--use=$use'")
+                        if !$daemon || opt('verbose');
+                    delete $use_results{$sig};
                 }
+                $ip = $use_results{$sig};
             }
 
             if ($usev4 ne 'disabled') {
-                if (exists $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4}) {
-                    # If we have already done a get_ipv4() for this, don't do it again.
-                    $ipv4 = $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4};
-                } else {
-                    # Else need to find the IPv4 address...
-                    $ipv4 = get_ipv4(strategy_inputs('usev4', $h));
-                    if (is_ipv4($ipv4)) {
-                         # And if it is valid, remember it...
-                        $ipv4list{$usev4}{$arg_ipv4}{$arg_fwv4}{$arg_ifv4}{$arg_webv4}{$arg_cmdv4} = $ipv4;
-                    } else {
-                        warning("unable to determine IPv4 address with strategy '--usev4=$usev4'")
-                            if !$daemon || opt('verbose');
-                    }
+                my %inputs = strategy_inputs('usev4', $h);
+                my $sig = repr(\%inputs, Indent => 0);
+                $usev4_results{$sig} //= get_ipv4(%inputs);
+                if (!is_ipv4($usev4_results{$sig})) {
+                    warning("unable to determine IPv4 address with strategy '--usev4=$usev4'")
+                        if !$daemon || opt('verbose');
+                    delete $usev4_results{$sig};
                 }
+                $ipv4 = $usev4_results{$sig};
             }
 
             if ($usev6 ne 'disabled') {
-                if (exists $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6}) {
-                    # If we have already done a get_ipv6() for this, don't do it again.
-                    $ipv6 = $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6};
-                } else {
-                    # Else need to find the IPv6 address...
-                    $ipv6 = get_ipv6(strategy_inputs('usev6', $h));
-                    if (is_ipv6($ipv6)) {
-                        # And if it is valid, remember it...
-                        $ipv6list{$usev6}{$arg_ipv6}{$arg_fwv6}{$arg_ifv6}{$arg_webv6}{$arg_cmdv6} = $ipv6;
-                    } else {
-                        warning("unable to determine IPv6 address with strategy '--usev6=$usev6'")
-                            if !$daemon || opt('verbose');
-                    }
+                my %inputs = strategy_inputs('usev6', $h);
+                my $sig = repr(\%inputs, Indent => 0);
+                $usev6_results{$sig} //= get_ipv6(%inputs);
+                if (!is_ipv6($usev6_results{$sig})) {
+                    warning("unable to determine IPv6 address with strategy '--usev6=$usev6'")
+                        if !$daemon || opt('verbose');
+                    delete $usev6_results{$sig};
                 }
+                $ipv6 = $usev6_results{$sig};
             }
 
             $ip //= $ipv4 // $ipv6;
