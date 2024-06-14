@@ -1396,8 +1396,6 @@ sub update_nics {
                             if !$daemon || opt('verbose');
                     }
                 }
-                # And remember it as the IP address we want to send to the DNS service.
-                $config{$h}{'wantip'} = $ip;
             }
 
             if ($usev4 ne 'disabled') {
@@ -1415,8 +1413,6 @@ sub update_nics {
                             if !$daemon || opt('verbose');
                     }
                 }
-                # And remember it as the IPv4 address we want to send to the DNS service.
-                $config{$h}{'wantipv4'} = $ipv4;
             }
 
             if ($usev6 ne 'disabled') {
@@ -1434,17 +1430,14 @@ sub update_nics {
                             if !$daemon || opt('verbose');
                     }
                 }
-                # And remember it as the IP address we want to send to the DNS service.
-                $config{$h}{'wantipv6'} = $ipv6;
             }
 
-            # DNS service update functions should only have to handle 'wantipv4' and 'wantipv6'
-            $config{$h}{'wantipv4'} = $ipv4 = $ip if (!$ipv4 && is_ipv4($ip));
-            $config{$h}{'wantipv6'} = $ipv6 = $ip if (!$ipv6 && is_ipv6($ip));
-            # If we don't have 'wantip', we fill it from 'wantipv4' or 'wantipv6'
-            # so old provider implementations continue to work until we update them all.
-            $config{$h}{'wantip'}   = $ipv4       if (!$ip && $ipv4);
-            $config{$h}{'wantip'}   = $ipv6       if (!$ip && !$ipv4 && $ipv6);
+            $ip //= $ipv4 // $ipv6;
+            $ipv4 //= $ip if is_ipv4($ip);
+            $ipv6 //= $ip if is_ipv6($ip);
+            $config{$h}{'wantip'} = $ip;
+            $config{$h}{'wantipv4'} = $ipv4;
+            $config{$h}{'wantipv6'} = $ipv6;
 
             if (!$ip && !$ipv4 && !$ipv6) {
                 warning("Could not determine an IP for %s", $h);
