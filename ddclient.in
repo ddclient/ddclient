@@ -1399,8 +1399,8 @@ sub update_nics {
                          # And if it is valid, remember it...
                         $iplist{$use}{$arg_ip}{$arg_fw}{$arg_if}{$arg_web}{$arg_cmd} = $ip;
                     } else {
-                        warning("%s: unable to determine IP address with strategy use=%s", $h, $use)
-                            if !$daemon || opt('verbose');
+                        warning("%s: unable to determine IP address with strategy --use=%s",
+                                $h, $use) if !$daemon || opt('verbose');
                     }
                 }
             }
