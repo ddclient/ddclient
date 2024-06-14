@@ -2101,9 +2101,10 @@ sub test_possible_ip {
     local $opt{'debug'} = 0;
 
     printf "----- Test_possible_ip with 'get_ip' -----\n";
-    printf "use=ip, ip=%s address is %s\n", opt('ip'), get_ip('ip') // 'NOT FOUND'
-        if defined opt('ip');
-
+    if (defined(opt('ip'))) {
+        local $opt{'use'} = 'ip';
+        printf "use=ip, ip=%s address is %s\n", opt('ip'), get_ip('ip') // 'NOT FOUND';
+    }
     {
         local $opt{'use'} = 'if';
         # Note: The `ip` command adds a `@eth0` suffix to the names of VLAN
@@ -2147,10 +2148,12 @@ sub test_possible_ip {
 
     # Now force IPv4
     printf "----- Test_possible_ip with 'get_ipv4' ------\n";
-    printf "usev4=ipv4, ipv4=%s address is %s\n", opt('ipv4'), get_ipv4('ipv4') // 'NOT FOUND'
-        if defined opt('ipv4');
-
+    if (defined(opt('ipv4'))) {
+        local $opt{'usev4'} = 'ipv4';
+        printf "usev4=ipv4, ipv4=%s address is %s\n", opt('ipv4'), get_ipv4('ipv4') // 'NOT FOUND';
+    }
     {
+        local $opt{'usev4'} = 'ifv4';
         # Note: The `ip` command adds a `@eth0` suffix to the names of VLAN
         # interfaces. That `@eth0` suffix is NOT part of the interface name.
         my @ifs = map({ /^[^\s:]*:\s*([^\s:@]+)/ ? $1 : () }
@@ -2181,10 +2184,12 @@ sub test_possible_ip {
 
     # Now force IPv6
     printf "----- Test_possible_ip with 'get_ipv6' -----\n";
-    printf "usev6=ipv6, ipv6=%s address is %s\n", opt('ipv6'), get_ipv6('ipv6') // 'NOT FOUND'
-        if defined opt('ipv6');
-
+    if (defined(opt('ipv6'))) {
+        local $opt{'usev6'} = 'ipv6';
+        printf "usev6=ipv6, ipv6=%s address is %s\n", opt('ipv6'), get_ipv6('ipv6') // 'NOT FOUND';
+    }
     {
+        local $opt{'usev6'} = 'ifv6';
         # Note: The `ip` command adds a `@eth0` suffix to the names of VLAN
         # interfaces. That `@eth0` suffix is NOT part of the interface name.
         my @ifs = map({ /^[^\s:]*:\s*([^\s:@]+)/ ? $1 : () }
