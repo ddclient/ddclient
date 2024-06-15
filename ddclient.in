@@ -4676,30 +4676,6 @@ sub nic_zoneedit1_update {
 }
 
 ######################################################################
-## nic_easydns_force_update
-######################################################################
-sub nic_easydns_force_update {
-    my $host   = shift;
-    my $update = 0;
-
-    if ($config{$host}{'mx'} ne $recap{$host}{'mx'}) {
-        info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
-        $update = 1;
-
-    } elsif ($config{$host}{'mx'} && (ynu($config{$host}{'backupmx'}, 1, 2, 3) ne ynu($config{$host}{'backupmx'}, 1, 2, 3))) {
-        info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
-        $update = 1;
-
-    } elsif ($config{$host}{'static'} ne $recap{$host}{'static'}) {
-
-        info("forcing updating %s because 'static' has changed to %s.", $host, ynu($config{$host}{'static'}, "YES", "NO", "NO"));
-        $update = 1;
-
-    }
-    return $update;
-}
-
-######################################################################
 ## nic_easydns_examples
 ######################################################################
 sub nic_easydns_examples {
