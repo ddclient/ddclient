@@ -773,7 +773,7 @@ our %protocols = (
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
             'min-error-interval' => setv(T_DELAY,  0, 0, interval('8m'),     0),
-            'script'             => setv(T_STRING, 0, 1, '/special/api.php', undef),
+            'script'             => setv(T_STRING, 0, 0, '/special/api.php', undef),
             'server'             => setv(T_FQDNP,  0, 0, 'dinahosting.com',  undef),
         },
     },
@@ -793,7 +793,7 @@ our %protocols = (
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'script' => setv(T_STRING, 0, 1, '/servlet/updateip',  undef),
+            'script' => setv(T_STRING, 0, 0, '/servlet/updateip',  undef),
             'server' => setv(T_FQDNP,  0, 0, 'cp.dnsmadeeasy.com', undef),
         },
     },
@@ -845,7 +845,7 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
-            'script' => setv(T_STRING, 0, 1, '/nic/update', undef),
+            'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
         },
     },
     'easydns' => {
@@ -859,7 +859,7 @@ our %protocols = (
             'min-interval' => setv(T_DELAY, 0, 0, interval('10m'), 0),
             'mx'           => setv(T_FQDN,   0, 1, undef,                undef),
             'server'       => setv(T_FQDNP,  0, 0, 'api.cp.easydns.com', undef),
-            'script'       => setv(T_STRING, 0, 1, '/dyn/generic.php',   undef),
+            'script'       => setv(T_STRING, 0, 0, '/dyn/generic.php',   undef),
             'wildcard'     => setv(T_BOOL,   0, 1, 0,                    undef),
         },
     },
@@ -889,7 +889,7 @@ our %protocols = (
             'login' => undef,
             'min-interval'              => setv(T_DELAY,  0, 0, interval('5m'),  interval('5m')),
             'server'                    => setv(T_FQDNP,  0, 0, 'api.gandi.net', undef),
-            'script'                    => setv(T_STRING, 0, 1, '/v5',           undef),
+            'script'                    => setv(T_STRING, 0, 0, '/v5',           undef),
             'use-personal-access-token' => setv(T_BOOL, 0, 0, 0, undef),
             'ttl'                       => setv(T_DELAY,  0, 0, undef,           interval('5m')),
             'zone'                      => setv(T_FQDN,   1, 0, undef,           undef),
@@ -973,7 +973,7 @@ our %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'njal.la', undef),
-            'quietreply' => setv(T_BOOL, 0, 1, 0, undef),
+            'quietreply' => setv(T_BOOL, 0, 0, 0, undef),
         },
     },
     'noip' => {
@@ -990,9 +990,9 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => setv(T_LOGIN,  0, 0, '/usr/bin/nsupdate', undef),
-            'tcp'   => setv(T_BOOL,   0, 1, 0,                   undef),
-            'ttl'   => setv(T_NUMBER, 0, 1, 600,                 undef),
-            'zone'  => setv(T_STRING, 1, 1, undef,               undef),
+            'tcp'   => setv(T_BOOL,   0, 0, 0,                   undef),
+            'ttl'   => setv(T_NUMBER, 0, 0, 600,                 undef),
+            'zone'  => setv(T_STRING, 1, 0, undef,               undef),
         },
     },
     'ovh' => {
@@ -1000,7 +1000,7 @@ our %protocols = (
         'examples'   => \&nic_ovh_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'script'   => setv(T_STRING, 0, 1, '/nic/update', undef),
+            'script'   => setv(T_STRING, 0, 0, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  0, 0, 'www.ovh.com', undef),
         },
     },
