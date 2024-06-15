@@ -3931,7 +3931,7 @@ sub nic_dyndns2_force_update {
         info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
         $update = 1;
 
-    } elsif ($config{$host}{'mx'} && (ynu($config{$host}{'backupmx'}, 1, 2, 3) ne ynu($config{$host}{'backupmx'}, 1, 2, 3))) {
+    } elsif ($config{$host}{'mx'} && (ynu($config{$host}{'backupmx'}, 1, 2, 3) ne ynu($recap{$host}{'backupmx'}, 1, 2, 3))) {
         info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
         $update = 1;
 
