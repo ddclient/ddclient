@@ -5247,7 +5247,7 @@ sub nic_njalla_update {
         # Read input params
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
-        my $quietreply = delete $config{$h}{'quietreply'};
+        my $quietreply = $config{$h}{'quietreply'};
         my $ip_output = '';
 
         # Build url
