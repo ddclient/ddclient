@@ -635,21 +635,53 @@ my %variables = (
         'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
         'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
         'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
-
-        'ip'                  => setv(T_IP,    0, 1, undef,                undef),  #TODO remove from cache?
-        'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
-        'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
-        'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
-        'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        'status'              => setv(T_ANY,   0, 1, undef,                undef),  #TODO remove from cache?
-        'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
-        'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
         'min-interval'        => setv(T_DELAY, 0, 0, interval('30s'),      0),
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
 
+        # As a cached value, this is the IP address (IPv4 or IPv6, but almost always IPv4) most
+        # recently saved at the DDNS service.  As a setting, this is the desired IP address that
+        # should be saved at the DDNS service.  Unfortunately, these two meanings are conflated,
+        # causing the bug "skipped: IP address was already set to a.b.c.d" when the IP was never
+        # set to a.b.c.d.
+        # TODO:  Move the cached value elsewhere to fix the bug.
+        'ip'                  => setv(T_IP,    0, 1, undef,                undef),
+        # As `ip`, but only IPv4 addresses.
+        'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
+        # As `ip`, but only IPv6 addresses.
+        'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
+        # Timestamp (seconds since epoch) indicating the earliest time the next update is
+        # permitted.
+        # TODO: Create a timestamp type and change this to that type.
+        'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
+        # Timestamp (seconds since epoch) indicating when an IP address was last sent to the DDNS
+        # service, even if the IP address was not different from what was already stored.
+        # TODO: Create a timestamp type and change this to that type.
+        'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
+        # Timestamp (seconds since epoch) of the most recent attempt to update the DDNS service
+        # (including attempts to update with the same IP address).  This equals mtime if the most
+        # recent attempt was successful, otherwise it will be more recent than mtime.
+        # TODO: Create a timestamp type and change this to that type.
+        'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
+        # Disposition of the most recent (or currently in progress) attempt to update the DDNS
+        # service with the IP address in `wantip`.  Anything other than `good`, including undef, is
+        # treated as a failure.
+        'status'              => setv(T_ANY,   0, 1, undef,                undef),
+        # As `status`, but with `wantipv4`.
+        'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
+        # As `status`, but with `wantipv6`.
+        'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
+        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
+        # `min-interval` not inhibited the attempt.  This is reset to 0 once an attempt is actually
+        # made.  This is used as a boolean to suppress repeated warnings to the user that indicate
+        # that `min-interval` has inhibited an update attempt.
+        # TODO: Change to a boolean and rename to improve readability.
         'warned-min-interval' => setv(T_ANY,   0, 1, 0,                    undef),
+        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
+        # `min-error-interval` not inhibited the attempt.  This is reset to 0 once an attempt is
+        # actually made.  This is used as a boolean to suppress repeated warnings to the user that
+        # indicate that `min-error-interval` has inhibited an update attempt.
+        # TODO: Change to a boolean and rename to improve readability.
         'warned-min-error-interval' => setv(T_ANY, 0, 1, 0,                undef),
     },
     'dyndns-common-defaults' => {
