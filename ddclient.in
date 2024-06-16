@@ -1565,7 +1565,7 @@ sub write_recap {
                 $recap{$h}{$v} = $config{$h}{$v};
             }
         } else {
-            for my $v (qw(atime wtime status)) {
+            for my $v (qw(atime wtime status status-ipv4 status-ivp6)) {
                 $recap{$h}{$v} = $config{$h}{$v};
             }
         }
@@ -1620,7 +1620,7 @@ sub read_recap {
 
         for my $h (keys(%recap)) {
             next if !exists($config->{$h});
-            for (qw(atime mtime wtime ip status)) {
+            for (qw(atime mtime wtime ip ipv4 ipv6 status status-ipv4 status-ipv6)) {
                 # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
                 # original intention behind this?  To copy %recap values into %config?  If so, is
                 # it better to just delete this and live with the current behavior (which doesn't
