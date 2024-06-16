@@ -77,8 +77,7 @@ my @use_test_cases = (
 );
 for my $tc (@use_test_cases) {
     my $desc = "'use' dynamic default: $tc->{desc}";
-    local %ddclient::protocols =
-        (protocol => {variables => $ddclient::variables{'protocol-common-defaults'}});
+    local %ddclient::protocols = (protocol => ddclient::Protocol->new());
     local %ddclient::variables = (merged => {
         'protocol' => $ddclient::variables{'merged'}{'protocol'},
         'use' => $ddclient::variables{'protocol-common-defaults'}{'use'},

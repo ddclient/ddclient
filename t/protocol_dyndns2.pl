@@ -266,7 +266,7 @@ for my $tc (@test_cases) {
             map("line: $_", @{$tc->{resp}}),
         );
         local $ddclient::_l = $l;
-        ddclient::nic_dyndns2_update(sort(keys(%{$tc->{cfg}})));
+        ddclient::nic_dyndns2_update(undef, sort(keys(%{$tc->{cfg}})));
     }
     is_deeply(\%ddclient::recap, $tc->{wantrecap}, "$tc->{desc}: recap")
         or diag(ddclient::repr(Values => [\%ddclient::recap, $tc->{wantrecap}],

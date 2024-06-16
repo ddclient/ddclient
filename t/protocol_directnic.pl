@@ -155,7 +155,7 @@ for my $tc (@test_cases) {
     local %ddclient::recap;
     {
         local $ddclient::_l = $l;
-        ddclient::nic_directnic_update(sort(keys(%{$tc->{cfg}})));
+        ddclient::nic_directnic_update(undef, sort(keys(%{$tc->{cfg}})));
     }
     is_deeply(\%ddclient::recap, $tc->{wantrecap}, "$tc->{desc}: recap")
         or diag(ddclient::repr(Values => [\%ddclient::recap, $tc->{wantrecap}],

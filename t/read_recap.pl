@@ -6,19 +6,19 @@ eval { require 'ddclient'; } or BAIL_OUT($@);
 local $ddclient::globals{debug} = 1;
 local $ddclient::globals{verbose} = 1;
 local %ddclient::protocols = (
-    protocol_a => {
+    protocol_a => ddclient::Protocol->new(
         variables => {
             host => {type => ddclient::T_STRING(), recap => 1},
             var_a => {type => ddclient::T_BOOL(), recap => 1},
         },
-    },
-    protocol_b => {
+    ),
+    protocol_b => ddclient::Protocol->new(
         variables => {
             host => {type => ddclient::T_STRING(), recap => 1},
             var_b => {type => ddclient::T_NUMBER(), recap => 1},
             var_b_non_recap => {type => ddclient::T_ANY()},
         },
-    },
+    ),
 );
 local %ddclient::variables =
     (merged => {map({ %{$ddclient::protocols{$_}{variables}}; } sort(keys(%ddclient::protocols)))});

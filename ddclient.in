@@ -698,49 +698,149 @@ our %variables = (
     },
 );
 
-# Converts a legacy protocol update method to behave like a modern implementation by moving
-# `$recap{$h}{status}` and `$recap{$h}{ip}` to the version-specific modern equivalents.
-sub adapt_legacy_update {
-    my ($update) = @_;
-    return sub {
-        my (@hosts) = @_;
+{
+    package ddclient::Protocol;
+
+    # Keyword arguments:
+    #   * `update`: Required coderef that takes `($self, @hosts)` and updates the given hosts.
+    #   * `examples`: Required coderef that takes `($self)` and returns a string showing
+    #     configuration examples for using the protocol.
+    #   * `variables`: Optional hashref of variable declarations.  If omitted or `undef`,
+    #     `$variables{'protocol-common-defaults'}` is used.
+    #   * `force_update`: Optional coderef that takes `($self, $h)` and returns truthy to force the
+    #     given host to update.  Omitting or passing `undef` is equivalent to passing a subroutine
+    #     that always returns falsy.
+    #   * `force_update_if_changed`: Optional arrayref of variable names to watch for changes.  If
+    #     any of the named values in `%config` have changed since the previous update attempt
+    #     (successful or not), the host update is forced.  If omitted or `undef`, an empty array is
+    #     used.
+    sub new {
+        my ($class, %args) = @_;
+        my $self = bless({%args}, $class);
+        # Set defaults and normalize.
+        $self->{variables} //= $ddclient::variables{'protocol-common-defaults'};
+        $self->{variables} = {%{$self->{variables}}};  # Shallow clone.
+        # Delete `undef` variable declarations to make it easier to cancel previously declared
+        # variables.
+        delete($self->{variables}{$_}) for grep(!defined($self->{variables}{$_}),
+                                                keys(%{$self->{variables}}));
+        $self->{force_update} //= sub { return 0; };
+        $self->{force_update_if_changed} //= [];
+        # Eliminate duplicates and non-recap variables.
+        my %fvs = map({ ($_ => undef); } @{$self->{force_update_if_changed}});
+        $self->{force_update_if_changed} =
+            [grep({ $self->{variables}{$_} && $self->{variables}{$_}{recap}; } sort(keys(%fvs)))];
+        return $self;
+    }
+
+    sub force_update {
+        my ($self, $h) = @_;
+        my @changed = grep({
+            my $rv = $ddclient::recap{$h}{$_};
+            my $cv = ddclient::opt($_, $h);
+            return defined($rv) && defined($cv) && $rv ne $cv;
+        } @{$self->{force_update_if_changed}});
+        if (@changed) {
+            ddclient::info("update forced because options changed: " . join(', ', @changed));
+            return 1;
+        }
+        my $f = $self->{force_update};
+        return $f if ref($f) ne 'CODE';
+        return $f->($self, $h);
+    }
+
+    sub update {
+        my ($self, @hosts) = @_;
+        for my $h (@hosts) {
+            $ddclient::recap{$h}{'atime'} = $now;
+            delete($ddclient::recap{$h}{$_}) for qw(status-ipv4 status-ipv6 wtime
+                                                    warned-min-interval warned-min-error-interval);
+            # Update the configuration change detection variables.  The vars are updated regardless
+            # of whether the update actually succeeds because update failures should be retried at
+            # the error retry rate (`min-error-interval`), not forced by `force_update`.  Notes
+            # about why the recap vars are updated here in this method:
+            #   * The vars must not be updated if the host is not being updated because change
+            #     detection is defined relative to the previous update attempt.  In particular,
+            #     these can't be updated when the protocol's `force_update` method is called
+            #     because that method is not always called before an update is attempted.
+            #   * The vars must be updated after the `force_update` method would be called so that
+            #     `force_update` can check whether any settings have changed since the last time an
+            #     update was attempted.
+            #   * The vars are updated before the protocol's `update` method is called so that
+            #     `update` sees consistent values between `%recap` and `%config`.  This reduces the
+            #     impact of Hyrum's Law; if a protocol needs a variable to be updated after the
+            #     `update` method is called then that behavior should be made explicit.
+            for my $v (@{$self->{force_update_if_changed}}) {
+                if (defined(my $val = ddclient::opt($v, $h))) {
+                    $ddclient::recap{$h}{$v} = $val;
+                } else {
+                    # Entries in `%recap` with `undef` values are deleted to avoid needing to
+                    # figure out how to represent `undef` in the cache file and to simplify
+                    # testing.
+                    delete($ddclient::recap{$h}{$v});
+                }
+            }
+        }
+        $self->_update(@hosts);
+    }
+
+    sub _update {
+        my $self = shift;
+        $self->{update}($self, @_);
+    }
+
+    sub examples {
+        my ($self) = @_;
+        return $self->{examples}($self);
+    }
+}
+
+{
+    # A legacy protocol implementation reads `$config{$h}{wantip}` and sets `$recap{$h}{status}`
+    # and `$recap{$h}{ip}`, rather than reading `wantipv4` and `wantipv6` and setting
+    # `status-ipv4`, `status-ipv6`, `ipv4`, and `ipv6`.
+    package ddclient::LegacyProtocol;
+    use parent qw(-norequire ddclient::Protocol);
+
+    sub _update {
+        my ($self, @hosts) = @_;
         my %ipv;
         for my $h (@hosts) {
-            $ipv{$h} = defined($config{$h}{'wantipv4'}) ? '4' : '6';
-            $config{$h}{'wantip'} = delete($config{$h}{"wantipv$ipv{$h}"});
-            delete($recap{$h}{$_}) for qw(ip status);
+            $ipv{$h} = defined($ddclient::config{$h}{'wantipv4'}) ? '4' : '6';
+            $ddclient::config{$h}{'wantip'} //= delete($ddclient::config{$h}{"wantipv$ipv{$h}"});
+            delete($ddclient::recap{$h}{$_}) for qw(ip status);
         }
-        $update->(@hosts);
+        $self->SUPER::_update(@hosts);
         for my $h (@hosts) {
-            local $_l = pushlogctx($h);
-            delete($config{$h}{'wantip'});
-            debug(
+            local $ddclient::_l = ddclient::pushlogctx($h);
+            delete($ddclient::config{$h}{'wantip'});
+            ddclient::debug(
                 "legacy protocol; moving 'status' to 'status-ipv$ipv{$h}', 'ip' to 'ipv$ipv{$h}'");
-            $recap{$h}{"status-ipv$ipv{$h}"} = delete($recap{$h}{'status'});
-            $recap{$h}{"ipv$ipv{$h}"} = delete($recap{$h}{'ip'});
+            $ddclient::recap{$h}{"status-ipv$ipv{$h}"} = delete($ddclient::recap{$h}{'status'});
+            $ddclient::recap{$h}{"ipv$ipv{$h}"} = delete($ddclient::recap{$h}{'ip'});
         }
-    };
+    }
 }
 
 our %protocols = (
-    '1984' => {
-        'update' => adapt_legacy_update(\&nic_1984_update),
+    '1984' => ddclient::LegacyProtocol->new(
+        'update' => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'api.1984.is', undef),
         },
-    },
-    'changeip' => {
-        'update'     => adapt_legacy_update(\&nic_changeip_update),
+    ),
+    'changeip' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP, 0, 0, 'nic.changeip.com', undef),
         },
-    },
-    'cloudflare' => {
+    ),
+    'cloudflare' => ddclient::Protocol->new(
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables' => {
@@ -750,9 +850,9 @@ our %protocols = (
             'server'       => setv(T_FQDNP,  0, 0, 'api.cloudflare.com/client/v4', undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
-    },
-    'cloudns' => {
-        'update' => adapt_legacy_update(\&nic_cloudns_update),
+    ),
+    'cloudns' => ddclient::LegacyProtocol->new(
+        'update' => \&nic_cloudns_update,
         'examples' => \&nic_cloudns_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -760,8 +860,8 @@ our %protocols = (
             'password' => undef,
             'dynurl' => setv(T_STRING, 1, 0, undef, undef),
         },
-    },
-    'ddns.fm' => {
+    ),
+    'ddns.fm' => ddclient::Protocol->new(
         'update' => \&nic_ddnsfm_update,
         'examples' => \&nic_ddnsfm_examples,
         'variables' => {
@@ -769,8 +869,8 @@ our %protocols = (
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'https://api.ddns.fm', undef),
         },
-    },
-    'digitalocean' => {
+    ),
+    'digitalocean' => ddclient::Protocol->new(
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
         'variables' => {
@@ -779,9 +879,9 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 0, 'api.digitalocean.com', undef),
             'zone'   => setv(T_FQDN,  1, 0, undef,                  undef),
         },
-    },
-    'dinahosting' => {
-        'update'     => adapt_legacy_update(\&nic_dinahosting_update),
+    ),
+    'dinahosting' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_dinahosting_update,
         'examples'   => \&nic_dinahosting_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
@@ -789,8 +889,8 @@ our %protocols = (
             'script'             => setv(T_STRING, 0, 0, '/special/api.php', undef),
             'server'             => setv(T_FQDNP,  0, 0, 'dinahosting.com',  undef),
         },
-    },
-    'directnic' => {
+    ),
+    'directnic' => ddclient::Protocol->new(
         'update'     => \&nic_directnic_update,
         'examples'   => \&nic_directnic_examples,
         'variables'  => {
@@ -800,41 +900,41 @@ our %protocols = (
             'urlv4'    => setv(T_URL, 0, 0, undef, undef),
             'urlv6'    => setv(T_URL, 0, 0, undef, undef),
         },
-    },
-    'dnsmadeeasy' => {
-        'update'     => adapt_legacy_update(\&nic_dnsmadeeasy_update),
+    ),
+    'dnsmadeeasy' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_dnsmadeeasy_update,
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'script' => setv(T_STRING, 0, 0, '/servlet/updateip',  undef),
             'server' => setv(T_FQDNP,  0, 0, 'cp.dnsmadeeasy.com', undef),
         },
-    },
-    'dondominio' => {
-        'update'     => adapt_legacy_update(\&nic_dondominio_update),
+    ),
+    'dondominio' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 0, 0, 'dondns.dondominio.com', undef),
         },
-    },
-    'dslreports1' => {
-        'update'     => adapt_legacy_update(\&nic_dslreports1_update),
+    ),
+    'dslreports1' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 0, 0, 'www.dslreports.com', undef),
         },
-    },
-    'domeneshop' => {
+    ),
+    'domeneshop' => ddclient::Protocol->new(
         'update'     => \&nic_domeneshop_update,
         'examples'   => \&nic_domeneshop_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 0, 0, 'api.domeneshop.no', undef),
         },
-    },
-    'duckdns' => {
+    ),
+    'duckdns' => ddclient::Protocol->new(
         'update'     => \&nic_duckdns_update,
         'examples'   => \&nic_duckdns_examples,
         'variables' => {
@@ -842,9 +942,9 @@ our %protocols = (
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'www.duckdns.org', undef),
         },
-    },
-    'dyndns1' => {
-        'update'     => adapt_legacy_update(\&nic_dyndns1_update),
+    ),
+    'dyndns1' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -852,8 +952,8 @@ our %protocols = (
             'static' => setv(T_BOOL, 0, 1, 0, undef),
         },
         'force_update_if_changed' => [qw(static wildcard mx backupmx)],
-    },
-    'dyndns2' => {
+    ),
+    'dyndns2' => ddclient::Protocol->new(
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
         'variables' => {
@@ -862,8 +962,8 @@ our %protocols = (
             'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
         },
         'force_update_if_changed' => [qw(wildcard mx backupmx)],
-    },
-    'easydns' => {
+    ),
+    'easydns' => ddclient::Protocol->new(
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
         'variables' => {
@@ -878,8 +978,8 @@ our %protocols = (
             'wildcard'     => setv(T_BOOL,   0, 1, 0,                    undef),
         },
         'force_update_if_changed' => [qw(wildcard mx backupmx)],
-    },
-    'freedns' => {
+    ),
+    'freedns' => ddclient::Protocol->new(
         'update'     => \&nic_freedns_update,
         'examples'   => \&nic_freedns_examples,
         'variables' => {
@@ -887,17 +987,17 @@ our %protocols = (
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP, 0, 0, 'freedns.afraid.org', undef),
         },
-    },
-    'freemyip' => {
-        'update'     => adapt_legacy_update(\&nic_freemyip_update),
+    ),
+    'freemyip' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_freemyip_update,
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'freemyip.com', undef),
         },
-    },
-    'gandi' => {
+    ),
+    'gandi' => ddclient::Protocol->new(
         'update'     => \&nic_gandi_update,
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
@@ -910,8 +1010,8 @@ our %protocols = (
             'ttl'                       => setv(T_DELAY,  0, 0, undef,           interval('5m')),
             'zone'                      => setv(T_FQDN,   1, 0, undef,           undef),
         }
-    },
-    'godaddy' => {
+    ),
+    'godaddy' => ddclient::Protocol->new(
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
         'variables' => {
@@ -921,8 +1021,8 @@ our %protocols = (
             'ttl'          => setv(T_NUMBER, 0, 0, 600,                            undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
-    },
-    'he.net' => {
+    ),
+    'he.net' => ddclient::Protocol->new(
         'update' => \&nic_henet_update,
         'examples' => \&nic_henet_examples,
         'variables' => {
@@ -931,8 +1031,8 @@ our %protocols = (
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0),
             'server' => setv(T_FQDNP, 0, 0, 'dyn.dns.he.net', undef),
         },
-    },
-    'hetzner' => {
+    ),
+    'hetzner' => ddclient::Protocol->new(
         'update'     => \&nic_hetzner_update,
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
@@ -943,8 +1043,8 @@ our %protocols = (
             'ttl'          => setv(T_NUMBER, 0, 0, 60,                             60),
             'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
-    },
-    'inwx' => {
+    ),
+    'inwx' => ddclient::Protocol->new(
         'update' => \&nic_inwx_update,
         'examples' => \&nic_inwx_examples,
         'variables' => {
@@ -952,8 +1052,8 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 0, 'dyndns.inwx.com', undef),
             'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
         },
-    },
-    'mythicdyn' => {
+    ),
+    'mythicdyn' => ddclient::Protocol->new(
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
         'variables' => {
@@ -961,18 +1061,18 @@ our %protocols = (
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 0, 0, 'api.mythic-beasts.com', undef),
         },
-    },
-    'namecheap' => {
-        'update'     => adapt_legacy_update(\&nic_namecheap_update),
+    ),
+    'namecheap' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_namecheap_update,
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP, 0, 0, 'dynamicdns.park-your-domain.com', undef),
         },
-    },
-    'nfsn' => {
-        'update'     => adapt_legacy_update(\&nic_nfsn_update),
+    ),
+    'nfsn' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -981,8 +1081,8 @@ our %protocols = (
             'ttl'          => setv(T_NUMBER, 0, 0, 300,                        undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
         },
-    },
-    'njalla' => {
+    ),
+    'njalla' => ddclient::Protocol->new(
         'update'     => \&nic_njalla_update,
         'examples'   => \&nic_njalla_examples,
         'variables' => {
@@ -991,16 +1091,16 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 0, 'njal.la', undef),
             'quietreply' => setv(T_BOOL, 0, 0, 0, undef),
         },
-    },
-    'noip' => {
+    ),
+    'noip' => ddclient::Protocol->new(
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 0, 0, 'dynupdate.no-ip.com', undef),
         },
-    },
-    'nsupdate' => {
+    ),
+    'nsupdate' => ddclient::Protocol->new(
         'update'     => \&nic_nsupdate_update,
         'examples'   => \&nic_nsupdate_examples,
         'variables' => {
@@ -1010,17 +1110,17 @@ our %protocols = (
             'ttl'   => setv(T_NUMBER, 0, 0, 600,                 undef),
             'zone'  => setv(T_STRING, 1, 0, undef,               undef),
         },
-    },
-    'ovh' => {
-        'update'     => adapt_legacy_update(\&nic_ovh_update),
+    ),
+    'ovh' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_ovh_update,
         'examples'   => \&nic_ovh_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'script'   => setv(T_STRING, 0, 0, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  0, 0, 'www.ovh.com', undef),
         },
-    },
-    'porkbun' => {
+    ),
+    'porkbun' => ddclient::Protocol->new(
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
         'variables'  => {
@@ -1032,27 +1132,27 @@ our %protocols = (
             'root-domain'    => setv(T_FQDN,   0, 0, undef,      undef),
             'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
         },
-    },
-    'sitelutions' => {
-        'update'     => adapt_legacy_update(\&nic_sitelutions_update),
+    ),
+    'sitelutions' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP, 0, 0, 'www.sitelutions.com', undef),
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
         },
-    },
-    'yandex' => {
-        'update'     => adapt_legacy_update(\&nic_yandex_update),
+    ),
+    'yandex' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_yandex_update,
         'examples'   => \&nic_yandex_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),     0),
             'server'       => setv(T_FQDNP, 0, 0, 'pddimp.yandex.ru', undef),
         },
-    },
-    'zoneedit1' => {
-        'update'     => adapt_legacy_update(\&nic_zoneedit1_update),
+    ),
+    'zoneedit1' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_zoneedit1_update,
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -1060,17 +1160,17 @@ our %protocols = (
             'server'       => setv(T_FQDNP, 0, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_FQDN,  0, 0, undef,                  undef),
         },
-    },
-    'keysystems' => {
-        'update' => adapt_legacy_update(\&nic_keysystems_update),
+    ),
+    'keysystems' => ddclient::LegacyProtocol->new(
+        'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'dynamicdns.key-systems.net', undef),
         },
-    },
-    'dnsexit2' => {
+    ),
+    'dnsexit2' => ddclient::Protocol->new(
         'update'     => \&nic_dnsexit2_update,
         'examples'   => \&nic_dnsexit2_examples,
         'variables'  => {
@@ -1082,8 +1182,8 @@ our %protocols = (
             'ttl' => setv(T_NUMBER, 0, 0, 5, 0),
             'zone' => setv(T_STRING, 0, 0, undef, undef),
         },
-    },
-    'regfishde' => {
+    ),
+    'regfishde' => ddclient::Protocol->new(
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
         'variables' => {
@@ -1091,25 +1191,25 @@ our %protocols = (
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 0, 'dyndns.regfish.de', undef),
         },
-    },
-    'enom' => {
-        'update'     => adapt_legacy_update(\&nic_enom_update),
+    ),
+    'enom' => ddclient::LegacyProtocol->new(
+        'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP,  0, 0, 'dynamic.name-services.com', undef),
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
          },
-     },
-    'infomaniak' => {
+     ),
+    'infomaniak' => ddclient::Protocol->new(
         'update'     => \&nic_infomaniak_update,
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
             'server' => undef,
         },
-    },
-    'emailonly' => {
+    ),
+    'emailonly' => ddclient::Protocol->new(
         'update'     => \&nic_emailonly_update,
         'examples'   => \&nic_emailonly_examples,
         'variables'  => {
@@ -1119,13 +1219,8 @@ our %protocols = (
             # Change default to never re-notify if IP address has not changed.
             'max-interval' => setv(T_DELAY, 0, 0, 'inf', 0),
         },
-    },
+    ),
 );
-# Delete undefined variables to make it easier to cancel previously defined variables.
-for my $proto (values(%protocols)) {
-    my $vars = $proto->{variables};
-    delete(@$vars{grep(!defined($vars->{$_}), keys(%$vars))});
-}
 $variables{'merged'} = {
     map({ %{$protocols{$_}{'variables'}} } keys(%protocols)),
     %{$variables{'dyndns-common-defaults'}},
@@ -1370,8 +1465,6 @@ sub update_nics {
 
     for my $p (sort keys %protocols) {
         my (@hosts, %ipsv4, %ipsv6) = ();
-        my $update = $protocols{$p}{'update'};
-
         for my $h (sort keys %config) {
             local $_l = pushlogctx($h);
             next if opt('protocol', $h) ne $p;
@@ -1471,38 +1564,7 @@ sub update_nics {
         if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
-            for my $h (@hosts) {
-                $recap{$h}{'atime'} = $now;
-                delete($recap{$h}{$_}) for qw(status-ipv4 status-ipv6 wtime
-                                              warned-min-interval warned-min-error-interval);
-                # Update configuration change detection variables in `%recap` with the latest
-                # values in `%config`.  Notes about why this is done here:
-                #   * The vars must not be updated if the host is not being updated because change
-                #     detection is defined relative to the previous update attempt.  In particular,
-                #     these can't be updated when the protocol's `force_update` method is called
-                #     because that method is not always called before an update is attempted.
-                #   * The vars must be updated after the `force_update` method would be called so
-                #     that `force_update` can check whether any settings have changed since the
-                #     last time an update was attempted.
-                #   * The vars are updated before the protocol's `update` method is called so that
-                #     `update` sees consistent values between `%recap` and `%config`.  This reduces
-                #     the impact of Hyrum's Law; if a protocol needs a variable to be updated after
-                #     the `update` method is called then that behavior should be made explicit.
-                my $protocol = $protocols{$p};
-                my $vars = $protocol->{variables};
-                for my $v (@{$protocol->{force_update_if_changed} // []}) {
-                    next if !$vars->{$v} || !$vars->{$v}{recap};
-                    if (defined(my $val = opt($v, $h))) {
-                        $recap{$h}{$v} = $val;
-                    } else {
-                        # Entries in `%recap` with `undef` values are deleted to avoid needing to
-                        # figure out how to represent `undef` in the cache file and to simplify
-                        # testing.
-                        delete($recap{$h}{$v});
-                    }
-                }
-            }
-            &$update(@hosts);
+            $protocols{$p}->update(@hosts);
             for my $h (@hosts) {
                 delete($config{$h}{$_}) for qw(wantipv4 wantipv6);
             }
@@ -3380,15 +3442,11 @@ sub nic_examples {
     my $examples  = "";
     my $separator = "";
     for my $p (sort keys %protocols) {
-        my $subr = $protocols{$p}{'examples'};
-        my $example;
-
-        if (defined($subr) && ($example = &$subr())) {
-            chomp($example);
-            $examples .= $example;
-            $examples .= "\n\n$separator";
-            $separator = "\n";
-        }
+        my $example = $protocols{$p}->examples();
+        chomp($example);
+        $examples .= $example;
+        $examples .= "\n\n$separator";
+        $separator = "\n";
     }
     my $intro = <<"EoEXAMPLE";
 == CONFIGURING ${program}
@@ -3445,7 +3503,6 @@ EoEXAMPLE
 sub nic_updateable {
     my ($host) = @_;
     my $protocol = $protocols{opt('protocol', $host)};
-    my $force_update = $protocol->{force_update};
     my $update = 0;
     my $ipv4   = $config{$host}{'wantipv4'};
     my $ipv6   = $config{$host}{'wantipv6'};
@@ -3530,18 +3587,8 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif (defined($force_update) && $force_update->($host)) {
+    } elsif ($protocol->force_update($host)) {
         $update = 1;
-    } elsif (my @changed = grep({
-                                    return 0 if (!$protocol->{variables}{$_} ||
-                                                 !$protocol->{variables}{$_}{recap});
-                                    my $rv = $recap{$host}{$_};
-                                    my $cv = opt($_, $host);
-                                    defined($rv) && defined($cv) && $rv ne $cv;
-                                } @{$protocol->{force_update_if_changed} // []})) {
-        info("update forced because options changed: " . join(', ', @changed));
-        $update = 1;
-
     } else {
         if (opt('verbose')) {
             success("skipped update because IPv4 address is already set to $ipv4")
@@ -3601,6 +3648,7 @@ sub header_ok {
 ## nic_dyndns1_examples
 ######################################################################
 sub nic_dyndns1_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dyndns1'
 
@@ -3638,6 +3686,7 @@ EoEXAMPLE
 ## nic_dyndns1_update
 ######################################################################
 sub nic_dyndns1_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -3691,6 +3740,7 @@ sub nic_dyndns1_update {
 ## nic_dyndns2_examples
 ######################################################################
 sub nic_dyndns2_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dyndns2'
 
@@ -3736,6 +3786,7 @@ EoEXAMPLE
 ## nic_dyndns2_update
 ######################################################################
 sub nic_dyndns2_update {
+    my $self = shift;
     my %errors = (
         'badauth' => 'Bad authorization (username or password)',
         'badsys' => 'The system parameter given was not valid',
@@ -3864,6 +3915,7 @@ sub nic_dyndns2_update {
 ## nic_dnsexit2_examples
 ######################################################################
 sub nic_dnsexit2_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dnsexit2'
 
@@ -3903,6 +3955,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_dnsexit2_update {
+    my $self = shift;
     # The DNSExit API does not support updating hosts with different zones at the same time,
     # handling update per host.
     for my $h (@_) {
@@ -4011,6 +4064,7 @@ sub dnsexit2_update_host {
 ## Note: uses same features as nic_dyndns2_update, less return codes
 ######################################################################
 sub nic_noip_update {
+    my $self = shift;
     my %errors = (
         'badauth' => 'Invalid username or password',
         'badagent' => 'Invalid user agent',
@@ -4110,6 +4164,7 @@ sub nic_noip_update {
 ## nic_noip_examples
 ######################################################################
 sub nic_noip_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'noip'
 
@@ -4138,6 +4193,7 @@ EoEXAMPLE
 ## nic_dslreports1_examples
 ######################################################################
 sub nic_dslreports1_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dslreports1'
 
@@ -4166,6 +4222,7 @@ EoEXAMPLE
 ## nic_dslreports1_update
 ######################################################################
 sub nic_dslreports1_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -4212,6 +4269,7 @@ sub nic_dslreports1_update {
 ## nic_domeneshop_examples
 ######################################################################
 sub nic_domeneshop_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'domeneshop'
 
@@ -4240,6 +4298,7 @@ EoEXAMPLE
 ## nic_domeneshop_update
 ######################################################################
 sub nic_domeneshop_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         for my $ipv ('4', '6') {
@@ -4265,6 +4324,7 @@ sub nic_domeneshop_update {
 ## nic_zoneedit1_examples
 ######################################################################
 sub nic_zoneedit1_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'zoneedit1'
 
@@ -4301,6 +4361,7 @@ EoEXAMPLE
 # <ERROR CODE="701" TEXT="Zone is not set up in this account." ZONE="bad.com">
 ######################################################################
 sub nic_zoneedit1_update {
+    my $self = shift;
     for my $group (group_hosts_by(\@_, qw(login password server zone wantip))) {
         my @hosts = @{$group->{hosts}};
         my %groupcfg = %{$group->{cfg}};
@@ -4372,6 +4433,7 @@ sub nic_zoneedit1_update {
 ## nic_easydns_examples
 ######################################################################
 sub nic_easydns_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'easydns'
 
@@ -4417,6 +4479,7 @@ EoEXAMPLE
 ## nic_easydns_update
 ######################################################################
 sub nic_easydns_update {
+    my $self = shift;
     my %errors = (
         'NOACCESS' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NO_AUTH' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
@@ -4472,6 +4535,7 @@ sub nic_easydns_update {
 ## nic_namecheap_examples
 ######################################################################
 sub nic_namecheap_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'namecheap'
@@ -4507,6 +4571,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_namecheap_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -4546,6 +4611,7 @@ sub nic_namecheap_update {
 ## nic_nfsn_examples
 ######################################################################
 sub nic_nfsn_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'nfsn'
@@ -4691,6 +4757,7 @@ sub nic_nfsn_handle_error {
 ##
 ######################################################################
 sub nic_nfsn_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -4772,6 +4839,7 @@ sub nic_nfsn_update {
 ## nic_njalla_examples
 ######################################################################
 sub nic_njalla_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'njalla'
@@ -4804,6 +4872,7 @@ EoEXAMPLE
 ## response contains "code 200" on succesful completion
 ######################################################################
 sub nic_njalla_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         # Read input params
@@ -4876,6 +4945,7 @@ sub nic_njalla_update {
 ## nic_sitelutions_examples
 ######################################################################
 sub nic_sitelutions_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'sitelutions'
@@ -4910,6 +4980,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_sitelutions_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -4948,6 +5019,7 @@ sub nic_sitelutions_update {
 ## nic_freedns_examples
 ######################################################################
 sub nic_freedns_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'freedns'
@@ -4998,6 +5070,7 @@ EoEXAMPLE
 ## failure.
 ######################################################################
 sub nic_freedns_update {
+    my $self = shift;
     # Separate the records that are currently holding IPv4 addresses from the records that are
     # currently holding IPv6 addresses so that we can avoid switching a record to a different
     # address type.
@@ -5093,6 +5166,7 @@ sub nic_freedns_update {
 ## nic_1984_examples
 ######################################################################
 sub nic_1984_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o '1984'
@@ -5123,6 +5197,7 @@ EoEXAMPLE
 ## - lookup: if domain or subdomain was not found lookup will contain a list of names tried
 ######################################################################
 sub nic_1984_update {
+    my $self = shift;
     for my $host (@_) {
         local $_l = pushlogctx($host);
         my $ip = delete $config{$host}{'wantip'};
@@ -5166,6 +5241,7 @@ sub nic_1984_update {
 ## nic_changeip_examples
 ######################################################################
 sub nic_changeip_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'changeip'
@@ -5198,6 +5274,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_changeip_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -5240,6 +5317,7 @@ sub nic_changeip_update {
 ##
 ######################################################################
 sub nic_godaddy_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'godaddy'
@@ -5275,6 +5353,7 @@ EoEXAMPLE
 ## nic_godaddy_update
 ######################################################################
 sub nic_godaddy_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my $zone = opt('zone', $h);
@@ -5356,6 +5435,7 @@ sub nic_godaddy_update {
 ##
 ######################################################################
 sub nic_henet_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'he.net'
 
@@ -5378,6 +5458,7 @@ EoEXAMPLE
 ## nic_henet_update
 ######################################################################
 sub nic_henet_update {
+    my $self = shift;
     my %errors = (
        'badauth' => 'Bad authorization (username or password)',
        'badsys' => 'The system parameter given was not valid',
@@ -5428,6 +5509,7 @@ sub nic_henet_update {
 ##
 ######################################################################
 sub nic_mythicdyn_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'mythicdyn'
 
@@ -5465,6 +5547,7 @@ EoEXAMPLE
 ## nic_mythicdyn_update
 ######################################################################
 sub nic_mythicdyn_update {
+    my $self = shift;
     # Update each configured host.
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -5501,6 +5584,7 @@ sub nic_mythicdyn_update {
 ## nic_nsupdate_examples
 ######################################################################
 sub nic_nsupdate_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'nsupdate'
 
@@ -5549,6 +5633,7 @@ EoEXAMPLE
 ## by Daniel Roethlisberger <daniel@roe.ch>
 ######################################################################
 sub nic_nsupdate_update {
+    my $self = shift;
     for my $group (group_hosts_by(\@_, qw(login password server tcp zone wantipv4 wantipv6))) {
         my @hosts = @{$group->{hosts}};
         my %groupcfg = %{$group->{cfg}};
@@ -5620,6 +5705,7 @@ EoINSTR4
 ##
 ######################################################################
 sub nic_cloudflare_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'cloudflare'
 
@@ -5660,6 +5746,7 @@ EoEXAMPLE
 ## nic_cloudflare_update
 ######################################################################
 sub nic_cloudflare_update {
+    my $self = shift;
     for my $group (group_hosts_by(\@_, qw(login password))) {
         my @hosts = @{$group->{hosts}};
         my %groupcfg = %{$group->{cfg}};
@@ -5769,6 +5856,7 @@ sub nic_cloudflare_update {
 ##
 ######################################################################
 sub nic_hetzner_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'hetzner'
 
@@ -5792,6 +5880,7 @@ EoEXAMPLE
 ## nic_hetzner_update
 ######################################################################
 sub nic_hetzner_update {
+    my $self = shift;
     for my $domain (@_) {
         local $_l = pushlogctx($domain);
         my $headers = "Auth-API-Token: " . opt('password', $domain) . "\n";
@@ -5894,6 +5983,7 @@ sub nic_hetzner_update {
 ## nic_inwx_examples
 ######################################################################
 sub nic_inwx_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'inwx'
 
@@ -5941,6 +6031,7 @@ EoEXAMPLE
 ## nic_inwx_update
 ######################################################################
 sub nic_inwx_update {
+    my $self = shift;
     my %errors = (
        'badauth' => 'Bad authorization (username or password)',
        'badsys' => 'The system parameter given was not valid',
@@ -6054,6 +6145,7 @@ sub nic_inwx_update {
 ## nic_yandex_examples
 ######################################################################
 sub nic_yandex_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o Yandex
 
@@ -6088,6 +6180,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_yandex_update {
+    my $self = shift;
     for my $host (@_) {
         local $_l = pushlogctx($host);
         my $ip = delete $config{$host}{'wantip'};
@@ -6153,6 +6246,7 @@ sub nic_yandex_update {
 ## nic_duckdns_examples
 ######################################################################
 sub nic_duckdns_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'duckdns'
 
@@ -6182,6 +6276,7 @@ EoEXAMPLE
 ## response contains OK or KO
 ######################################################################
 sub nic_duckdns_update {
+    my $self = shift;
     for my $group (group_hosts_by(\@_, qw(password server wantipv4 wantipv6))) {
         my @hosts = @{$group->{hosts}};
         my %groupcfg = %{$group->{cfg}};
@@ -6223,6 +6318,7 @@ sub nic_duckdns_update {
 ## nic_freemyip_examples
 ######################################################################
 sub nic_freemyip_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'freemyip'
 
@@ -6251,6 +6347,7 @@ EoEXAMPLE
 ## response contains OK or ERROR
 ######################################################################
 sub nic_freemyip_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my $ip = delete $config{$h}{'wantip'};
@@ -6274,6 +6371,7 @@ sub nic_freemyip_update {
 ## nic_ddnsfm_examples
 ######################################################################
 sub nic_ddnsfm_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'ddns.fm'
 
@@ -6299,6 +6397,7 @@ EoEXAMPLE
 ## nic_ddnsfm_update
 ######################################################################
 sub nic_ddnsfm_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         # ddns.fm behavior as of 2024-07-14:
@@ -6325,6 +6424,7 @@ sub nic_ddnsfm_update {
 ## nic_dondominio_examples
 ######################################################################
 sub nic_dondominio_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dondominio'
 The 'dondominio' protocol is used by DNS service offered by www.dondominio.com/ .
@@ -6349,6 +6449,7 @@ EoEXAMPLE
 ######################################################################
 
 sub nic_dondominio_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my $ip = delete $config{$h}{'wantip'};
@@ -6373,6 +6474,7 @@ sub nic_dondominio_update {
 ## nic_dnsmadeeasy_examples
 ######################################################################
 sub nic_dnsmadeeasy_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dnsmadeeasy'
 
@@ -6401,6 +6503,7 @@ EoEXAMPLE
 ## nic_dnsmadeeasy_update
 ######################################################################
 sub nic_dnsmadeeasy_update {
+    my $self = shift;
     my %messages = (
         'error-auth' => 'Invalid username or password, or invalid IP syntax',
         'error-auth-suspend' => 'User has had their account suspended due to complaints or misuse of the service.',
@@ -6437,6 +6540,7 @@ sub nic_dnsmadeeasy_update {
 ## nic_ovh_examples
 ######################################################################
 sub nic_ovh_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'ovh'
@@ -6465,6 +6569,7 @@ EoEXAMPLE
 ## nic_ovh_update
 ######################################################################
 sub nic_ovh_update {
+    my $self = shift;
     ## update each configured host
     ## should improve to update in one pass
     for my $h (@_) {
@@ -6513,6 +6618,7 @@ sub nic_ovh_update {
 ## nic_porkbun_examples
 ######################################################################
 sub nic_porkbun_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'porkbun'
 
@@ -6586,6 +6692,7 @@ EoEXAMPLE
 ## nic_porkbun_update
 ######################################################################
 sub nic_porkbun_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my ($sub_domain, $domain);
@@ -6668,6 +6775,7 @@ sub nic_porkbun_update {
 }
 
 sub nic_cloudns_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'cloudns'
 
@@ -6695,6 +6803,7 @@ EoEXAMPLE
 }
 
 sub nic_cloudns_update {
+    my $self = shift;
     for my $group (group_hosts_by(\@_, qw(dynurl wantip))) {
         my @hosts = @{$group->{hosts}};
         my %groupcfg = %{$group->{cfg}};
@@ -6732,6 +6841,7 @@ sub nic_cloudns_update {
 ## nic_dinahosting_examples
 ######################################################################
 sub nic_dinahosting_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'dinahosting'
 
@@ -6756,6 +6866,7 @@ EoEXAMPLE
 ## nic_dinahosting_update
 ######################################################################
 sub nic_dinahosting_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my $ip = delete $config{$h}{'wantip'};
@@ -6794,6 +6905,7 @@ sub nic_dinahosting_update {
 ## nic_directnic_examples
 ######################################################################
 sub nic_directnic_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'directnic'
 
@@ -6818,6 +6930,7 @@ EoEXAMPLE
 ## nic_directnic_update
 ######################################################################
 sub nic_directnic_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         for my $ipv ('4', '6') {
@@ -6861,6 +6974,7 @@ sub nic_directnic_update {
 ## by Jimmy Thrasibule <dev@jimmy.lt>
 ######################################################################
 sub nic_gandi_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'gandi'
 
@@ -6908,6 +7022,7 @@ EoEXAMPLE
 ## nic_gandi_update
 ######################################################################
 sub nic_gandi_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         for my $ipv ('ipv4', 'ipv6') {
@@ -6978,6 +7093,7 @@ sub nic_gandi_update {
 ## nic_keysystems_examples
 ######################################################################
 sub nic_keysystems_examples {
+    my $self = shift;
     return <<EoEXAMPLE;
 o 'keysystems'
 
@@ -7005,6 +7121,7 @@ EoEXAMPLE
 ## response contains "code 200" on succesfull completion
 ######################################################################
 sub nic_keysystems_update {
+    my $self = shift;
     ## update each configured host
     ## should improve to update in one pass
     for my $h (@_) {
@@ -7031,6 +7148,7 @@ sub nic_keysystems_update {
 ## nic_regfishde_examples
 ######################################################################
 sub nic_regfishde_examples {
+    my $self = shift;
     return <<EoEXAMPLE;
 o 'regfishde'
 The 'regfishde' protocol is used by the non-free dynamic DNS service offered by www.regfish.de.
@@ -7052,6 +7170,7 @@ EoEXAMPLE
 ## response contains "success" on succesfull completion
 ######################################################################
 sub nic_regfishde_update {
+    my $self = shift;
     ## update configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -7085,6 +7204,7 @@ sub nic_regfishde_update {
 ## enom
 ######################################################################
 sub nic_enom_examples {
+    my $self = shift;
     return <<EoEXAMPLE;
 o 'enom'
 The 'enom' protocol is used by DNS services offered by www.enom.com and their resellers.
@@ -7121,6 +7241,7 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_enom_update {
+    my $self = shift;
     ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -7158,6 +7279,7 @@ sub nic_enom_update {
 }
 
 sub nic_digitalocean_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'digitalocean'
 
@@ -7250,6 +7372,7 @@ sub nic_digitalocean_update_one {
 }
 
 sub nic_digitalocean_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my $ipv4 = delete $config{$h}{'wantipv4'};
@@ -7269,6 +7392,7 @@ sub nic_digitalocean_update {
 ## nic_infomaniak_examples
 ######################################################################
 sub nic_infomaniak_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 
 o 'infomaniak'
@@ -7317,6 +7441,7 @@ EoEXAMPLE
 ##   https://infomaniak.com/nic/update?hostname=subdomain.yourdomain.com&myip=1.2.3.4&username=XXX&password=XXX
 ######################################################################
 sub nic_infomaniak_update {
+    my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
         for my $v (4, 6) {
@@ -7373,6 +7498,7 @@ sub nic_infomaniak_update {
 ## host must be specified; the host names are mentioned in the email.
 ######################################################################
 sub nic_emailonly_update {
+    my $self = shift;
     # Note: This is logged after opt('max-interval', $_) even if the IP address hasn't changed, so
     # it is best to avoid phrasing like, "IP address has changed."
     logmsg(email => 1, raw => 1, join("\n", 'Host IP addresses:', map({
@@ -7391,6 +7517,7 @@ sub nic_emailonly_update {
 ## nic_emailonly_examples
 ######################################################################
 sub nic_emailonly_examples {
+    my $self = shift;
     return <<"EoEXAMPLE";
 o 'emailonly'
 
