@@ -1513,9 +1513,15 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     for my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
-            map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
+            my $vars = $services{$config{$h}{protocol}}{variables};
+            for my $v (keys(%$vars)) {
+                next if !$vars->{$v}{cache} || !defined($config{$h}{$v});
+                $cache{$h}{$v} = $config{$h}{$v};
+            }
         } else {
-            map { $cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
+            for my $v (qw(atime wtime status)) {
+                $cache{$h}{$v} = $config{$h}{$v};
+            }
         }
     }
 
@@ -1929,15 +1935,6 @@ sub init_config {
     map { $hosts{$_} = undef } @hosts;
     map { delete $config{$_} unless exists $hosts{$_} } keys %config;
 
-    ## collect the cacheable variables.
-    for my $proto (keys %services) {
-        my @cacheable = ();
-        for my $k (keys %{$services{$proto}{'variables'}}) {
-            push @cacheable, $k if $services{$proto}{'variables'}{$k}{'cache'};
-        }
-        $services{$proto}{'cacheable'} = [ @cacheable ];
-    }
-
     ## sanity check..
     ## make sure config entries have all defaults and they meet minimums
     ## first the globals...
@@ -1989,7 +1986,6 @@ sub init_config {
             $conf->{$k} = $value;
         }
         $config{$h} = $conf;
-        $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
     }
 }
 
