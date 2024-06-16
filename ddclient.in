@@ -836,7 +836,7 @@ our %protocols = (
         },
     },
     'dyndns1' => {
-        'force_update' => \&nic_dyndns2_force_update,
+        'force_update' => undef,
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
@@ -846,7 +846,7 @@ our %protocols = (
         },
     },
     'dyndns2' => {
-        'force_update' => \&nic_dyndns2_force_update,
+        'force_update' => undef,
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
         'variables' => {
@@ -3932,29 +3932,7 @@ sub nic_dyndns1_update {
         }
     }
 }
-######################################################################
-## nic_dyndns2_force_update
-######################################################################
-sub nic_dyndns2_force_update {
-    my $host   = shift;
-    my $update = 0;
 
-    if ($config{$host}{'mx'} ne $recap{$host}{'mx'}) {
-        info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
-        $update = 1;
-
-    } elsif ($config{$host}{'mx'} && (ynu($config{$host}{'backupmx'}, 1, 2, 3) ne ynu($recap{$host}{'backupmx'}, 1, 2, 3))) {
-        info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
-        $update = 1;
-
-    } elsif ($config{$host}{'static'} ne $recap{$host}{'static'}) {
-
-        info("forcing updating %s because 'static' has changed to %s.", $host, ynu($config{$host}{'static'}, "YES", "NO", "NO"));
-        $update = 1;
-
-    }
-    return $update;
-}
 ######################################################################
 ## nic_dyndns2_examples
 ######################################################################
