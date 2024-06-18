@@ -35,7 +35,7 @@ my @test_cases = (
 
 for my $tc (@test_cases) {
     $warning = undef;
-    ddclient::write_cache($tc->{f});
+    ddclient::write_recap($tc->{f});
     subtest $tc->{name} => sub {
         if (defined($tc->{warning_regex})) {
             like($warning, $tc->{warning_regex}, "expected warning message");

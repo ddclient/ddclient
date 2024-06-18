@@ -142,9 +142,24 @@ $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin
 
 our %globals;
 our %config;
-our %cache;
+
+# %recap holds details about recent updates (and attempts) that are needed to implement various
+# service-specific and protocol-independent mechanisms such as `min-interval`.  This data is
+# persisted in the cache file (`--cache`) so that it survives ddclient restarts.  This hash maps a
+# hostname to a hashref containing those protocol variables that have their `recap` property set to
+# true.
+#
+# A note about terminology: This was previously named `%cache`, but "cache" implies that the
+# purpose is to reduce the cost or latency of data retrieval or computation, and that deletion only
+# affects performance.  That is not the case here, so the variable was renamed.  "Recap" is meant
+# to evoke the "previously on" clips that play before TV episodes, which are designed to give you
+# just enough context to recall the state.  The recap is written to the cache file, so-named for
+# historical reasons.  (Renaming "cache file" to "recap file" is more difficult due to
+# compatibility concerns with the public `--cache` option.)
+our %recap;
+
 my $result;
-my $saved_cache;
+my $saved_recap;
 my %saved_opt;
 my $daemon;
 # Control how many times warning message logged for invalid IP addresses
@@ -536,7 +551,7 @@ sub setv {
     return {
         'type'     => shift,
         'required' => shift,
-        'cache'    => shift,
+        'recap'    => shift,
         'default'  => shift,
         'minimum'  => shift,
     };
@@ -639,12 +654,12 @@ my %variables = (
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
 
-        # As a cached value, this is the IP address (IPv4 or IPv6, but almost always IPv4) most
+        # As a recap value, this is the IP address (IPv4 or IPv6, but almost always IPv4) most
         # recently saved at the DDNS service.  As a setting, this is the desired IP address that
         # should be saved at the DDNS service.  Unfortunately, these two meanings are conflated,
         # causing the bug "skipped: IP address was already set to a.b.c.d" when the IP was never
         # set to a.b.c.d.
-        # TODO:  Move the cached value elsewhere to fix the bug.
+        # TODO:  Move the recap value elsewhere to fix the bug.
         'ip'                  => setv(T_IP,    0, 1, undef,                undef),
         # As `ip`, but only IPv4 addresses.
         'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
@@ -1251,7 +1266,7 @@ my @opt = (
 sub main {
     ## process args
     my $opt_usage = process_args(@opt);
-    $saved_cache = '';
+    $saved_recap = '';
     %saved_opt = %opt;
     $result = 'OK';
 
@@ -1303,7 +1318,7 @@ sub main {
 
         read_config($opt{'file'} // default('file'), \%config, \%globals);
         init_config();
-        read_cache(opt('cache'), \%cache);
+        read_recap(opt('cache'), \%recap);
         print_info() if opt('debug') && opt('verbose');
 
         fatal("invalid argument '--use=%s'; possible values are:\n%s",
@@ -1506,7 +1521,7 @@ sub update_nics {
                    $h, $config{$h}{'protocol'} // '<undefined>');
         }
     }
-    write_cache(opt('cache'));
+    write_recap(opt('cache'));
 }
 
 ######################################################################
@@ -1537,36 +1552,33 @@ sub write_pid {
 }
 
 ######################################################################
-## write_cache($file)
+## write_recap($file)
 ######################################################################
-sub write_cache {
+sub write_recap {
     my ($file) = @_;
 
-    ## merge the updated host entries into the cache.
     for my $h (keys %config) {
-        if (!exists $cache{$h} || $config{$h}{'update'}) {
+        if (!exists $recap{$h} || $config{$h}{'update'}) {
             my $vars = $protocols{$config{$h}{protocol}}{variables};
             for my $v (keys(%$vars)) {
-                next if !$vars->{$v}{cache} || !defined($config{$h}{$v});
-                $cache{$h}{$v} = $config{$h}{$v};
+                next if !$vars->{$v}{recap} || !defined($config{$h}{$v});
+                $recap{$h}{$v} = $config{$h}{$v};
             }
         } else {
             for my $v (qw(atime wtime status)) {
-                $cache{$h}{$v} = $config{$h}{$v};
+                $recap{$h}{$v} = $config{$h}{$v};
             }
         }
     }
 
-    ## construct the cache file.
-    my $cache = "";
-    for my $h (sort keys %cache) {
-        my $opt = join(',', map { "$_=" . ($cache{$h}{$_} // '') } sort keys %{$cache{$h}});
+    my $recap = "";
+    for my $h (sort keys %recap) {
+        my $opt = join(',', map { "$_=" . ($recap{$h}{$_} // '') } sort keys %{$recap{$h}});
 
-        $cache .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
+        $recap .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
     }
-    $file = '' if defined($saved_cache) && $cache eq $saved_cache;
+    $file = '' if defined($saved_recap) && $recap eq $saved_recap;
 
-    ## write the updates and other entries to the cache file.
     if ($file) {
         (undef, my $dir) = fileparse($file);
         make_path($dir, { error => \my $err }) if !-d $dir;
@@ -1578,7 +1590,7 @@ sub write_cache {
             return;
         }
 
-        $saved_cache = undef;
+        $saved_recap = undef;
         local *FD;
         if (!open(FD, ">", $file)) {
             warning("Failed to create cache file %s: %s", $file, $!);
@@ -1586,36 +1598,35 @@ sub write_cache {
         }
         printf FD "## %s-%s\n", $program, $version;
         printf FD "## last updated at %s (%d)\n", prettytime($now), $now;
-        printf FD "%s", $cache;
+        printf FD "%s", $recap;
 
         close(FD);
     }
 }
 ######################################################################
-## read_cache($file) - called before reading the .conf
+## read_recap($file) - called before reading the .conf
 ######################################################################
-sub read_cache {
+sub read_recap {
     my $file    = shift;
     my $config  = shift;
     my $globals = {};
 
     %{$config} = ();
-    ## read the cache file ignoring anything on the command-line.
     if (-e $file) {
         my %saved = %opt;
         %opt         = ();
-        $saved_cache = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
+        $saved_recap = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
         %opt         = %saved;
 
-        for my $h (keys %cache) {
+        for my $h (keys(%recap)) {
             next if !exists($config->{$h});
             for (qw(atime mtime wtime ip status)) {
-                # TODO: Isn't $config equal to \%cache here?  If so, this is a no-op.  What was the
-                # original intention behind this?  To copy %cache values into %config?  If so, is
+                # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
+                # original intention behind this?  To copy %recap values into %config?  If so, is
                 # it better to just delete this and live with the current behavior (which doesn't
                 # seem to be causing users any problems) or to "fix" it to match the original
                 # intention, which might introduce a bug?
-                $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
+                $config->{$h}{$_} = $recap{$h}{$_} if exists $recap{$h}{$_};
             }
         }
     }
@@ -1964,14 +1975,14 @@ sub init_config {
     }
     fatal("options --retry and --daemon cannot be used together") if (opt('retry') && opt('daemon'));
 
-    ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
+    ## determine hosts to update (those on the cmd-line, config-file, or failed in recap)
     my @hosts = keys %config;
     if (opt('host')) {
         @hosts = split_by_comma($opt{'host'});
     }
     # TODO: This function is called before the recap file is read.  How is this supposed to work?
     if (opt('retry')) {
-        @hosts = grep(($cache{$_}{'status'} // '') ne 'good', keys(%cache));
+        @hosts = grep(($recap{$_}{'status'} // '') ne 'good', keys(%recap));
     }
 
     ## remove any other hosts
@@ -2272,7 +2283,7 @@ sub save_file {
 ## print_opt
 ## print_globals
 ## print_config
-## print_cache
+## print_recap
 ## print_info
 ######################################################################
 sub _print_hash {
@@ -2302,12 +2313,12 @@ sub print_hash {
 sub print_opt     { print_hash("opt",     \%opt);     }
 sub print_globals { print_hash("globals", \%globals); }
 sub print_config  { print_hash("config",  \%config);  }
-sub print_cache   { print_hash("cache",   \%cache);   }
+sub print_recap   { print_hash("recap",   \%recap);   }
 sub print_info {
     print_opt();
     print_globals();
     print_config();
-    print_cache();
+    print_recap();
 }
 ######################################################################
 ## pipecmd      - run an external command
@@ -2524,11 +2535,11 @@ sub interval_expired {
     my ($host, $time, $interval) = @_;
 
     return 0 if ($config{$host}{$interval} // 0) == 'inf';
-    return 1 if !exists $cache{$host};
-    return 1 if !exists $cache{$host}{$time} || !$cache{$host}{$time};
+    return 1 if !exists $recap{$host};
+    return 1 if !exists $recap{$host}{$time} || !$recap{$host}{$time};
     return 1 if !exists $config{$host}{$interval} || !$config{$host}{$interval};
 
-    return $now > ($cache{$host}{$time} + $config{$host}{$interval});
+    return $now > ($recap{$host}{$time} + $config{$host}{$interval});
 }
 
 
@@ -3574,54 +3585,54 @@ sub nic_updateable {
         info("forcing update of %s.", $host);
         $update = 1;
 
-    } elsif (!exists($cache{$host})) {
-        info("forcing updating %s because no cached entry exists.", $host);
+    } elsif (!exists($recap{$host})) {
+        info("forcing updating %s because no recap entry exists in cache file.", $host);
         $update = 1;
 
-    } elsif ($cache{$host}{'wtime'} && $cache{$host}{'wtime'} > $now) {
+    } elsif ($recap{$host}{'wtime'} && $recap{$host}{'wtime'} > $now) {
         warning("cannot update %s from %s to %s until after %s.",
                 $host,
-                ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
-                prettytime($cache{$host}{'wtime'})
+                ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'), $ip,
+                prettytime($recap{$host}{'wtime'})
         );
 
-    } elsif ($cache{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
+    } elsif ($recap{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
         warning("forcing update of %s from %s to %s; %s since last update on %s.",
                 $host,
-                ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
+                ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'), $ip,
                 prettyinterval($config{$host}{'max-interval'}),
-                prettytime($cache{$host}{'mtime'})
+                prettytime($recap{$host}{'mtime'})
         );
         $update = 1;
 
-    } elsif ($use ne 'disabled' && ($cache{$host}{'ip'} // '') ne $ip) {
+    } elsif ($use ne 'disabled' && ($recap{$host}{'ip'} // '') ne $ip) {
         ## Check whether to update IP address for the "--use" method"
-        if (($cache{$host}{'status'} // '') eq 'good' &&
+        if (($recap{$host}{'status'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'),
+                    ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'),
                     $ip,
-                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $cache{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status'} // '') ne 'good' &&
+        } elsif (($recap{$host}{'status'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$cache{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ip{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
-                        ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'),
+                        ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'),
                         $ip,
-                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
+                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
                         prettyinterval($config{$host}{'min-error-interval'})
                 );
                 if (!$ip && !opt('verbose')) {
@@ -3631,40 +3642,40 @@ sub nic_updateable {
                 }
             }
 
-            $cache{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
         }
 
-    } elsif ($usev4 ne 'disabled' && ($cache{$host}{'ipv4'} // '') ne $ipv4) {
+    } elsif ($usev4 ne 'disabled' && ($recap{$host}{'ipv4'} // '') ne $ipv4) {
         ## Check whether to update IPv4 address for the "--usev4" method"
-        if (($cache{$host}{'status-ipv4'} // '') eq 'good' &&
+        if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ipv4'} ? $cache{$host}{'ipv4'} : '<nothing>'),
+                    ($recap{$host}{'ipv4'} ? $recap{$host}{'ipv4'} : '<nothing>'),
                     $ipv4,
-                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $cache{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status-ipv4'} // '') ne 'good' &&
+        } elsif (($recap{$host}{'status-ipv4'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$cache{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
-                        ($cache{$host}{'ipv4'} ? $cache{$host}{'ipv4'} : '<nothing>'),
+                        ($recap{$host}{'ipv4'} ? $recap{$host}{'ipv4'} : '<nothing>'),
                         $ipv4,
-                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
+                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
                         prettyinterval($config{$host}{'min-error-interval'})
                 );
                 if (!$ipv4 && !opt('verbose')) {
@@ -3674,40 +3685,40 @@ sub nic_updateable {
                 }
             }
 
-            $cache{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
         }
 
-    } elsif ($usev6 ne 'disabled' && ($cache{$host}{'ipv6'} // '') ne $ipv6) {
+    } elsif ($usev6 ne 'disabled' && ($recap{$host}{'ipv6'} // '') ne $ipv6) {
         ## Check whether to update IPv6 address for the "--usev6" method"
-        if (($cache{$host}{'status-ipv6'} // '') eq 'good' &&
+        if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ipv6'} ? $cache{$host}{'ipv6'} : '<nothing>'),
+                    ($recap{$host}{'ipv6'} ? $recap{$host}{'ipv6'} : '<nothing>'),
                     $ipv6,
-                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $cache{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
-        } elsif (($cache{$host}{'status-ipv6'} // '') ne 'good' &&
+        } elsif (($recap{$host}{'status-ipv6'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$cache{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
-                        ($cache{$host}{'ipv6'} ? $cache{$host}{'ipv6'} : '<nothing>'),
+                        ($recap{$host}{'ipv6'} ? $recap{$host}{'ipv6'} : '<nothing>'),
                         $ipv6,
-                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
+                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
                         prettyinterval($config{$host}{'min-error-interval'})
                 );
                 if (!$ipv6 && !opt('verbose')) {
@@ -3717,7 +3728,7 @@ sub nic_updateable {
                 }
             }
 
-            $cache{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
@@ -3725,14 +3736,14 @@ sub nic_updateable {
 
     } elsif (defined($sub) && &$sub($host)) {
         $update = 1;
-    } elsif ((defined($cache{$host}{'static'}) && defined($config{$host}{'static'}) &&
-              ($cache{$host}{'static'} ne $config{$host}{'static'})) ||
-             (defined($cache{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
-              ($cache{$host}{'wildcard'} ne $config{$host}{'wildcard'})) ||
-             (defined($cache{$host}{'mx'}) && defined($config{$host}{'mx'}) &&
-              ($cache{$host}{'mx'} ne $config{$host}{'mx'})) ||
-             (defined($cache{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
-              ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'}))) {
+    } elsif ((defined($recap{$host}{'static'}) && defined($config{$host}{'static'}) &&
+              ($recap{$host}{'static'} ne $config{$host}{'static'})) ||
+             (defined($recap{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
+              ($recap{$host}{'wildcard'} ne $config{$host}{'wildcard'})) ||
+             (defined($recap{$host}{'mx'}) && defined($config{$host}{'mx'}) &&
+              ($recap{$host}{'mx'} ne $config{$host}{'mx'})) ||
+             (defined($recap{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
+              ($recap{$host}{'backupmx'} ne $config{$host}{'backupmx'}))) {
         info("updating %s because host settings have been changed.", $host);
         $update = 1;
 
@@ -3750,9 +3761,9 @@ sub nic_updateable {
         }
     }
 
-    $config{$host}{'status'} = $cache{$host}{'status'};
-    $config{$host}{'status-ipv4'} = $cache{$host}{'status-ipv4'};
-    $config{$host}{'status-ipv6'} = $cache{$host}{'status-ipv6'};
+    $config{$host}{'status'} = $recap{$host}{'status'};
+    $config{$host}{'status-ipv4'} = $recap{$host}{'status-ipv4'};
+    $config{$host}{'status-ipv6'} = $recap{$host}{'status-ipv6'};
     $config{$host}{'update'} = $update;
     if ($update) {
         $config{$host}{'status'}                    = undef;
@@ -3763,8 +3774,8 @@ sub nic_updateable {
         $config{$host}{'warned-min-interval'}       = 0;
         $config{$host}{'warned-min-error-interval'} = 0;
 
-        delete $cache{$host}{'warned-min-interval'};
-        delete $cache{$host}{'warned-min-error-interval'};
+        delete $recap{$host}{'warned-min-interval'};
+        delete $recap{$host}{'warned-min-error-interval'};
     }
 
     return $update;
@@ -3911,7 +3922,7 @@ sub nic_dyndns2_updateable {
     my $host   = shift;
     my $update = 0;
 
-    if ($config{$host}{'mx'} ne $cache{$host}{'mx'}) {
+    if ($config{$host}{'mx'} ne $recap{$host}{'mx'}) {
         info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
         $update = 1;
 
@@ -3919,7 +3930,7 @@ sub nic_dyndns2_updateable {
         info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
         $update = 1;
 
-    } elsif ($config{$host}{'static'} ne $cache{$host}{'static'}) {
+    } elsif ($config{$host}{'static'} ne $recap{$host}{'static'}) {
 
         info("forcing updating %s because 'static' has changed to %s.", $host, ynu($config{$host}{'static'}, "YES", "NO", "NO"));
         $update = 1;
@@ -4711,7 +4722,7 @@ sub nic_easydns_updateable {
     my $host   = shift;
     my $update = 0;
 
-    if ($config{$host}{'mx'} ne $cache{$host}{'mx'}) {
+    if ($config{$host}{'mx'} ne $recap{$host}{'mx'}) {
         info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
         $update = 1;
 
@@ -4719,7 +4730,7 @@ sub nic_easydns_updateable {
         info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
         $update = 1;
 
-    } elsif ($config{$host}{'static'} ne $cache{$host}{'static'}) {
+    } elsif ($config{$host}{'static'} ne $recap{$host}{'static'}) {
 
         info("forcing updating %s because 'static' has changed to %s.", $host, ynu($config{$host}{'static'}, "YES", "NO", "NO"));
         $update = 1;
@@ -5889,7 +5900,6 @@ sub nic_googledomains_update {
             }
             next if !header_ok($host, $reply);
 
-            # Cache
             $config{$host}{'ip'} = $ip;
             $config{$host}{'mtime'} = $now;
             $config{$host}{'status'} = 'good';
@@ -6531,7 +6541,6 @@ sub nic_yandex_update {
                 success("%s -- Updated Successfully to %s", $host, $ip);
             }
 
-            # Cache
             $config{$host}{'ip'} = $ip;
             $config{$host}{'mtime'} = $now;
             $config{$host}{'status'} = 'good';
