@@ -708,7 +708,7 @@ my %variables = (
 );
 my %protocols = (
     '1984' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
         'variables' => {
@@ -718,7 +718,7 @@ my %protocols = (
         },
     },
     'changeip' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
         'variables' => {
@@ -728,7 +728,7 @@ my %protocols = (
         },
     },
     'cloudflare' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables' => {
@@ -745,7 +745,7 @@ my %protocols = (
         },
     },
     'cloudns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_cloudns_update,
         'examples' => \&nic_cloudns_examples,
         'variables' => {
@@ -756,7 +756,7 @@ my %protocols = (
         },
     },
     'digitalocean' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
         'variables' => {
@@ -767,7 +767,7 @@ my %protocols = (
         },
     },
     'dinahosting' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dinahosting_update,
         'examples'   => \&nic_dinahosting_examples,
         'variables'  => {
@@ -778,7 +778,7 @@ my %protocols = (
         },
     },
     'dnsmadeeasy' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dnsmadeeasy_update,
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
@@ -788,7 +788,7 @@ my %protocols = (
         },
     },
     'dondominio' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
@@ -797,7 +797,7 @@ my %protocols = (
         },
     },
     'dslreports1' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
@@ -806,7 +806,7 @@ my %protocols = (
         },
     },
     'domeneshop' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_domeneshop_update,
         'examples'   => \&nic_domeneshop_examples,
         'variables' => {
@@ -815,7 +815,7 @@ my %protocols = (
         },
     },
     'duckdns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_duckdns_update,
         'examples'   => \&nic_duckdns_examples,
         'variables' => {
@@ -825,7 +825,7 @@ my %protocols = (
         },
     },
     'dyndns1' => {
-        'updateable' => \&nic_dyndns2_updateable,
+        'force_update' => \&nic_dyndns2_force_update,
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
@@ -834,7 +834,7 @@ my %protocols = (
         },
     },
     'dyndns2' => {
-        'updateable' => \&nic_dyndns2_updateable,
+        'force_update' => \&nic_dyndns2_force_update,
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
         'variables' => {
@@ -845,7 +845,7 @@ my %protocols = (
         },
     },
     'easydns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
         'variables' => {
@@ -859,7 +859,7 @@ my %protocols = (
         },
     },
     'freedns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_freedns_update,
         'examples'   => \&nic_freedns_examples,
         'variables' => {
@@ -869,7 +869,7 @@ my %protocols = (
         },
     },
     'freemyip' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_freemyip_update,
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
@@ -879,7 +879,7 @@ my %protocols = (
         },
     },
     'gandi' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_gandi_update,
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
@@ -894,7 +894,7 @@ my %protocols = (
         }
     },
     'godaddy' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
         'variables' => {
@@ -906,7 +906,7 @@ my %protocols = (
         },
     },
     'googledomains' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_googledomains_update,
         'examples'   => \&nic_googledomains_examples,
         'variables' => {
@@ -916,7 +916,7 @@ my %protocols = (
         },
     },
     'hetzner' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_hetzner_update,
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
@@ -929,7 +929,7 @@ my %protocols = (
         },
     },
     'mythicdyn' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
         'variables' => {
@@ -939,7 +939,7 @@ my %protocols = (
         },
     },
     'namecheap' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_namecheap_update,
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
@@ -949,7 +949,7 @@ my %protocols = (
         },
     },
     'nfsn' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
@@ -961,7 +961,7 @@ my %protocols = (
         },
     },
     'njalla' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_njalla_update,
         'examples'   => \&nic_njalla_examples,
         'variables' => {
@@ -972,7 +972,7 @@ my %protocols = (
         },
     },
     'noip' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
         'variables' => {
@@ -983,7 +983,7 @@ my %protocols = (
         },
     },
     'nsupdate' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_nsupdate_update,
         'examples'   => \&nic_nsupdate_examples,
         'variables' => {
@@ -995,7 +995,7 @@ my %protocols = (
         },
     },
     'ovh' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_ovh_update,
         'examples'   => \&nic_ovh_examples,
         'variables' => {
@@ -1005,7 +1005,7 @@ my %protocols = (
         },
     },
     'porkbun' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
         'variables'  => {
@@ -1019,7 +1019,7 @@ my %protocols = (
         },
     },
     'sitelutions' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
@@ -1029,7 +1029,7 @@ my %protocols = (
         },
     },
     'woima' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_woima_update,
         'examples'   => \&nic_woima_examples,
         'variables' => {
@@ -1044,7 +1044,7 @@ my %protocols = (
         },
     },
     'yandex' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_yandex_update,
         'examples'   => \&nic_yandex_examples,
         'variables' => {
@@ -1054,7 +1054,7 @@ my %protocols = (
         },
     },
     'zoneedit1' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_zoneedit1_update,
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
@@ -1065,7 +1065,7 @@ my %protocols = (
         },
     },
     'keysystems' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
         'variables' => {
@@ -1075,7 +1075,7 @@ my %protocols = (
         },
     },
     'dnsexit2' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dnsexit2_update,
         'examples'   => \&nic_dnsexit2_examples,
         'variables'  => {
@@ -1089,7 +1089,7 @@ my %protocols = (
         },
     },
     'regfishde' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
         'variables' => {
@@ -1099,7 +1099,7 @@ my %protocols = (
         },
     },
     'enom' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
@@ -1109,7 +1109,7 @@ my %protocols = (
          },
      },
     'infomaniak' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_infomaniak_update,
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
@@ -1117,7 +1117,7 @@ my %protocols = (
         },
     },
     'emailonly' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_emailonly_update,
         'examples'   => \&nic_emailonly_examples,
         'variables'  => {
@@ -1396,7 +1396,7 @@ sub update_nics {
 
     for my $p (sort keys %protocols) {
         my (@hosts, %ipsv4, %ipsv6) = ();
-        my $updateable = $protocols{$p}{'updateable'};
+        my $force_update = $protocols{$p}{'force_update'};
         my $update = $protocols{$p}{'update'};
 
         for my $h (sort keys %config) {
@@ -1491,7 +1491,7 @@ sub update_nics {
                 next;
             }
 
-            next if !nic_updateable($h, $updateable);
+            next if !nic_updateable($h, $force_update);
             push @hosts, $h;
 
             $ipsv4{$ipv4} = $h if ($ipv4);
@@ -3805,7 +3805,7 @@ sub header_ok {
 ######################################################################
 ## DDNS providers
 #  A DDNS provider consists of an example function, the update
-#  function, and an optional updateable function.
+#  function, and an optional force_update function.
 #
 #  The example function simply returns a string for the help message,
 #  explaining how to configure the provider
@@ -3813,7 +3813,7 @@ sub header_ok {
 #  The update function performs the actual record update.
 #  It receives an array of hosts as its argument.
 #
-#  The updateable function allows a provider implementation to force
+#  The force_update function allows a provider implementation to force
 #  an update even if ddclient has itself determined no update is
 #  necessary. The function shall return 1 if an update should be
 #  performed, else 0.
@@ -3916,9 +3916,9 @@ sub nic_dyndns1_update {
     }
 }
 ######################################################################
-## nic_dyndns2_updateable
+## nic_dyndns2_force_update
 ######################################################################
-sub nic_dyndns2_updateable {
+sub nic_dyndns2_force_update {
     my $host   = shift;
     my $update = 0;
 
@@ -4633,9 +4633,9 @@ EoEXAMPLE
 }
 
 ######################################################################
-## nic_zoneedit1_updateable
+## nic_zoneedit1_force_update
 ######################################################################
-sub nic_zoneedit1_updateable {
+sub nic_zoneedit1_force_update {
     return 0;
 }
 
@@ -4716,9 +4716,9 @@ sub nic_zoneedit1_update {
     }
 }
 ######################################################################
-## nic_easydns_updateable
+## nic_easydns_force_update
 ######################################################################
-sub nic_easydns_updateable {
+sub nic_easydns_force_update {
     my $host   = shift;
     my $update = 0;
 
