@@ -603,7 +603,7 @@ my %variables = (
         'ssl_ca_file'         => setv(T_FILE,  0, 0, undef,                undef),
         'redirect'            => setv(T_NUMBER,0, 0, 0,                    undef)
     },
-    'service-common-defaults' => {
+    'protocol-common-defaults' => {
         'server'              => setv(T_FQDNP, 1, 0, 'members.dyndns.org', undef),
         'login'               => setv(T_LOGIN, 1, 0, '',                   undef),
         'password'            => setv(T_PASSWD,1, 0, '',                   undef),
@@ -691,13 +691,13 @@ my %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
-my %services = (
+my %protocols = (
     '1984' => {
         'updateable' => undef,
         'update' => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'api.1984.is', undef),
         },
@@ -707,7 +707,7 @@ my %services = (
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, 0,                  interval('5m')),
             'server'       => setv(T_FQDNP, 1, 0, 'nic.changeip.com', undef),
         },
@@ -717,7 +717,7 @@ my %services = (
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                              undef),
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
@@ -734,7 +734,7 @@ my %services = (
         'update' => \&nic_cloudns_update,
         'examples' => \&nic_cloudns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             'dynurl' => setv(T_STRING, 1, 0, undef, undef),
@@ -745,7 +745,7 @@ my %services = (
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'api.digitalocean.com', undef),
             'zone'   => setv(T_FQDN,  1, 0, '',                     undef),
@@ -756,7 +756,7 @@ my %services = (
         'update'     => \&nic_dinahosting_update,
         'examples'   => \&nic_dinahosting_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-error-interval' => setv(T_DELAY,  0, 0, interval('8m'),     0),
             'script'             => setv(T_STRING, 0, 1, '/special/api.php', undef),
             'server'             => setv(T_FQDNP,  1, 0, 'dinahosting.com',  undef),
@@ -767,7 +767,7 @@ my %services = (
         'update'     => \&nic_dnsmadeeasy_update,
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'script' => setv(T_STRING, 1, 1, '/servlet/updateip',  undef),
             'server' => setv(T_FQDNP,  1, 0, 'cp.dnsmadeeasy.com', undef),
         },
@@ -777,7 +777,7 @@ my %services = (
         'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'dondns.dondominio.com', undef),
         },
     },
@@ -786,7 +786,7 @@ my %services = (
         'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
         },
     },
@@ -795,7 +795,7 @@ my %services = (
         'update'     => \&nic_domeneshop_update,
         'examples'   => \&nic_domeneshop_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP,  1, 0, 'api.domeneshop.no', undef),
         },
     },
@@ -804,7 +804,7 @@ my %services = (
         'update'     => \&nic_duckdns_update,
         'examples'   => \&nic_duckdns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'www.duckdns.org', undef),
         },
@@ -814,7 +814,7 @@ my %services = (
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
         },
     },
@@ -823,7 +823,7 @@ my %services = (
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
             'custom' => setv(T_BOOL,   0, 1, 0,             undef),
             'script' => setv(T_STRING, 1, 1, '/nic/update', undef),
@@ -834,7 +834,7 @@ my %services = (
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),       0),
             'mx'           => setv(T_OFQDN,  0, 1, '',                   undef),
@@ -848,7 +848,7 @@ my %services = (
         'update'     => \&nic_freedns_update,
         'examples'   => \&nic_freedns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, 0,                    interval('5m')),
             'server'       => setv(T_FQDNP, 1, 0, 'freedns.afraid.org', undef),
         },
@@ -858,7 +858,7 @@ my %services = (
         'update'     => \&nic_freemyip_update,
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'freemyip.com', undef),
         },
@@ -868,7 +868,7 @@ my %services = (
         'update'     => \&nic_gandi_update,
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'min-interval'              => setv(T_DELAY,  0, 0, 0,               interval('5m')),
             'server'                    => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
@@ -883,7 +883,7 @@ my %services = (
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
             'server'       => setv(T_FQDNP,  1, 0, 'api.godaddy.com/v1/domains',   undef),
             'ttl'          => setv(T_NUMBER, 1, 0, 600,                            undef),
@@ -895,7 +895,7 @@ my %services = (
         'update'     => \&nic_googledomains_update,
         'examples'   => \&nic_googledomains_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 1, 0, 'domains.google.com', undef),
         },
@@ -905,7 +905,7 @@ my %services = (
         'update'     => \&nic_hetzner_update,
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('1m'),                 0),
             'server'       => setv(T_FQDNP,  1, 0, 'dns.hetzner.com/api/v1',       undef),
@@ -918,7 +918,7 @@ my %services = (
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 1, 0, 'api.mythic-beasts.com', undef),
         },
@@ -928,7 +928,7 @@ my %services = (
         'update'     => \&nic_namecheap_update,
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, 0, interval('5m')),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamicdns.park-your-domain.com', undef),
         },
@@ -938,7 +938,7 @@ my %services = (
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min_interval' => setv(T_FQDNP,  0, 0, 0,                          interval('5m')),
             'server'       => setv(T_FQDNP,  1, 0, 'api.nearlyfreespeech.net', undef),
             'ttl'          => setv(T_NUMBER, 1, 0, 300,                        undef),
@@ -950,7 +950,7 @@ my %services = (
         'update'     => \&nic_njalla_update,
         'examples'   => \&nic_njalla_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
             'quietreply' => setv(T_BOOL, 0, 1, 0, undef),
@@ -961,7 +961,7 @@ my %services = (
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'server'                    => setv(T_FQDNP,  1, 0, 'dynupdate.no-ip.com', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
@@ -972,7 +972,7 @@ my %services = (
         'update'     => \&nic_nsupdate_update,
         'examples'   => \&nic_nsupdate_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => setv(T_LOGIN,  1, 0, '/usr/bin/nsupdate', undef),
             'tcp'   => setv(T_BOOL,   0, 1, 0,                   undef),
             'ttl'   => setv(T_NUMBER, 0, 1, 600,                 undef),
@@ -984,7 +984,7 @@ my %services = (
         'update'     => \&nic_ovh_update,
         'examples'   => \&nic_ovh_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'script'   => setv(T_STRING, 1, 1, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
         },
@@ -994,7 +994,7 @@ my %services = (
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
@@ -1008,7 +1008,7 @@ my %services = (
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP, 1, 0, 'www.sitelutions.com', undef),
             'min-interval' => setv(T_DELAY, 0, 0, 0,                     interval('5m')),
         },
@@ -1018,7 +1018,7 @@ my %services = (
         'update'     => \&nic_woima_update,
         'examples'   => \&nic_woima_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'backupmx'                  => setv(T_BOOL,   0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'mx'                        => setv(T_OFQDN,  0, 1, '',              undef),
@@ -1033,7 +1033,7 @@ my %services = (
         'update'     => \&nic_yandex_update,
         'examples'   => \&nic_yandex_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),     0),
             'server'       => setv(T_FQDNP, 1, 0, 'pddimp.yandex.ru', undef),
         },
@@ -1043,7 +1043,7 @@ my %services = (
         'update'     => \&nic_zoneedit1_update,
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
@@ -1054,7 +1054,7 @@ my %services = (
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
         },
@@ -1064,7 +1064,7 @@ my %services = (
         'update'     => \&nic_dnsexit2_update,
         'examples'   => \&nic_dnsexit2_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'ssl' => setv(T_BOOL, 0, 0, 1, undef),
             'server' => setv(T_FQDNP, 1, 0, 'api.dnsexit.com', undef),
@@ -1078,7 +1078,7 @@ my %services = (
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
         },
@@ -1088,7 +1088,7 @@ my %services = (
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
             'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
          },
@@ -1098,7 +1098,7 @@ my %services = (
         'update'     => \&nic_infomaniak_update,
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
         },
     },
     'emailonly' => {
@@ -1106,7 +1106,7 @@ my %services = (
         'update'     => \&nic_emailonly_update,
         'examples'   => \&nic_emailonly_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             # Change default to never re-notify if IP address has not changed.
@@ -1115,14 +1115,14 @@ my %services = (
     },
 );
 # Delete undefined variables to make it easier to cancel previously defined variables.
-for my $svc (values(%services)) {
-    my $vars = $svc->{variables};
+for my $proto (values(%protocols)) {
+    my $vars = $proto->{variables};
     delete(@$vars{grep(!defined($vars->{$_}), keys(%$vars))});
 }
 $variables{'merged'} = {
-    map({ %{$services{$_}{'variables'}} } keys(%services)),
+    map({ %{$protocols{$_}{'variables'}} } keys(%protocols)),
     %{$variables{'dyndns-common-defaults'}},
-    %{$variables{'service-common-defaults'}},
+    %{$variables{'protocol-common-defaults'}},
     %{$variables{'global-defaults'}},
 };
 
@@ -1136,7 +1136,7 @@ $opt{'list-devices'} = sub {
     exit(0);
 };
 $opt{'list-protocols'} = sub {
-    printf("%s\n", $_) for sort(keys(%services));
+    printf("%s\n", $_) for sort(keys(%protocols));
     exit(0);
 };
 $opt{'list-web-services'} = sub {
@@ -1379,13 +1379,13 @@ sub update_nics {
     my %ipv4list = ();
     my %ipv6list = ();
 
-    for my $s (sort keys %services) {
+    for my $p (sort keys %protocols) {
         my (@hosts, %ipsv4, %ipsv6) = ();
-        my $updateable = $services{$s}{'updateable'};
-        my $update     = $services{$s}{'update'};
+        my $updateable = $protocols{$p}{'updateable'};
+        my $update = $protocols{$p}{'update'};
 
         for my $h (sort keys %config) {
-            next if $config{$h}{'protocol'} ne lc($s);
+            next if $config{$h}{'protocol'} ne lc($p);
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
             my $use = opt('use', $h) // 'disabled';
@@ -1545,7 +1545,7 @@ sub write_cache {
     ## merge the updated host entries into the cache.
     for my $h (keys %config) {
         if (!exists $cache{$h} || $config{$h}{'update'}) {
-            my $vars = $services{$config{$h}{protocol}}{variables};
+            my $vars = $protocols{$config{$h}{protocol}}{variables};
             for my $v (keys(%$vars)) {
                 next if !$vars->{$v}{cache} || !defined($config{$h}{$v});
                 $cache{$h}{$v} = $config{$h}{$v};
@@ -2011,13 +2011,13 @@ sub init_config {
         load_sha1_support($proto) if (grep(/^$proto$/, ("freedns", "nfsn")));
         load_json_support($proto) if (grep(/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
 
-        if (!exists($services{$proto})) {
+        if (!exists($protocols{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
             delete $config{$h};
             next;
         }
 
-        my $svars = $services{$proto}{'variables'};
+        my $svars = $protocols{$proto}{'variables'};
         my $conf = {'protocol' => $proto};
 
         for my $k (keys %$svars) {
@@ -2571,7 +2571,7 @@ sub check_value {
 
     } elsif ($type eq T_PROTO) {
         $value = lc $value;
-        return undef if !exists $services{$value};
+        return undef if !exists $protocols{$value};
 
     } elsif ($type eq T_USE) {
         $value = lc $value;
@@ -3478,8 +3478,8 @@ sub encode_www_form_urlencoded {
 sub nic_examples {
     my $examples  = "";
     my $separator = "";
-    for my $s (sort keys %services) {
-        my $subr = $services{$s}{'examples'};
+    for my $p (sort keys %protocols) {
+        my $subr = $protocols{$p}{'examples'};
         my $example;
 
         if (defined($subr) && ($example = &$subr())) {
