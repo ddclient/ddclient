@@ -709,7 +709,6 @@ our %variables = (
 );
 our %protocols = (
     '1984' => {
-        'force_update' => undef,
         'update' => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
         'variables' => {
@@ -719,7 +718,6 @@ our %protocols = (
         },
     },
     'changeip' => {
-        'force_update' => undef,
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
         'variables' => {
@@ -729,7 +727,6 @@ our %protocols = (
         },
     },
     'cloudflare' => {
-        'force_update' => undef,
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables' => {
@@ -746,7 +743,6 @@ our %protocols = (
         },
     },
     'cloudns' => {
-        'force_update' => undef,
         'update' => \&nic_cloudns_update,
         'examples' => \&nic_cloudns_examples,
         'variables' => {
@@ -757,7 +753,6 @@ our %protocols = (
         },
     },
     'ddns.fm' => {
-        'force_update' => undef,
         'update' => \&nic_ddnsfm_update,
         'examples' => \&nic_ddnsfm_examples,
         'variables' => {
@@ -767,7 +762,6 @@ our %protocols = (
         },
     },
     'digitalocean' => {
-        'force_update' => undef,
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
         'variables' => {
@@ -778,7 +772,6 @@ our %protocols = (
         },
     },
     'dinahosting' => {
-        'force_update' => undef,
         'update'     => \&nic_dinahosting_update,
         'examples'   => \&nic_dinahosting_examples,
         'variables'  => {
@@ -789,7 +782,6 @@ our %protocols = (
         },
     },
     'dnsmadeeasy' => {
-        'force_update' => undef,
         'update'     => \&nic_dnsmadeeasy_update,
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
@@ -799,7 +791,6 @@ our %protocols = (
         },
     },
     'dondominio' => {
-        'force_update' => undef,
         'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
@@ -808,7 +799,6 @@ our %protocols = (
         },
     },
     'dslreports1' => {
-        'force_update' => undef,
         'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
@@ -817,7 +807,6 @@ our %protocols = (
         },
     },
     'domeneshop' => {
-        'force_update' => undef,
         'update'     => \&nic_domeneshop_update,
         'examples'   => \&nic_domeneshop_examples,
         'variables' => {
@@ -826,7 +815,6 @@ our %protocols = (
         },
     },
     'duckdns' => {
-        'force_update' => undef,
         'update'     => \&nic_duckdns_update,
         'examples'   => \&nic_duckdns_examples,
         'variables' => {
@@ -836,7 +824,6 @@ our %protocols = (
         },
     },
     'dyndns1' => {
-        'force_update' => undef,
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
@@ -846,7 +833,6 @@ our %protocols = (
         },
     },
     'dyndns2' => {
-        'force_update' => undef,
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
         'variables' => {
@@ -856,7 +842,6 @@ our %protocols = (
         },
     },
     'easydns' => {
-        'force_update' => undef,
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
         'variables' => {
@@ -872,7 +857,6 @@ our %protocols = (
         },
     },
     'freedns' => {
-        'force_update' => undef,
         'update'     => \&nic_freedns_update,
         'examples'   => \&nic_freedns_examples,
         'variables' => {
@@ -882,7 +866,6 @@ our %protocols = (
         },
     },
     'freemyip' => {
-        'force_update' => undef,
         'update'     => \&nic_freemyip_update,
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
@@ -892,7 +875,6 @@ our %protocols = (
         },
     },
     'gandi' => {
-        'force_update' => undef,
         'update'     => \&nic_gandi_update,
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
@@ -907,7 +889,6 @@ our %protocols = (
         }
     },
     'godaddy' => {
-        'force_update' => undef,
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
         'variables' => {
@@ -919,7 +900,6 @@ our %protocols = (
         },
     },
     'he.net' => {
-        'updateable' => undef,
         'update' => \&nic_henet_update,
         'examples' => \&nic_henet_examples,
         'variables' => {
@@ -930,7 +910,6 @@ our %protocols = (
         },
     },
     'hetzner' => {
-        'force_update' => undef,
         'update'     => \&nic_hetzner_update,
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
@@ -943,7 +922,6 @@ our %protocols = (
         },
     },
     'inwx' => {
-        'force_update' => undef,
         'update' => \&nic_inwx_update,
         'examples' => \&nic_inwx_examples,
         'variables' => {
@@ -953,7 +931,6 @@ our %protocols = (
         },
     },
     'mythicdyn' => {
-        'force_update' => undef,
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
         'variables' => {
@@ -963,7 +940,6 @@ our %protocols = (
         },
     },
     'namecheap' => {
-        'force_update' => undef,
         'update'     => \&nic_namecheap_update,
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
@@ -973,7 +949,6 @@ our %protocols = (
         },
     },
     'nfsn' => {
-        'force_update' => undef,
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
@@ -985,7 +960,6 @@ our %protocols = (
         },
     },
     'njalla' => {
-        'force_update' => undef,
         'update'     => \&nic_njalla_update,
         'examples'   => \&nic_njalla_examples,
         'variables' => {
@@ -996,7 +970,6 @@ our %protocols = (
         },
     },
     'noip' => {
-        'force_update' => undef,
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
         'variables' => {
@@ -1005,7 +978,6 @@ our %protocols = (
         },
     },
     'nsupdate' => {
-        'force_update' => undef,
         'update'     => \&nic_nsupdate_update,
         'examples'   => \&nic_nsupdate_examples,
         'variables' => {
@@ -1017,7 +989,6 @@ our %protocols = (
         },
     },
     'ovh' => {
-        'force_update' => undef,
         'update'     => \&nic_ovh_update,
         'examples'   => \&nic_ovh_examples,
         'variables' => {
@@ -1027,7 +998,6 @@ our %protocols = (
         },
     },
     'porkbun' => {
-        'force_update' => undef,
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
         'variables'  => {
@@ -1041,7 +1011,6 @@ our %protocols = (
         },
     },
     'sitelutions' => {
-        'force_update' => undef,
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
@@ -1051,7 +1020,6 @@ our %protocols = (
         },
     },
     'yandex' => {
-        'force_update' => undef,
         'update'     => \&nic_yandex_update,
         'examples'   => \&nic_yandex_examples,
         'variables' => {
@@ -1061,7 +1029,6 @@ our %protocols = (
         },
     },
     'zoneedit1' => {
-        'force_update' => undef,
         'update'     => \&nic_zoneedit1_update,
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
@@ -1072,7 +1039,6 @@ our %protocols = (
         },
     },
     'keysystems' => {
-        'force_update' => undef,
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
         'variables' => {
@@ -1082,7 +1048,6 @@ our %protocols = (
         },
     },
     'dnsexit2' => {
-        'force_update' => undef,
         'update'     => \&nic_dnsexit2_update,
         'examples'   => \&nic_dnsexit2_examples,
         'variables'  => {
@@ -1096,7 +1061,6 @@ our %protocols = (
         },
     },
     'regfishde' => {
-        'force_update' => undef,
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
         'variables' => {
@@ -1106,7 +1070,6 @@ our %protocols = (
         },
     },
     'enom' => {
-        'force_update' => undef,
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
@@ -1116,7 +1079,6 @@ our %protocols = (
          },
      },
     'infomaniak' => {
-        'force_update' => undef,
         'update'     => \&nic_infomaniak_update,
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
@@ -1125,7 +1087,6 @@ our %protocols = (
         },
     },
     'emailonly' => {
-        'force_update' => undef,
         'update'     => \&nic_emailonly_update,
         'examples'   => \&nic_emailonly_examples,
         'variables'  => {
