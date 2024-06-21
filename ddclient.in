@@ -1489,8 +1489,10 @@ sub update_nics {
             }
             $config{$h}{'wantipv4'} = $ipv4;
             $config{$h}{'wantipv6'} = $ipv6;
-
-            next if !nic_updateable($h);
+            if (!nic_updateable($h)) {
+                delete($config{$h}{$_}) for qw(wantipv4 wantipv6);
+                next;
+            }
             push @hosts, $h;
 
             $ipsv4{$ipv4} = $h if ($ipv4);
@@ -1499,6 +1501,12 @@ sub update_nics {
         if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
+            for my $h (@hosts) {
+                $config{$h}{'update'} = 1;
+                $config{$h}{'atime'} = $now;
+                delete($config{$h}{$_}) for qw(status-ipv4 status-ipv6 wtime
+                                               warned-min-interval warned-min-error-interval);
+            }
             &$update(@hosts);
             for my $h (@hosts) {
                 delete($config{$h}{$_}) for qw(wantipv4 wantipv6);
@@ -3605,16 +3613,6 @@ sub nic_updateable {
                 if defined($ipv6);
         }
     }
-
-    if ($update) {
-        $config{$host}{'update'} = 1;
-        $config{$host}{'atime'} = $now;
-        delete($config{$host}{$_}) for qw(status-ipv4 status-ipv6 wtime
-                                          warned-min-interval warned-min-error-interval);
-    } else {
-        delete($config{$host}{$_}) for qw(wantipv4 wantipv6);
-    }
-
     return $update;
 }
 
