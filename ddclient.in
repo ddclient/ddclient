@@ -8042,7 +8042,7 @@ sub nic_infomaniak_update {
                 if (defined $updated && $updated) {
                     info($msg);
                     $config{$h}{"ipv$v"} = $ip;
-                    $config{$h}{'mtime'} = $config{$h}{'mtime'} // $now;
+                    $config{$h}{'mtime'} = $now;
                     $config{$h}{"status-ipv$v"} = 'good';
                     next INFOMANIAK_IP_LOOP;
                 }
