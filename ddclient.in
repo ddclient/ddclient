@@ -7704,13 +7704,13 @@ sub nic_regfishde_update {
 
     ## update configured host
     for my $h (@_) {
-        my $ip = delete $config{$h}{'wantip'};
-        my $ipv6 = delete $config{$h}{'wantip'};
-
-        info("regfish.de setting IP address to %s for %s", $ip, $h);
-
-        my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-        my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv$ipv=$ip&forcehost=1&token=$config{$h}{'password'}";
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        info("regfish.de setting IPv4 address to %s for %s", $ipv4, $h) if $ipv4;
+        info("regfish.de setting IPv6 address to %s for %s", $ipv6, $h) if $ipv6;
+        my $url = "https://$config{$h}{'server'}/?fqdn=$h&forcehost=1&token=$config{$h}{'password'}";
+        $url .= "&ipv4=$ipv4" if $ipv4;
+        $url .= "&ipv6=$ipv6" if $ipv6;
 
         # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
@@ -7721,16 +7721,17 @@ sub nic_regfishde_update {
             last;
         }
         last if !header_ok($h, $reply);
-
-        if ($reply =~ /success/) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
-        } else {
-            $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '$reply'", $h);
+        if ($reply !~ /success/) {
+            failed("updating %s: Server said: '%s'", $h, $reply);
+            next;
         }
+        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+        $config{$h}{'mtime'} = $now;
+        success("updating %s: good: IPv4 address set to %s", $h, $ipv4) if $ipv4;
+        success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
     }
 }
 
