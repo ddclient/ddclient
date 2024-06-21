@@ -1255,7 +1255,7 @@ sub main {
     %saved_opt = %opt;
     $result = 'OK';
     ## read config file because 'daemon' mode may be defined there.
-    read_config($opt{'file'} // default('file'), \%config, \%globals);
+    read_config(opt('file'), \%config, \%globals);
     init_config();
     test_possible_ip() if opt('query');
 
@@ -1288,19 +1288,17 @@ sub main {
         $now    = time;
         $result = 'OK';
         %opt    = %saved_opt;
-        read_config($opt{'file'} // default('file'), \%config, \%globals);
+        read_config(opt('file'), \%config, \%globals);
         init_config();
         read_recap(opt('cache'), \%recap);
         print_info() if opt('debug') && opt('verbose');
 
         fatal("invalid argument '--use=%s'; possible values are:\n%s",
-              $opt{'use'}, join("\n", ip_strategies_usage()))
+              opt('use'), join("\n", ip_strategies_usage()))
             if defined(opt('use')) && !$ip_strategies{lc(opt('use'))};
-        if (defined($opt{'usev6'})) {
-            fatal("invalid argument '--usev6=%s'; possible values are:\n%s",
-                  $opt{'usev6'}, join("\n", ipv6_strategies_usage()))
-                unless exists $ipv6_strategies{lc opt('usev6')};
-        }
+        fatal("invalid argument '--usev6=%s'; possible values are:\n%s",
+              opt('usev6'), join("\n", ipv6_strategies_usage()))
+            if defined(opt('usev6')) && !$ipv6_strategies{lc(opt('usev6'))};
 
         $daemon = opt('daemon');
 
@@ -1347,12 +1345,12 @@ sub main {
 sub runpostscript {
     my ($ip) = @_;
 
-    if (defined $globals{postscript}) {
-        my @postscript = split(/\s+/, $globals{postscript});
+    if (defined(my $ps = opt('postscript'))) {
+        my @postscript = split(/\s+/, $ps);
         if (-x $postscript[0]) {
-            system("$globals{postscript} $ip &");
+            system("$ps $ip &");
         } else {
-            warning("Can not execute post script: %s", $globals{postscript});
+            warning("Can not execute post script: %s", $ps);
         }
     }
 }
@@ -1971,7 +1969,7 @@ sub init_config {
     }
 
     ## sanity check
-    if (defined $opt{'host'} && defined $opt{'retry'}) {
+    if (defined(opt('host')) && opt('retry')) {
         fatal("options --retry and --host (or --option host=..) are mutually exclusive");
     }
     fatal("options --retry and --daemon cannot be used together") if (opt('retry') && opt('daemon'));
@@ -2769,7 +2767,7 @@ sub geturl {
         $use_ssl = 1;
     } elsif ($url =~ /^http:/) {
         $use_ssl = 0;
-    } elsif ($globals{'ssl'} && !($params{ignore_ssl_option} // 0)) {
+    } elsif (opt('ssl') && !($params{ignore_ssl_option} // 0)) {
         $use_ssl = 1;
     } else {
         $use_ssl = 0;
@@ -3573,7 +3571,7 @@ sub nic_updateable {
     $warned_ipv4{$host} = 0 if $usev4 ne 'disabled' && $ipv4;
     $warned_ipv6{$host} = 0 if $usev6 ne 'disabled' && $ipv6;
 
-    if ($opt{'force'}) {
+    if (opt('force')) {
         info("update forced via 'force' option");
         $update = 1;
 
