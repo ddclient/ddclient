@@ -1578,6 +1578,11 @@ sub read_cache {
         for my $h (keys %cache) {
             next if !exists($config->{$h});
             for (qw(atime mtime wtime ip status)) {
+                # TODO: Isn't $config equal to \%cache here?  If so, this is a no-op.  What was the
+                # original intention behind this?  To copy %cache values into %config?  If so, is
+                # it better to just delete this and live with the current behavior (which doesn't
+                # seem to be causing users any problems) or to "fix" it to match the original
+                # intention, which might introduce a bug?
                 $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
             }
         }
@@ -1810,6 +1815,12 @@ sub _read_config {
 
         ## allow {host} to be a comma separated list of hosts
         for my $h (split_by_comma($host)) {
+            # TODO: Shouldn't %locals go after $config{h}?  Later lines should override earlier
+            # lines, no?  Otherwise, later assignments will have a mixed effect: assignments to new
+            # variables will take effect but assignments to variables that already have a value
+            # will not.  One problem with swapping the order: due to the `%locals = (%globals,
+            # %locals)` line above, any values in %globals would override any locals in the
+            # previous host line.
             $config{$h} = {%locals, %{$config{$h} // {}}};
             $config{$h}{'host'} = $h;
         }
@@ -1904,7 +1915,13 @@ sub init_config {
 
     ## override global options with those on the command-line.
     for my $o (keys %opt) {
+        # TODO: Isn't $opt{$o} guaranteed to be defined?  Otherwise $o wouldn't appear in the keys
+        # of %opt, right?
+        # TODO: Why is this limited to $variables{'global-defaults'}?  Why not
+        # $variables{'merged'}?
         if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
+            # TODO: What's the point of this?  The opt() function will fall back to %globals if
+            # %opt doesn't have a value, so this shouldn't be necessary.
             $globals{$o} = $opt{$o};
         }
     }
@@ -1920,6 +1937,7 @@ sub init_config {
     if (opt('host')) {
         @hosts = split_by_comma($opt{'host'});
     }
+    # TODO: This function is called before the recap file is read.  How is this supposed to work?
     if (opt('retry')) {
         @hosts = grep(($cache{$_}{'status'} // '') ne 'good', keys(%cache));
     }
@@ -1936,10 +1954,18 @@ sub init_config {
         # Make sure any _env suffixed variables look at their original entry
         $k = $1 if $k =~ /^(.*)_env$/;
 
+        # TODO: This might grab an arbitrary protocol-specific variable, which could cause
+        # surprising behavior.
         my $def = $variables{'merged'}{$k};
+        # TODO: Isn't $globals{$k} guaranteed to be defined here?  Otherwise $k wouldn't appear in
+        # %globals.
         my $ovalue = $globals{$k} // $def->{'default'};
+        # TODO: Didn't _read_config already check the value?  Or is the purpose of this to check
+        # the value of command-line options ($opt{$k}) which were merged into %globals above?
         my $value = check_value($ovalue, $def);
         if ($def->{'required'} && !defined $value) {
+            # TODO: What's the point of this?  The opt() function will fall back to the default
+            # value if $globals{$k} is undefined.
             $value = default($k);
             warning("'%s=%s' is an invalid %s. (using default of %s)", $k, $ovalue, $def->{'type'}, $value);
         }
