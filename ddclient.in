@@ -1323,7 +1323,7 @@ sub main {
 
         fatal("invalid argument '--use=%s'; possible values are:\n%s",
               $opt{'use'}, join("\n", ip_strategies_usage()))
-            unless exists $ip_strategies{lc opt('use')};
+            if defined(opt('use')) && !$ip_strategies{lc(opt('use'))};
         if (defined($opt{'usev6'})) {
             usage("invalid argument '--usev6=%s'; possible values are:\n%s",
                   $opt{'usev6'}, join("\n", ipv6_strategies_usage()))
