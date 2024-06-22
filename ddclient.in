@@ -1876,7 +1876,7 @@ sub init_config {
     $opt{'daemon'} = minimum('daemon') if opt('daemon') > 0 && opt('daemon') < minimum('daemon');
 
     ## define or modify host options specified on the command-line
-    if (exists $opt{'options'} && defined $opt{'options'}) {
+    if (defined($opt{'options'})) {
         ## collect cmdline configuration options.
         my %options = ();
         for my $opt (split_by_comma($opt{'options'})) {
@@ -3560,10 +3560,9 @@ sub nic_updateable {
         );
         $update = 1;
 
-    } elsif (($use ne 'disabled') && ((!exists($cache{$host}{'ip'})) ||
-                                      ("$cache{$host}{'ip'}" ne "$ip"))) {
+    } elsif ($use ne 'disabled' && ($cache{$host}{'ip'} // '') ne $ip) {
         ## Check whether to update IP address for the "--use" method"
-        if ((($cache{$host}{'status'} // '') eq 'good') &&
+        if (($cache{$host}{'status'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
@@ -3577,11 +3576,11 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif ((($cache{$host}{'status'} // '') ne 'good') &&
+        } elsif (($cache{$host}{'status'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
             if (opt('verbose') || (!$cache{$host}{'warned-min-error-interval'} &&
-                                   (($warned_ip{$host} // 0) < $inv_ip_warn_count))) {
+                                   ($warned_ip{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
@@ -3604,10 +3603,9 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif (($usev4 ne 'disabled') && ((!exists($cache{$host}{'ipv4'})) ||
-                                        ("$cache{$host}{'ipv4'}" ne "$ipv4"))) {
+    } elsif ($usev4 ne 'disabled' && ($cache{$host}{'ipv4'} // '') ne $ipv4) {
         ## Check whether to update IPv4 address for the "--usev4" method"
-        if ((($cache{$host}{'status-ipv4'} // '') eq 'good') &&
+        if (($cache{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
@@ -3621,11 +3619,11 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif ((($cache{$host}{'status-ipv4'} // '') ne 'good') &&
+        } elsif (($cache{$host}{'status-ipv4'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
             if (opt('verbose') || (!$cache{$host}{'warned-min-error-interval'} &&
-                                   (($warned_ipv4{$host} // 0) < $inv_ip_warn_count))) {
+                                   ($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
@@ -3648,10 +3646,9 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif (($usev6 ne 'disabled') && ((!exists($cache{$host}{'ipv6'})) ||
-                                        ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
+    } elsif ($usev6 ne 'disabled' && ($cache{$host}{'ipv6'} // '') ne $ipv6) {
         ## Check whether to update IPv6 address for the "--usev6" method"
-        if ((($cache{$host}{'status-ipv6'} // '') eq 'good') &&
+        if (($cache{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
@@ -3665,11 +3662,11 @@ sub nic_updateable {
 
             $cache{$host}{'warned-min-interval'} = $now;
 
-        } elsif ((($cache{$host}{'status-ipv6'} // '') ne 'good') &&
+        } elsif (($cache{$host}{'status-ipv6'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
             if (opt('verbose') || (!$cache{$host}{'warned-min-error-interval'} &&
-                                   (($warned_ipv6{$host} // 0) < $inv_ip_warn_count))) {
+                                   ($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
