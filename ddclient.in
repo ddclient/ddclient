@@ -1790,11 +1790,11 @@ sub _read_config {
         }
         %passwords = ();
         if (exists($locals{'host'})) {
-            $args[0] = @args ? "$args[0],$locals{host}" : "$locals{host}";
+            $args[0] = (@args ? "$args[0]," : '') . $locals{host};
         }
         ## accumulate globals
-        if ($#args < 0) {
-            map { $globals{$_} = $locals{$_} } keys %locals;
+        if (!@args) {
+            %globals = (%globals, %locals);
             next;
         }
 
@@ -1810,14 +1810,8 @@ sub _read_config {
 
         ## allow {host} to be a comma separated list of hosts
         for my $h (split_by_comma($host)) {
-            if ($config{$h}) {
-                ## host already defined, merging configs
-                $config{$h} = {%locals, %{$config{$h}}};
-            } else {
-                ## save a copy of the current globals
-                $config{$h} = {%locals};
-                $config{$h}{'host'} = $h;
-            }
+            $config{$h} = {%locals, %{$config{$h} // {}}};
+            $config{$h}{'host'} = $h;
         }
     }
     close(FD);
@@ -1927,7 +1921,7 @@ sub init_config {
         @hosts = split_by_comma($opt{'host'});
     }
     if (opt('retry')) {
-        @hosts = map { $_ if ($cache{$_}{'status'} // '') ne 'good' } keys %cache;
+        @hosts = grep(($cache{$_}{'status'} // '') ne 'good', keys(%cache));
     }
 
     ## remove any other hosts
@@ -1955,10 +1949,7 @@ sub init_config {
     ## now the host definitions...
   HOST:
     for my $h (keys %config) {
-        my $proto;
-        $proto = $config{$h}{'protocol'};
-        $proto = opt('protocol') if !defined($proto);
-
+        my $proto = opt('protocol', $h);
         load_sha1_support($proto) if (grep(/^$proto$/, ("freedns", "nfsn")));
         load_json_support($proto) if (grep(/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
 
@@ -2005,7 +1996,7 @@ sub process_args {
             push @spec, $key . $specifier;
 
             ## define the default value which can be overwritten later
-            $opt{$key} = undef unless exists($opt{$key});
+            $opt{$key} //= undef;
 
             next unless $arg_usage;
 
