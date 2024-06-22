@@ -142,9 +142,24 @@ $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin
 
 our %globals;
 our %config;
-our %cache;
+
+# %recap holds details about recent updates (and attempts) that are needed to implement various
+# service-specific and protocol-independent mechanisms such as `min-interval`.  This data is
+# persisted in the cache file (`--cache`) so that it survives ddclient restarts.  This hash maps a
+# hostname to a hashref containing those protocol variables that have their `recap` property set to
+# true.
+#
+# A note about terminology: This was previously named `%cache`, but "cache" implies that the
+# purpose is to reduce the cost or latency of data retrieval or computation, and that deletion only
+# affects performance.  That is not the case here, so the variable was renamed.  "Recap" is meant
+# to evoke the "previously on" clips that play before TV episodes, which are designed to give you
+# just enough context to recall the state.  The recap is written to the cache file, so-named for
+# historical reasons.  (Renaming "cache file" to "recap file" is more difficult due to
+# compatibility concerns with the public `--cache` option.)
+our %recap;
+
 my $result;
-my $saved_cache;
+my $saved_recap;
 my %saved_opt;
 my $daemon;
 # Control how many times warning message logged for invalid IP addresses
@@ -536,7 +551,7 @@ sub setv {
     return {
         'type'     => shift,
         'required' => shift,
-        'cache'    => shift,
+        'recap'    => shift,
         'default'  => shift,
         'minimum'  => shift,
     };
@@ -603,7 +618,7 @@ my %variables = (
         'ssl_ca_file'         => setv(T_FILE,  0, 0, undef,                undef),
         'redirect'            => setv(T_NUMBER,0, 0, 0,                    undef)
     },
-    'service-common-defaults' => {
+    'protocol-common-defaults' => {
         'server'              => setv(T_FQDNP, 1, 0, 'members.dyndns.org', undef),
         'login'               => setv(T_LOGIN, 1, 0, '',                   undef),
         'password'            => setv(T_PASSWD,1, 0, '',                   undef),
@@ -635,21 +650,53 @@ my %variables = (
         'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
         'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
         'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
-
-        'ip'                  => setv(T_IP,    0, 1, undef,                undef),  #TODO remove from cache?
-        'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
-        'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
-        'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
-        'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        'status'              => setv(T_ANY,   0, 1, undef,                undef),  #TODO remove from cache?
-        'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
-        'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
         'min-interval'        => setv(T_DELAY, 0, 0, interval('30s'),      0),
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
 
-        'warned-min-interval'       => setv(T_ANY, 0, 1, 0,                undef),
+        # As a recap value, this is the IP address (IPv4 or IPv6, but almost always IPv4) most
+        # recently saved at the DDNS service.  As a setting, this is the desired IP address that
+        # should be saved at the DDNS service.  Unfortunately, these two meanings are conflated,
+        # causing the bug "skipped: IP address was already set to a.b.c.d" when the IP was never
+        # set to a.b.c.d.
+        # TODO:  Move the recap value elsewhere to fix the bug.
+        'ip'                  => setv(T_IP,    0, 1, undef,                undef),
+        # As `ip`, but only IPv4 addresses.
+        'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
+        # As `ip`, but only IPv6 addresses.
+        'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
+        # Timestamp (seconds since epoch) indicating the earliest time the next update is
+        # permitted.
+        # TODO: Create a timestamp type and change this to that type.
+        'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
+        # Timestamp (seconds since epoch) indicating when an IP address was last sent to the DDNS
+        # service, even if the IP address was not different from what was already stored.
+        # TODO: Create a timestamp type and change this to that type.
+        'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
+        # Timestamp (seconds since epoch) of the most recent attempt to update the DDNS service
+        # (including attempts to update with the same IP address).  This equals mtime if the most
+        # recent attempt was successful, otherwise it will be more recent than mtime.
+        # TODO: Create a timestamp type and change this to that type.
+        'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
+        # Disposition of the most recent (or currently in progress) attempt to update the DDNS
+        # service with the IP address in `wantip`.  Anything other than `good`, including undef, is
+        # treated as a failure.
+        'status'              => setv(T_ANY,   0, 1, undef,                undef),
+        # As `status`, but with `wantipv4`.
+        'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
+        # As `status`, but with `wantipv6`.
+        'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
+        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
+        # `min-interval` not inhibited the attempt.  This is reset to 0 once an attempt is actually
+        # made.  This is used as a boolean to suppress repeated warnings to the user that indicate
+        # that `min-interval` has inhibited an update attempt.
+        # TODO: Change to a boolean and rename to improve readability.
+        'warned-min-interval' => setv(T_ANY,   0, 1, 0,                    undef),
+        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
+        # `min-error-interval` not inhibited the attempt.  This is reset to 0 once an attempt is
+        # actually made.  This is used as a boolean to suppress repeated warnings to the user that
+        # indicate that `min-error-interval` has inhibited an update attempt.
+        # TODO: Change to a boolean and rename to improve readability.
         'warned-min-error-interval' => setv(T_ANY, 0, 1, 0,                undef),
     },
     'dyndns-common-defaults' => {
@@ -659,33 +706,33 @@ my %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
-my %services = (
+my %protocols = (
     '1984' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'api.1984.is', undef),
         },
     },
     'changeip' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, 0,                  interval('5m')),
             'server'       => setv(T_FQDNP, 1, 0, 'nic.changeip.com', undef),
         },
     },
     'cloudflare' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                              undef),
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
@@ -698,111 +745,111 @@ my %services = (
         },
     },
     'cloudns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_cloudns_update,
         'examples' => \&nic_cloudns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             'dynurl' => setv(T_STRING, 1, 0, undef, undef),
         },
     },
     'digitalocean' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'api.digitalocean.com', undef),
             'zone'   => setv(T_FQDN,  1, 0, '',                     undef),
         },
     },
     'dinahosting' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dinahosting_update,
         'examples'   => \&nic_dinahosting_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-error-interval' => setv(T_DELAY,  0, 0, interval('8m'),     0),
             'script'             => setv(T_STRING, 0, 1, '/special/api.php', undef),
             'server'             => setv(T_FQDNP,  1, 0, 'dinahosting.com',  undef),
         },
     },
     'dnsmadeeasy' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dnsmadeeasy_update,
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'script' => setv(T_STRING, 1, 1, '/servlet/updateip',  undef),
             'server' => setv(T_FQDNP,  1, 0, 'cp.dnsmadeeasy.com', undef),
         },
     },
     'dondominio' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'dondns.dondominio.com', undef),
         },
     },
     'dslreports1' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
         },
     },
     'domeneshop' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_domeneshop_update,
         'examples'   => \&nic_domeneshop_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP,  1, 0, 'api.domeneshop.no', undef),
         },
     },
     'duckdns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_duckdns_update,
         'examples'   => \&nic_duckdns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'www.duckdns.org', undef),
         },
     },
     'dyndns1' => {
-        'updateable' => \&nic_dyndns2_updateable,
+        'force_update' => \&nic_dyndns2_force_update,
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
         },
     },
     'dyndns2' => {
-        'updateable' => \&nic_dyndns2_updateable,
+        'force_update' => \&nic_dyndns2_force_update,
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
             'custom' => setv(T_BOOL,   0, 1, 0,             undef),
             'script' => setv(T_STRING, 1, 1, '/nic/update', undef),
         },
     },
     'easydns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),       0),
             'mx'           => setv(T_OFQDN,  0, 1, '',                   undef),
@@ -812,31 +859,31 @@ my %services = (
         },
     },
     'freedns' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_freedns_update,
         'examples'   => \&nic_freedns_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, 0,                    interval('5m')),
             'server'       => setv(T_FQDNP, 1, 0, 'freedns.afraid.org', undef),
         },
     },
     'freemyip' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_freemyip_update,
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'freemyip.com', undef),
         },
     },
     'gandi' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_gandi_update,
         'examples'   => \&nic_gandi_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'min-interval'              => setv(T_DELAY,  0, 0, 0,               interval('5m')),
             'server'                    => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
@@ -847,11 +894,11 @@ my %services = (
         }
     },
     'godaddy' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
             'server'       => setv(T_FQDNP,  1, 0, 'api.godaddy.com/v1/domains',   undef),
             'ttl'          => setv(T_NUMBER, 1, 0, 600,                            undef),
@@ -859,21 +906,21 @@ my %services = (
         },
     },
     'googledomains' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_googledomains_update,
         'examples'   => \&nic_googledomains_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 1, 0, 'domains.google.com', undef),
         },
     },
     'hetzner' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_hetzner_update,
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('1m'),                 0),
             'server'       => setv(T_FQDNP,  1, 0, 'dns.hetzner.com/api/v1',       undef),
@@ -882,31 +929,31 @@ my %services = (
         },
     },
     'mythicdyn' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 1, 0, 'api.mythic-beasts.com', undef),
         },
     },
     'namecheap' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_namecheap_update,
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, 0, interval('5m')),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     },
     'nfsn' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min_interval' => setv(T_FQDNP,  0, 0, 0,                          interval('5m')),
             'server'       => setv(T_FQDNP,  1, 0, 'api.nearlyfreespeech.net', undef),
             'ttl'          => setv(T_NUMBER, 1, 0, 300,                        undef),
@@ -914,33 +961,33 @@ my %services = (
         },
     },
     'njalla' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_njalla_update,
         'examples'   => \&nic_njalla_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
             'quietreply' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
     'noip' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'server'                    => setv(T_FQDNP,  1, 0, 'dynupdate.no-ip.com', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
         },
     },
     'nsupdate' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_nsupdate_update,
         'examples'   => \&nic_nsupdate_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => setv(T_LOGIN,  1, 0, '/usr/bin/nsupdate', undef),
             'tcp'   => setv(T_BOOL,   0, 1, 0,                   undef),
             'ttl'   => setv(T_NUMBER, 0, 1, 600,                 undef),
@@ -948,21 +995,21 @@ my %services = (
         },
     },
     'ovh' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_ovh_update,
         'examples'   => \&nic_ovh_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'script'   => setv(T_STRING, 1, 1, '/nic/update', undef),
             'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
         },
     },
     'porkbun' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
@@ -972,21 +1019,21 @@ my %services = (
         },
     },
     'sitelutions' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP, 1, 0, 'www.sitelutions.com', undef),
             'min-interval' => setv(T_DELAY, 0, 0, 0,                     interval('5m')),
         },
     },
     'woima' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_woima_update,
         'examples'   => \&nic_woima_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'backupmx'                  => setv(T_BOOL,   0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'mx'                        => setv(T_OFQDN,  0, 1, '',              undef),
@@ -997,42 +1044,42 @@ my %services = (
         },
     },
     'yandex' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_yandex_update,
         'examples'   => \&nic_yandex_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),     0),
             'server'       => setv(T_FQDNP, 1, 0, 'pddimp.yandex.ru', undef),
         },
     },
     'zoneedit1' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_zoneedit1_update,
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
             'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
         },
     },
     'keysystems' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
         },
     },
     'dnsexit2' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_dnsexit2_update,
         'examples'   => \&nic_dnsexit2_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'ssl' => setv(T_BOOL, 0, 0, 1, undef),
             'server' => setv(T_FQDNP, 1, 0, 'api.dnsexit.com', undef),
@@ -1042,39 +1089,39 @@ my %services = (
         },
     },
     'regfishde' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
         'variables' => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
         },
     },
     'enom' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
             'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
          },
      },
     'infomaniak' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_infomaniak_update,
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
         },
     },
     'emailonly' => {
-        'updateable' => undef,
+        'force_update' => undef,
         'update'     => \&nic_emailonly_update,
         'examples'   => \&nic_emailonly_examples,
         'variables'  => {
-            %{$variables{'service-common-defaults'}},
+            %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             # Change default to never re-notify if IP address has not changed.
@@ -1083,14 +1130,14 @@ my %services = (
     },
 );
 # Delete undefined variables to make it easier to cancel previously defined variables.
-for my $svc (values(%services)) {
-    my $vars = $svc->{variables};
+for my $proto (values(%protocols)) {
+    my $vars = $proto->{variables};
     delete(@$vars{grep(!defined($vars->{$_}), keys(%$vars))});
 }
 $variables{'merged'} = {
-    map({ %{$services{$_}{'variables'}} } keys(%services)),
+    map({ %{$protocols{$_}{'variables'}} } keys(%protocols)),
     %{$variables{'dyndns-common-defaults'}},
-    %{$variables{'service-common-defaults'}},
+    %{$variables{'protocol-common-defaults'}},
     %{$variables{'global-defaults'}},
 };
 
@@ -1104,7 +1151,7 @@ $opt{'list-devices'} = sub {
     exit(0);
 };
 $opt{'list-protocols'} = sub {
-    printf("%s\n", $_) for sort(keys(%services));
+    printf("%s\n", $_) for sort(keys(%protocols));
     exit(0);
 };
 $opt{'list-web-services'} = sub {
@@ -1219,7 +1266,7 @@ my @opt = (
 sub main {
     ## process args
     my $opt_usage = process_args(@opt);
-    $saved_cache = '';
+    $saved_recap = '';
     %saved_opt = %opt;
     $result = 'OK';
 
@@ -1271,13 +1318,15 @@ sub main {
 
         read_config($opt{'file'} // default('file'), \%config, \%globals);
         init_config();
-        read_cache(opt('cache'), \%cache);
+        read_recap(opt('cache'), \%recap);
         print_info() if opt('debug') && opt('verbose');
 
-        fatal("invalid argument '--use=%s'; possible values are:\n%s", $opt{'use'}, join("\n", ip_strategies_usage()))
+        fatal("invalid argument '--use=%s'; possible values are:\n%s",
+              $opt{'use'}, join("\n", ip_strategies_usage()))
             unless exists $ip_strategies{lc opt('use')};
         if (defined($opt{'usev6'})) {
-            usage("invalid argument '--usev6=%s'; possible values are:\n%s", $opt{'usev6'}, join("\n",ipv6_strategies_usage()))
+            usage("invalid argument '--usev6=%s'; possible values are:\n%s",
+                  $opt{'usev6'}, join("\n", ipv6_strategies_usage()))
                 unless exists $ipv6_strategies{lc opt('usev6')};
         }
 
@@ -1345,21 +1394,21 @@ sub update_nics {
     my %ipv4list = ();
     my %ipv6list = ();
 
-    for my $s (sort keys %services) {
+    for my $p (sort keys %protocols) {
         my (@hosts, %ipsv4, %ipsv6) = ();
-        my $updateable = $services{$s}{'updateable'};
-        my $update     = $services{$s}{'update'};
+        my $force_update = $protocols{$p}{'force_update'};
+        my $update = $protocols{$p}{'update'};
 
         for my $h (sort keys %config) {
-            next if $config{$h}{'protocol'} ne lc($s);
+            next if $config{$h}{'protocol'} ne lc($p);
             $examined{$h} = 1;
             # we only do this once per 'use' and argument combination
-            my $use       = opt('use',   $h) // 'disabled';
-            my $usev4     = opt('usev4', $h) // 'disabled';
-            my $usev6     = opt('usev6', $h) // 'disabled';
-            $use          = 'disabled' if ($use eq 'no'); # backward compatibility
-            $usev6        = 'disabled' if ($usev6 eq 'no'); # backward compatibility
-            $use          = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
+            my $use = opt('use', $h) // 'disabled';
+            my $usev4 = opt('usev4', $h) // 'disabled';
+            my $usev6 = opt('usev6', $h) // 'disabled';
+            $use = 'disabled' if ($use eq 'no'); # backward compatibility
+            $usev6 = 'disabled' if ($usev6 eq 'no'); # backward compatibility
+            $use = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
             my $arg_ip    = opt('ip',    $h) // '';
             my $arg_ipv4  = opt('ipv4',  $h) // '';
             my $arg_ipv6  = opt('ipv6',  $h) // '';
@@ -1394,8 +1443,6 @@ sub update_nics {
                             if !$daemon || opt('verbose');
                     }
                 }
-                # And remember it as the IP address we want to send to the DNS service.
-                $config{$h}{'wantip'} = $ip;
             }
 
             if ($usev4 ne 'disabled') {
@@ -1413,8 +1460,6 @@ sub update_nics {
                             if !$daemon || opt('verbose');
                     }
                 }
-                # And remember it as the IPv4 address we want to send to the DNS service.
-                $config{$h}{'wantipv4'} = $ipv4;
             }
 
             if ($usev6 ne 'disabled') {
@@ -1432,25 +1477,21 @@ sub update_nics {
                             if !$daemon || opt('verbose');
                     }
                 }
-                # And remember it as the IP address we want to send to the DNS service.
-                $config{$h}{'wantipv6'} = $ipv6;
             }
 
-            # DNS service update functions should only have to handle 'wantipv4' and 'wantipv6'
-            $config{$h}{'wantipv4'} = $ipv4 = $ip if (!$ipv4 && is_ipv4($ip));
-            $config{$h}{'wantipv6'} = $ipv6 = $ip if (!$ipv6 && is_ipv6($ip));
-            # If we don't have 'wantip', we fill it from 'wantipv4' or 'wantipv6'
-            # so old provider implementations continue to work until we update them all.
-            $config{$h}{'wantip'}   = $ipv4       if (!$ip && $ipv4);
-            $config{$h}{'wantip'}   = $ipv6       if (!$ip && !$ipv4 && $ipv6);
+            $ip //= $ipv4 // $ipv6;
+            $ipv4 //= $ip if is_ipv4($ip);
+            $ipv6 //= $ip if is_ipv6($ip);
+            $config{$h}{'wantip'} = $ip;
+            $config{$h}{'wantipv4'} = $ipv4;
+            $config{$h}{'wantipv6'} = $ipv6;
 
-            if (!$ip && !$ipv4 && !$ipv6)
-            {
+            if (!$ip && !$ipv4 && !$ipv6) {
                 warning("Could not determine an IP for %s", $h);
                 next;
             }
 
-            next if !nic_updateable($h, $updateable);
+            next if !nic_updateable($h, $force_update);
             push @hosts, $h;
 
             $ipsv4{$ipv4} = $h if ($ipv4);
@@ -1480,7 +1521,7 @@ sub update_nics {
                    $h, $config{$h}{'protocol'} // '<undefined>');
         }
     }
-    write_cache(opt('cache'));
+    write_recap(opt('cache'));
 }
 
 ######################################################################
@@ -1511,30 +1552,33 @@ sub write_pid {
 }
 
 ######################################################################
-## write_cache($file)
+## write_recap($file)
 ######################################################################
-sub write_cache {
+sub write_recap {
     my ($file) = @_;
 
-    ## merge the updated host entries into the cache.
     for my $h (keys %config) {
-        if (!exists $cache{$h} || $config{$h}{'update'}) {
-            map { defined($config{$h}{$_}) ? ($cache{$h}{$_} = $config{$h}{$_}) : () } @{$config{$h}{'cacheable'}};
+        if (!exists $recap{$h} || $config{$h}{'update'}) {
+            my $vars = $protocols{$config{$h}{protocol}}{variables};
+            for my $v (keys(%$vars)) {
+                next if !$vars->{$v}{recap} || !defined($config{$h}{$v});
+                $recap{$h}{$v} = $config{$h}{$v};
+            }
         } else {
-            map { $cache{$h}{$_} = $config{$h}{$_} } qw(atime wtime status);
+            for my $v (qw(atime wtime status)) {
+                $recap{$h}{$v} = $config{$h}{$v};
+            }
         }
     }
 
-    ## construct the cache file.
-    my $cache = "";
-    for my $h (sort keys %cache) {
-        my $opt = join(',', map { "$_=" . ($cache{$h}{$_} // '') } sort keys %{$cache{$h}});
+    my $recap = "";
+    for my $h (sort keys %recap) {
+        my $opt = join(',', map { "$_=" . ($recap{$h}{$_} // '') } sort keys %{$recap{$h}});
 
-        $cache .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
+        $recap .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
     }
-    $file = '' if defined($saved_cache) && $cache eq $saved_cache;
+    $file = '' if defined($saved_recap) && $recap eq $saved_recap;
 
-    ## write the updates and other entries to the cache file.
     if ($file) {
         (undef, my $dir) = fileparse($file);
         make_path($dir, { error => \my $err }) if !-d $dir;
@@ -1546,7 +1590,7 @@ sub write_cache {
             return;
         }
 
-        $saved_cache = undef;
+        $saved_recap = undef;
         local *FD;
         if (!open(FD, ">", $file)) {
             warning("Failed to create cache file %s: %s", $file, $!);
@@ -1554,32 +1598,35 @@ sub write_cache {
         }
         printf FD "## %s-%s\n", $program, $version;
         printf FD "## last updated at %s (%d)\n", prettytime($now), $now;
-        printf FD "%s", $cache;
+        printf FD "%s", $recap;
 
         close(FD);
     }
 }
 ######################################################################
-## read_cache($file) - called before reading the .conf
+## read_recap($file) - called before reading the .conf
 ######################################################################
-sub read_cache {
+sub read_recap {
     my $file    = shift;
     my $config  = shift;
     my $globals = {};
 
     %{$config} = ();
-    ## read the cache file ignoring anything on the command-line.
     if (-e $file) {
         my %saved = %opt;
         %opt         = ();
-        $saved_cache = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
+        $saved_recap = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
         %opt         = %saved;
 
-        for my $h (keys %cache) {
-            if (exists $config->{$h}) {
-                for (qw(atime mtime wtime ip status)) {
-                    $config->{$h}{$_} = $cache{$h}{$_} if exists $cache{$h}{$_};
-                }
+        for my $h (keys(%recap)) {
+            next if !exists($config->{$h});
+            for (qw(atime mtime wtime ip status)) {
+                # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
+                # original intention behind this?  To copy %recap values into %config?  If so, is
+                # it better to just delete this and live with the current behavior (which doesn't
+                # seem to be causing users any problems) or to "fix" it to match the original
+                # intention, which might introduce a bug?
+                $config->{$h}{$_} = $recap{$h}{$_} if exists $recap{$h}{$_};
             }
         }
     }
@@ -1761,69 +1808,65 @@ sub _read_config {
         ## verify that keywords are valid...and check the value
         for my $k (keys %locals) {
             # Handle '_env' keyword suffix
-            if ($k =~ /(.*)_env$/)
-            {
+            if ($k =~ /(.*)_env$/) {
                 debug("Loading value for $1 from environment variable $locals{$k}.");
-                if (exists($ENV{$locals{$k}}))
-                {
-                    # Set the value to the value of the environment variable
-                    $locals{$1} = $ENV{$locals{$k}};
-                    # Remove the '_env' suffix from the key
-                    $k = $1;
-                }
-                else
-                {
+                if (!exists($ENV{$locals{$k}})) {
                     warning("Environment variable '$locals{$k}' not set for keyword '$k' (ignored)");
                     delete $locals{$k};
                     next;
                 }
+                # Set the value to the value of the environment variable
+                $locals{$1} = $ENV{$locals{$k}};
+                # Remove the '_env' suffix from the key
+                $k = $1;
             }
 
             $locals{$k} = $passwords{$k} if defined $passwords{$k};
             if (!exists $variables{'merged'}{$k}) {
                 warning("unrecognized keyword '%s' (ignored)", $k);
                 delete $locals{$k};
-            } else {
-                my $def = $variables{'merged'}{$k};
-                my $value = check_value($locals{$k}, $def);
-                if (!defined($value)) {
-                    warning("Invalid Value for keyword '%s' = '%s'", $k, $locals{$k});
-                    delete $locals{$k};
-                } else { $locals{$k} = $value; }
+                next;
             }
+            my $def = $variables{'merged'}{$k};
+            my $value = check_value($locals{$k}, $def);
+            if (!defined($value)) {
+                warning("Invalid Value for keyword '%s' = '%s'", $k, $locals{$k});
+                delete $locals{$k};
+                next;
+            }
+            $locals{$k} = $value;
         }
+        %passwords = ();
         if (exists($locals{'host'})) {
-            $args[0] = @args ? "$args[0],$locals{host}" : "$locals{host}";
+            $args[0] = (@args ? "$args[0]," : '') . $locals{host};
         }
         ## accumulate globals
-        if ($#args < 0) {
-            map { $globals{$_} = $locals{$_} } keys %locals;
+        if (!@args) {
+            %globals = (%globals, %locals);
+            next;
         }
 
         ## process this host definition
-        if (@args) {
-            my ($host, $login, $password) = @args;
+        my ($host, $login, $password) = @args;
 
-            ## add in any globals..
-            %locals = (%globals, %locals);
+        ## add in any globals..
+        %locals = (%globals, %locals);
 
-            ## override login and password if specified the old way.
-            $locals{'login'}    = $login    if defined $login;
-            $locals{'password'} = $password if defined $password;
+        ## override login and password if specified the old way.
+        $locals{'login'}    = $login    if defined $login;
+        $locals{'password'} = $password if defined $password;
 
-            ## allow {host} to be a comma separated list of hosts
-            for my $h (split_by_comma($host)) {
-                if ($config{$h}) {
-                    ## host already defined, merging configs
-                    $config{$h} = {%locals, %{$config{$h}}};
-                } else {
-                    ## save a copy of the current globals
-                    $config{$h} = { %locals };
-                    $config{$h}{'host'} = $h;
-                }
-            }
+        ## allow {host} to be a comma separated list of hosts
+        for my $h (split_by_comma($host)) {
+            # TODO: Shouldn't %locals go after $config{h}?  Later lines should override earlier
+            # lines, no?  Otherwise, later assignments will have a mixed effect: assignments to new
+            # variables will take effect but assignments to variables that already have a value
+            # will not.  One problem with swapping the order: due to the `%locals = (%globals,
+            # %locals)` line above, any values in %globals would override any locals in the
+            # previous host line.
+            $config{$h} = {%locals, %{$config{$h} // {}}};
+            $config{$h}{'host'} = $h;
         }
-        %passwords = ();
     }
     close(FD);
 
@@ -1877,7 +1920,7 @@ sub init_config {
     $opt{'daemon'} = minimum('daemon') if opt('daemon') > 0 && opt('daemon') < minimum('daemon');
 
     ## define or modify host options specified on the command-line
-    if (exists $opt{'options'} && defined $opt{'options'}) {
+    if (defined($opt{'options'})) {
         ## collect cmdline configuration options.
         my %options = ();
         for my $opt (split_by_comma($opt{'options'})) {
@@ -1915,7 +1958,13 @@ sub init_config {
 
     ## override global options with those on the command-line.
     for my $o (keys %opt) {
+        # TODO: Isn't $opt{$o} guaranteed to be defined?  Otherwise $o wouldn't appear in the keys
+        # of %opt, right?
+        # TODO: Why is this limited to $variables{'global-defaults'}?  Why not
+        # $variables{'merged'}?
         if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
+            # TODO: What's the point of this?  The opt() function will fall back to %globals if
+            # %opt doesn't have a value, so this shouldn't be necessary.
             $globals{$o} = $opt{$o};
         }
     }
@@ -1926,28 +1975,20 @@ sub init_config {
     }
     fatal("options --retry and --daemon cannot be used together") if (opt('retry') && opt('daemon'));
 
-    ## determine hosts to update (those on the cmd-line, config-file, or failed cached)
+    ## determine hosts to update (those on the cmd-line, config-file, or failed in recap)
     my @hosts = keys %config;
     if (opt('host')) {
         @hosts = split_by_comma($opt{'host'});
     }
+    # TODO: This function is called before the recap file is read.  How is this supposed to work?
     if (opt('retry')) {
-        @hosts = map { $_ if ($cache{$_}{'status'} // '') ne 'good' } keys %cache;
+        @hosts = grep(($recap{$_}{'status'} // '') ne 'good', keys(%recap));
     }
 
     ## remove any other hosts
     my %hosts;
     map { $hosts{$_} = undef } @hosts;
     map { delete $config{$_} unless exists $hosts{$_} } keys %config;
-
-    ## collect the cacheable variables.
-    for my $proto (keys %services) {
-        my @cacheable = ();
-        for my $k (keys %{$services{$proto}{'variables'}}) {
-            push @cacheable, $k if $services{$proto}{'variables'}{$k}{'cache'};
-        }
-        $services{$proto}{'cacheable'} = [ @cacheable ];
-    }
 
     ## sanity check..
     ## make sure config entries have all defaults and they meet minimums
@@ -1956,10 +1997,18 @@ sub init_config {
         # Make sure any _env suffixed variables look at their original entry
         $k = $1 if $k =~ /^(.*)_env$/;
 
-        my $def    = $variables{'merged'}{$k};
+        # TODO: This might grab an arbitrary protocol-specific variable, which could cause
+        # surprising behavior.
+        my $def = $variables{'merged'}{$k};
+        # TODO: Isn't $globals{$k} guaranteed to be defined here?  Otherwise $k wouldn't appear in
+        # %globals.
         my $ovalue = $globals{$k} // $def->{'default'};
-        my $value  = check_value($ovalue, $def);
+        # TODO: Didn't _read_config already check the value?  Or is the purpose of this to check
+        # the value of command-line options ($opt{$k}) which were merged into %globals above?
+        my $value = check_value($ovalue, $def);
         if ($def->{'required'} && !defined $value) {
+            # TODO: What's the point of this?  The opt() function will fall back to the default
+            # value if $globals{$k} is undefined.
             $value = default($k);
             warning("'%s=%s' is an invalid %s. (using default of %s)", $k, $ovalue, $def->{'type'}, $value);
         }
@@ -1969,39 +2018,34 @@ sub init_config {
     ## now the host definitions...
   HOST:
     for my $h (keys %config) {
-        my $proto;
-        $proto = $config{$h}{'protocol'};
-        $proto = opt('protocol') if !defined($proto);
+        my $proto = opt('protocol', $h);
+        load_sha1_support($proto) if (grep(/^$proto$/, ("freedns", "nfsn")));
+        load_json_support($proto) if (grep(/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
 
-        load_sha1_support($proto) if (grep (/^$proto$/, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep (/^$proto$/, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
-
-        if (!exists($services{$proto})) {
+        if (!exists($protocols{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
             delete $config{$h};
-
-        } else {
-            my $svars = $services{$proto}{'variables'};
-            my $conf  = { 'protocol' => $proto };
-
-            for my $k (keys %$svars) {
-                # Make sure any _env suffixed variables look at their original entry
-                $k = $1 if $k =~ /^(.*)_env$/;
-
-                my $def    = $svars->{$k};
-                my $ovalue = $config{$h}{$k} // $def->{'default'};
-                my $value  = check_value($ovalue, $def);
-                if ($def->{'required'} && !defined $value) {
-                    warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
-                    delete $config{$h};
-                    next HOST;
-                }
-                $conf->{$k} = $value;
-
-            }
-            $config{$h} = $conf;
-            $config{$h}{'cacheable'} = [ @{$services{$proto}{'cacheable'}} ];
+            next;
         }
+
+        my $svars = $protocols{$proto}{'variables'};
+        my $conf = {'protocol' => $proto};
+
+        for my $k (keys %$svars) {
+            # Make sure any _env suffixed variables look at their original entry
+            $k = $1 if $k =~ /^(.*)_env$/;
+
+            my $def = $svars->{$k};
+            my $ovalue = $config{$h}{$k} // $def->{'default'};
+            my $value = check_value($ovalue, $def);
+            if ($def->{'required'} && !defined $value) {
+                warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
+                delete $config{$h};
+                next HOST;
+            }
+            $conf->{$k} = $value;
+        }
+        $config{$h} = $conf;
     }
 }
 
@@ -2021,7 +2065,7 @@ sub process_args {
             push @spec, $key . $specifier;
 
             ## define the default value which can be overwritten later
-            $opt{$key} = undef unless exists($opt{$key});
+            $opt{$key} //= undef;
 
             next unless $arg_usage;
 
@@ -2239,7 +2283,7 @@ sub save_file {
 ## print_opt
 ## print_globals
 ## print_config
-## print_cache
+## print_recap
 ## print_info
 ######################################################################
 sub _print_hash {
@@ -2269,12 +2313,12 @@ sub print_hash {
 sub print_opt     { print_hash("opt",     \%opt);     }
 sub print_globals { print_hash("globals", \%globals); }
 sub print_config  { print_hash("config",  \%config);  }
-sub print_cache   { print_hash("cache",   \%cache);   }
+sub print_recap   { print_hash("recap",   \%recap);   }
 sub print_info {
     print_opt();
     print_globals();
     print_config();
-    print_cache();
+    print_recap();
 }
 ######################################################################
 ## pipecmd      - run an external command
@@ -2491,11 +2535,11 @@ sub interval_expired {
     my ($host, $time, $interval) = @_;
 
     return 0 if ($config{$host}{$interval} // 0) == 'inf';
-    return 1 if !exists $cache{$host};
-    return 1 if !exists $cache{$host}{$time}      || !$cache{$host}{$time};
+    return 1 if !exists $recap{$host};
+    return 1 if !exists $recap{$host}{$time} || !$recap{$host}{$time};
     return 1 if !exists $config{$host}{$interval} || !$config{$host}{$interval};
 
-    return $now > ($cache{$host}{$time} + $config{$host}{$interval});
+    return $now > ($recap{$host}{$time} + $config{$host}{$interval});
 }
 
 
@@ -2538,7 +2582,7 @@ sub check_value {
 
     } elsif ($type eq T_PROTO) {
         $value = lc $value;
-        return undef if !exists $services{$value};
+        return undef if !exists $protocols{$value};
 
     } elsif ($type eq T_USE) {
         $value = lc $value;
@@ -2546,11 +2590,11 @@ sub check_value {
 
     } elsif ($type eq T_USEV4) {
         $value = lc $value;
-        return undef if ! exists $ipv4_strategies{$value};
+        return undef if !exists $ipv4_strategies{$value};
 
     } elsif ($type eq T_USEV6) {
         $value = lc $value;
-        return undef if ! exists $ipv6_strategies{$value};
+        return undef if !exists $ipv6_strategies{$value};
 
     } elsif ($type eq T_FILE) {
         return undef if $value eq "";
@@ -2816,41 +2860,35 @@ sub geturl {
 ######################################################################
 sub get_ip {
     my $use = lc shift;
-    $use    = 'disabled' if ($use eq 'no'); # backward compatibility
-    my $h   = shift;
+    $use = 'disabled' if ($use eq 'no');  # backward compatibility
+    my $h = shift;
     my ($ip, $arg, $reply, $url, $skip) = (undef, opt($use, $h), '');
     $arg = '' unless $arg;
 
     if ($use eq 'ip') {
-        $ip  = opt('ip', $h);
+        $ip = opt('ip', $h);
         if (!is_ipv4($ip) && !is_ipv6($ip)) {
             warning("'%s' is not a valid IPv4 or IPv6 address", $ip // '');
             $ip = undef;
         }
         $arg = 'ip';
-
     } elsif ($use eq 'if') {
         $ip = get_ip_from_interface($arg);
-
     } elsif ($use eq 'cmd') {
         if ($arg) {
             $skip = opt('cmd-skip', $h);
             $reply = `$arg`;
             $reply = '' if $?;
         }
-
     } elsif ($use eq 'web') {
         $url = opt('web', $h) // '';
         $skip = opt('web-skip', $h);
-
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
-
             $skip //= $builtinweb{$url}->{'skip'};
-            $url  = $builtinweb{$url}->{'url'};
+            $url = $builtinweb{$url}->{'url'};
         }
         $arg = $url;
-
         if ($url) {
             $reply = geturl(
                 proxy => opt('proxy', $h),
@@ -2858,11 +2896,9 @@ sub get_ip {
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
         }
-
     } elsif ($use eq 'disabled') {
         ## This is a no-op... Do not get an IP address for this host/service
         $reply = '';
-
     } elsif ($use eq 'fw' || defined(my $fw = $builtinfw{$use})) {
         # Note that --use=firewallname uses --fw=arg, not --firewallname=arg.
         $arg = opt('fw', $h) // '';
@@ -2877,7 +2913,6 @@ sub get_ip {
                 $url = "http://$url$fw->{'url'}" unless $url =~ /\//;
             }
         }
-
         if ($url) {
             $reply = geturl(
                 url => $url,
@@ -2887,7 +2922,6 @@ sub get_ip {
                 ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
         }
-
     } else {
         warning("ignoring unsupported '--use=$use'");
     }
@@ -3215,7 +3249,6 @@ sub get_ip_from_interface {
 sub get_ipv4 {
     my $usev4 = lc(shift);  ## Method to obtain IP address
     my $h     = shift;      ## Host/service making the request
-
     my $ipv4  = undef;      ## Found IPv4 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
@@ -3224,17 +3257,15 @@ sub get_ipv4 {
 
     if ($usev4 eq 'ipv4') {
         ## Static IPv4 address is provided in "ipv4=<address>"
-        $ipv4  = $arg;
+        $ipv4 = $arg;
         if (!is_ipv4($ipv4)) {
-            warning("'%s' is not a valid IPv4",$ipv4 // '');
+            warning("'%s' is not a valid IPv4", $ipv4 // '');
             $ipv4 = undef;
         }
         $arg = 'ipv4';  # For debug message at end of function
-
     } elsif ($usev4 eq 'ifv4') {
         ## Obtain IPv4 address from interface mamed in "ifv4=<if>"
-        $ipv4 = get_ip_from_interface($arg,4);
-
+        $ipv4 = get_ip_from_interface($arg, 4);
     } elsif ($usev4 eq 'cmdv4') {
         ## Obtain IPv4 address by executing the command in "cmdv4=<command>"
         warning("'--cmd-skip' ignored for '--usev4=$usev4'") if (opt('verbose') && opt('cmd-skip', $h));
@@ -3243,30 +3274,27 @@ sub get_ipv4 {
             $reply = qx{$sys_cmd};
             $reply = '' if $?;
         }
-
     } elsif ($usev4 eq 'webv4') {
         ## Obtain IPv4 address by accessing website at url in "webv4=<url>"
         $url = $arg;
         $skip = opt('webv4-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
-
             $skip //= $builtinweb{$url}->{'skip'};
-            $url  = $builtinweb{$url}->{'url'};
+            $url = $builtinweb{$url}->{'url'};
             $arg  = $url;
         }
         if ($url) {
-            $reply = geturl( proxy => opt('proxy', $h),
+            $reply = geturl(
+                proxy => opt('proxy', $h),
                 url => $url,
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
         }
-
     } elsif ($usev4 eq 'disabled') {
         ## This is a no-op... Do not get an IPv4 address for this host/service
         $reply = '';
-
     } elsif ($usev4 eq 'fwv4' || defined(my $fw = $builtinfw{$usev4})) {
         warning("'--fw' is deprecated for '--usev4=$usev4'; use '--fwv4' instead")
             if (!defined(opt('fwv4', $h)) && defined(opt('fw', $h)));
@@ -3295,7 +3323,6 @@ sub get_ipv4 {
                 ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
         }
-
     } else {
         warning("ignoring unsupported '--usev4=$usev4'");
     }
@@ -3321,7 +3348,6 @@ sub get_ipv6 {
     my $usev6 = lc(shift);  ## Method to obtain IP address
     $usev6    = 'disabled' if ($usev6 eq 'no'); # backward compatibility
     my $h     = shift;      ## Host/service making the request
-
     my $ipv6  = undef;      ## Found IPv6 address
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
@@ -3336,19 +3362,17 @@ sub get_ipv6 {
         }
         $ipv6 = $arg;
         if (!is_ipv6($ipv6)) {
-            warning("'%s' is not a valid IPv6",$ipv6 // '');
+            warning("'%s' is not a valid IPv6", $ipv6 // '');
             $ipv6 = undef;
         }
         $arg = 'ipv6';  # For debug message at end of function
-
-    } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if' ) {
+    } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if') {
         ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
         if ($usev6 eq 'if') {
             warning("'--usev6=if' is deprecated. Use '--usev6=ifv6'");
             $arg = opt('ifv6', $h) // $arg;
         }
-        $ipv6 = get_ip_from_interface($arg,6);
-
+        $ipv6 = get_ip_from_interface($arg, 6);
     }  elsif ($usev6 eq 'cmdv6' || $usev6 eq 'cmd') {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
         if ($usev6 eq 'cmd') {
@@ -3361,7 +3385,6 @@ sub get_ipv6 {
             $reply = qx{$sys_cmd};
             $reply = '' if $?;
         }
-
     } elsif ($usev6 eq 'webv6' || $usev6 eq 'web') {
         ## Obtain IPv6 address by accessing website at url in "webv6=<url>"
         if ($usev6 eq 'web') {
@@ -3374,9 +3397,8 @@ sub get_ipv6 {
         $skip = opt('webv6-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
-
             $skip //= $builtinweb{$url}->{'skip'};
-            $url  = $builtinweb{$url}->{'url'};
+            $url = $builtinweb{$url}->{'url'};
             $arg  = $url;
         }
         if ($url) {
@@ -3387,10 +3409,8 @@ sub get_ipv6 {
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
         }
-
     } elsif ($usev6 eq 'disabled') {
         $reply = '';
-
     } elsif ($usev6 eq 'fwv6' || defined(my $fw = $builtinfw{$usev6})) {
         $skip = opt('fwv6-skip', $h) // $fw->{'skip'};
         if ($fw && defined(my $query = $fw->{'queryv6'})) {
@@ -3399,10 +3419,8 @@ sub get_ipv6 {
         } else {
             warning("'--usev6=%s' is not implemented and does nothing", $usev6);
         }
-
     } else {
         warning("ignoring unsupported '--usev6=$usev6'");
-
     }
 
     ## Set to loopback address if no text set yet
@@ -3471,8 +3489,8 @@ sub encode_www_form_urlencoded {
 sub nic_examples {
     my $examples  = "";
     my $separator = "";
-    for my $s (sort keys %services) {
-        my $subr = $services{$s}{'examples'};
+    for my $p (sort keys %protocols) {
+        my $subr = $protocols{$p}{'examples'};
         my $example;
 
         if (defined($subr) && ($example = &$subr())) {
@@ -3567,56 +3585,54 @@ sub nic_updateable {
         info("forcing update of %s.", $host);
         $update = 1;
 
-    } elsif (!exists($cache{$host})) {
-        info("forcing updating %s because no cached entry exists.", $host);
+    } elsif (!exists($recap{$host})) {
+        info("forcing updating %s because no recap entry exists in cache file.", $host);
         $update = 1;
 
-    } elsif ($cache{$host}{'wtime'} && $cache{$host}{'wtime'} > $now) {
+    } elsif ($recap{$host}{'wtime'} && $recap{$host}{'wtime'} > $now) {
         warning("cannot update %s from %s to %s until after %s.",
                 $host,
-                ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
-                prettytime($cache{$host}{'wtime'})
+                ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'), $ip,
+                prettytime($recap{$host}{'wtime'})
         );
 
-    } elsif ($cache{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
+    } elsif ($recap{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
         warning("forcing update of %s from %s to %s; %s since last update on %s.",
                 $host,
-                ($cache{$host}{'ip'} ? $cache{$host}{'ip'} : '<nothing>'), $ip,
+                ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'), $ip,
                 prettyinterval($config{$host}{'max-interval'}),
-                prettytime($cache{$host}{'mtime'})
+                prettytime($recap{$host}{'mtime'})
         );
         $update = 1;
 
-    } elsif ( ($use ne 'disabled')
-           && ((!exists($cache{$host}{'ip'})) || ("$cache{$host}{'ip'}" ne "$ip"))) {
+    } elsif ($use ne 'disabled' && ($recap{$host}{'ip'} // '') ne $ip) {
         ## Check whether to update IP address for the "--use" method"
-        if ((($cache{$host}{'status'} // '') eq 'good') &&
+        if (($recap{$host}{'status'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'),
+                    ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'),
                     $ip,
-                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $cache{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
-        } elsif ((($cache{$host}{'status'} // '') ne 'good') &&
-            !interval_expired($host, 'atime', 'min-error-interval')) {
+        } elsif (($recap{$host}{'status'} // '') ne 'good' &&
+                 !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if ( opt('verbose')
-                 || ( ! $cache{$host}{'warned-min-error-interval'}
-                     && (($warned_ip{$host} // 0) < $inv_ip_warn_count)) ) {
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
+                                   ($warned_ip{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
-                        ($cache{$host}{'ip'}    ? $cache{$host}{'ip'}                : '<nothing>'),
+                        ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'),
                         $ip,
-                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
+                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
                         prettyinterval($config{$host}{'min-error-interval'})
                 );
                 if (!$ip && !opt('verbose')) {
@@ -3626,42 +3642,40 @@ sub nic_updateable {
                 }
             }
 
-            $cache{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
         }
 
-    } elsif ( ($usev4 ne 'disabled')
-           && ((!exists($cache{$host}{'ipv4'})) || ("$cache{$host}{'ipv4'}" ne "$ipv4"))) {
+    } elsif ($usev4 ne 'disabled' && ($recap{$host}{'ipv4'} // '') ne $ipv4) {
         ## Check whether to update IPv4 address for the "--usev4" method"
-        if ((($cache{$host}{'status-ipv4'} // '') eq 'good') &&
+        if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ipv4'}  ? $cache{$host}{'ipv4'}              : '<nothing>'),
+                    ($recap{$host}{'ipv4'} ? $recap{$host}{'ipv4'} : '<nothing>'),
                     $ipv4,
-                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $cache{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
-        } elsif ((($cache{$host}{'status-ipv4'} // '') ne 'good') &&
-            !interval_expired($host, 'atime', 'min-error-interval')) {
+        } elsif (($recap{$host}{'status-ipv4'} // '') ne 'good' &&
+                 !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if ( opt('verbose')
-                 || ( ! $cache{$host}{'warned-min-error-interval'}
-                     && (($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) ) {
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
+                                   ($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
-                        ($cache{$host}{'ipv4'}  ? $cache{$host}{'ipv4'}              : '<nothing>'),
+                        ($recap{$host}{'ipv4'} ? $recap{$host}{'ipv4'} : '<nothing>'),
                         $ipv4,
-                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
+                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
                         prettyinterval($config{$host}{'min-error-interval'})
                 );
                 if (!$ipv4 && !opt('verbose')) {
@@ -3671,42 +3685,40 @@ sub nic_updateable {
                 }
             }
 
-            $cache{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
         }
 
-    } elsif ( ($usev6 ne 'disabled')
-           && ((!exists($cache{$host}{'ipv6'})) || ("$cache{$host}{'ipv6'}" ne "$ipv6"))) {
+    } elsif ($usev6 ne 'disabled' && ($recap{$host}{'ipv6'} // '') ne $ipv6) {
         ## Check whether to update IPv6 address for the "--usev6" method"
-        if ((($cache{$host}{'status-ipv6'} // '') eq 'good') &&
+        if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
 
             warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
                     $host,
-                    ($cache{$host}{'ipv6'}  ? $cache{$host}{'ipv6'}              : '<nothing>'),
+                    ($recap{$host}{'ipv6'} ? $recap{$host}{'ipv6'} : '<nothing>'),
                     $ipv6,
-                    ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
+                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
                     prettyinterval($config{$host}{'min-interval'})
             )
-                if opt('verbose') || !($cache{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $cache{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
-        } elsif ((($cache{$host}{'status-ipv6'} // '') ne 'good') &&
-            !interval_expired($host, 'atime', 'min-error-interval')) {
+        } elsif (($recap{$host}{'status-ipv6'} // '') ne 'good' &&
+                 !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if ( opt('verbose')
-                 || ( ! $cache{$host}{'warned-min-error-interval'}
-                     && (($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) ) {
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
+                                   ($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) {
 
                 warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
                         $host,
-                        ($cache{$host}{'ipv6'}  ? $cache{$host}{'ipv6'}              : '<nothing>'),
+                        ($recap{$host}{'ipv6'} ? $recap{$host}{'ipv6'} : '<nothing>'),
                         $ipv6,
-                        ($cache{$host}{'mtime'} ? prettytime($cache{$host}{'mtime'}) : '<never>'),
-                        ($cache{$host}{'atime'} ? prettytime($cache{$host}{'atime'}) : '<never>'),
+                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
+                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
                         prettyinterval($config{$host}{'min-error-interval'})
                 );
                 if (!$ipv6 && !opt('verbose')) {
@@ -3716,7 +3728,7 @@ sub nic_updateable {
                 }
             }
 
-            $cache{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
@@ -3724,14 +3736,14 @@ sub nic_updateable {
 
     } elsif (defined($sub) && &$sub($host)) {
         $update = 1;
-    } elsif ((defined($cache{$host}{'static'}) && defined($config{$host}{'static'}) &&
-              ($cache{$host}{'static'} ne $config{$host}{'static'})) ||
-             (defined($cache{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
-              ($cache{$host}{'wildcard'} ne $config{$host}{'wildcard'})) ||
-             (defined($cache{$host}{'mx'}) && defined($config{$host}{'mx'}) &&
-              ($cache{$host}{'mx'} ne $config{$host}{'mx'})) ||
-             (defined($cache{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
-              ($cache{$host}{'backupmx'} ne $config{$host}{'backupmx'}))) {
+    } elsif ((defined($recap{$host}{'static'}) && defined($config{$host}{'static'}) &&
+              ($recap{$host}{'static'} ne $config{$host}{'static'})) ||
+             (defined($recap{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
+              ($recap{$host}{'wildcard'} ne $config{$host}{'wildcard'})) ||
+             (defined($recap{$host}{'mx'}) && defined($config{$host}{'mx'}) &&
+              ($recap{$host}{'mx'} ne $config{$host}{'mx'})) ||
+             (defined($recap{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
+              ($recap{$host}{'backupmx'} ne $config{$host}{'backupmx'}))) {
         info("updating %s because host settings have been changed.", $host);
         $update = 1;
 
@@ -3749,9 +3761,9 @@ sub nic_updateable {
         }
     }
 
-    $config{$host}{'status'} = $cache{$host}{'status'};
-    $config{$host}{'status-ipv4'} = $cache{$host}{'status-ipv4'};
-    $config{$host}{'status-ipv6'} = $cache{$host}{'status-ipv6'};
+    $config{$host}{'status'} = $recap{$host}{'status'};
+    $config{$host}{'status-ipv4'} = $recap{$host}{'status-ipv4'};
+    $config{$host}{'status-ipv6'} = $recap{$host}{'status-ipv6'};
     $config{$host}{'update'} = $update;
     if ($update) {
         $config{$host}{'status'}                    = undef;
@@ -3762,8 +3774,8 @@ sub nic_updateable {
         $config{$host}{'warned-min-interval'}       = 0;
         $config{$host}{'warned-min-error-interval'} = 0;
 
-        delete $cache{$host}{'warned-min-interval'};
-        delete $cache{$host}{'warned-min-error-interval'};
+        delete $recap{$host}{'warned-min-interval'};
+        delete $recap{$host}{'warned-min-error-interval'};
     }
 
     return $update;
@@ -3793,7 +3805,7 @@ sub header_ok {
 ######################################################################
 ## DDNS providers
 #  A DDNS provider consists of an example function, the update
-#  function, and an optional updateable function.
+#  function, and an optional force_update function.
 #
 #  The example function simply returns a string for the help message,
 #  explaining how to configure the provider
@@ -3801,7 +3813,7 @@ sub header_ok {
 #  The update function performs the actual record update.
 #  It receives an array of hosts as its argument.
 #
-#  The updateable function allows a provider implementation to force
+#  The force_update function allows a provider implementation to force
 #  an update even if ddclient has itself determined no update is
 #  necessary. The function shall return 1 if an update should be
 #  performed, else 0.
@@ -3896,21 +3908,21 @@ sub nic_dyndns1_update {
             failed("updating %s: %s", $h, $title);
 
         } else {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: %s: IP address set to %s (%s)", $h, $return_code, $ip, $title);
         }
     }
 }
 ######################################################################
-## nic_dyndns2_updateable
+## nic_dyndns2_force_update
 ######################################################################
-sub nic_dyndns2_updateable {
+sub nic_dyndns2_force_update {
     my $host   = shift;
     my $update = 0;
 
-    if ($config{$host}{'mx'} ne $cache{$host}{'mx'}) {
+    if ($config{$host}{'mx'} ne $recap{$host}{'mx'}) {
         info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
         $update = 1;
 
@@ -3918,7 +3930,7 @@ sub nic_dyndns2_updateable {
         info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
         $update = 1;
 
-    } elsif ($config{$host}{'static'} ne $cache{$host}{'static'}) {
+    } elsif ($config{$host}{'static'} ne $recap{$host}{'static'}) {
 
         info("forcing updating %s because 'static' has changed to %s.", $host, ynu($config{$host}{'static'}, "YES", "NO", "NO"));
         $update = 1;
@@ -4079,8 +4091,8 @@ sub nic_dyndns2_update {
 
                 if ($status eq 'good') {
                     for my $h (@hosts) {
-                        $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
-                        $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
+                        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
                         $config{$h}{'mtime'} = $now;
                     }
 
@@ -4092,9 +4104,9 @@ sub nic_dyndns2_update {
                         warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
 
                         for my $h (@hosts) {
-                            $config{$h}{'ipv4'}  = $ipv4 if $ipv4;
-                            $config{$h}{'ipv6'}  = $ipv6 if $ipv6;
-                            $config{$h}{'mtime'}  = $now;
+                            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                            $config{$h}{'mtime'} = $now;
                             $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                             $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                         }
@@ -4499,8 +4511,8 @@ sub nic_dslreports1_update {
             failed("updating %s", $h);
 
         } else {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: %s: IP address set to %s", $h, $return_code, $ip);
         }
@@ -4575,8 +4587,8 @@ sub nic_domeneshop_update {
         my $status = shift(@reply);
         my $message = pop(@reply);
         if ($status =~ /204/) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -4621,9 +4633,9 @@ EoEXAMPLE
 }
 
 ######################################################################
-## nic_zoneedit1_updateable
+## nic_zoneedit1_force_update
 ######################################################################
-sub nic_zoneedit1_updateable {
+sub nic_zoneedit1_force_update {
     return 0;
 }
 
@@ -4681,8 +4693,8 @@ sub nic_zoneedit1_update {
                     $status_ip   = $var{'IP'}   if exists $var{'IP'};
 
                     if ($status eq 'SUCCESS' || ($status eq 'ERROR' && $var{'CODE'} eq '707')) {
-                        $config{$h}{'ip'}     = $status_ip;
-                        $config{$h}{'mtime'}  = $now;
+                        $config{$h}{'ip'} = $status_ip;
+                        $config{$h}{'mtime'} = $now;
                         $config{$h}{'status'} = 'good';
 
                         success("updating %s: IP address set to %s (%s: %s)", $h, $ip, $status_code, $status_text);
@@ -4704,13 +4716,13 @@ sub nic_zoneedit1_update {
     }
 }
 ######################################################################
-## nic_easydns_updateable
+## nic_easydns_force_update
 ######################################################################
-sub nic_easydns_updateable {
+sub nic_easydns_force_update {
     my $host   = shift;
     my $update = 0;
 
-    if ($config{$host}{'mx'} ne $cache{$host}{'mx'}) {
+    if ($config{$host}{'mx'} ne $recap{$host}{'mx'}) {
         info("forcing updating %s because 'mx' has changed to %s.", $host, $config{$host}{'mx'});
         $update = 1;
 
@@ -4718,7 +4730,7 @@ sub nic_easydns_updateable {
         info("forcing updating %s because 'backupmx' has changed to %s.", $host, ynu($config{$host}{'backupmx'}, "YES", "NO", "NO"));
         $update = 1;
 
-    } elsif ($config{$host}{'static'} ne $cache{$host}{'static'}) {
+    } elsif ($config{$host}{'static'} ne $recap{$host}{'static'}) {
 
         info("forcing updating %s because 'static' has changed to %s.", $host, ynu($config{$host}{'static'}, "YES", "NO", "NO"));
         $update = 1;
@@ -4847,8 +4859,8 @@ sub nic_easydns_update {
                 $config{$h}{'status-ipv4'} = $status if $ipv4;
                 $config{$h}{'status-ipv6'} = $status if $ipv6;
                 if ($status eq 'NOERROR') {
-                    $config{$h}{'ipv4'}  = $ipv4;
-                    $config{$h}{'ipv6'}  = $ipv6;
+                    $config{$h}{'ipv4'} = $ipv4;
+                    $config{$h}{'ipv6'} = $ipv6;
                     $config{$h}{'mtime'} = $now;
                     success("updating %s: %s: IP address set to %s %s", $h, $status, $ipv4, $ipv6);
 
@@ -4917,8 +4929,6 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_namecheap_update {
-
-
     debug("\nnic_namecheap1_update -------------------");
 
     ## update each configured host
@@ -4947,8 +4957,8 @@ sub nic_namecheap_update {
 
         my @reply = split /\n/, $reply;
         if (grep /<ErrCount>0/i, @reply) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -5177,8 +5187,8 @@ sub nic_nfsn_update {
         my $add_resp = nic_nfsn_make_request($h, $add_path, 'POST',
                                              $add_body);
         if (header_ok($h, $add_resp)) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -5334,8 +5344,6 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_sitelutions_update {
-
-
     debug("\nnic_sitelutions_update -------------------");
 
     ## update each configured host
@@ -5361,8 +5369,8 @@ sub nic_sitelutions_update {
 
         my @reply = split /\n/, $reply;
         if (grep /success/i, @reply) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -5637,8 +5645,6 @@ EoEXAMPLE
 ##
 ######################################################################
 sub nic_changeip_update {
-
-
     debug("\nnic_changeip_update -------------------");
 
     ## update each configured host
@@ -5667,8 +5673,8 @@ sub nic_changeip_update {
 
         my @reply = split /\n/, $reply;
         if (grep /success/i, @reply) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -5894,9 +5900,8 @@ sub nic_googledomains_update {
             }
             next if !header_ok($host, $reply);
 
-            # Cache
-            $config{$host}{'ip'}     = $ip;
-            $config{$host}{'mtime'}  = $now;
+            $config{$host}{'ip'} = $ip;
+            $config{$host}{'mtime'} = $now;
             $config{$host}{'status'} = 'good';
         }
     }
@@ -5972,7 +5977,7 @@ sub nic_mythicdyn_update {
 
                 my $ok = header_ok($h, $reply);
                 if ($ok) {
-                    $config{$h}{'mtime'}  = $now;
+                    $config{$h}{'mtime'} = $now;
                     $config{$h}{"status-ipv$mythver"} = "good";
 
                     success("%s -- IPV%s Updated successfully.", $h, $mythver);
@@ -6094,7 +6099,7 @@ EoINSTR4
                 for my $ip ($ipv4, $ipv6) {
                     next if (!$ip);
                     my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                    $config{$_}{"ipv$ipv"}  = $ip;
+                    $config{$_}{"ipv$ipv"} = $ip;
                     $config{$_}{"status-ipv$ipv"} = 'good';
                     success("updating %s: good: IPv%s address set to %s", $_, $ipv, $ip);
                 }
@@ -6536,9 +6541,8 @@ sub nic_yandex_update {
                 success("%s -- Updated Successfully to %s", $host, $ip);
             }
 
-            # Cache
-            $config{$host}{'ip'}     = $ip;
-            $config{$host}{'mtime'}  = $now;
+            $config{$host}{'ip'} = $ip;
+            $config{$host}{'mtime'} = $now;
             $config{$host}{'status'} = 'good';
         }
     }
@@ -6614,9 +6618,9 @@ sub nic_duckdns_update {
 
         for $line (@reply) {
             if ($line eq 'OK') {
-                $config{$h}{'ipv4'}   = $ipv4 if $ipv4;
-                $config{$h}{'ipv6'}   = $ipv6 if $ipv6;
-                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $config{$h}{'mtime'} = $now;
                 $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                 $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                 $state = 'result';
@@ -6697,8 +6701,8 @@ sub nic_freemyip_update {
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
         if ($returned =~ /OK/) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -6845,15 +6849,15 @@ sub nic_woima_update {
 
                 $config{$h}{'status'} = $status;
                 if ($status eq 'good') {
-                    $config{$h}{'ip'}    = $ip;
+                    $config{$h}{'ip'} = $ip;
                     $config{$h}{'mtime'} = $now;
                     success("updating %s: %s: IP address set to %s", $h, $status, $ip);
 
                 } elsif (exists $errors{$status}) {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                        $config{$h}{'ip'}     = $ip;
-                        $config{$h}{'mtime'}  = $now;
+                        $config{$h}{'ip'} = $ip;
+                        $config{$h}{'mtime'} = $now;
                         $config{$h}{'status'} = 'good';
 
                     } else {
@@ -6945,8 +6949,8 @@ sub nic_dondominio_update {
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
         if ($returned =~ /OK/ || $returned =~ /IP:$ip/) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -7031,8 +7035,8 @@ sub nic_dnsmadeeasy_update {
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
         if ($returned =~ 'success') {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("Updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -7105,8 +7109,8 @@ sub nic_ovh_update {
         my @reply = split /\n/, $reply;
         my $returned = List::Util::first { $_ =~ /good/ || $_ =~ /nochg/ } @reply;
         if ($returned) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             if ($returned =~ /good/) {
                 success("updating %s: good: IP address set to %s", $h, $ip);
@@ -7450,8 +7454,8 @@ sub nic_dinahosting_update {
             failed("updating %s: error %d: %s", $code, $message);
             next;
         }
-        $config{$h}{'ip'}     = $ip;
-        $config{$h}{'mtime'}  = $now;
+        $config{$h}{'ip'} = $ip;
+        $config{$h}{'mtime'} = $now;
         $config{$h}{'status'} = 'good';
         success("updating %s: IP address set to %s", $h, $ip);
     }
@@ -7560,8 +7564,8 @@ sub nic_gandi_update {
             }
             if($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
                 $response->{'rrset_ttl'} eq $config{$h}{'ttl'})) {
-                $config{$h}{'ip'}     = $ip;
-                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'ip'} = $ip;
+                $config{$h}{'mtime'} = $now;
                 $config{$h}{"status-$ipv"} = "good";
                 success("updating %s: skipped: address was already set to %s.", $h, $ip);
                 next;
@@ -7584,14 +7588,12 @@ sub nic_gandi_update {
             }
             $ok = header_ok($h, $reply);
             if ($ok) {
-                $config{$h}{'ip'}     = $ip;
-                $config{$h}{'mtime'}  = $now;
+                $config{$h}{'ip'} = $ip;
+                $config{$h}{'mtime'} = $now;
                 $config{$h}{"status-$ipv"} = "good";
-
                 success("%s -- Updated successfully to %s.", $h, $ip);
             } else {
                 $config{$h}{"status-$ipv"} = "bad";
-
                 if (defined($response->{status}) && $response->{status} eq "error") {
                     my @errors;
                     for my $err (@{$response->{errors}}) {
@@ -7636,39 +7638,36 @@ EoEXAMPLE
 ## response contains "code 200" on succesfull completion
 ######################################################################
 sub nic_keysystems_update {
- debug("\nnic_keysystems_update -------------------");
+    debug("\nnic_keysystems_update -------------------");
 
- ## update each configured host
- ## should improve to update in one pass
- for my $h (@_) {
-   my $ip = delete $config{$h}{'wantip'};
-   info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
+    ## update each configured host
+    ## should improve to update in one pass
+    for my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
 
-   my $url = "http://$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
+        my $url = "http://$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
 
-   # Try to get URL
-   my $reply = geturl(proxy => opt('proxy'), url => $url) // '';
+        # Try to get URL
+        my $reply = geturl(proxy => opt('proxy'), url => $url) // '';
 
-   # No response, declare as failed
-   if (!defined($reply) || !$reply) {
-     failed("KEYSYSTEMS updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-     last;
-   }
-   last if !header_ok($h, $reply);
+        # No response, declare as failed
+        if (!defined($reply) || !$reply) {
+            failed("KEYSYSTEMS updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
 
-   if ($reply =~ /code = 200/)
-   {
-       $config{$h}{'ip'}   = $ip;
-       $config{$h}{'mtime'} = $now;
-       $config{$h}{'status'} = 'good';
-       success("updating %s: good: IP address set to %s", $h, $ip);
+        if ($reply =~ /code = 200/) {
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '$reply'", $h);
+        }
     }
-    else
-    {
-       $config{$h}{'status'} = 'failed';
-       failed("updating %s: Server said: '$reply'", $h);
-    }
-  }
 }
 
 ######################################################################
@@ -7696,41 +7695,38 @@ EoEXAMPLE
 ## response contains "success" on succesfull completion
 ######################################################################
 sub nic_regfishde_update {
- debug("\nnic_regfishde_update -------------------");
+    debug("\nnic_regfishde_update -------------------");
 
- ## update configured host
- for my $h (@_) {
-   my $ip = delete $config{$h}{'wantip'};
-   my $ipv6 = delete $config{$h}{'wantip'};
+    ## update configured host
+    for my $h (@_) {
+        my $ip = delete $config{$h}{'wantip'};
+        my $ipv6 = delete $config{$h}{'wantip'};
 
-   info("regfish.de setting IP address to %s for %s", $ip, $h);
+        info("regfish.de setting IP address to %s for %s", $ip, $h);
 
-   my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-   my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv$ipv=$ip&forcehost=1&token=$config{$h}{'password'}";
+        my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+        my $url = "https://$config{$h}{'server'}/?fqdn=$h&ipv$ipv=$ip&forcehost=1&token=$config{$h}{'password'}";
 
-   # Try to get URL
-   my $reply = geturl(proxy => opt('proxy'), url => $url);
+        # Try to get URL
+        my $reply = geturl(proxy => opt('proxy'), url => $url);
 
-   # No response, give error
-   if (!defined($reply) || !$reply) {
-     failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
-     last;
-   }
-   last if !header_ok($h, $reply);
+        # No response, give error
+        if (!defined($reply) || !$reply) {
+            failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
+            last;
+        }
+        last if !header_ok($h, $reply);
 
-   if ($reply =~ /success/)
-   {
-       $config{$h}{'ip'} = $ip;
-       $config{$h}{'mtime'} = $now;
-       $config{$h}{'status'} = 'good';
-       success("updating %s: good: IP address set to %s", $h, $ip);
+        if ($reply =~ /success/) {
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{'status'} = 'good';
+            success("updating %s: good: IP address set to %s", $h, $ip);
+        } else {
+            $config{$h}{'status'} = 'failed';
+            failed("updating %s: Server said: '$reply'", $h);
+        }
     }
-    else
-    {
-       $config{$h}{'status'} = 'failed';
-       failed("updating %s: Server said: '$reply'", $h);
-    }
-  }
 }
 
 ######################################################################
@@ -7804,8 +7800,8 @@ sub nic_enom_update {
         my @reply = split /\n/, $reply;
 
         if (grep /Done=true/i, @reply) {
-            $config{$h}{'ip'}     = $ip;
-            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
             success("updating %s: good: IP address set to %s", $h, $ip);
         } else {
@@ -7913,8 +7909,8 @@ sub nic_digitalocean_update_one {
     }
 
     $config{$h}{"status-$ipv"} = 'good';
-    $config{$h}{"ip-$ipv"}     = $ip;
-    $config{$h}{"mtime"}       = $now;
+    $config{$h}{"ip-$ipv"} = $ip;
+    $config{$h}{"mtime"} = $now;
 }
 
 sub nic_digitalocean_update {

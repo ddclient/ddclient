@@ -77,7 +77,7 @@ handwritten_tests = \
 	t/parse_assignments.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
-	t/write_cache.pl
+	t/write_recap.pl
 generated_tests = \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
