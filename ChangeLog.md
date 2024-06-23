@@ -77,6 +77,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#703](https://github.com/ddclient/ddclient/pull/703)
   * `ddns.fm`: New `protocol` option for updating [DDNS.FM](https://ddns.fm/)
     records.  [#695](https://github.com/ddclient/ddclient/pull/695)
+  * `inwx`: New `protocol` option for updating [INWX](https://www.inwx.com/)
+    records.  [#690](https://github.com/ddclient/ddclient/pull/690)
 
 ### Bug fixes
 
