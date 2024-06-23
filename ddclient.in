@@ -928,6 +928,16 @@ my %protocols = (
             'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
         },
     },
+    'inwx' => {
+        'force_update' => undef,
+        'update'     => \&nic_inwx_update,
+        'examples'   => \&nic_inwx_examples,
+        'variables' => {
+            %{$variables{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 1, 0, 'dyndns.inwx.com', undef),
+            'script' => setv(T_STRING, 1, 1, '/nic/update', undef),
+        },
+    },
     'mythicdyn' => {
         'force_update' => undef,
         'update'     => \&nic_mythicdyn_update,
@@ -6425,6 +6435,185 @@ sub nic_hetzner_update {
                 }
             }
         }
+    }
+}
+
+######################################################################
+## nic_inwx_examples
+######################################################################
+sub nic_inwx_examples {
+    return <<"EoEXAMPLE";
+o 'inwx'
+
+The 'inwx' protocol is an adaption of the 'dyndns2' protocol. This is nescessary
+because INWX uses a custom Update-URL-Format for IPv6-Support:
+
+'https://dyndns.inwx.com/nic/update?myip=<ipaddr>&myipv6=<ip6addr>'
+
+Please note (as of June 2024):
+- INWX does not support updating an IPv6 without including the IPv4 in the
+URL, unless the DynDNS-Account has been turned into IPv6-only manually by their support.
+- Including the IPv6 in the URL without 'myip' or with an empty value for '<ipaddr>'
+will result in the IPv4 (A-Record) beeing reset to '127.0.0.1'.
+- Updating the IPv4 only will delete the IPv6 (AAAA-Record).
+- 'dyndns.inwx.com' is not reachable via IPv6 (there is no AAAA-Record).
+- GET 'https://dyndns.inwx.com/nic/update' without further parameters will set the IPv4
+to the public IP of the requesting host.
+
+Configuration variables applicable to the 'inwx' protocol are:
+  protocol=inwx                ##
+  server=fqdn.of.service       ## defaults to dyndns.inwx.com
+  script=/path/to/script       ## defaults to /nic/update
+  login=service-login          ## login name and password  registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=inwx                             \\
+  login=my-inwx-DynDNS-account-username     \\
+  password=my-inwx-DynDNS-account-password  \\
+  myhost.example.org
+EoEXAMPLE
+}
+######################################################################
+## nic_inwx_update
+######################################################################
+sub nic_inwx_update {
+    debug("\nnic_inwx_update -------------------");
+
+    ## group hosts with identical attributes together
+    my %groups = group_hosts_by(\@_, [qw(login password server wantipv4 wantipv6)]);
+
+    my %errors = (
+       'badauth'  => 'Bad authorization (username or password)',
+       'badsys'   => 'The system parameter given was not valid',
+
+       'notfqdn'  => 'A Fully-Qualified Domain Name was not provided',
+       'nohost'   => 'The hostname specified does not exist in the database',
+       '!yours'   => 'The hostname specified exists, but not under the username currently being used',
+       '!donator' => 'The offline setting was set, when the user is not a donator',
+       '!active'  => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+       'abuse',   => 'The hostname specified is blocked for abuse; you should receive an email notification ' .
+                     'which provides an unblock request link.',
+
+       'numhost'  => 'System error: Too many or too few hosts found.',
+       'dnserr'   => 'System error: DNS error encountered.',
+
+       'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+    );
+
+    ## update each set of hosts that had similar configurations
+    for my $sig (keys %groups) {
+        my @hosts = @{$groups{$sig}};
+        my $hosts = join(',', @hosts);
+        my $h     = $hosts[0];
+        my $ipv4  = $config{$h}{'wantipv4'};
+        my $ipv6  = $config{$h}{'wantipv6'};
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
+
+        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
+        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
+        verbose("UPDATE:", "updating %s", $hosts);
+
+        ## Select the server and script to update
+        my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?";
+
+        if ($ipv4) {
+            $url .= "myip=";
+            $url .= $ipv4;
+        }
+
+        if ($ipv6) {
+            verbose("WARNING: No IPv4 is provided. INWX does not support updating an IPv6 without providing an IPv4 unless the DynDNS-Account has been turned into IPV6-only by their support.") if not $ipv4;
+            $url .= "&" if $ipv4;
+            $url .= "myipv6=";
+            $url .= $ipv6;
+        }
+
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$h}{'login'},
+            password => $config{$h}{'password'},
+        ) // '';
+        if ($reply eq '') {
+            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            next;
+        }
+        next if !header_ok($hosts, $reply);
+
+        my @reply      = split /\n/, $reply;
+        my $state      = 'header';
+
+        for my $line (@reply) {
+            if ($state eq 'header') {
+                $state = 'body';
+
+            } elsif ($state eq 'body') {
+                $state = 'results' if $line eq '';
+
+            } elsif ($state =~ /^results/) {
+                $state = 'results2';
+
+                # bug #10: some dyndns providers does not return the IP so
+                # we can't use the returned IP
+                my ($status, $returnedips) = split / /, lc $line;
+
+                for my $h (@hosts) {
+                    $config{$h}{'status-ipv4'} = $status if $ipv4;
+                    $config{$h}{'status-ipv6'} = $status if $ipv6;
+                }
+
+                if ($status eq 'good') {
+                    for my $h (@hosts) {
+                        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                        $config{$h}{'mtime'} = $now;
+                    }
+
+                    success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
+                    success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
+
+                } elsif (exists $errors{$status}) {
+                    if ($status eq 'nochg') {
+                        warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
+
+                        for my $h (@hosts) {
+                            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                            $config{$h}{'mtime'} = $now;
+                            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+                            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+                        }
+
+                    } else {
+                        failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
+                    }
+
+                } elsif ($status =~ /w(\d+)(.)/) {
+                    my ($wait, $units) = ($1, lc $2);
+                    my ($sec,  $scale) = ($wait, 1);
+
+                    ($scale, $units) = (1, 'seconds')   if $units eq 's';
+                    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
+                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
+
+                    $sec = $wait * $scale;
+                    for my $h (@hosts) {
+                        $config{$h}{'wtime'} = $now + $sec;
+                    }
+
+                    warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
+
+                } else {
+                    failed("updating %s: unexpected status (%s)", $hosts, $line);
+                }
+            }
+        }
+        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+            if $state ne 'results2';
     }
 }
 

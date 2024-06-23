@@ -397,3 +397,11 @@ ssl=yes					# use ssl-support.  Works with
 ##
 # protocol=emailonly
 # host.example.com
+
+##
+## INWX
+##
+# protocol=inwx                             \
+# login=my-inwx-DynDNS-account-username     \
+# password=my-inwx-DynDNS-account-password  \
+# myhost.example.org
