@@ -177,7 +177,6 @@ sub T_LOGIN  { 'login' }
 sub T_PASSWD { 'password' }
 sub T_BOOL   { 'boolean value' }
 sub T_FQDN   { 'fully qualified host name' }
-sub T_OFQDN  { 'optional fully qualified host name' }
 sub T_FILE   { 'file name' }
 sub T_FQDNP  { 'fully qualified host name and optional port number' }
 sub T_PROTO  { 'protocol' }
@@ -704,7 +703,7 @@ our %variables = (
     },
     'dyndns-common-defaults' => {
         'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
-        'mx'                  => setv(T_OFQDN, 0, 1, undef,                undef),
+        'mx'                  => setv(T_FQDN,  0, 1, undef,                undef),
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
@@ -734,7 +733,7 @@ our %protocols = (
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                              undef),
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
-            'mx'           => setv(T_OFQDN,  0, 1, undef,                          undef),
+            'mx'           => setv(T_FQDN,   0, 1, undef,                          undef),
             'server'       => setv(T_FQDNP,  0, 0, 'api.cloudflare.com/client/v4', undef),
             'static'       => setv(T_BOOL,   0, 1, 0,                              undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 1,                              undef),
@@ -861,7 +860,7 @@ our %protocols = (
             # From <https://kb.easydns.com/knowledge/dynamic-dns/>: "You need to wait at least 10
             # minutes between updates."
             'min-interval' => setv(T_DELAY, 0, 0, interval('10m'), 0),
-            'mx'           => setv(T_OFQDN,  0, 1, undef,                undef),
+            'mx'           => setv(T_FQDN,   0, 1, undef,                undef),
             'server'       => setv(T_FQDNP,  0, 0, 'api.cp.easydns.com', undef),
             'script'       => setv(T_STRING, 0, 1, '/dyn/generic.php',   undef),
             'wildcard'     => setv(T_BOOL,   0, 1, 0,                    undef),
@@ -1017,7 +1016,7 @@ our %protocols = (
             'password' => undef,
             'apikey'         => setv(T_PASSWD, 1, 0, undef,      undef),
             'secretapikey'   => setv(T_PASSWD, 1, 0, undef,      undef),
-            'root-domain'    => setv(T_OFQDN,  0, 0, undef,      undef),
+            'root-domain'    => setv(T_FQDN,   0, 0, undef,      undef),
             'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
         },
     },
@@ -1046,7 +1045,7 @@ our %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
             'server'       => setv(T_FQDNP, 0, 0, 'dynamic.zoneedit.com', undef),
-            'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
+            'zone'         => setv(T_FQDN,  0, 0, undef,                  undef),
         },
     },
     'keysystems' => {
@@ -2587,9 +2586,9 @@ sub check_value {
         } else {
             return undef;
         }
-    } elsif ($type eq T_FQDN || $type eq T_OFQDN && $value ne '') {
+    } elsif ($type eq T_FQDN) {
         $value = lc $value;
-        return undef if $value !~ /[^.]\.[^.]/;
+        return undef if ($value ne '' || $required) && $value !~ /[^.]\.[^.]/;
 
     } elsif ($type eq T_FQDNP) {
         $value = lc $value;
