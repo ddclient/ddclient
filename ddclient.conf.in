@@ -1,12 +1,12 @@
 ######################################################################
 ##
 ## Define default global variables with lines like:
-## 	var=value [, var=value]*
+##      var=value [, var=value]*
 ## These values will be used for each following host unless overridden
 ## with a local variable definition.
 ##
 ## Define local variables for one or more hosts with:
-## 	var=value [, var=value]* host.and.domain[,host2.and.domain...]
+##      var=value [, var=value]* host.and.domain[,host2.and.domain...]
 ##
 ## Lines can be continued on the following line by ending the line
 ## with a \
@@ -21,31 +21,31 @@
 ## missing from a URL.  Defaults to "yes".
 #ssl=yes
 
-daemon=300				# check every 300 seconds
-syslog=yes				# log update msgs to syslog
-mail=root				# mail all msgs to root
-mail-failure=root		# mail failed update msgs to root
-pid=@runstatedir@/ddclient.pid		# record PID in file.
-# postscript=script		# run script after updating.  The
-						# new IP is added as argument.
+daemon=300                      # check every 300 seconds
+syslog=yes                      # log update msgs to syslog
+mail=root                       # mail all msgs to root
+mail-failure=root               # mail failed update msgs to root
+pid=@runstatedir@/ddclient.pid  # record PID in file.
+# postscript=script             # run script after updating.  The new IP is
+                                # added as argument.
 #
-#use=watchguard-soho,        fw=192.168.111.1:80	# via Watchguard's SOHO FW
-#use=netopia-r910,           fw=192.168.111.1:80	# via Netopia R910 FW
-#use=smc-barricade,          fw=192.168.123.254:80	# via SMC's Barricade FW
-#use=netgear-rt3xx,          fw=192.168.0.1:80		# via Netgear's internet FW
-#use=linksys,                fw=192.168.1.1:80		# via Linksys's internet FW
-#use=maxgate-ugate3x00,      fw=192.168.0.1:80		# via MaxGate's UGATE-3x00  FW
-#use=elsa-lancom-dsl10,      fw=10.0.0.254:80		# via ELSA LanCom DSL/10 DSL Router
-#use=elsa-lancom-dsl10-ch01, fw=10.0.0.254:80		# via ELSA LanCom DSL/10 DSL Router
-#use=elsa-lancom-dsl10-ch02, fw=10.0.0.254:80		# via ELSA LanCom DSL/10 DSL Router
+#use=watchguard-soho,        fw=192.168.111.1:80        # via Watchguard's SOHO FW
+#use=netopia-r910,           fw=192.168.111.1:80        # via Netopia R910 FW
+#use=smc-barricade,          fw=192.168.123.254:80      # via SMC's Barricade FW
+#use=netgear-rt3xx,          fw=192.168.0.1:80          # via Netgear's internet FW
+#use=linksys,                fw=192.168.1.1:80          # via Linksys's internet FW
+#use=maxgate-ugate3x00,      fw=192.168.0.1:80          # via MaxGate's UGATE-3x00  FW
+#use=elsa-lancom-dsl10,      fw=10.0.0.254:80           # via ELSA LanCom DSL/10 DSL Router
+#use=elsa-lancom-dsl10-ch01, fw=10.0.0.254:80           # via ELSA LanCom DSL/10 DSL Router
+#use=elsa-lancom-dsl10-ch02, fw=10.0.0.254:80           # via ELSA LanCom DSL/10 DSL Router
 #use=alcatel-stp,            fw=10.0.0.138:80           # via Alcatel Speed Touch Pro
 #use=xsense-aero,            fw=192.168.1.1:80          # via Xsense Aero Router
 #use=allnet-1298,            fw=192.168.1.1:80          # via AllNet 1298 DSL Router
-#use=3com-oc-remote812,	     fw=192.168.0.254:80	# via 3com OfficeConnect Remote 812
+#use=3com-oc-remote812,      fw=192.168.0.254:80        # via 3com OfficeConnect Remote 812
 #use=e-tech,                 fw=192.168.1.1:80          # via E-tech Router
 #use=cayman-3220h,           fw=192.168.0.1:1080        # via Cayman 3220-H DSL Router
 #
-#fw-login=admin,             fw-password=XXXXXX		# FW login and password
+#fw-login=admin,             fw-password=XXXXXX         # FW login and password
 #
 ## To obtain an IP address from FW status page (using fw-login, fw-password)
 #use=fw, fw=192.168.1.254/status.htm, fw-skip='IP Address' # found after IP Address
@@ -57,55 +57,55 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 ## get banned from their service.
 #use=web, web=checkip.dyndns.org/, web-skip='IP Address' # found after IP Address
 #
-#use=ip,                     ip=127.0.0.1	# via static IP's
-#use=if,                     if=eth0		# via interfaces
-#use=web					# via web
+#use=ip,                     ip=127.0.0.1       # via static IP's
+#use=if,                     if=eth0            # via interfaces
+#use=web                                        # via web
 #
-#protocol=dyndns2				# default protocol
-#proxy=fasthttp.sympatico.ca:80			# default proxy
-#server=members.dyndns.org			# default server
-#server=members.dyndns.org:8245			# default server (bypassing proxies)
+#protocol=dyndns2                               # default protocol
+#proxy=fasthttp.sympatico.ca:80                 # default proxy
+#server=members.dyndns.org                      # default server
+#server=members.dyndns.org:8245                 # default server (bypassing proxies)
 
-#login=your-login				# default login
-#password=test					# default password
-#mx=mx.for.your.host				# default MX
-#backupmx=yes|no				# host is primary MX?
-#wildcard=yes|no				# add wildcard CNAME?
+#login=your-login                               # default login
+#password=test                                  # default password
+#mx=mx.for.your.host                            # default MX
+#backupmx=yes|no                                # host is primary MX?
+#wildcard=yes|no                                # add wildcard CNAME?
 
 ##
 ## dyndns.org dynamic addresses
 ##
 ## (supports variables: wildcard,mx,backupmx)
 ##
-# server=members.dyndns.org,		\
-# protocol=dyndns2			\
+# server=members.dyndns.org,            \
+# protocol=dyndns2                      \
 # your-dynamic-host.dyndns.org
 
 ##
 ## ZoneEdit (zoneedit.com)
 ##
-# server=dynamic.zoneedit.com, 		\
-# protocol=zoneedit1,			\
-# login=your-zoneedit-login,  		\
-# password=your-zoneedit-password	\
+# server=dynamic.zoneedit.com,          \
+# protocol=zoneedit1,                   \
+# login=your-zoneedit-login,            \
+# password=your-zoneedit-password       \
 # your.any.domain,your-2nd.any.dom
 
 ##
 ## EasyDNS (easydns.com)
 ##
-# server=members.easydns.com, 		\
-# protocol=easydns,			\
-# login=your-easydns-login,  		\
-# password=your-easydns-password	\
+# server=members.easydns.com,           \
+# protocol=easydns,                     \
+# login=your-easydns-login,             \
+# password=your-easydns-password        \
 # your.any.domain,your-2nd.any.domain
 
 ##
 ## dslreports.com dynamic-host monitoring
 ##
-# server=members.dslreports.com		\
-# protocol=dslreports1,			\
-# login=dslreports-login,		\
-# password=dslreports-password		\
+# server=members.dslreports.com         \
+# protocol=dslreports1,                 \
+# login=dslreports-login,               \
+# password=dslreports-password          \
 # dslreports-unique-id
 
 ##
@@ -113,16 +113,16 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 ##
 # use=web, web=members.orgdns.org/nic/ip
 # protocol=dyndns2
-# server=www.orgdns.org 		\
-# login=yourLoginName 			\
-# password=yourPassword 		\
+# server=www.orgdns.org                 \
+# login=yourLoginName                   \
+# password=yourPassword                 \
 # yourSubdomain.orgdns.org
 
 ##
 ## NameCheap (namecheap.com)
 ##
 # protocol=namecheap,                     \
-# server=dynamicdns.park-your-domain.com,	\
+# server=dynamicdns.park-your-domain.com, \
 # login=example.com,                      \
 # password=example.com-password           \
 # subdomain.example.com
@@ -169,12 +169,12 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 ##
 ## CloudFlare (www.cloudflare.com)
 ##
-#protocol=cloudflare,        \
-#zone=domain.tld,            \
-#ttl=1,                      \
-#login=your-login-email,     \ # Only needed if you are using your global API key. If you are using an API token, set it to "token" (without double quotes).
-#password=APIKey             \ # This is either your global API key, or an API token. If you are using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
-#domain.tld,my.domain.tld
+# protocol=cloudflare,        \
+# zone=domain.tld,            \
+# ttl=1,                      \
+# login=your-login-email,     \ # Only needed if you are using your global API key. If you are using an API token, set it to "token" (without double quotes).
+# password=APIKey             \ # This is either your global API key, or an API token. If you are using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
+# domain.tld,my.domain.tld
 
 ##
 ## Gandi (gandi.net)
@@ -244,23 +244,23 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 ##
 ## nsupdate.info IPV4(https://www.nsupdate.info)
 ##
-#use=web, web=http://ipv4.nsupdate.info/myip
-#protocol=dyndns2
-#server=ipv4.nsupdate.info
-#login=domain.nsupdate.info
-#password='123'
-#domain.nsupdate.info
+# use=web, web=http://ipv4.nsupdate.info/myip
+# protocol=dyndns2
+# server=ipv4.nsupdate.info
+# login=domain.nsupdate.info
+# password='123'
+# domain.nsupdate.info
 
 ##
 ## nsupdate.info IPV6 (https://www.nsupdate.info)
 ## ddclient releases <= 3.8.1 do not support IPv6
 ##
-#usev6=if, if=eth0
-#protocol=dyndns2
-#server=ipv6.nsupdate.info
-#login=domain.nsupdate.info
-#password='123'
-#domain.nsupdate.info
+# usev6=if, if=eth0
+# protocol=dyndns2
+# server=ipv6.nsupdate.info
+# login=domain.nsupdate.info
+# password='123'
+# domain.nsupdate.info
 
 ##
 ## Yandex.Mail for Domain (domain.yandex.com)
@@ -314,17 +314,17 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 ##
 ## dnsexit (www.dnsexit.com)
 ##
-#protocol=dnsexit,                                            \
-#login=myusername,                                            \
-#password=mypassword,                                         \
-#subdomain-1.domain.com,subdomain-2.domain.com
+# protocol=dnsexit,                                            \
+# login=myusername,                                            \
+# password=mypassword,                                         \
+# subdomain-1.domain.com,subdomain-2.domain.com
 
 ##
 ## dnsexit2 (API method www.dnsexit.com)
 ##
-#protocol=dnsexit2
-#password=MyAPIKey
-#subdomain-1.domain.com,subdomain-2.domain.com
+# protocol=dnsexit2
+# password=MyAPIKey
+# subdomain-1.domain.com,subdomain-2.domain.com
 
 ##
 ## domeneshop (www.domeneshop.no)
@@ -360,10 +360,10 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 ##
 ## DigitalOcean (www.digitalocean.com)
 ##
-#protocol=digitalocean, \
-#zone=example.com,      \
-#password=api-token     \
-#example.com,sub.example.com
+# protocol=digitalocean, \
+# zone=example.com,      \
+# password=api-token     \
+# example.com,sub.example.com
 
 ##
 ## Infomaniak (www.infomaniak.com)

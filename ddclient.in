@@ -1838,6 +1838,7 @@ sub _read_config {
 
     return $content;
 }
+
 ######################################################################
 ## init_config -
 ######################################################################
@@ -2020,18 +2021,13 @@ sub init_config {
 sub process_args {
     my @spec  = ();
     my $usage = "";
-
     for (@_) {
         if (ref $_) {
             my ($key, $specifier, $arg_usage) = @$_;
             my $value = default($key);
-
             push @spec, $key . $specifier;
-
             $opt{$key} //= undef;
-
             next unless $arg_usage;
-
             $usage .= "  $arg_usage";
             if (defined($value) && $value ne '') {
                 $usage .= " (default: ";
@@ -3011,7 +3007,7 @@ sub get_default_interface {
     my @list = split(/\n/, $reply);
     @list = grep(/^default|^(?:0\.){3}0|^::\/0/, @list); # Select 'default' or '0.0.0.0' or '::/0'
     return undef if (scalar(@list) == 0);
-    debug("Default routes found for IPv%s :\n%s", $ipver, join("\n",@list));
+    debug("Default routes found for IPv%s:\n%s", $ipver, join("\n", @list));
 
     # now check each interface to make sure it is global (not loopback).
     for my $line (@list) {
