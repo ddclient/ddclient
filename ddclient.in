@@ -1540,6 +1540,11 @@ sub write_recap {
     my ($file) = @_;
 
     for my $h (keys %config) {
+        # nic_updateable (called from update_nics for each host) sets `$config{$h}{update}`
+        # according to whether an update was attempted.
+        #
+        # TODO: Why are different variables saved to the recap depending on whether an update was
+        # attempted or not?  Shouldn't the same variables be saved every time?
         if (!exists $recap{$h} || $config{$h}{'update'}) {
             my $vars = $protocols{$config{$h}{protocol}}{variables};
             for my $v (keys(%$vars)) {
@@ -1602,6 +1607,8 @@ sub read_recap {
 
         for my $h (keys(%recap)) {
             next if !exists($config->{$h});
+            # TODO: Why is this limited to this set of variables?  Why not copy every recap var
+            # defined for the host's protocol?
             for (qw(atime mtime wtime ip ipv4 ipv6 status status-ipv4 status-ipv6)) {
                 # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
                 # original intention behind this?  To copy %recap values into %config?  If so, is
@@ -1760,6 +1767,8 @@ sub _read_config {
         }
 
         ## remove comments
+        # TODO: This makes it impossible to include '#' in keys or values except as permitted by
+        # the special password parsing above.
         s/#.*//;
 
         ## Handle continuation lines
@@ -1778,6 +1787,8 @@ sub _read_config {
 
         s/^\s+//;     # remove leading white space
         s/\s+$//;     # remove trailing white space
+        # TODO: This makes it impossible to include multiple consecutive spaces, tabs, etc. in keys
+        # or values.
         s/\s+/ /g;    # canonify
         next if /^$/;
 
@@ -1799,6 +1810,7 @@ sub _read_config {
                 # Set the value to the value of the environment variable
                 $locals{$1} = $ENV{$locals{$k}};
                 # Remove the '_env' suffix from the key
+                # TODO: Shouldn't the *_env entry be deleted from %locals?
                 $k = $1;
             }
 
@@ -1808,6 +1820,8 @@ sub _read_config {
                 delete $locals{$k};
                 next;
             }
+            # TODO: This might grab an arbitrary protocol-specific variable definition, which could
+            # cause surprising behavior.
             my $def = $variables{'merged'}{$k};
             my $value = check_value($locals{$k}, $def);
             if (!defined($value)) {
@@ -1872,24 +1886,36 @@ sub init_config {
 
     ## infer the IP strategy if possible
     if (!$opt{'use'}) {
+        # TODO: I don't think these have any effect.  The value is not copied into the
+        # host-specific %config settings, and $config{$h}{use} is initialized to the variable
+        # default ("ip"), not set to undef, so opt() won't fall back to this.
         $opt{'use'} = 'web' if ($opt{'web'});
         $opt{'use'} = 'if'  if ($opt{'if'});
         $opt{'use'} = 'ip'  if ($opt{'ip'});
     }
     ## infer the IPv4 strategy if possible
     if (!$opt{'usev4'}) {
+        # TODO: I don't think these have any effect.  The value is not copied into the
+        # host-specific %config settings, and $config{$h}{usev4} is initialized to the variable
+        # default ("disabled"), not set to undef, so opt() won't fall back to this.
         $opt{'usev4'} = 'webv4' if ($opt{'webv4'});
         $opt{'usev4'} = 'ifv4'  if ($opt{'ifv4'});
         $opt{'usev4'} = 'ipv4'  if ($opt{'ipv4'});
     }
     ## infer the IPv6 strategy if possible
     if (!$opt{'usev6'}) {
+        # TODO: I don't think these have any effect.  The value is not copied into the
+        # host-specific %config settings, and $config{$h}{usev6} is initialized to the variable
+        # default ("disabled"), not set to undef, so opt() won't fall back to this.
         $opt{'usev6'} = 'webv6' if ($opt{'webv6'});
         $opt{'usev6'} = 'ifv6'  if ($opt{'ifv6'});
         $opt{'usev6'} = 'ipv6'  if ($opt{'ipv6'});
     }
 
     ## sanity check
+    # TODO: I don't think these have any effect.  The values are not copied into the host-specific
+    # %config settings, and $config{$h}{$opt} is initialized to the non-undef variable default so
+    # opt() won't fall back to these.
     $opt{'max-interval'}       = min(interval(opt('max-interval')), interval(default('max-interval')));
     $opt{'min-interval'}       = max(interval(opt('min-interval')), interval(default('min-interval')));
     $opt{'min-error-interval'} = max(interval(opt('min-error-interval')), interval(default('min-error-interval')));
@@ -1911,6 +1937,7 @@ sub init_config {
                 warning("'$name' is deprecated and does nothing");
                 next;
             }
+            # TODO: Shouldn't *_env options be processed like _read_config does?
             $options{$name} = $var;
         }
         ## determine hosts specified with --host
@@ -1928,20 +1955,20 @@ sub init_config {
             delete $options{'host'};
         }
         ## merge options into host definitions or globals
+        # TODO: Keys and values should be validated before mutating %config or %globals.
         if (@hosts) {
             for my $h (@hosts) {
                 $config{$h} = {%{$config{$h} // {}}, %options, 'host' => $h};
             }
             $opt{'host'} = join(',', @hosts);
         } else {
+            # TODO: Why not merge the values into %opt?
             %globals = (%globals, %options);
         }
     }
 
     ## override global options with those on the command-line.
     for my $o (keys %opt) {
-        # TODO: Isn't $opt{$o} guaranteed to be defined?  Otherwise $o wouldn't appear in the keys
-        # of %opt, right?
         # TODO: Why is this limited to $variables{'global-defaults'}?  Why not
         # $variables{'merged'}?
         if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
@@ -1949,6 +1976,9 @@ sub init_config {
             # %opt doesn't have a value, so this shouldn't be necessary.
             $globals{$o} = $opt{$o};
         }
+        # TODO: Why aren't host configs updated with command-line values (except for $opt{options}
+        # handled above)?  Shouldn't command-line values always override config file values (even
+        # if they are not associated with a host via `--host=` or `--options=host=`)?
     }
 
     ## sanity check
@@ -1962,7 +1992,9 @@ sub init_config {
     if (opt('host')) {
         @hosts = split_by_comma($opt{'host'});
     }
-    # TODO: This function is called before the recap file is read.  How is this supposed to work?
+    # TODO: The first two times init_config() is called the cache file has not been read yet, so
+    # this will not filter out any hosts and thus updates will not be limited to non-good hosts as
+    # intended.
     if (opt('retry')) {
         @hosts = grep(($recap{$_}{'status'} // '') ne 'good', keys(%recap));
     }
@@ -1972,11 +2004,19 @@ sub init_config {
     map { $hosts{$_} = undef } @hosts;
     map { delete $config{$_} unless exists $hosts{$_} } keys %config;
 
+    # TODO: Why aren't the hosts specified by --host added to %config except when --options is also
+    # given?
+
     ## sanity check..
+    # TODO: The code below doesn't look like a mere "sanity check", so I'm guessing the above
+    # comment is out of date.  Figure out what this code is actually doing and refactor to improve
+    # the readability so that a comment isn't necessary.
     ## make sure config entries have all defaults and they meet minimums
     ## first the globals...
     for my $k (keys %globals) {
         # Make sure any _env suffixed variables look at their original entry
+        # TODO: Didn't _read_config already handle *_env?  Or is this needed to handle
+        # the --options command-line option whose values were merged into %globals above?
         $k = $1 if $k =~ /^(.*)_env$/;
 
         # TODO: This might grab an arbitrary protocol-specific variable, which could cause
@@ -1990,9 +2030,12 @@ sub init_config {
         # TODO: Isn't $globals{$k} guaranteed to be defined here?  Otherwise $k wouldn't appear in
         # %globals.
         my $ovalue = $globals{$k} // $def->{'default'};
-        # TODO: Didn't _read_config already check the value?  Or is the purpose of this to check
-        # the value of command-line options ($opt{$k}) which were merged into %globals above?
+        # _read_config already checked any value from the config file, so the purpose of this check
+        # is to validate command-line options which were merged into %globals above.
+        # TODO: Move this check to where the command-line options are actually processed.
         my $value = check_value($ovalue, $def);
+        # TODO: If the variable is not required, the value is set to undef but no warning is
+        # logged.  Is that intentional?
         if ($def->{'required'} && !defined $value) {
             # TODO: What's the point of this?  The opt() function will fall back to the default
             # value if $globals{$k} is undefined.
@@ -2018,13 +2061,26 @@ sub init_config {
         my $svars = $protocols{$proto}{'variables'};
         my $conf = {'host' => $h, 'protocol' => $proto};
 
+        # TODO: This silently ignores unknown options passed via --options.
         for my $k (keys %$svars) {
             # Make sure any _env suffixed variables look at their original entry
             $k = $1 if $k =~ /^(.*)_env$/;
 
             my $def = $svars->{$k};
+            # TODO: Why doesn't this try %opt and %globals before falling back to the variable
+            # default?  By ignoring %opt and %globals, `--options` will not have any effect on any
+            # hosts that are not specified on the command line (via `--host=a,b` and/or
+            # `--options=host=c,d`).
+            # TODO: Why not just leave $conf->{$k} undef?  Then opt() would automatically fall back
+            # to %opt, %globals, or the variable default.
             my $ovalue = $config{$h}{$k} // $def->{'default'};
+            # _read_config already checked any value from the config file, so the purpose of this
+            # check is to validate command-line options from --options which were merged into
+            # $config{$h} above.
+            # TODO: Move this check to where --options is actually processed.
             my $value = check_value($ovalue, $def);
+            # TODO: If the variable is not required, the value is set to undef but no warning is
+            # logged.  Is that intentional?
             if ($def->{'required'} && !defined $value) {
                 $ovalue //= '(not set)';
                 warning("skipping host $h: invalid $def->{type} variable value '$k=$ovalue'");
@@ -2321,17 +2377,24 @@ sub split_by_comma {
 sub default {
     my $v = shift;
     return undef if !defined($variables{'merged'}{$v});
+    # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
+    # surprising behavior.
     return $variables{'merged'}{$v}{'default'};
 }
 sub minimum {
     my $v = shift;
     return undef if !defined($variables{'merged'}{$v});
+    # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
+    # surprising behavior.
     return $variables{'merged'}{$v}{'minimum'};
 }
 sub opt {
     my $v = shift;
     my $h = shift;
     return $config{$h}{$v} if defined($h) && defined($config{$h}{$v});
+    # TODO: Why check %opt before %globals?  Valid variables from %opt are merged into %globals by
+    # init_config(), so it shouldn't be necessary.  Also, it runs the risk of collision with a
+    # non-variable command line option like `--version`, `--help`, etc.
     return $opt{$v} // $globals{$v} // default($v);
 }
 sub min {
