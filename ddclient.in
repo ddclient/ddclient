@@ -1248,12 +1248,12 @@ my @opt = (
 );
 
 sub main {
-    my $opt_usage = process_args(@opt);
+    process_args(@opt);
     $saved_recap = '';
     %saved_opt = %opt;
     $result = 'OK';
     if (opt('help')) {
-        printf "%s\n", $opt_usage;
+        print(usage(@opt), "\n");
         $opt{'version'}('', '');
     }
 
@@ -2093,18 +2093,12 @@ sub init_config {
     }
 }
 
-######################################################################
-## process_args -
-######################################################################
-sub process_args {
-    my @spec  = ();
+sub usage {
     my $usage = "";
     for (@_) {
         if (ref $_) {
             my ($key, $specifier, $arg_usage) = @$_;
             my $value = default($key);
-            push @spec, $key . $specifier;
-            $opt{$key} //= undef;
             next unless $arg_usage;
             $usage .= "  $arg_usage";
             if (defined($value) && $value ne '') {
@@ -2123,10 +2117,23 @@ sub process_args {
         }
         $usage .= "\n";
     }
+    return $usage;
+}
+
+######################################################################
+## process_args -
+######################################################################
+sub process_args {
+    my @spec = ();
+    for (@_) {
+        next if !ref($_);
+        my ($key, $specifier) = @$_;
+        push @spec, $key . $specifier;
+        $opt{$key} //= undef;
+    }
     if (!GetOptions(\%opt, @spec)) {
         $opt{"help"} = 1;
     }
-    return $usage;
 }
 
 ######################################################################
