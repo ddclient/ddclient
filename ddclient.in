@@ -1228,7 +1228,6 @@ my @opt = (
 );
 
 sub main {
-    ## process args
     my $opt_usage = process_args(@opt);
     $saved_recap = '';
     %saved_opt = %opt;
@@ -2027,15 +2026,12 @@ sub process_args {
             my ($key, $specifier, $arg_usage) = @$_;
             my $value = default($key);
 
-            ## add a option specifier
             push @spec, $key . $specifier;
 
-            ## define the default value which can be overwritten later
             $opt{$key} //= undef;
 
             next unless $arg_usage;
 
-            ## add a line to the usage;
             $usage .= "  $arg_usage";
             if (defined($value) && $value ne '') {
                 $usage .= " (default: ";
@@ -2053,7 +2049,6 @@ sub process_args {
         }
         $usage .= "\n";
     }
-    ## process the arguments
     if (!GetOptions(\%opt, @spec)) {
         $opt{"help"} = 1;
     }
