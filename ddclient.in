@@ -614,7 +614,6 @@ our %variables = (
         'debug'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'verbose'             => setv(T_BOOL,  0, 0, 0,                    undef),
         'quiet'               => setv(T_BOOL,  0, 0, 0,                    undef),
-        'help'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'test'                => setv(T_BOOL,  0, 0, 0,                    undef),
 
         'postscript'          => setv(T_POSTS, 0, 0, undef,                undef),
@@ -1291,11 +1290,6 @@ sub main {
         $now    = time;
         $result = 'OK';
         %opt    = %saved_opt;
-        if (opt('help')) {
-            *STDERR = *STDOUT;
-            printf("Help found");
-        }
-
         read_config($opt{'file'} // default('file'), \%config, \%globals);
         init_config();
         read_recap(opt('cache'), \%recap);
