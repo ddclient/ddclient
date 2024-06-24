@@ -1245,17 +1245,16 @@ my @opt = (
     "",
     nic_examples(),
 );
+$opt{'help'} = sub {
+    print(usage(@opt), "\n");
+    $opt{'version'}('', '');
+};
 
 sub main {
     process_args(@opt);
     $saved_recap = '';
     %saved_opt = %opt;
     $result = 'OK';
-    if (opt('help')) {
-        print(usage(@opt), "\n");
-        $opt{'version'}('', '');
-    }
-
     ## read config file because 'daemon' mode may be defined there.
     read_config($opt{'file'} // default('file'), \%config, \%globals);
     init_config();
@@ -2126,7 +2125,7 @@ sub process_args {
         $opt{$key} //= undef;
     }
     if (!GetOptions(\%opt, @spec)) {
-        $opt{"help"} = 1;
+        $opt{'help'}('', '');
     }
 }
 
