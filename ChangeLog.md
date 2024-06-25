@@ -81,6 +81,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#670](https://github.com/ddclient/ddclient/pull/670)
   * Fixed DNSExit provider when configured with a zone and non-identical
     hostname.  [#673](https://github.com/ddclient/ddclient/issues/673)
+  * `infomaniak`: Fixed frequent forced updates after 25 days (`max-interval`).
+    [#691](https://github.com/ddclient/ddclient/issues/691)
+  * `regfishde`: Fixed IPv6 support.
+    [#691](https://github.com/ddclient/ddclient/issues/691)
 
 ## 2023-11-23 v3.11.2
 
