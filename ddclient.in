@@ -5970,7 +5970,7 @@ sub nic_henet_update {
             verbose("UPDATE:", "updating %s", $h);
             my $reply = geturl(
                 proxy => opt('proxy'),
-                url => "http://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
+                url => "https://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
                 login => $config{$h}{'login'},
                 password => $config{$h}{'password'},
             ) // '';
