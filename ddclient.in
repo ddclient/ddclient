@@ -921,6 +921,7 @@ my %protocols = (
         'examples'   => \&nic_henet_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
+            'login' => undef,
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
             'server'       => setv(T_FQDNP, 1, 0, 'dyn.dns.he.net', undef),
         },
@@ -5936,14 +5937,12 @@ The 'henet' protocol is used by DNS service offered by dns.he.net.
 
 Configuration variables applicable to the 'henet' protocol are:
   protocol=henet               ##
-  login=fully.qualified.host   ## the host registered with the service
   password=service-password    ## the password provided by the admin interface
   fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=henet,                                              \\
-  login=myhost.example.com,                                    \\
   password=my-genereated-password                              \\
   myhost.example.com
 EoEXAMPLE
@@ -5971,7 +5970,7 @@ sub nic_henet_update {
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => "https://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
-                login => $config{$h}{'login'},
+                login => $h,
                 password => $config{$h}{'password'},
             ) // '';
             if ($reply eq '') {

@@ -226,7 +226,6 @@ ssl=yes					# use ssl-support.  Works with
 ## Hurricane Electric (dns.he.net)
 ##
 # protocol=henet,                       \
-# login=mmyhost.example.com,            \
 # password=my-genereated-password       \
 # myhost.example.com
 
