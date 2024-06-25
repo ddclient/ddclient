@@ -5978,37 +5978,22 @@ sub nic_henet_update {
                 next;
             }
             next if !header_ok($h, $reply);
-            my @reply = split /\n/, $reply;
-            my $state = 'header';
-            for my $line (@reply) {
-                if ($state eq 'header') {
-                    $state = 'body';
-                } elsif ($state eq 'body') {
-                    $state = 'results' if $line eq '';
-                } elsif ($state =~ /^results/) {
-                    $state = 'results2';
-                    my ($status, $returnedip) = split / /, lc $line;
-                    $config{$h}{"status-ipv$ipv"} = $status;
-                    if ($status eq 'good') {
-                        $config{$h}{"ipv$ipv"} = $returnedip;
-                        $config{$h}{'mtime'} = $now;
-                        success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $returnedip);
-                    } elsif (exists $errors{$status}) {
-                        if ($status eq 'nochg') {
-                            warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                            $config{$h}{"ipv$ipv"} = $returnedip;
-                            $config{$h}{'mtime'} = $now;
-                            $config{$h}{"status-ipv$ipv"} = 'good';
-                        } else {
-                            failed("updating %s: %s: %s", $h, $status, $errors{$status});
-                        }
-                    } else {
-                        failed("updating %s: unexpected status (%s)", $h, $line);
-                    }
+            (my $body = $reply) =~ s/.*?\n\n//s;
+            my ($line) = split(/\n/, $body, 2);
+            my ($status, $returnedip) = split(/ /, lc($line));
+            $status = 'good' if $status eq 'nochg';
+            $config{$h}{"status-ipv$ipv"} = $status;
+            if ($status ne 'good') {
+                if (exists($errors{$status})) {
+                    failed("updating %s: %s: %s", $h, $status, $errors{$status});
+                } else {
+                    failed("updating %s: unexpected status: %s", $h, $line);
                 }
+                next;
             }
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
-                if $state ne 'results2';
+            success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $returnedip);
+            $config{$h}{"ipv$ipv"} = $returnedip;
+            $config{$h}{'mtime'} = $now;
         }
     }
 }
