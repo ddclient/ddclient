@@ -5958,7 +5958,7 @@ sub nic_henet_update {
        'badauth' => 'Bad authorization (username or password)',
        'badsys' => 'The system parameter given was not valid',
        'nohost' => 'The hostname specified does not exist in the database',
-       'abuse', => 'The hostname specified is blocked for abuse',
+       'abuse' => 'The hostname specified is blocked for abuse',
        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
 
