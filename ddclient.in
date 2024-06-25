@@ -5955,11 +5955,11 @@ sub nic_henet_update {
     debug("\nnic_henet_update -------------------");
 
     my %errors = (
-       'badauth'  => 'Bad authorization (username or password)',
-       'badsys'   => 'The system parameter given was not valid',
-       'nohost'   => 'The hostname specified does not exist in the database',
-       'abuse',   => 'The hostname specified is blocked for abuse',
-       'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+       'badauth' => 'Bad authorization (username or password)',
+       'badsys' => 'The system parameter given was not valid',
+       'nohost' => 'The hostname specified does not exist in the database',
+       'abuse', => 'The hostname specified is blocked for abuse',
+       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
 
     for my $h (@_) {
@@ -5968,9 +5968,7 @@ sub nic_henet_update {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             info("Setting IPv%s address to %s for %s", $ipv, $ip, $h);
             verbose("UPDATE:", "updating %s", $h);
-
             my $url = "http://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip";
-
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
@@ -5982,41 +5980,30 @@ sub nic_henet_update {
                 next;
             }
             next if !header_ok($h, $reply);
-
-            my @reply      = split /\n/, $reply;
-            my $state      = 'header';
-
+            my @reply = split /\n/, $reply;
+            my $state = 'header';
             for my $line (@reply) {
                 if ($state eq 'header') {
                     $state = 'body';
-
                 } elsif ($state eq 'body') {
                     $state = 'results' if $line eq '';
-
                 } elsif ($state =~ /^results/) {
                     $state = 'results2';
-
                     my ($status, $returnedip) = split / /, lc $line;
-
                     $config{$h}{"status-ipv$ipv"} = $status;
-
                     if ($status eq 'good') {
-                        $config{$h}{"ipv$ipv"}  = $returnedip;
+                        $config{$h}{"ipv$ipv"} = $returnedip;
                         $config{$h}{'mtime'} = $now;
                         success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $returnedip);
-
                     } elsif (exists $errors{$status}) {
                         if ($status eq 'nochg') {
                             warning("updating %s: %s: %s", $h, $status, $errors{$status});
-
-                            $config{$h}{"ipv$ipv"}  = $returnedip;
-                            $config{$h}{'mtime'}  = $now;
+                            $config{$h}{"ipv$ipv"} = $returnedip;
+                            $config{$h}{'mtime'} = $now;
                             $config{$h}{"status-ipv$ipv"} = 'good';
-
                         } else {
                             failed("updating %s: %s: %s", $h, $status, $errors{$status});
                         }
-
                     } else {
                         failed("updating %s: unexpected status (%s)", $h, $line);
                     }
