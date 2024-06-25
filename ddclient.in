@@ -5968,10 +5968,9 @@ sub nic_henet_update {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             info("Setting IPv%s address to %s for %s", $ipv, $ip, $h);
             verbose("UPDATE:", "updating %s", $h);
-            my $url = "http://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip";
             my $reply = geturl(
                 proxy => opt('proxy'),
-                url => $url,
+                url => "http://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
                 login => $config{$h}{'login'},
                 password => $config{$h}{'password'},
             ) // '';
