@@ -2026,13 +2026,14 @@ sub init_config {
         # is to validate command-line options which were merged into %globals above.
         # TODO: Move this check to where the command-line options are actually processed.
         my $value = check_value($ovalue, $def);
-        # TODO: If the variable is not required, the value is set to undef but no warning is
-        # logged.  Is that intentional?
-        if ($def->{'required'} && !defined $value) {
-            # TODO: What's the point of this?  The opt() function will fall back to the default
-            # value if $globals{$k} is undefined.
-            $value = default($k);
-            warning("'%s=%s' is an invalid %s. (using default of %s)", $k, $ovalue, $def->{'type'}, $value);
+        if (!defined($value)) {
+            $ovalue //= '(not set)';
+            warning("ignoring invalid $def->{type} variable value '$k=$ovalue'");
+            if ($def->{'required'}) {
+                # TODO: What's the point of this?  The opt() function will fall back to the default
+                # value if $globals{$k} is undefined.
+                $value = default($k);
+            }
         }
         $globals{$k} = $value;
     }
@@ -2071,13 +2072,15 @@ sub init_config {
             # $config{$h} above.
             # TODO: Move this check to where --options is actually processed.
             my $value = check_value($ovalue, $def);
-            # TODO: If the variable is not required, the value is set to undef but no warning is
-            # logged.  Is that intentional?
-            if ($def->{'required'} && !defined $value) {
+            if (!defined($value)) {
                 $ovalue //= '(not set)';
-                warning("skipping host $h: invalid $def->{type} variable value '$k=$ovalue'");
-                delete $config{$h};
-                next HOST;
+                if ($def->{'required'}) {
+                    warning("skipping host $h: invalid $def->{type} variable value '$k=$ovalue'");
+                    delete $config{$h};
+                    next HOST;
+                } else {
+                    warning("host $h: ignoring invalid $def->{type} variable value '$k=$ovalue'");
+                }
             }
             $conf->{$k} = $value;
         }
