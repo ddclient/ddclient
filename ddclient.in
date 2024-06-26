@@ -8022,14 +8022,14 @@ sub nic_infomaniak_update {
             for my $url ($url1, $url2) {
                 info("trying update with %s", $url);
                 my $reply = geturl(proxy => opt('proxy'), url => $url);
-                if (!defined($reply) || !$reply) {
+                if (!$reply) {
                     info("could not update %s using url %s, trying next one", $h, $url);
                     next;
                 }
                 my ($status) = split / /, $reply, 1;
                 my ($updated, $msg) =
                     $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $reply));
-                if (defined $updated && $updated) {
+                if ($updated) {
                     info($msg);
                     $config{$h}{"ipv$v"} = $ip;
                     $config{$h}{'mtime'} = $now;
