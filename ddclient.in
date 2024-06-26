@@ -8019,9 +8019,10 @@ sub nic_infomaniak_update {
                 failed("could not update %s", $h);
                 next;
             }
-            my ($status) = split / /, $reply, 1;
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my ($status) = split(/ /, $body, 2);
             my ($ok, $msg) =
-                $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $reply));
+                $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $body));
             if (!$ok) {
                 failed($msg);
                 next;
