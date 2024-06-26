@@ -8019,10 +8019,9 @@ sub nic_infomaniak_update {
             $url2 .= "&myip=$ip";
             $url2 .= "&username=$config{$h}{'login'}";
             $url2 .= "&password=$config{$h}{'password'}";
-            my $reply;
             for my $url ($url1, $url2) {
                 info("trying update with %s", $url);
-                $reply = geturl(proxy => opt('proxy'), url => $url);
+                my $reply = geturl(proxy => opt('proxy'), url => $url);
                 if (!defined($reply) || !$reply) {
                     info("could not update %s using url %s, trying next one", $h, $url);
                     next;
