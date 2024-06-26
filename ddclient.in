@@ -1114,6 +1114,7 @@ my %protocols = (
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
+            'server' => undef,
         },
     },
     'emailonly' => {
