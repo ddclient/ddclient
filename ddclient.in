@@ -1292,14 +1292,6 @@ sub main {
         init_config();
         read_recap(opt('cache'), \%recap);
         print_info() if opt('debug') && opt('verbose');
-
-        fatal("invalid argument '--use=%s'; possible values are:\n%s",
-              opt('use'), join("\n", ip_strategies_usage()))
-            if defined(opt('use')) && !$ip_strategies{lc(opt('use'))};
-        fatal("invalid argument '--usev6=%s'; possible values are:\n%s",
-              opt('usev6'), join("\n", ipv6_strategies_usage()))
-            if defined(opt('usev6')) && !$ipv6_strategies{lc(opt('usev6'))};
-
         $daemon = opt('daemon');
 
         update_nics();
@@ -1864,6 +1856,15 @@ sub _read_config {
 ######################################################################
 sub init_config {
     %opt = %saved_opt;
+    # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
+    # surprising behavior.
+    for my $var (keys(%{$variables{'merged'}})) {
+        # TODO: Also validate $opt{'options'}.
+        next if !defined($opt{$var}) || ref($opt{$var});
+        if (!eval { $opt{$var} = check_value($opt{$var}, $variables{'merged'}{$var}); 1; }) {
+            fatal("invalid argument '--$var=$opt{$var}': $@");
+        }
+    }
 
     ##
     $opt{'quiet'} = 0 if opt('verbose');
@@ -1903,13 +1904,6 @@ sub init_config {
     $opt{'max-interval'}       = min(interval(opt('max-interval')), interval(default('max-interval')));
     $opt{'min-interval'}       = max(interval(opt('min-interval')), interval(default('min-interval')));
     $opt{'min-error-interval'} = max(interval(opt('min-error-interval')), interval(default('min-error-interval')));
-
-    $opt{'timeout'} = 0 if opt('timeout') < 0;
-
-    ## parse an interval expression (such as '5m') into number of seconds
-    $opt{'daemon'} = interval(opt('daemon')) if defined($opt{'daemon'});
-    ## make sure the interval isn't too short
-    $opt{'daemon'} = minimum('daemon') if opt('daemon') && opt('daemon') < minimum('daemon');
 
     ## define or modify host options specified on the command-line
     if (defined($opt{'options'})) {
@@ -2347,7 +2341,6 @@ sub sendmail {
 ######################################################################
 ##  split_by_comma
 ##  default
-##  minimum
 ##  opt
 ######################################################################
 sub split_by_comma {
@@ -2362,13 +2355,6 @@ sub default {
     # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
     # surprising behavior.
     return $variables{'merged'}{$v}{'default'};
-}
-sub minimum {
-    my $v = shift;
-    return undef if !defined($variables{'merged'}{$v});
-    # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
-    # surprising behavior.
-    return $variables{'merged'}{$v}{'minimum'};
 }
 sub opt {
     my $v = shift;
