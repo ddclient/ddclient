@@ -8022,15 +8022,14 @@ sub nic_infomaniak_update {
             my ($status) = split / /, $reply, 1;
             my ($ok, $msg) =
                 $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $reply));
-            if ($ok) {
-                success($msg);
-                $config{$h}{"ipv$v"} = $ip;
-                $config{$h}{'mtime'} = $now;
-                $config{$h}{"status-ipv$v"} = 'good';
-                next;
-            } else {
+            if (!$ok) {
                 failed($msg);
+                next;
             }
+            success($msg);
+            $config{$h}{"ipv$v"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-ipv$v"} = 'good';
         }
     }
 }
