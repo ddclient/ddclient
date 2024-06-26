@@ -7989,19 +7989,15 @@ EoEXAMPLE
 ######################################################################
 sub nic_infomaniak_update {
     debug("\nnic_infomaniak_update -------------------");
-
     for my $h (@_) {
         INFOMANIAK_IP_LOOP:
         for my $v (4, 6) {
             my $ip = delete $config{$h}{"wantipv$v"};
-
             if (!defined $ip) {
                 debug("ipv%d not wanted, skipping", $v);
                 next;
             }
-
             info("setting IP address to %s for %s", $ip, $h);
-
             # No change in IP => nochg <w.x.y.z>
             # Bad auth => badauth
             # Bad domain name => nohost
@@ -8014,20 +8010,16 @@ sub nic_infomaniak_update {
                 'nohost'  => (0, sprintf("Bad domain name %s or bad IP %s", $h, $ip)),
                 'badauth' => (0, sprintf("Bad authentication for %s", $h)),
             );
-
             my $url1 = "https://$config{$h}{'login'}:$config{$h}{'password'}";
             $url1 .= "\@infomaniak.com/nic/update";
             $url1 .= "?hostname=$h";
             $url1 .= "&myip=$ip";
-
             my $url2 = "https://infomaniak.com/nic/update";
             $url2 .= "?hostname=$h";
             $url2 .= "&myip=$ip";
             $url2 .= "&username=$config{$h}{'login'}";
             $url2 .= "&password=$config{$h}{'password'}";
-
             my $reply;
-
             for my $url ($url1, $url2) {
                 info("trying update with %s", $url);
                 $reply = geturl(proxy => opt('proxy'), url => $url);
@@ -8035,23 +8027,19 @@ sub nic_infomaniak_update {
                     info("could not update %s using url %s, trying next one", $h, $url);
                     next;
                 }
-
                 my ($status) = split / /, $reply, 1;
                 my ($updated, $msg) =
                     $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $reply));
-
                 if (defined $updated && $updated) {
                     info($msg);
                     $config{$h}{"ipv$v"} = $ip;
                     $config{$h}{'mtime'} = $now;
                     $config{$h}{"status-ipv$v"} = 'good';
                     next INFOMANIAK_IP_LOOP;
-                }
-                else {
+                } else {
                     warning($msg);
                 }
             }
-
             $config{$h}{"status-ipv$v"} = 'failed';
             failed("updating %s: could not update IP on Infomaniak", $h);
         }
