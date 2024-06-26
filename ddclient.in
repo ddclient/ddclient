@@ -8019,10 +8019,7 @@ sub nic_infomaniak_update {
                 login => $config{$h}{'login'},
                 password => $config{$h}{'password'},
             );
-            if (!$reply) {
-                failed("could not update %s", $h);
-                next;
-            }
+            next if !header_ok($h, $reply);
             (my $body = $reply) =~ s/^.*?\n\n//s;
             my ($status) = split(/ /, $body, 2);
             my ($ok, $msg) =
