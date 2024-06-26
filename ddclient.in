@@ -1810,13 +1810,11 @@ sub _read_config {
             # TODO: This might grab an arbitrary protocol-specific variable definition, which could
             # cause surprising behavior.
             my $def = $variables{'merged'}{$k};
-            my $value = check_value($locals{$k}, $def);
-            if (!defined($value)) {
-                warning("Invalid Value for keyword '%s' = '%s'", $k, $locals{$k});
+            if (!eval { $locals{$k} = check_value($locals{$k}, $def); 1; }) {
+                warning("invalid variable value '$k=$locals{$k}': $@");
                 delete $locals{$k};
                 next;
             }
-            $locals{$k} = $value;
         }
         %passwords = ();
         if (exists($locals{'host'})) {
@@ -2020,17 +2018,17 @@ sub init_config {
         # _read_config already checked any value from the config file, so the purpose of this check
         # is to validate command-line options which were merged into %globals above.
         # TODO: Move this check to where the command-line options are actually processed.
-        my $value = check_value($ovalue, $def);
-        if (!defined($value)) {
+        if (!eval { $globals{$k} = check_value($ovalue, $def); 1; }) {
             $ovalue //= '(not set)';
-            warning("ignoring invalid $def->{type} variable value '$k=$ovalue'");
+            warning("ignoring invalid variable value '$k=$ovalue': $@");
             if ($def->{'required'}) {
                 # TODO: What's the point of this?  The opt() function will fall back to the default
                 # value if $globals{$k} is undefined.
-                $value = default($k);
+                $globals{$k} = default($k);
+            } else {
+                $globals{$k} = undef;
             }
         }
-        $globals{$k} = $value;
     }
 
     ## now the host definitions...
@@ -2068,18 +2066,17 @@ sub init_config {
             # check is to validate command-line options from --options which were merged into
             # $config{$h} above.
             # TODO: Move this check to where --options is actually processed.
-            my $value = check_value($ovalue, $def);
-            if (!defined($value)) {
+            if (!eval { $conf->{$k} = check_value($ovalue, $def); 1; }) {
                 $ovalue //= '(not set)';
                 if ($def->{'required'}) {
-                    warning("skipping host $h: invalid $def->{type} variable value '$k=$ovalue'");
+                    warning("skipping host $h: invalid variable value '$k=$ovalue': $@");
                     delete $config{$h};
                     next HOST;
                 } else {
-                    warning("host $h: ignoring invalid $def->{type} variable value '$k=$ovalue'");
+                    warning("host $h: ignoring invalid variable value '$k=$ovalue': $@");
+                    $conf->{$k} = undef;
                 }
             }
-            $conf->{$k} = $value;
         }
         $config{$h} = $conf;
     }
@@ -2558,7 +2555,8 @@ sub interval_expired {
 ## check_value
 ######################################################################
 sub check_value {
-    my ($value, $def) = @_;
+    my ($orig, $def) = @_;
+    my $value = $orig;
     my $type     = $def->{'type'};
     my $min      = $def->{'minimum'};
     my $required = $def->{'required'};
@@ -2568,14 +2566,14 @@ sub check_value {
     } elsif (!defined($value) && $required) {
         # None of the types have 'undef' as a valid value, so check definedness once here for
         # convenience.
-        return undef;
+        die("$type is required\n");
 
     } elsif ($type eq T_DELAY) {
         $value = interval($value);
         $value = $min if defined($value) && defined($min) && $value < $min;
 
     } elsif ($type eq T_NUMBER) {
-        return undef if $value !~ /^\d+$/;
+        die("invalid $type: $orig\n") if $value !~ /^\d+$/;
         $value = $min if defined($min) && $value < $min;
 
     } elsif ($type eq T_BOOL) {
@@ -2584,57 +2582,58 @@ sub check_value {
         } elsif ($value =~ /^(n(o)?|f(alse)?|0)$/i) {
             $value = 0;
         } else {
-            return undef;
+            die("invalid $type: $orig\n");
         }
     } elsif ($type eq T_FQDN) {
         $value = lc $value;
-        return undef if ($value ne '' || $required) && $value !~ /[^.]\.[^.]/;
+        die("invalid $type: $orig\n") if ($value ne '' || $required) && $value !~ /[^.]\.[^.]/;
 
     } elsif ($type eq T_FQDNP) {
         $value = lc $value;
-        return undef if $value !~ /[^.]\.[^.].*(:\d+)?$/;
+        die("invalid $type: $orig\n") if $value !~ /[^.]\.[^.].*(:\d+)?$/;
 
     } elsif ($type eq T_PROTO) {
         $value = lc $value;
-        return undef if !exists $protocols{$value};
+        die("invalid $type: $orig\n") if !exists $protocols{$value};
 
     } elsif ($type eq T_URL) {
-        return undef if $value !~ qr{^(?i:https?://)?[^./]+(\.[^./]+)+(:\d+)?(/[^/]+)*/?$};
+        die("invalid $type: $orig\n")
+            if $value !~ qr{^(?i:https?://)?[^./]+(\.[^./]+)+(:\d+)?(/[^/]+)*/?$};
 
     } elsif ($type eq T_USE) {
         $value = lc $value;
         $value = 'disabled' if $value eq 'no';  # backwards compatibility
-        return undef if !exists $ip_strategies{$value};
+        die("invalid $type: $orig\n") if !exists($ip_strategies{$value});
 
     } elsif ($type eq T_USEV4) {
         $value = lc $value;
-        return undef if !exists $ipv4_strategies{$value};
+        die("invalid $type: $orig\n") if !exists($ipv4_strategies{$value});
 
     } elsif ($type eq T_USEV6) {
         $value = lc $value;
         $value = 'disabled' if $value eq 'no';  # backwards compatibility
-        return undef if !exists $ipv6_strategies{$value};
+        die("invalid $type: $orig\n") if !exists($ipv6_strategies{$value});
 
     } elsif ($type eq T_FILE) {
-        return undef if $value eq "";
+        die("invalid $type: $orig\n") if $value eq "";
 
     } elsif ($type eq T_IF) {
-        return undef if $value !~ /^[a-zA-Z0-9:._-]+$/;
+        die("invalid $type: $orig\n") if $value !~ /^[a-zA-Z0-9:._-]+$/;
 
     } elsif ($type eq T_PROG) {
-        return undef if $value eq "";
+        die("invalid $type: $orig\n") if $value eq "";
 
     } elsif ($type eq T_LOGIN) {
-        return undef if $value eq "";
+        die("invalid $type: $orig\n") if $value eq "";
 
     } elsif ($type eq T_IP) {
-        return undef if !is_ipv4($value) && !is_ipv6($value);
+        die("invalid $type: $orig\n") if !is_ipv4($value) && !is_ipv6($value);
 
     } elsif ($type eq T_IPV4) {
-        return undef if !is_ipv4($value);
+        die("invalid $type: $orig\n") if !is_ipv4($value);
 
     } elsif ($type eq T_IPV6) {
-        return undef if !is_ipv6($value);
+        die("invalid $type: $orig\n") if !is_ipv6($value);
 
     }
     return $value;
