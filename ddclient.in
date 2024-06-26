@@ -3791,6 +3791,10 @@ sub nic_updateable {
 ######################################################################
 sub header_ok {
     my ($host, $line) = @_;
+    if (!$line) {
+        failed("updating %s: no response from server", $host);
+        return 0;
+    }
     $line =~ s/\r?\n.*//s;
     my ($code, $msg) = ($line =~ qr%^\s*HTTP/.*\s+(\d+)\s*(?:\s+([^\s].*))?$%i);
     if (!defined($code)) {
