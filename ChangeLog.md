@@ -83,6 +83,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     hostname.  [#673](https://github.com/ddclient/ddclient/issues/673)
   * `infomaniak`: Fixed frequent forced updates after 25 days (`max-interval`).
     [#691](https://github.com/ddclient/ddclient/issues/691)
+  * `infomaniak`: Fixed incorrect parsing of server response.
+    [#692](https://github.com/ddclient/ddclient/issues/692)
   * `regfishde`: Fixed IPv6 support.
     [#691](https://github.com/ddclient/ddclient/issues/691)
 

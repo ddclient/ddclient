@@ -1114,6 +1114,7 @@ my %protocols = (
         'examples'   => \&nic_infomaniak_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
+            'server' => undef,
         },
     },
     'emailonly' => {
@@ -3791,6 +3792,10 @@ sub nic_updateable {
 ######################################################################
 sub header_ok {
     my ($host, $line) = @_;
+    if (!$line) {
+        failed("updating %s: no response from server", $host);
+        return 0;
+    }
     $line =~ s/\r?\n.*//s;
     my ($code, $msg) = ($line =~ qr%^\s*HTTP/.*\s+(\d+)\s*(?:\s+([^\s].*))?$%i);
     if (!defined($code)) {
@@ -7989,19 +7994,14 @@ EoEXAMPLE
 ######################################################################
 sub nic_infomaniak_update {
     debug("\nnic_infomaniak_update -------------------");
-
     for my $h (@_) {
-        INFOMANIAK_IP_LOOP:
         for my $v (4, 6) {
             my $ip = delete $config{$h}{"wantipv$v"};
-
             if (!defined $ip) {
                 debug("ipv%d not wanted, skipping", $v);
                 next;
             }
-
             info("setting IP address to %s for %s", $ip, $h);
-
             # No change in IP => nochg <w.x.y.z>
             # Bad auth => badauth
             # Bad domain name => nohost
@@ -8014,46 +8014,25 @@ sub nic_infomaniak_update {
                 'nohost'  => (0, sprintf("Bad domain name %s or bad IP %s", $h, $ip)),
                 'badauth' => (0, sprintf("Bad authentication for %s", $h)),
             );
-
-            my $url1 = "https://$config{$h}{'login'}:$config{$h}{'password'}";
-            $url1 .= "\@infomaniak.com/nic/update";
-            $url1 .= "?hostname=$h";
-            $url1 .= "&myip=$ip";
-
-            my $url2 = "https://infomaniak.com/nic/update";
-            $url2 .= "?hostname=$h";
-            $url2 .= "&myip=$ip";
-            $url2 .= "&username=$config{$h}{'login'}";
-            $url2 .= "&password=$config{$h}{'password'}";
-
-            my $reply;
-
-            for my $url ($url1, $url2) {
-                info("trying update with %s", $url);
-                $reply = geturl(proxy => opt('proxy'), url => $url);
-                if (!defined($reply) || !$reply) {
-                    info("could not update %s using url %s, trying next one", $h, $url);
-                    next;
-                }
-
-                my ($status) = split / /, $reply, 1;
-                my ($updated, $msg) =
-                    $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $reply));
-
-                if (defined $updated && $updated) {
-                    info($msg);
-                    $config{$h}{"ipv$v"} = $ip;
-                    $config{$h}{'mtime'} = $now;
-                    $config{$h}{"status-ipv$v"} = 'good';
-                    next INFOMANIAK_IP_LOOP;
-                }
-                else {
-                    warning($msg);
-                }
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => "https://infomaniak.com/nic/update?hostname=$h&myip=$ip",
+                login => $config{$h}{'login'},
+                password => $config{$h}{'password'},
+            );
+            next if !header_ok($h, $reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my ($status) = split(/ /, $body, 2);
+            my ($ok, $msg) =
+                $statuses{$status} // (0, sprintf("Unknown reply from Infomaniak: %s", $body));
+            if (!$ok) {
+                failed($msg);
+                next;
             }
-
-            $config{$h}{"status-ipv$v"} = 'failed';
-            failed("updating %s: could not update IP on Infomaniak", $h);
+            success($msg);
+            $config{$h}{"ipv$v"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-ipv$v"} = 'good';
         }
     }
 }
