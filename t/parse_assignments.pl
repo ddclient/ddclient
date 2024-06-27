@@ -48,6 +48,10 @@ my @test_cases = (
     tc('env: unset',                 "a_env=UNSET",  {},                     ""),
     tc('env: set',                   "a_env=TEST",   { a => 'val' },         ""),
     tc('env: single quoted',         "a_env='TEST'", { a => 'val' },         ""),
+    tc('newline: quoted value',      "a='1\n2'",     { a => "1\n2" },        ""),
+    tc('newline: escaped value',     "a=1\\\n2",     { a => "1\n2" },        ""),
+    tc('newline: between vars',      "a=1 \n b=2",   { a => '1' },           "\n b=2"),
+    tc('newline: terminating',       "a=1 \n",       { a => '1' },           "\n"),
 );
 
 delete($ENV{''});

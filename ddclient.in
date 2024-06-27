@@ -1610,6 +1610,9 @@ sub read_recap {
 ######################################################################
 ## parse_assignments(string) return (rest, %variables)
 ## parse_assignment(string)  return (name, value, rest)
+#
+# Parsing stops upon encountering non-assignment text (e.g., hostname after the assignments) or an
+# unquoted/unescaped newline.
 ######################################################################
 sub parse_assignments {
     my ($rest) = @_;
@@ -1617,7 +1620,7 @@ sub parse_assignments {
 
     while (1) {
         (my $name, my $value, $rest) = parse_assignment($rest);
-        $rest =~ s/^[,\s]+//;
+        $rest =~ s/^(?:[^\S\n]|,)+//;  # Remove leading commas and non-newline whitespace.
         return ($rest, %variables) if !defined($name);
         if ($name eq 'fw-banlocal' || $name eq 'if-skip') {
             warning("'$name' is deprecated and does nothing");
@@ -1631,7 +1634,9 @@ sub parse_assignment {
     my ($name, $value);
     my ($escape, $quote) = (0, '');
 
-    if ($rest =~ /^[,\s]*([a-z][0-9a-z_-]*)=(.*)/i) {
+    # Ignore leading commas and non-newline whitespace.  (An unquoted/unescaped newline terminates
+    # the assignment search.)
+    if ($rest =~ qr/^(?:[^\S\n]|,)*([a-z][0-9a-z_-]*)=(.*)/is) {
         ($name, $rest, $value) = ($1, $2, '');
 
         while (length(my $c = substr($rest, 0, 1))) {
