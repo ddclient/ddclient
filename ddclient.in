@@ -1913,17 +1913,12 @@ sub init_config {
 
     ## define or modify host options specified on the command-line
     if (defined($opt{'options'})) {
-        ## collect cmdline configuration options.
-        my %options = ();
-        for my $opt (split_by_comma($opt{'options'})) {
-            my ($name, $var) = split /\s*=\s*/, $opt;
-            if ($name eq 'fw-banlocal' || $name eq 'if-skip') {
-                warning("'$name' is deprecated and does nothing");
-                next;
-            }
-            # TODO: Shouldn't *_env options be processed like _read_config does?
-            $options{$name} = $var;
-        }
+        # TODO: Perhaps the --options argument should be processed like the contents of the config
+        # file: each line (after removing any comments or continuations) either specifies global
+        # values or host-specific settings.  For now, non-value newlines and end-of-line host
+        # declarations are rejected.
+        my ($rest, %options) = parse_assignments($opt{'options'});
+        fatal("unexpected content in '--options' argument: $rest") if $rest ne '';
         ## determine hosts specified with --host
         my @hosts = ();
         if (exists $opt{'host'}) {
@@ -1998,11 +1993,6 @@ sub init_config {
     ## make sure config entries have all defaults and they meet minimums
     ## first the globals...
     for my $k (keys %globals) {
-        # Make sure any _env suffixed variables look at their original entry
-        # TODO: Didn't _read_config already handle *_env?  Or is this needed to handle
-        # the --options command-line option whose values were merged into %globals above?
-        $k = $1 if $k =~ /^(.*)_env$/;
-
         # TODO: This might grab an arbitrary protocol-specific variable, which could cause
         # surprising behavior.
         my $def = $variables{'merged'}{$k};
@@ -2050,9 +2040,6 @@ sub init_config {
 
         # TODO: This silently ignores unknown options passed via --options.
         for my $k (keys %$svars) {
-            # Make sure any _env suffixed variables look at their original entry
-            $k = $1 if $k =~ /^(.*)_env$/;
-
             my $def = $svars->{$k};
             # TODO: Why doesn't this try %opt and %globals before falling back to the variable
             # default?  By ignoring %opt and %globals, `--options` will not have any effect on any
