@@ -44,7 +44,15 @@ my @test_cases = (
     tc('unquoted escaped backslash', "a=\\\\",       { a => "\\" },          ""),
     tc('squoted escaped squote',     "a='\\''",      { a => "'" },           ""),
     tc('dquoted escaped dquote',     "a=\"\\\"\"",   { a => '"' },           ""),
+    tc('env: empty',                 "a_env=",       {},                     ""),
+    tc('env: unset',                 "a_env=UNSET",  {},                     ""),
+    tc('env: set',                   "a_env=TEST",   { a => 'val' },         ""),
+    tc('env: single quoted',         "a_env='TEST'", { a => 'val' },         ""),
 );
+
+delete($ENV{''});
+delete($ENV{UNSET});
+$ENV{TEST} = 'val';
 
 for my $tc (@test_cases) {
     my ($got_rest, %got_vars) = ddclient::parse_assignments($tc->{input});

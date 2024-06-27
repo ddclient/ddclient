@@ -1652,6 +1652,15 @@ sub parse_assignment {
             }
             $rest = substr($rest,1);
         }
+        if ($name =~ qr/^(.*)_env$/) {
+            $name = $1;
+            debug("Loading value for $name from environment variable $value");
+            if (!exists($ENV{$value})) {
+                warning("Environment variable '$value' not set for keyword '$name' (ignored)");
+                return parse_assignment($rest);
+            }
+            $value = $ENV{$value};
+        }
     }
     warning("assignment to '%s' ended with the escape character (\\)", $name) if $escape;
     warning("assignment to '%s' ended with an unterminated quote (%s)", $name, $quote) if $quote;
@@ -1786,21 +1795,6 @@ sub _read_config {
 
         ## verify that keywords are valid...and check the value
         for my $k (keys %locals) {
-            # Handle '_env' keyword suffix
-            if ($k =~ /(.*)_env$/) {
-                debug("Loading value for $1 from environment variable $locals{$k}.");
-                if (!exists($ENV{$locals{$k}})) {
-                    warning("Environment variable '$locals{$k}' not set for keyword '$k' (ignored)");
-                    delete $locals{$k};
-                    next;
-                }
-                # Set the value to the value of the environment variable
-                $locals{$1} = $ENV{$locals{$k}};
-                # Remove the '_env' suffix from the key
-                # TODO: Shouldn't the *_env entry be deleted from %locals?
-                $k = $1;
-            }
-
             $locals{$k} = $passwords{$k} if defined $passwords{$k};
             if (!exists $variables{'merged'}{$k}) {
                 warning("unrecognized keyword '%s' (ignored)", $k);
