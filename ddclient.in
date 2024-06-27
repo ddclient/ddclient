@@ -1212,6 +1212,7 @@ my @opt = (
     "",
     "  Options related to '--use=fw', '--usev4=fwv4', '--usev6=fwv6', and '--usev6=fw'",
     "  as well as '--use=<device>', '--usev4=<device>', and '--usev6=<device>':",
+    ["fw",                "=s", "--fw=<address|url>     : deprecated, use '--fwv4' or '--fwv6'"],
     ["fw-skip",           "=s", "--fw-skip=<pattern>    : deprecated, use '--fwv4-skip' or '--fwv6-skip'"],
     ["fwv4",              "=s", "--fwv4=<address|url>   : obtain IPv4 address from device with IP address <address> or URL <url>"],
     ["fwv4-skip",         "=s", "--fwv4-skip=<pattern>  : skip any IP addresses before <pattern> in the text returned from the device"],
