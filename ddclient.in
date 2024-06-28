@@ -723,7 +723,7 @@ my %protocols = (
         'examples'   => \&nic_changeip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, 0,                  interval('5m')),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP, 0, 0, 'nic.changeip.com', undef),
         },
     },
@@ -864,7 +864,7 @@ my %protocols = (
         'examples'   => \&nic_freedns_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, 0,                    interval('5m')),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP, 0, 0, 'freedns.afraid.org', undef),
         },
     },
@@ -885,7 +885,7 @@ my %protocols = (
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'min-interval'              => setv(T_DELAY,  0, 0, 0,               interval('5m')),
+            'min-interval'              => setv(T_DELAY,  0, 0, interval('5m'),  interval('5m')),
             'server'                    => setv(T_FQDNP,  0, 0, 'api.gandi.net', undef),
             'script'                    => setv(T_STRING, 0, 1, '/v5',           undef),
             'use-personal-access-token' => setv(T_BOOL, 0, 0, 0, undef),
@@ -944,7 +944,7 @@ my %protocols = (
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, 0, interval('5m')),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP, 0, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     },
@@ -954,7 +954,7 @@ my %protocols = (
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY,  0, 0, 0,                          interval('5m')),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP,  0, 0, 'api.nearlyfreespeech.net', undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 300,                        undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
@@ -1025,7 +1025,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP, 0, 0, 'www.sitelutions.com', undef),
-            'min-interval' => setv(T_DELAY, 0, 0, 0,                     interval('5m')),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
         },
     },
     'woima' => {
@@ -1105,7 +1105,7 @@ my %protocols = (
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
             'server'       => setv(T_FQDNP,  0, 0, 'dynamic.name-services.com', undef),
-            'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
          },
      },
     'infomaniak' => {
