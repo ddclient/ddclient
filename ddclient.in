@@ -668,7 +668,7 @@ my %variables = (
         # Timestamp (seconds since epoch) indicating the earliest time the next update is
         # permitted.
         # TODO: Create a timestamp type and change this to that type.
-        'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
+        'wtime'               => setv(T_NUMBER,0, 1, undef,                undef),
         # Timestamp (seconds since epoch) indicating when an IP address was last sent to the DDNS
         # service, even if the IP address was not different from what was already stored.
         # TODO: Create a timestamp type and change this to that type.
