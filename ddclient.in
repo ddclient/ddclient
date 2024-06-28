@@ -132,7 +132,7 @@ my $last_emailbody = '';
 
 ## If run as *d (e.g., ddclientd) then daemonize by default (but allow
 ## flags and options to override).
-my $daemon_default = ($programd =~ /d$/) ? interval('5m') : 0;
+my $daemon_default = ($programd =~ /d$/) ? interval('5m') : undef;
 
 use vars qw($file $lineno);
 local $file   = '';
@@ -556,13 +556,13 @@ sub setv {
         'minimum'  => shift,
     };
 }
-my %variables = (
+our %variables = (
     'global-defaults' => {
         'daemon'              => setv(T_DELAY, 0, 0, $daemon_default,      interval('60s')),
         'foreground'          => setv(T_BOOL,  0, 0, 0,                    undef),
         'file'                => setv(T_FILE,  0, 0, "$etc/$program.conf", undef),
         'cache'               => setv(T_FILE,  0, 0, "$cachedir/$program.cache", undef),
-        'pid'                 => setv(T_FILE,  0, 0, "",                   undef),
+        'pid'                 => setv(T_FILE,  0, 0, undef,                undef),
         'proxy'               => setv(T_FQDNP, 0, 0, undef,                undef),
         'protocol'            => setv(T_PROTO, 0, 0, 'dyndns2',            undef),
 
@@ -581,18 +581,18 @@ my %variables = (
         'webv4-skip'          => setv(T_STRING,0, 0, undef,                undef),
         'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
         'webv6-skip'          => setv(T_STRING,0, 0, undef,                undef),
-        'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
+        'fw'                  => setv(T_ANY,   0, 0, undef,                undef),
         'fw-skip'             => setv(T_STRING,0, 0, undef,                undef),
-        'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv4'                => setv(T_ANY,   0, 0, undef,                undef),
         'fwv4-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'fwv6'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv6'                => setv(T_ANY,   0, 0, undef,                undef),
         'fwv6-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'fw-login'            => setv(T_LOGIN, 1, 0, '',                   undef),
-        'fw-password'         => setv(T_PASSWD,1, 0, '',                   undef),
-        'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
+        'fw-login'            => setv(T_LOGIN, 0, 0, undef,                undef),
+        'fw-password'         => setv(T_PASSWD,0, 0, undef,                undef),
+        'cmd'                 => setv(T_PROG,  0, 0, undef,                undef),
         'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
-        'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
-        'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
+        'cmdv4'               => setv(T_PROG,  0, 0, undef,                undef),
+        'cmdv6'               => setv(T_PROG,  0, 0, undef,                undef),
 
         'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
         'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -601,8 +601,8 @@ my %variables = (
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
         'facility'            => setv(T_STRING,0, 0, 'daemon',             undef),
         'priority'            => setv(T_STRING,0, 0, 'notice',             undef),
-        'mail'                => setv(T_EMAIL, 0, 0, '',                   undef),
-        'mail-failure'        => setv(T_EMAIL, 0, 0, '',                   undef),
+        'mail'                => setv(T_EMAIL, 0, 0, undef,                undef),
+        'mail-failure'        => setv(T_EMAIL, 0, 0, undef,                undef),
         'max-warn'            => setv(T_NUMBER,0, 0, 1,                    undef),
 
         'exec'                => setv(T_BOOL,  0, 0, 1,                    undef),
@@ -611,18 +611,18 @@ my %variables = (
         'quiet'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'help'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'test'                => setv(T_BOOL,  0, 0, 0,                    undef),
-        'geturl'              => setv(T_STRING,0, 0, '',                   undef),
+        'geturl'              => setv(T_STRING,0, 0, undef,                undef),
 
-        'postscript'          => setv(T_POSTS, 0, 0, '',                   undef),
+        'postscript'          => setv(T_POSTS, 0, 0, undef,                undef),
         'ssl_ca_dir'          => setv(T_FILE,  0, 0, undef,                undef),
         'ssl_ca_file'         => setv(T_FILE,  0, 0, undef,                undef),
         'redirect'            => setv(T_NUMBER,0, 0, 0,                    undef)
     },
     'protocol-common-defaults' => {
-        'server'              => setv(T_FQDNP, 1, 0, 'members.dyndns.org', undef),
-        'login'               => setv(T_LOGIN, 1, 0, '',                   undef),
-        'password'            => setv(T_PASSWD,1, 0, '',                   undef),
-        'host'                => setv(T_STRING,1, 1, '',                   undef),
+        'server'              => setv(T_FQDNP, 0, 0, 'members.dyndns.org', undef),
+        'login'               => setv(T_LOGIN, 1, 0, undef,                undef),
+        'password'            => setv(T_PASSWD,1, 0, undef,                undef),
+        'host'                => setv(T_STRING,1, 1, undef,                undef),
 
         'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
         'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
@@ -637,19 +637,19 @@ my %variables = (
         'webv4-skip'          => setv(T_STRING,0, 0, undef,                undef),
         'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
         'webv6-skip'          => setv(T_STRING,0, 0, undef,                undef),
-        'fw'                  => setv(T_ANY,   0, 0, '',                   undef),
+        'fw'                  => setv(T_ANY,   0, 0, undef,                undef),
         'fw-skip'             => setv(T_STRING,0, 0, undef,                undef),
-        'fw-login'            => setv(T_LOGIN, 0, 0, '',                   undef),
-        'fw-password'         => setv(T_PASSWD,0, 0, '',                   undef),
+        'fw-login'            => setv(T_LOGIN, 0, 0, undef,                undef),
+        'fw-password'         => setv(T_PASSWD,0, 0, undef,                undef),
         'fw-ssl-validate'     => setv(T_BOOL,  0, 0, 1,                    undef),
-        'fwv4'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv4'                => setv(T_ANY,   0, 0, undef,                undef),
         'fwv4-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'fwv6'                => setv(T_ANY,   0, 0, '',                   undef),
+        'fwv6'                => setv(T_ANY,   0, 0, undef,                undef),
         'fwv6-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'cmd'                 => setv(T_PROG,  0, 0, '',                   undef),
+        'cmd'                 => setv(T_PROG,  0, 0, undef,                undef),
         'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
-        'cmdv4'               => setv(T_PROG,  0, 0, '',                   undef),
-        'cmdv6'               => setv(T_PROG,  0, 0, '',                   undef),
+        'cmdv4'               => setv(T_PROG,  0, 0, undef,                undef),
+        'cmdv6'               => setv(T_PROG,  0, 0, undef,                undef),
         'min-interval'        => setv(T_DELAY, 0, 0, interval('30s'),      0),
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
@@ -668,7 +668,7 @@ my %variables = (
         # Timestamp (seconds since epoch) indicating the earliest time the next update is
         # permitted.
         # TODO: Create a timestamp type and change this to that type.
-        'wtime'               => setv(T_DELAY, 0, 1, 0,                    interval('30s')),
+        'wtime'               => setv(T_NUMBER,0, 1, undef,                undef),
         # Timestamp (seconds since epoch) indicating when an IP address was last sent to the DDNS
         # service, even if the IP address was not different from what was already stored.
         # TODO: Create a timestamp type and change this to that type.
@@ -701,12 +701,12 @@ my %variables = (
     },
     'dyndns-common-defaults' => {
         'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
-        'mx'                  => setv(T_OFQDN, 0, 1, '',                   undef),
+        'mx'                  => setv(T_OFQDN, 0, 1, undef,                undef),
         'static'              => setv(T_BOOL,  0, 1, 0,                    undef),
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
-my %protocols = (
+our %protocols = (
     '1984' => {
         'force_update' => undef,
         'update' => \&nic_1984_update,
@@ -714,7 +714,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'api.1984.is', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'api.1984.is', undef),
         },
     },
     'changeip' => {
@@ -723,8 +723,8 @@ my %protocols = (
         'examples'   => \&nic_changeip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, 0,                  interval('5m')),
-            'server'       => setv(T_FQDNP, 1, 0, 'nic.changeip.com', undef),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP, 0, 0, 'nic.changeip.com', undef),
         },
     },
     'cloudflare' => {
@@ -736,12 +736,12 @@ my %protocols = (
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                              undef),
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
-            'mx'           => setv(T_OFQDN,  0, 1, '',                             undef),
-            'server'       => setv(T_FQDNP,  1, 0, 'api.cloudflare.com/client/v4', undef),
+            'mx'           => setv(T_OFQDN,  0, 1, undef,                          undef),
+            'server'       => setv(T_FQDNP,  0, 0, 'api.cloudflare.com/client/v4', undef),
             'static'       => setv(T_BOOL,   0, 1, 0,                              undef),
-            'ttl'          => setv(T_NUMBER, 1, 0, 1,                              undef),
+            'ttl'          => setv(T_NUMBER, 0, 0, 1,                              undef),
             'wildcard'     => setv(T_BOOL,   0, 1, 0,                              undef),
-            'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
+            'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
     },
     'cloudns' => {
@@ -762,8 +762,8 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'api.digitalocean.com', undef),
-            'zone'   => setv(T_FQDN,  1, 0, '',                     undef),
+            'server' => setv(T_FQDNP, 0, 0, 'api.digitalocean.com', undef),
+            'zone'   => setv(T_FQDN,  1, 0, undef,                  undef),
         },
     },
     'dinahosting' => {
@@ -774,7 +774,7 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'min-error-interval' => setv(T_DELAY,  0, 0, interval('8m'),     0),
             'script'             => setv(T_STRING, 0, 1, '/special/api.php', undef),
-            'server'             => setv(T_FQDNP,  1, 0, 'dinahosting.com',  undef),
+            'server'             => setv(T_FQDNP,  0, 0, 'dinahosting.com',  undef),
         },
     },
     'dnsmadeeasy' => {
@@ -783,8 +783,8 @@ my %protocols = (
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'script' => setv(T_STRING, 1, 1, '/servlet/updateip',  undef),
-            'server' => setv(T_FQDNP,  1, 0, 'cp.dnsmadeeasy.com', undef),
+            'script' => setv(T_STRING, 0, 1, '/servlet/updateip',  undef),
+            'server' => setv(T_FQDNP,  0, 0, 'cp.dnsmadeeasy.com', undef),
         },
     },
     'dondominio' => {
@@ -793,7 +793,7 @@ my %protocols = (
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 1, 0, 'dondns.dondominio.com', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'dondns.dondominio.com', undef),
         },
     },
     'dslreports1' => {
@@ -802,7 +802,7 @@ my %protocols = (
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 1, 0, 'www.dslreports.com', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'www.dslreports.com', undef),
         },
     },
     'domeneshop' => {
@@ -811,7 +811,7 @@ my %protocols = (
         'examples'   => \&nic_domeneshop_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP,  1, 0, 'api.domeneshop.no', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'api.domeneshop.no', undef),
         },
     },
     'duckdns' => {
@@ -821,7 +821,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'www.duckdns.org', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'www.duckdns.org', undef),
         },
     },
     'dyndns1' => {
@@ -841,7 +841,7 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
             'custom' => setv(T_BOOL,   0, 1, 0,             undef),
-            'script' => setv(T_STRING, 1, 1, '/nic/update', undef),
+            'script' => setv(T_STRING, 0, 1, '/nic/update', undef),
         },
     },
     'easydns' => {
@@ -852,9 +852,9 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),       0),
-            'mx'           => setv(T_OFQDN,  0, 1, '',                   undef),
-            'server'       => setv(T_FQDNP,  1, 0, 'api.cp.easydns.com', undef),
-            'script'       => setv(T_STRING, 1, 1, '/dyn/generic.php',   undef),
+            'mx'           => setv(T_OFQDN,  0, 1, undef,                undef),
+            'server'       => setv(T_FQDNP,  0, 0, 'api.cp.easydns.com', undef),
+            'script'       => setv(T_STRING, 0, 1, '/dyn/generic.php',   undef),
             'wildcard'     => setv(T_BOOL,   0, 1, 0,                    undef),
         },
     },
@@ -864,8 +864,8 @@ my %protocols = (
         'examples'   => \&nic_freedns_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, 0,                    interval('5m')),
-            'server'       => setv(T_FQDNP, 1, 0, 'freedns.afraid.org', undef),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP, 0, 0, 'freedns.afraid.org', undef),
         },
     },
     'freemyip' => {
@@ -875,7 +875,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'freemyip.com', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'freemyip.com', undef),
         },
     },
     'gandi' => {
@@ -885,9 +885,9 @@ my %protocols = (
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'min-interval'              => setv(T_DELAY,  0, 0, 0,               interval('5m')),
-            'server'                    => setv(T_FQDNP,  1, 0, 'api.gandi.net', undef),
-            'script'                    => setv(T_STRING, 1, 1, '/v5',           undef),
+            'min-interval'              => setv(T_DELAY,  0, 0, interval('5m'),  interval('5m')),
+            'server'                    => setv(T_FQDNP,  0, 0, 'api.gandi.net', undef),
+            'script'                    => setv(T_STRING, 0, 1, '/v5',           undef),
             'use-personal-access-token' => setv(T_BOOL, 0, 0, 0, undef),
             'ttl'                       => setv(T_DELAY,  0, 0, undef,           interval('5m')),
             'zone'                      => setv(T_FQDN,   1, 0, undef,           undef),
@@ -900,9 +900,9 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
-            'server'       => setv(T_FQDNP,  1, 0, 'api.godaddy.com/v1/domains',   undef),
-            'ttl'          => setv(T_NUMBER, 1, 0, 600,                            undef),
-            'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
+            'server'       => setv(T_FQDNP,  0, 0, 'api.godaddy.com/v1/domains',   undef),
+            'ttl'          => setv(T_NUMBER, 0, 0, 600,                            undef),
+            'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
     },
     'googledomains' => {
@@ -912,7 +912,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
-            'server'       => setv(T_FQDNP, 1, 0, 'domains.google.com', undef),
+            'server'       => setv(T_FQDNP, 0, 0, 'domains.google.com', undef),
         },
     },
     'hetzner' => {
@@ -923,9 +923,9 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, 0, interval('1m'),                 0),
-            'server'       => setv(T_FQDNP,  1, 0, 'dns.hetzner.com/api/v1',       undef),
+            'server'       => setv(T_FQDNP,  0, 0, 'dns.hetzner.com/api/v1',       undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 60,                             60),
-            'zone'         => setv(T_FQDN,   1, 0, '',                             undef),
+            'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
     },
     'mythicdyn' => {
@@ -935,7 +935,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
-            'server'       => setv(T_FQDNP, 1, 0, 'api.mythic-beasts.com', undef),
+            'server'       => setv(T_FQDNP, 0, 0, 'api.mythic-beasts.com', undef),
         },
     },
     'namecheap' => {
@@ -944,8 +944,8 @@ my %protocols = (
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, 0, interval('5m')),
-            'server'       => setv(T_FQDNP, 1, 0, 'dynamicdns.park-your-domain.com', undef),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP, 0, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     },
     'nfsn' => {
@@ -954,9 +954,9 @@ my %protocols = (
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min_interval' => setv(T_FQDNP,  0, 0, 0,                          interval('5m')),
-            'server'       => setv(T_FQDNP,  1, 0, 'api.nearlyfreespeech.net', undef),
-            'ttl'          => setv(T_NUMBER, 1, 0, 300,                        undef),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP,  0, 0, 'api.nearlyfreespeech.net', undef),
+            'ttl'          => setv(T_NUMBER, 0, 0, 300,                        undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
         },
     },
@@ -967,7 +967,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'njal.la', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'njal.la', undef),
             'quietreply' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
@@ -978,7 +978,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'server'                    => setv(T_FQDNP,  1, 0, 'dynupdate.no-ip.com', undef),
+            'server'                    => setv(T_FQDNP,  0, 0, 'dynupdate.no-ip.com', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
         },
     },
@@ -988,10 +988,10 @@ my %protocols = (
         'examples'   => \&nic_nsupdate_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'login' => setv(T_LOGIN,  1, 0, '/usr/bin/nsupdate', undef),
+            'login' => setv(T_LOGIN,  0, 0, '/usr/bin/nsupdate', undef),
             'tcp'   => setv(T_BOOL,   0, 1, 0,                   undef),
             'ttl'   => setv(T_NUMBER, 0, 1, 600,                 undef),
-            'zone'  => setv(T_STRING, 1, 1, '',                  undef),
+            'zone'  => setv(T_STRING, 1, 1, undef,               undef),
         },
     },
     'ovh' => {
@@ -1000,8 +1000,8 @@ my %protocols = (
         'examples'   => \&nic_ovh_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'script'   => setv(T_STRING, 1, 1, '/nic/update', undef),
-            'server'   => setv(T_FQDNP,  1, 0, 'www.ovh.com', undef),
+            'script'   => setv(T_STRING, 0, 1, '/nic/update', undef),
+            'server'   => setv(T_FQDNP,  0, 0, 'www.ovh.com', undef),
         },
     },
     'porkbun' => {
@@ -1012,9 +1012,9 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
-            'apikey'         => setv(T_PASSWD, 1, 0, '',         undef),
-            'secretapikey'   => setv(T_PASSWD, 1, 0, '',         undef),
-            'root-domain'    => setv(T_OFQDN,  0, 0, '',         undef),
+            'apikey'         => setv(T_PASSWD, 1, 0, undef,      undef),
+            'secretapikey'   => setv(T_PASSWD, 1, 0, undef,      undef),
+            'root-domain'    => setv(T_OFQDN,  0, 0, undef,      undef),
             'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
         },
     },
@@ -1024,8 +1024,8 @@ my %protocols = (
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'server'       => setv(T_FQDNP, 1, 0, 'www.sitelutions.com', undef),
-            'min-interval' => setv(T_DELAY, 0, 0, 0,                     interval('5m')),
+            'server'       => setv(T_FQDNP, 0, 0, 'www.sitelutions.com', undef),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
         },
     },
     'woima' => {
@@ -1036,9 +1036,9 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'backupmx'                  => setv(T_BOOL,   0, 1, 0,               undef),
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'mx'                        => setv(T_OFQDN,  0, 1, '',              undef),
-            'script'                    => setv(T_STRING, 1, 1, '/nic/update',   undef),
-            'server'                    => setv(T_FQDNP,  1, 0, 'dyn.woima.fi',  undef),
+            'mx'                        => setv(T_OFQDN,  0, 1, undef,           undef),
+            'script'                    => setv(T_STRING, 0, 1, '/nic/update',   undef),
+            'server'                    => setv(T_FQDNP,  0, 0, 'dyn.woima.fi',  undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'wildcard'                  => setv(T_BOOL,   0, 1, 0,               undef),
         },
@@ -1050,7 +1050,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),     0),
-            'server'       => setv(T_FQDNP, 1, 0, 'pddimp.yandex.ru', undef),
+            'server'       => setv(T_FQDNP, 0, 0, 'pddimp.yandex.ru', undef),
         },
     },
     'zoneedit1' => {
@@ -1060,7 +1060,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
-            'server'       => setv(T_FQDNP, 1, 0, 'dynamic.zoneedit.com', undef),
+            'server'       => setv(T_FQDNP, 0, 0, 'dynamic.zoneedit.com', undef),
             'zone'         => setv(T_OFQDN, 0, 0, undef,                  undef),
         },
     },
@@ -1071,7 +1071,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'dynamicdns.key-systems.net', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'dynamicdns.key-systems.net', undef),
         },
     },
     'dnsexit2' => {
@@ -1082,9 +1082,9 @@ my %protocols = (
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
             'ssl' => setv(T_BOOL, 0, 0, 1, undef),
-            'server' => setv(T_FQDNP, 1, 0, 'api.dnsexit.com', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'api.dnsexit.com', undef),
             'path' => setv(T_STRING, 0, 0, '/dns/', undef),
-            'ttl' => setv(T_NUMBER, 1, 0, 5, 0),
+            'ttl' => setv(T_NUMBER, 0, 0, 5, 0),
             'zone' => setv(T_STRING, 0, 0, undef, undef),
         },
     },
@@ -1095,7 +1095,7 @@ my %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 1, 0, 'dyndns.regfish.de', undef),
+            'server' => setv(T_FQDNP, 0, 0, 'dyndns.regfish.de', undef),
         },
     },
     'enom' => {
@@ -1104,8 +1104,8 @@ my %protocols = (
         'examples'   => \&nic_enom_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
-            'server'       => setv(T_FQDNP,  1, 0, 'dynamic.name-services.com', undef),
-            'min-interval' => setv(T_DELAY,  0, 0, 0, interval('5m')),
+            'server'       => setv(T_FQDNP,  0, 0, 'dynamic.name-services.com', undef),
+            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
          },
      },
     'infomaniak' => {
@@ -2562,6 +2562,10 @@ sub check_value {
 
     if (!defined $value && !$required) {
         ;
+    } elsif (!defined($value) && $required) {
+        # None of the types have 'undef' as a valid value, so check definedness once here for
+        # convenience.
+        die("$type is required\n");
 
     } elsif ($type eq T_DELAY) {
         $value = interval($value);
@@ -7216,7 +7220,7 @@ sub nic_porkbun_update {
 
     for my $host (@_) {
         my ($sub_domain, $domain);
-        if ($config{$host}{'root-domain'} ne '') {
+        if ($config{$host}{'root-domain'}) {
             # Process 'root-domain' option
             $domain = $config{$host}{'root-domain'};
             $sub_domain = $host;
