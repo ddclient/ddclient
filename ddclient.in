@@ -556,7 +556,7 @@ sub setv {
         'minimum'  => shift,
     };
 }
-my %variables = (
+our %variables = (
     'global-defaults' => {
         'daemon'              => setv(T_DELAY, 0, 0, $daemon_default,      interval('60s')),
         'foreground'          => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -706,7 +706,7 @@ my %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
-my %protocols = (
+our %protocols = (
     '1984' => {
         'force_update' => undef,
         'update' => \&nic_1984_update,
