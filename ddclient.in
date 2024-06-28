@@ -2562,6 +2562,10 @@ sub check_value {
 
     if (!defined $value && !$required) {
         ;
+    } elsif (!defined($value) && $required) {
+        # None of the types have 'undef' as a valid value, so check definedness once here for
+        # convenience.
+        die("$type is required\n");
 
     } elsif ($type eq T_DELAY) {
         $value = interval($value);
