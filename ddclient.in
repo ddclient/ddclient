@@ -954,7 +954,7 @@ my %protocols = (
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min_interval' => setv(T_FQDNP,  0, 0, 0,                          interval('5m')),
+            'min-interval' => setv(T_FQDNP,  0, 0, 0,                          interval('5m')),
             'server'       => setv(T_FQDNP,  1, 0, 'api.nearlyfreespeech.net', undef),
             'ttl'          => setv(T_NUMBER, 1, 0, 300,                        undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
