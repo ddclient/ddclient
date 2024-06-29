@@ -2046,7 +2046,8 @@ sub init_config {
             my $ovalue = $config{$h}{$k} // $def->{'default'};
             my $value = check_value($ovalue, $def);
             if ($def->{'required'} && !defined $value) {
-                warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
+                $ovalue //= '(not set)';
+                warning("skipping host $h: invalid $def->{type} variable value '$k=$ovalue'");
                 delete $config{$h};
                 next HOST;
             }
