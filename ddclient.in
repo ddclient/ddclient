@@ -1950,7 +1950,7 @@ sub init_config {
         ## merge options into host definitions or globals
         if (@hosts) {
             for my $h (@hosts) {
-                $config{$h} = {%{$config{$h} // {}}, %options};
+                $config{$h} = {%{$config{$h} // {}}, %options, 'host' => $h};
             }
             $opt{'host'} = join(',', @hosts);
         } else {
@@ -2031,7 +2031,7 @@ sub init_config {
         }
 
         my $svars = $protocols{$proto}{'variables'};
-        my $conf = {'protocol' => $proto};
+        my $conf = {'host' => $h, 'protocol' => $proto};
 
         for my $k (keys %$svars) {
             # Make sure any _env suffixed variables look at their original entry
