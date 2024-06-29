@@ -1567,7 +1567,7 @@ sub write_recap {
                 $recap{$h}{$v} = $config{$h}{$v};
             }
         } else {
-            for my $v (qw(atime wtime status status-ipv4 status-ivp6)) {
+            for my $v (qw(atime wtime status status-ipv4 status-ipv6)) {
                 $recap{$h}{$v} = $config{$h}{$v};
             }
         }
