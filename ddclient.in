@@ -1567,7 +1567,7 @@ sub write_recap {
                 $recap{$h}{$v} = $config{$h}{$v};
             }
         } else {
-            for my $v (qw(atime wtime status status-ipv4 status-ivp6)) {
+            for my $v (qw(atime wtime status status-ipv4 status-ipv6)) {
                 $recap{$h}{$v} = $config{$h}{$v};
             }
         }
@@ -1919,7 +1919,7 @@ sub init_config {
     ## parse an interval expression (such as '5m') into number of seconds
     $opt{'daemon'} = interval(opt('daemon')) if defined($opt{'daemon'});
     ## make sure the interval isn't too short
-    $opt{'daemon'} = minimum('daemon') if opt('daemon') > 0 && opt('daemon') < minimum('daemon');
+    $opt{'daemon'} = minimum('daemon') if opt('daemon') && opt('daemon') < minimum('daemon');
 
     ## define or modify host options specified on the command-line
     if (defined($opt{'options'})) {
@@ -1950,7 +1950,7 @@ sub init_config {
         ## merge options into host definitions or globals
         if (@hosts) {
             for my $h (@hosts) {
-                $config{$h} = {%{$config{$h}}, %options};
+                $config{$h} = {%{$config{$h} // {}}, %options, 'host' => $h};
             }
             $opt{'host'} = join(',', @hosts);
         } else {
@@ -2002,6 +2002,11 @@ sub init_config {
         # TODO: This might grab an arbitrary protocol-specific variable, which could cause
         # surprising behavior.
         my $def = $variables{'merged'}{$k};
+        if (!$def) {
+            warning("ignoring unknown setting '$k=$globals{$k}'");
+            delete($globals{$k});
+            next;
+        }
         # TODO: Isn't $globals{$k} guaranteed to be defined here?  Otherwise $k wouldn't appear in
         # %globals.
         my $ovalue = $globals{$k} // $def->{'default'};
@@ -2031,7 +2036,7 @@ sub init_config {
         }
 
         my $svars = $protocols{$proto}{'variables'};
-        my $conf = {'protocol' => $proto};
+        my $conf = {'host' => $h, 'protocol' => $proto};
 
         for my $k (keys %$svars) {
             # Make sure any _env suffixed variables look at their original entry
@@ -2041,7 +2046,8 @@ sub init_config {
             my $ovalue = $config{$h}{$k} // $def->{'default'};
             my $value = check_value($ovalue, $def);
             if ($def->{'required'} && !defined $value) {
-                warning("skipping host: %s: '%s=%s' is an invalid %s.", $h, $k, $ovalue, $def->{'type'});
+                $ovalue //= '(not set)';
+                warning("skipping host $h: invalid $def->{type} variable value '$k=$ovalue'");
                 delete $config{$h};
                 next HOST;
             }
@@ -2405,10 +2411,12 @@ sub split_by_comma {
 }
 sub default {
     my $v = shift;
+    return undef if !defined($variables{'merged'}{$v});
     return $variables{'merged'}{$v}{'default'};
 }
 sub minimum {
     my $v = shift;
+    return undef if !defined($variables{'merged'}{$v});
     return $variables{'merged'}{$v}{'minimum'};
 }
 sub opt {
@@ -2565,7 +2573,7 @@ sub check_value {
     } elsif (!defined($value) && $required) {
         # None of the types have 'undef' as a valid value, so check definedness once here for
         # convenience.
-        die("$type is required\n");
+        return undef;
 
     } elsif ($type eq T_DELAY) {
         $value = interval($value);
