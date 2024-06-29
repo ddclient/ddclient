@@ -2405,10 +2405,12 @@ sub split_by_comma {
 }
 sub default {
     my $v = shift;
+    return undef if !defined($variables{'merged'}{$v});
     return $variables{'merged'}{$v}{'default'};
 }
 sub minimum {
     my $v = shift;
+    return undef if !defined($variables{'merged'}{$v});
     return $variables{'merged'}{$v}{'minimum'};
 }
 sub opt {
