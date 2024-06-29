@@ -2002,6 +2002,11 @@ sub init_config {
         # TODO: This might grab an arbitrary protocol-specific variable, which could cause
         # surprising behavior.
         my $def = $variables{'merged'}{$k};
+        if (!$def) {
+            warning("ignoring unknown setting '$k=$globals{$k}'");
+            delete($globals{$k});
+            next;
+        }
         # TODO: Isn't $globals{$k} guaranteed to be defined here?  Otherwise $k wouldn't appear in
         # %globals.
         my $ovalue = $globals{$k} // $def->{'default'};
