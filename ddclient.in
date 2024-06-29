@@ -1950,7 +1950,7 @@ sub init_config {
         ## merge options into host definitions or globals
         if (@hosts) {
             for my $h (@hosts) {
-                $config{$h} = {%{$config{$h}}, %options};
+                $config{$h} = {%{$config{$h} // {}}, %options};
             }
             $opt{'host'} = join(',', @hosts);
         } else {
