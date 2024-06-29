@@ -1919,7 +1919,7 @@ sub init_config {
     ## parse an interval expression (such as '5m') into number of seconds
     $opt{'daemon'} = interval(opt('daemon')) if defined($opt{'daemon'});
     ## make sure the interval isn't too short
-    $opt{'daemon'} = minimum('daemon') if opt('daemon') > 0 && opt('daemon') < minimum('daemon');
+    $opt{'daemon'} = minimum('daemon') if opt('daemon') && opt('daemon') < minimum('daemon');
 
     ## define or modify host options specified on the command-line
     if (defined($opt{'options'})) {
