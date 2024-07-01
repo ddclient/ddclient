@@ -1964,13 +1964,7 @@ sub init_config {
         # TODO: Move this check to where the command-line options are actually processed.
         if (!eval { $globals{$k} = check_value($globals{$k}, $def); 1; }) {
             warning("ignoring invalid variable value '$k=$globals{$k}': $@");
-            if ($def->{'required'}) {
-                # TODO: What's the point of this?  The opt() function will fall back to the default
-                # value if $globals{$k} is undefined.
-                $globals{$k} = default($k);
-            } else {
-                $globals{$k} = undef;
-            }
+            delete($globals{$k});
         }
     }
 
@@ -1994,26 +1988,19 @@ sub init_config {
 
         # TODO: This silently ignores unknown options passed via --options.
         for my $k (keys %$svars) {
+            next if !defined($config{$h}{$k});
             my $def = $svars->{$k};
-            # TODO: Why doesn't this try %opt and %globals before falling back to the variable
-            # default?  By ignoring %opt and %globals, `--options` will not have any effect on any
-            # hosts that are not specified on the command line (via `--host=a,b` and/or
-            # `--options=host=c,d`).
-            # TODO: Why not just leave $conf->{$k} undef?  Then opt() would automatically fall back
-            # to %opt, %globals, or the variable default.
-            my $ovalue = $config{$h}{$k} // $def->{'default'};
             # _read_config already checked any value from the config file, so the purpose of this
             # check is to validate command-line options from --options which were merged into
             # $config{$h} above.
             # TODO: Move this check to where --options is actually processed.
-            if (!eval { $conf->{$k} = check_value($ovalue, $def); 1; }) {
-                $ovalue //= '(not set)';
+            if (!eval { $conf->{$k} = check_value($config{$h}{$k}, $def); 1; }) {
                 if ($def->{'required'}) {
-                    warning("skipping host $h: invalid variable value '$k=$ovalue': $@");
+                    warning("skipping host $h: invalid variable value '$k=$config{$h}{$k}': $@");
                     delete $config{$h};
                     next HOST;
                 } else {
-                    warning("host $h: ignoring invalid variable value '$k=$ovalue': $@");
+                    warning("host $h: ignoring invalid variable value '$k=$config{$h}{$k}': $@");
                     $conf->{$k} = undef;
                 }
             }
