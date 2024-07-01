@@ -2350,7 +2350,12 @@ sub split_by_comma {
     return ();
 }
 sub default {
-    my $v = shift;
+    my ($v, $h) = @_;
+    if (defined($h) && $config{$h}) {
+        my $proto = $protocols{$config{$h}{'protocol'}};
+        my $var = $proto->{variables}{$v} if $proto;
+        return $var->{default} if $var;
+    }
     return undef if !defined($variables{'merged'}{$v});
     # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
     # surprising behavior.
@@ -2363,7 +2368,7 @@ sub opt {
     # TODO: Why check %opt before %globals?  Valid variables from %opt are merged into %globals by
     # init_config(), so it shouldn't be necessary.  Also, it runs the risk of collision with a
     # non-variable command line option like `--version`, `--help`, etc.
-    return $opt{$v} // $globals{$v} // default($v);
+    return $opt{$v} // $globals{$v} // default($v, $h);
 }
 sub min {
     my $min = shift;
