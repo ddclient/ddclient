@@ -2098,7 +2098,6 @@ sub process_args {
         next if !ref($_);
         my ($key, $specifier) = @$_;
         push @spec, $key . $specifier;
-        $opt{$key} //= undef;
     }
     if (!GetOptions(\%opt, @spec)) {
         $opt{'help'}('', '');
