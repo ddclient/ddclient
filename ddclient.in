@@ -1869,42 +1869,6 @@ sub init_config {
     ##
     $opt{'quiet'} = 0 if opt('verbose');
 
-    ## infer the IP strategy if possible
-    if (!$opt{'use'}) {
-        # TODO: I don't think these have any effect.  The value is not copied into the
-        # host-specific %config settings, and $config{$h}{use} is initialized to the variable
-        # default ("ip"), not set to undef, so opt() won't fall back to this.
-        $opt{'use'} = 'web' if ($opt{'web'});
-        $opt{'use'} = 'if'  if ($opt{'if'});
-        $opt{'use'} = 'ip'  if ($opt{'ip'});
-    }
-    ## infer the IPv4 strategy if possible
-    if (!$opt{'usev4'}) {
-        # TODO: I don't think these have any effect.  The value is not copied into the
-        # host-specific %config settings, and $config{$h}{usev4} is initialized to the variable
-        # default ("disabled"), not set to undef, so opt() won't fall back to this.
-        $opt{'usev4'} = 'webv4' if ($opt{'webv4'});
-        $opt{'usev4'} = 'ifv4'  if ($opt{'ifv4'});
-        $opt{'usev4'} = 'ipv4'  if ($opt{'ipv4'});
-    }
-    ## infer the IPv6 strategy if possible
-    if (!$opt{'usev6'}) {
-        # TODO: I don't think these have any effect.  The value is not copied into the
-        # host-specific %config settings, and $config{$h}{usev6} is initialized to the variable
-        # default ("disabled"), not set to undef, so opt() won't fall back to this.
-        $opt{'usev6'} = 'webv6' if ($opt{'webv6'});
-        $opt{'usev6'} = 'ifv6'  if ($opt{'ifv6'});
-        $opt{'usev6'} = 'ipv6'  if ($opt{'ipv6'});
-    }
-
-    ## sanity check
-    # TODO: I don't think these have any effect.  The values are not copied into the host-specific
-    # %config settings, and $config{$h}{$opt} is initialized to the non-undef variable default so
-    # opt() won't fall back to these.
-    $opt{'max-interval'}       = min(interval(opt('max-interval')), interval(default('max-interval')));
-    $opt{'min-interval'}       = max(interval(opt('min-interval')), interval(default('min-interval')));
-    $opt{'min-error-interval'} = max(interval(opt('min-error-interval')), interval(default('min-error-interval')));
-
     ## define or modify host options specified on the command-line
     if (defined($opt{'options'})) {
         # TODO: Perhaps the --options argument should be processed like the contents of the config
