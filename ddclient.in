@@ -2001,7 +2001,6 @@ sub init_config {
                     next HOST;
                 } else {
                     warning("host $h: ignoring invalid variable value '$k=$config{$h}{$k}': $@");
-                    $conf->{$k} = undef;
                 }
             }
         }
