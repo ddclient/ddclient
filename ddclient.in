@@ -5418,7 +5418,7 @@ sub nic_godaddy_update {
                 if ($code eq "400") {
                     $msg = 'GoDaddy API URL ($url) was malformed.';
                 } elsif ($code eq "401") {
-                    if ($config{$h}{'login'} && $config{$h}{'login'}) {
+                    if ($config{$h}{'login'}) {
                         $msg = 'login or password option incorrect.';
                     } else {
                         $msg = 'login or password option missing.';
