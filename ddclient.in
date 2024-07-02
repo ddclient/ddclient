@@ -5896,7 +5896,7 @@ sub nic_hetzner_update {
         my $headers = "Auth-API-Token: $config{$domain}{'password'}\n";
         $headers .= "Content-Type: application/json";
 
-        (my $hostname = $domain) =~ s/\.$config{$domain}{zone}$//;
+        (my $hostname = $domain) =~ s/\Q.$config{$domain}{zone}\E$//;
         my $ipv4 = delete $config{$domain}{'wantipv4'};
         my $ipv6 = delete $config{$domain}{'wantipv6'};
 
