@@ -1892,15 +1892,29 @@ sub init_config {
             delete $options{'host'};
         }
         ## merge options into host definitions or globals
-        # TODO: Keys and values should be validated before mutating %config or %globals.
         if (@hosts) {
             for my $h (@hosts) {
-                $config{$h} = {%{$config{$h} // {}}, %options, 'host' => $h};
+                $config{$h} //= {'host' => $h};
+                my $proto = $options{'protocol'} // opt('protocol', $h);
+                my $protodef = $protocols{$proto} or fatal("host $h: invalid protocol: $proto");
+                for my $var (keys(%options)) {
+                    my $def = $protodef->{variables}{$var}
+                        or fatal("host $h: unknown option '--options=$var=$options{$var}'");
+                    eval { $config{$h}{$var} = check_value($options{$var}, $def); 1; }
+                        or fatal("host $h: invalid option value '--options=$var=$options{$var}': $@");
+                }
             }
             $opt{'host'} = join(',', @hosts);
         } else {
-            # TODO: Why not merge the values into %opt?
-            %globals = (%globals, %options);
+            for my $var (keys(%options)) {
+                # TODO: This might grab an arbitrary protocol-specific variable definition, which
+                # could cause surprising behavior.
+                my $def = $variables{'merged'}{$var}
+                    or fatal("unknown option '--options=$var=$options{$var}'");
+                # TODO: Why not merge the values into %opt?
+                eval { $globals{$var} = check_value($options{$var}, $def); 1; }
+                    or fatal("invalid option value '--options=$var=$options{$var}': $@");
+            }
         }
     }
 
@@ -1944,48 +1958,12 @@ sub init_config {
     # TODO: Why aren't the hosts specified by --host added to %config except when --options is also
     # given?
 
-    ## sanity check..
-    # TODO: The code below doesn't look like a mere "sanity check", so I'm guessing the above
-    # comment is out of date.  Figure out what this code is actually doing and refactor to improve
-    # the readability so that a comment isn't necessary.
-    ## make sure config entries have all defaults and they meet minimums
-    ## first the globals...
-    for my $k (keys %globals) {
-        # TODO: This might grab an arbitrary protocol-specific variable, which could cause
-        # surprising behavior.
-        my $def = $variables{'merged'}{$k} or fatal("unknown option '$k=$globals{$k}'");
-        # _read_config already checked any value from the config file, so the purpose of this check
-        # is to validate command-line options which were merged into %globals above.
-        # TODO: Move this check to where the command-line options are actually processed.
-        eval { $globals{$k} = check_value($globals{$k}, $def); 1; }
-            or fatal("invalid option value '$k=$globals{$k}': $@");
-    }
-
-    ## now the host definitions...
-  HOST:
     for my $h (keys %config) {
         $config{$h}{use} = 'disabled'
             if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
         my $proto = opt('protocol', $h);
         load_sha1_support($proto) if (grep($_ eq $proto, ("freedns", "nfsn")));
         load_json_support($proto) if (grep($_ eq $proto, ("1984", "cloudflare", "digitalocean", "directnic", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
-
-        if (!exists($protocols{$proto})) {
-            fatal("host %s: unrecognized protocol: '%s'", $h, $proto);
-        }
-
-        my $svars = $protocols{$proto}{'variables'};
-        my $conf = {'host' => $h, 'protocol' => $proto};
-        for my $k (keys(%{$config{$h}})) {
-            my $def = $svars->{$k} or fatal("host $h: unknown option: $k");
-            # _read_config already checked any value from the config file, so the purpose of this
-            # check is to validate command-line options from --options which were merged into
-            # $config{$h} above.
-            # TODO: Move this check to where --options is actually processed.
-            eval { $conf->{$k} = check_value($config{$h}{$k}, $def); 1; }
-                or fatal("host $h: invalid option value '$k=$config{$h}{$k}': $@");
-        }
-        $config{$h} = $conf;
     }
 }
 
