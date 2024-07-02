@@ -1976,11 +1976,8 @@ sub init_config {
 
         my $svars = $protocols{$proto}{'variables'};
         my $conf = {'host' => $h, 'protocol' => $proto};
-
-        # TODO: This silently ignores unknown options passed via --options.
-        for my $k (keys %$svars) {
-            next if !defined($config{$h}{$k});
-            my $def = $svars->{$k};
+        for my $k (keys(%{$config{$h}})) {
+            my $def = $svars->{$k} or fatal("host $h: unknown option: $k");
             # _read_config already checked any value from the config file, so the purpose of this
             # check is to validate command-line options from --options which were merged into
             # $config{$h} above.
