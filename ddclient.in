@@ -1961,10 +1961,14 @@ sub init_config {
     for my $h (keys %config) {
         $config{$h}{use} = 'disabled'
             if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
-        my $proto = opt('protocol', $h);
-        load_sha1_support($proto) if (grep($_ eq $proto, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep($_ eq $proto, ("1984", "cloudflare", "digitalocean", "directnic", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
     }
+    my @protos = map(opt('protocol', $_), keys(%config));
+    my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
+    load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
+    my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
+                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
+                             nfsn njalla porkbun yandex));
+    load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
 sub usage {
