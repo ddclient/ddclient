@@ -762,6 +762,16 @@ our %protocols = (
             'dynurl' => setv(T_STRING, 1, 0, undef, undef),
         },
     },
+    'ddns.fm' => {
+        'force_update' => undef,
+        'update' => \&nic_ddnsfm_update,
+        'examples' => \&nic_ddnsfm_examples,
+        'variables' => {
+            %{$variables{'protocol-common-defaults'}},
+            'login' => undef,
+            'server' => setv(T_FQDNP, 0, 0, 'https://api.ddns.fm', undef),
+        },
+    },
     'digitalocean' => {
         'force_update' => undef,
         'update' => \&nic_digitalocean_update,
@@ -6726,6 +6736,62 @@ sub nic_freemyip_update {
         } else {
             $config{$h}{'status'} = 'failed';
             failed("updating %s: Server said: '%s'", $h, $returned);
+        }
+    }
+}
+
+######################################################################
+## nic_ddnsfm_examples
+######################################################################
+sub nic_ddnsfm_examples {
+    return <<"EoEXAMPLE";
+o 'ddns.fm'
+
+The 'ddns.fm' protocol is used by the free
+dynamic DNS service available at ddns.fm.
+API is documented here: https://ddns.fm/docs
+
+Configuration variables applicable to the 'ddns.fm' protocol are:
+  protocol=ddns.fm                ##
+  password=service-key            ## key for your domain
+  non-fully.qualified.host        ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=ddns.fm,        \\
+  password=your_ddns_key,  \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_ddnsfm_update
+######################################################################
+sub nic_ddnsfm_update {
+    debug("\nnic_ddnsfm_update -------------------");
+    for my $h (@_) {
+        # ddns.fm behavior as of 2024-07-14:
+        #   - IPv4 and IPv6 addresses cannot be updated simultaneously.
+        #   - IPv4 updates do not affect the IPv6 AAAA record (if present).
+        #   - IPv6 updates do not affect the IPv4 A record (if present).
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            info("setting IPv$ipv address to $ip for $h");
+            verbose("UPDATE:", "updating %s", $h);
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => "$config{$h}{server}/update?key=$config{$h}{password}&domain=$h&myip=$ip",
+            );
+            if (!$reply) {
+                failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+                next;
+            }
+            next if !header_ok($h, $reply);
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            success("updating $h: good: IPv$ipv address set to $ip");
         }
     }
 }

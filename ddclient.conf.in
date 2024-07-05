@@ -249,6 +249,14 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 # myhost
 
 ##
+## DDNS.FM (https://ddns.fm/)
+##
+#
+# protocol=ddns.fm,
+# password=my-token
+# myhost.example.com
+
+##
 ## MyOnlinePortal (http://myonlineportal.net)
 ##
 # # ipv6=yes # optional
