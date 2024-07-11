@@ -47,7 +47,10 @@ subtest "Get default interface and IP for test system (IPv4)" => sub {
     my $ip1 = ddclient::get_ip_from_interface("default", 4);
     my $ip2 = ddclient::get_ip_from_interface($interface, 4);
     is($ip1, $ip2, "Check IPv4 from default interface");
-    ok(ddclient::is_ipv4($ip1), "Valid IPv4 from get_ip_from_interface($interface)");
+    SKIP: {
+        skip('default interface does not have an appropriate IPv4 addresses') if !$ip1;
+        ok(ddclient::is_ipv4($ip1), "Valid IPv4 from get_ip_from_interface($interface)");
+    }
 };
 
 subtest "Get default interface and IP for test system (IPv6)" => sub {
@@ -58,7 +61,10 @@ subtest "Get default interface and IP for test system (IPv6)" => sub {
     my $ip1 = ddclient::get_ip_from_interface("default", 6);
     my $ip2 = ddclient::get_ip_from_interface($interface, 6);
     is($ip1, $ip2, "Check IPv6 from default interface");
-    ok(ddclient::is_ipv6($ip1), "Valid IPv6 from get_ip_from_interface($interface)");
+    SKIP: {
+        skip('default interface does not have an appropriate IPv6 addresses') if !$ip1;
+        ok(ddclient::is_ipv6($ip1), "Valid IPv6 from get_ip_from_interface($interface)");
+    }
 };
 
 done_testing();
