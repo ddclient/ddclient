@@ -6196,7 +6196,9 @@ sub nic_cloudflare_update {
 
         my $headers = "Content-Type: application/json\n";
         if ($config{$key}{'login'} eq 'token') {
-            $headers .= "Authorization: Bearer $config{$key}{'password'}\n";
+            my $token = $config{$key}{'password'};
+            $token =~ s/,$//;
+            $headers .= "Authorization: Bearer $token\n";
         } else {
             $headers .= "X-Auth-Email: $config{$key}{'login'}\n";
             $headers .= "X-Auth-Key: $config{$key}{'password'}\n";
