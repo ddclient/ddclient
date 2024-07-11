@@ -64,21 +64,11 @@ jobs:
           - fedora:rawhide
           - almalinux:8
           - almalinux:latest
-          # RedHat UBI is mostly garbage due to a profound lack of basic
-          # packages.  It is tested anyway because it's the closest available
-          # approximation of RHEL, aside from AlmaLinux.  Some of the packages
-          # needed for some tests aren't available, so those tests will be
-          # skipped.  I guess it's still better than nothing.
-          - registry.access.redhat.com/ubi7/ubi:latest
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
     steps:
-      - if: ${{ matrix.image != 'registry.access.redhat.com/ubi7/ubi:latest' }}
-        uses: actions/checkout@v4
-      # ubi7 is too old for checkout@v4.
-      - if: ${{ matrix.image == 'registry.access.redhat.com/ubi7/ubi:latest' }}
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: enable repositories (AlmaLinux 8)
         if: ${{ matrix.image == 'almalinux:8' }}
         run: |
@@ -93,12 +83,7 @@ jobs:
         # The --skip-broken argument works around RedHat UBI's missing packages.
         # (They're only used for testing, so it's OK to not install them.)
         run: |
-          inst="dnf --refresh --skip-broken install -y"
-          case '${{ matrix.image }}' in
-              # RedHat UBI 7 (RHEL 7) doesn't have dnf.
-              *ubi7*) inst="yum --skip-broken install -y";;
-          esac
-          ${inst} \
+          dnf --refresh --skip-broken install -y \
               automake \
               findutils \
               iproute \
