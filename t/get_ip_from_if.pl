@@ -41,7 +41,7 @@ subtest "get_ip_from_interface tests" => sub {
 
 subtest "Get default interface and IP for test system (IPv4)" => sub {
     my $interface = ddclient::get_default_interface(4);
-    return if !$interface;
+    plan(skip_all => 'no IPv4 interface') if !$interface;
     isnt($interface, "lo", "Check for loopback 'lo'");
     isnt($interface, "lo0", "Check for loopback 'lo0'");
     my $ip1 = ddclient::get_ip_from_interface("default", 4);
@@ -52,7 +52,7 @@ subtest "Get default interface and IP for test system (IPv4)" => sub {
 
 subtest "Get default interface and IP for test system (IPv6)" => sub {
     my $interface = ddclient::get_default_interface(6);
-    return if !$interface;
+    plan(skip_all => 'no IPv6 interface') if !$interface;
     isnt($interface, "lo", "Check for loopback 'lo'");
     isnt($interface, "lo0", "Check for loopback 'lo0'");
     my $ip1 = ddclient::get_ip_from_interface("default", 6);
