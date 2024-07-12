@@ -4289,7 +4289,7 @@ sub dnsexit2_update_host {
 ######################################################################
 sub nic_noip_update {
     debug("\nnic_noip_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
+    my %groups = group_hosts_by(\@_, [qw(login password server wantipv4 wantipv6)]);
     my %errors = (
         'badauth' => 'Invalid username or password',
         'badagent' => 'Invalid user agent',
