@@ -6110,7 +6110,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
+    my %groups = group_hosts_by(\@_, [qw(login password)]);
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -6130,15 +6130,15 @@ sub nic_cloudflare_update {
             info("getting Cloudflare Zone ID for %s", $domain);
 
             # Get zone ID
-            my $url = "https://$config{$key}{'server'}/zones/?";
-            $url .= "name=" . $config{$key}{'zone'};
+            my $url = "https://$config{$domain}{'server'}/zones/?";
+            $url .= "name=" . $config{$domain}{'zone'};
 
             my $reply = geturl(proxy => opt('proxy'),
                                url => $url,
                                headers => $headers
                               );
             unless ($reply && header_ok($domain, $reply)) {
-                failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+                failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
 
@@ -6151,9 +6151,9 @@ sub nic_cloudflare_update {
             }
 
             # Pull the ID out of the json, messy
-            my ($zone_id) = map {$_->{name} eq $config{$key}{'zone'} ? $_->{id} : ()} @{$response->{result}};
+            my ($zone_id) = map {$_->{name} eq $config{$domain}{'zone'} ? $_->{id} : ()} @{$response->{result}};
             unless ($zone_id) {
-                failed("updating %s: No zone ID found.", $config{$key}{'zone'});
+                failed("updating %s: No zone ID found.", $config{$domain}{'zone'});
                 next;
             }
             info("Zone ID is %s", $zone_id);
@@ -6169,14 +6169,14 @@ sub nic_cloudflare_update {
                 $config{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
+                $url = "https://$config{$domain}{'server'}/zones/$zone_id/dns_records?";
                 $url .= "type=$type&name=$domain";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
                                 headers => $headers
                                );
                 unless ($reply && header_ok($domain, $reply)) {
-                    failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+                    failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                     next;
                 }
                 # Strip header
@@ -6194,7 +6194,7 @@ sub nic_cloudflare_update {
                 }
                 debug("updating %s: DNS '$type' record ID: $dns_rec_id", $domain);
                 # Set domain
-                $url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
+                $url = "https://$config{$domain}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
                 my $data = "{\"content\":\"$ip\"}";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
