@@ -4771,30 +4771,24 @@ EoEXAMPLE
 ######################################################################
 sub nic_easydns_update {
     debug("\nnic_easydns_update -------------------");
-    my %groups = map { $_ => [ $_ ] } @_;
     my %errors = (
         'NOACCESS' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
         'ILLEGAL' => 'Client sent data that is not allowed in a dynamic DNS update.',
         'TOOSOON' => 'Update frequency is too short.',
     );
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
-        my $hosts = join(',', @hosts);
-        my $h = $hosts[0];
-        my $ipv4 = $config{$h}{'wantipv4'};
-        my $ipv6 = $config{$h}{'wantipv6'};
-        delete $config{$_}{'wantipv4'} for @hosts;
-        delete $config{$_}{'wantipv6'} for @hosts;
+    for my $h (@_) {
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
 
-        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $hosts);
-        verbose("UPDATE:", "updating %s", $hosts);
+        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $h);
+        verbose("UPDATE:", "updating %s", $h);
 
         #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
 
         my $url;
         $url = "https://$config{$h}{'server'}$config{$h}{'script'}?";
-        $url .= "hostname=$hosts";
+        $url .= "hostname=$h";
         $url .= "&myip=";
         $url .= $ipv4 if $ipv4;
         for my $ipv6a ($ipv6) {
@@ -4815,10 +4809,10 @@ sub nic_easydns_update {
             password => $config{$h}{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
-        next if !header_ok($hosts, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my $state = 'header';
@@ -4833,7 +4827,6 @@ sub nic_easydns_update {
                 $state = 'results2';
 
                 my ($status) = $line =~ /^(\S*)\b.*/;
-                my $h = shift @hosts;
 
                 $config{$h}{'status-ipv4'} = $status if $ipv4;
                 $config{$h}{'status-ipv6'} = $status if $ipv6;
@@ -4863,7 +4856,7 @@ sub nic_easydns_update {
                 last;
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+        failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
             if $state ne 'results2';
     }
 }
