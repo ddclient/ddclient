@@ -6004,7 +6004,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password server zone wantipv4 wantipv6)]);
+    my %groups = group_hosts_by(\@_, [qw(login password server tcp zone wantipv4 wantipv6)]);
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
