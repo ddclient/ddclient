@@ -195,6 +195,7 @@ our %builtinweb = (
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
     'googledomains' => {'url' => 'https://domains.google.com/checkip'}, #  Deprecated! See https://github.com/ddclient/ddclient/issues/622 for more details
     'he' => {'url' => 'https://checkip.dns.he.net/'},
+    'he.net' => {'url' => 'https://checkip.dns.he.net/'},
     'ip4only.me' => {'url' => 'https://ip4only.me/api/'},
     'ip6only.me' => {'url' => 'https://ip6only.me/api/'},
     'ipify-ipv4' => {'url' => 'https://api.ipify.org/'},
@@ -2913,6 +2914,7 @@ sub get_ip {
         $skip = opt('web-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
+            warning("'he' is deprecated; use 'he.net' instead.") if ($url eq 'he');
             $skip //= $builtinweb{$url}->{'skip'};
             $url = $builtinweb{$url}->{'url'};
         }
@@ -3308,6 +3310,7 @@ sub get_ipv4 {
         $skip = opt('webv4-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
+            warning("'he' is deprecated; use 'he.net' instead.") if ($url eq 'he');
             $skip //= $builtinweb{$url}->{'skip'};
             $url = $builtinweb{$url}->{'url'};
             $arg  = $url;
@@ -3425,6 +3428,7 @@ sub get_ipv6 {
         $skip = opt('webv6-skip', $h);
         if (exists $builtinweb{$url}) {
             warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
+            warning("'he' is deprecated; use 'he.net' instead.") if ($url eq 'he');
             $skip //= $builtinweb{$url}->{'skip'};
             $url = $builtinweb{$url}->{'url'};
             $arg  = $url;

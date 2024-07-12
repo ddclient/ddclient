@@ -19,6 +19,11 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     `Digest::SHA` is now required.  Previously, `Digest::SHA1` was used (if
     available) as an alternative to `Digest::SHA`.
     [#685](https://github.com/ddclient/ddclient/pull/685)
+  * The `he` built-in web IP discovery service (`--webv4=he`, `--webv6=he`, and
+    `--web=he`) was renamed to `he.net` for consistency with the new `he.net`
+    protocol.  The old name is still accepted but is deprecated and will be
+    removed in a future version of ddclient.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
 
 ### New features
 
