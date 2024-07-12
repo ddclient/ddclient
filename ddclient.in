@@ -921,7 +921,7 @@ our %protocols = (
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
+            'login' => undef,
             'min-interval' => setv(T_DELAY,  0, 0, interval('1m'),                 0),
             'server'       => setv(T_FQDNP,  0, 0, 'dns.hetzner.com/api/v1',       undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 60,                             60),
