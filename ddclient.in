@@ -4013,7 +4013,6 @@ EoEXAMPLE
 sub nic_dyndns2_update {
     debug("\nnic_dyndns2_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
 
     my %errors = (
@@ -4035,7 +4034,6 @@ sub nic_dyndns2_update {
        'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -4324,7 +4322,6 @@ sub dnsexit2_update_host {
 sub nic_noip_update {
     debug("\nnic_noip_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
 
     my %errors = (
@@ -4338,7 +4335,6 @@ sub nic_noip_update {
         'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -4671,10 +4667,8 @@ sub nic_zoneedit1_force_update {
 sub nic_zoneedit1_update {
     debug("\nnic_zoneedit1_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(login password server zone wantip)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -4811,7 +4805,6 @@ EoEXAMPLE
 sub nic_easydns_update {
     debug("\nnic_easydns_update -------------------");
 
-    ## each host is in a group by itself
     my %groups = map { $_ => [ $_ ] } @_;
 
     my %errors = (
@@ -4821,7 +4814,6 @@ sub nic_easydns_update {
         'TOOSOON'   => 'Update frequency is too short.',
     );
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -4911,7 +4903,6 @@ sub nic_easydns_update {
             if $state ne 'results2';
     }
 }
-######################################################################
 
 ######################################################################
 ## nic_namecheap_examples
@@ -5752,14 +5743,11 @@ EoEXAMPLE
 sub nic_godaddy_update {
     debug("\nnic_godaddy_update --------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(server login password zone wantipv4 wantipv6)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
 
-        # Update each set configured host.
         for my $host (@hosts) {
             my $ipv4 = delete $config{$host}{'wantipv4'};
             my $ipv6 = delete $config{$host}{'wantipv6'};
@@ -5889,23 +5877,19 @@ EoEXAMPLE
 sub nic_googledomains_update {
     debug("\nnic_googledomains_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(server login password wantip)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $key   = $hosts[0];
         my $ip    = $config{$key}{'wantip'};
 
-        # FQDNs
         for my $host (@hosts) {
             delete $config{$host}{'wantip'};
 
             info("setting IP address to %s for %s", $ip, $host);
             verbose("UPDATE:", "updating %s", $host);
 
-            # Update the DNS record
             my $url = "https://$config{$host}{'server'}/nic/update";
             $url .= "?hostname=$host";
             $url .= "&myip=";
@@ -6068,10 +6052,8 @@ EoEXAMPLE
 sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(login password server zone wantipv4 wantipv6)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts   = @{$groups{$sig}};
         my $hosts   = join(',', @hosts);
@@ -6185,10 +6167,8 @@ EoEXAMPLE
 sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -6202,7 +6182,6 @@ sub nic_cloudflare_update {
             $headers .= "X-Auth-Key: $config{$key}{'password'}\n";
         }
 
-        # FQDNs
         for my $domain (@hosts) {
             my $ipv4  = delete $config{$domain}{'wantipv4'};
             my $ipv6  = delete $config{$domain}{'wantipv6'};
@@ -6333,10 +6312,8 @@ EoEXAMPLE
 sub nic_hetzner_update {
     debug("\nnic_hetzner_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -6345,7 +6322,6 @@ sub nic_hetzner_update {
         my $headers = "Auth-API-Token: $config{$key}{'password'}\n";
         $headers .= "Content-Type: application/json";
 
-        # FQDNs
         for my $domain (@hosts) {
             (my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
             my $ipv4  = delete $config{$domain}{'wantipv4'};
@@ -6490,17 +6466,14 @@ EoEXAMPLE
 sub nic_yandex_update {
     debug("\nnic_yandex_update -------------------");
 
-    ## group hosts with identical attributes together
     my %groups = group_hosts_by(\@_, [qw(server login pasword wantip)]);
 
-    ## update each set of hosts that had similar configurations
     for my $sig (keys %groups) {
         my @hosts   = @{$groups{$sig}};
         my $key     = $hosts[0];
         my $ip      = $config{$key}{'wantip'};
         my $headers = "PddToken: $config{$key}{'password'}\n";
 
-        # FQDNs
         for my $host (@hosts) {
             delete $config{$host}{'wantip'};
 
