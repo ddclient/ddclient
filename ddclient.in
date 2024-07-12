@@ -977,9 +977,7 @@ our %protocols = (
         'examples'   => \&nic_noip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'custom' => setv(T_BOOL, 0, 1, 0, undef),
             'server' => setv(T_FQDNP, 0, 0, 'dynupdate.no-ip.com', undef),
-            'static' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
     'nsupdate' => {
