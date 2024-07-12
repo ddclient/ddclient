@@ -34,57 +34,77 @@ my @test_cases = (
     {
         desc => 'empty attribute set yields single group with all hosts',
         groupby => [qw()],
-        want => [[$h1, $h2, $h3]],
+        want => [{cfg => {}, hosts => [$h1, $h2, $h3]}],
     },
     {
         desc => 'common attribute yields single group with all hosts',
         groupby => [qw(common)],
-        want => [[$h1, $h2, $h3]],
+        want => [{cfg => {common => 'common'}, hosts => [$h1, $h2, $h3]}],
     },
     {
         desc => 'subset share a value',
         groupby => [qw(h1h2)],
-        want => [[$h1, $h2], [$h3]],
+        want => [
+            {cfg => {h1h2 => 'h1 and h2'}, hosts => [$h1, $h2]},
+            {cfg => {h1h2 => 'unique'}, hosts => [$h3]},
+        ],
     },
     {
         desc => 'all unique',
         groupby => [qw(unique)],
-        want => [[$h1], [$h2], [$h3]],
+        want => [
+            {cfg => {unique => 'h1'}, hosts => [$h1]},
+            {cfg => {unique => 'h2'}, hosts => [$h2]},
+            {cfg => {unique => 'h3'}, hosts => [$h3]},
+        ],
     },
     {
         desc => 'combination',
         groupby => [qw(common h1h2)],
-        want => [[$h1, $h2], [$h3]],
+        want => [
+            {cfg => {common => 'common', h1h2 => 'h1 and h2'}, hosts => [$h1, $h2]},
+            {cfg => {common => 'common', h1h2 => 'unique'}, hosts => [$h3]},
+        ],
     },
     {
         desc => 'falsy values',
         groupby => [qw(falsy)],
-        want => [[$h1], [$h2], [$h3]],
+        want => [
+            {cfg => {falsy => 0}, hosts => [$h1]},
+            {cfg => {falsy => ''}, hosts => [$h2]},
+            {cfg => {falsy => undef}, hosts => [$h3]},
+        ],
     },
     {
         desc => 'set, unset, undef',
         groupby => [qw(maybeunset)],
-        want => [[$h1], [$h2], [$h3]],
+        want => [
+            {cfg => {maybeunset => 'unique'}, hosts => [$h1]},
+            {cfg => {maybeunset => undef}, hosts => [$h2]},
+            {cfg => {}, hosts => [$h3]},
+        ],
     },
     {
         desc => 'missing attribute',
         groupby => [qw(thisdoesnotexist)],
-        want => [[$h1, $h2, $h3]],
+        want => [{cfg => {}, hosts => [$h1, $h2, $h3]}],
     },
 );
 
 for my $tc (@test_cases) {
     my @got = ddclient::group_hosts_by([$h1, $h2, $h3], @{$tc->{groupby}});
     # @got is used as a set of sets.  Sort everything to make comparison easier.
+    $_->{hosts} = [sort(@{$_->{hosts}})] for @got;
     @got = sort({
-        for (my $i = 0; $i < @$a && $i < @$b; ++$i) {
-            my $x = $a->[$i] cmp $b->[$i];
+        for (my $i = 0; $i < @{$a->{hosts}} && $i < @{$b->{hosts}}; ++$i) {
+            my $x = $a->{hosts}[$i] cmp $b->{hosts}[$i];
             return $x if $x != 0;
         }
-        return @$a <=> @$b;
-    } map({ [sort(@$_)]; } @got));
+        return @{$a->{hosts}} <=> @{$b->{hosts}};
+    } @got);
     is_deeply(\@got, $tc->{want}, $tc->{desc})
-        or diag(Data::Dumper->Dump([\@got, $tc->{want}], [qw(got want)]));
+        or diag(Data::Dumper->new([\@got, $tc->{want}],
+                                  [qw(got want)])->Sortkeys(1)->Useqq(1)->Dump());
 }
 
 done_testing();

@@ -3462,13 +3462,15 @@ sub group_hosts_by {
     my %attrs = map({ ($_ => undef); } @attrs);
     @attrs = sort(keys(%attrs));
     my %groups;
+    my %cfgs;
     my $d = Data::Dumper->new([])->Indent(0)->Sortkeys(1)->Terse(1)->Useqq(1);
     for my $h (@$hosts) {
         my %cfg = map({ ($_ => $config{$h}{$_}); } grep(exists($config{$h}{$_}), @attrs));
         my $sig = $d->Reset()->Values([\%cfg])->Dump();
         push(@{$groups{$sig}}, $h);
+        $cfgs{$sig} = \%cfg;
     }
-    return values(%groups);
+    return map({ {cfg => $cfgs{$_}, hosts => $groups{$_}}; } keys(%groups));
 }
 
 ######################################################################
@@ -4026,23 +4028,23 @@ sub nic_dyndns2_update {
        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
     for my $group (@groups) {
-        my @hosts = @$group;
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h = $hosts[0];
-        my $ipv4 = $config{$h}{'wantipv4'};
-        my $ipv6 = $config{$h}{'wantipv6'};
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
         ## Select the DynDNS system to update
-        my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
-        if ($config{$h}{'custom'}) {
+        my $url = "http://$groupcfg{'server'}$groupcfg{'script'}?system=";
+        if ($groupcfg{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
-                if $config{$h}{'static'};
+                if $groupcfg{'static'};
             $url .= 'custom';
-        } elsif ($config{$h}{'static'}) {
+        } elsif ($groupcfg{'static'}) {
             $url .= 'statdns';
         } else {
             $url .= 'dyndns';
@@ -4055,19 +4057,19 @@ sub nic_dyndns2_update {
             $url .= $ipv6;
         }
         ## some args are not valid for a custom domain.
-        $url .= "&wildcard=ON" if ynu($config{$h}{'wildcard'}, 1, 0, 0);
-        if ($config{$h}{'mx'}) {
-            $url .= "&mx=$config{$h}{'mx'}";
-            $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
+        $url .= "&wildcard=ON" if ynu($groupcfg{'wildcard'}, 1, 0, 0);
+        if ($groupcfg{'mx'}) {
+            $url .= "&mx=$groupcfg{'mx'}";
+            $url .= "&backmx=" . ynu($groupcfg{'backupmx'}, 'YES', 'NO');
         }
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
         next if !header_ok($hosts, $reply);
@@ -4124,7 +4126,7 @@ sub nic_dyndns2_update {
                 }
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
             if $state ne 'results2';
     }
 }
@@ -4300,11 +4302,11 @@ sub nic_noip_update {
         'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
     for my $group (group_hosts_by(\@_, qw(login password server wantipv4 wantipv6))) {
-        my @hosts = @$group;
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h = $hosts[0];
-        my $ipv4 = $config{$h}{'wantipv4'};
-        my $ipv6 = $config{$h}{'wantipv6'};
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
 
@@ -4312,7 +4314,7 @@ sub nic_noip_update {
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
 
-        my $url = "https://$config{$h}{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
+        my $url = "https://$groupcfg{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
         $url .= $ipv4 if $ipv4;
         if ($ipv6) {
             $url .= "," if $ipv4;
@@ -4322,11 +4324,11 @@ sub nic_noip_update {
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
         next if !header_ok($hosts, $reply);
@@ -4392,7 +4394,7 @@ sub nic_noip_update {
                 }
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
             if $state ne 'results2';
     }
 }
@@ -4632,29 +4634,29 @@ sub nic_zoneedit1_force_update {
 sub nic_zoneedit1_update {
     debug("\nnic_zoneedit1_update -------------------");
     for my $group (group_hosts_by(\@_, qw(login password server zone wantip))) {
-        my @hosts = @$group;
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h = $hosts[0];
-        my $ip = $config{$h}{'wantip'};
+        my $ip = $groupcfg{'wantip'};
         delete $config{$_}{'wantip'} for @hosts;
 
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
         my $url = '';
-        $url .= "https://$config{$h}{'server'}/auth/dynamic.html";
+        $url .= "https://$groupcfg{'server'}/auth/dynamic.html";
         $url .= "?host=$hosts";
         $url .= "&dnsto=$ip" if $ip;
-        $url .= "&zone=$config{$h}{'zone'}" if defined $config{$h}{'zone'};
+        $url .= "&zone=$groupcfg{'zone'}" if defined $groupcfg{'zone'};
 
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
         next if !header_ok($hosts, $reply);
@@ -4662,6 +4664,7 @@ sub nic_zoneedit1_update {
         my @reply = split /\n/, $reply;
         # TODO: This is awkward and fragile -- it assumes that each line in the response body
         # corresponds with each host in @hosts (and in the same order).
+        my $h = $hosts[0];
         for my $line (@reply) {
             if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
@@ -4693,7 +4696,7 @@ sub nic_zoneedit1_update {
             }
         }
         # TODO: Shouldn't this log join(',' @hosts) instead of $hosts?
-        failed("updating %s: no response from %s", $hosts, $config{$h}{'server'})
+        failed("updating %s: no response from %s", $hosts, $groupcfg{'server'})
             if @hosts;
     }
 }
@@ -5995,17 +5998,17 @@ EoEXAMPLE
 sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
     for my $group (group_hosts_by(\@_, qw(login password server tcp zone wantipv4 wantipv6))) {
-        my @hosts = @$group;
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h = $hosts[0];
-        my $binary = $config{$h}{'login'};
-        my $keyfile = $config{$h}{'password'};
-        my $server = $config{$h}{'server'};
+        my $binary = $groupcfg{'login'};
+        my $keyfile = $groupcfg{'password'};
+        my $server = $groupcfg{'server'};
         ## nsupdate requires a port number to be separated by whitepace, not colon
         $server =~ s/:/ /;
-        my $zone = $config{$h}{'zone'};
-        my $ipv4 = $config{$h}{'wantipv4'};
-        my $ipv6 = $config{$h}{'wantipv6'};
+        my $zone = $groupcfg{'zone'};
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
 
@@ -6032,7 +6035,7 @@ EoINSTR2
 send
 EoINSTR4
         my $command = "$binary -k $keyfile";
-        $command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
+        $command .= " -v" if ynu($groupcfg{'tcp'}, 1, 0, 0);
         $command .= " -d" if (opt('debug'));
         verbose("UPDATE:", "nsupdate command is: %s", $command);
         verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
@@ -6108,15 +6111,15 @@ EoEXAMPLE
 sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
     for my $group (group_hosts_by(\@_, qw(login password))) {
-        my @hosts = @$group;
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $key = $hosts[0];
         my $headers = "Content-Type: application/json\n";
-        if ($config{$key}{'login'} eq 'token') {
-            $headers .= "Authorization: Bearer $config{$key}{'password'}\n";
+        if ($groupcfg{'login'} eq 'token') {
+            $headers .= "Authorization: Bearer $groupcfg{'password'}\n";
         } else {
-            $headers .= "X-Auth-Email: $config{$key}{'login'}\n";
-            $headers .= "X-Auth-Key: $config{$key}{'password'}\n";
+            $headers .= "X-Auth-Email: $groupcfg{'login'}\n";
+            $headers .= "X-Auth-Key: $groupcfg{'password'}\n";
         }
 
         for my $domain (@hosts) {
@@ -7275,10 +7278,11 @@ EoEXAMPLE
 
 sub nic_cloudns_update {
     for my $group (group_hosts_by(\@_, qw(dynurl wantip))) {
-        my @hosts = @$group;
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $ip = $config{$hosts[0]}{'wantip'};
-        my $dynurl = $config{$hosts[0]}{'dynurl'};
+        my $ip = $groupcfg{'wantip'};
+        my $dynurl = $groupcfg{'dynurl'};
         delete $config{$_}{'wantip'} for @hosts;
         # https://www.cloudns.net/wiki/article/36/ says, "If you are behind a proxy and your real
         # IP is set in the header X-Forwarded-For you need to add &proxy=1 at the end of the
