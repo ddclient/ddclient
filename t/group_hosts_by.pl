@@ -74,15 +74,15 @@ my @test_cases = (
 );
 
 for my $tc (@test_cases) {
-    my %got = ddclient::group_hosts_by([$h1, $h2, $h3], @{$tc->{groupby}});
-    # %got is used as a set of sets.  Sort everything to make comparison easier.
-    my @got = sort({
+    my @got = ddclient::group_hosts_by([$h1, $h2, $h3], @{$tc->{groupby}});
+    # @got is used as a set of sets.  Sort everything to make comparison easier.
+    @got = sort({
         for (my $i = 0; $i < @$a && $i < @$b; ++$i) {
             my $x = $a->[$i] cmp $b->[$i];
             return $x if $x != 0;
         }
         return @$a <=> @$b;
-    } map({ [sort(@$_)]; } values(%got)));
+    } map({ [sort(@$_)]; } @got));
     is_deeply(\@got, $tc->{want}, $tc->{desc})
         or diag(Data::Dumper->Dump([\@got, $tc->{want}], [qw(got want)]));
 }

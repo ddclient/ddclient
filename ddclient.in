@@ -3468,7 +3468,7 @@ sub group_hosts_by {
         my $sig = $d->Reset()->Values([\%cfg])->Dump();
         push(@{$groups{$sig}}, $h);
     }
-    return %groups;
+    return values(%groups);
 }
 
 ######################################################################
@@ -4011,7 +4011,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_dyndns2_update {
     debug("\nnic_dyndns2_update -------------------");
-    my %groups = group_hosts_by(\@_, qw(login password server script static custom wildcard mx backupmx wantipv4 wantipv6));
+    my @groups = group_hosts_by(\@_, qw(login password server script static custom wildcard mx backupmx wantipv4 wantipv6));
     my %errors = (
        'badauth' => 'Bad authorization (username or password)',
        'badsys' => 'The system parameter given was not valid',
@@ -4025,8 +4025,8 @@ sub nic_dyndns2_update {
        'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (@groups) {
+        my @hosts = @$group;
         my $hosts = join(',', @hosts);
         my $h = $hosts[0];
         my $ipv4 = $config{$h}{'wantipv4'};
@@ -4289,7 +4289,6 @@ sub dnsexit2_update_host {
 ######################################################################
 sub nic_noip_update {
     debug("\nnic_noip_update -------------------");
-    my %groups = group_hosts_by(\@_, qw(login password server wantipv4 wantipv6));
     my %errors = (
         'badauth' => 'Invalid username or password',
         'badagent' => 'Invalid user agent',
@@ -4300,8 +4299,8 @@ sub nic_noip_update {
         'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
         'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password server wantipv4 wantipv6))) {
+        my @hosts = @$group;
         my $hosts = join(',', @hosts);
         my $h = $hosts[0];
         my $ipv4 = $config{$h}{'wantipv4'};
@@ -4632,9 +4631,8 @@ sub nic_zoneedit1_force_update {
 ######################################################################
 sub nic_zoneedit1_update {
     debug("\nnic_zoneedit1_update -------------------");
-    my %groups = group_hosts_by(\@_, qw(login password server zone wantip));
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password server zone wantip))) {
+        my @hosts = @$group;
         my $hosts = join(',', @hosts);
         my $h = $hosts[0];
         my $ip = $config{$h}{'wantip'};
@@ -5996,9 +5994,8 @@ EoEXAMPLE
 ######################################################################
 sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
-    my %groups = group_hosts_by(\@_, qw(login password server tcp zone wantipv4 wantipv6));
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password server tcp zone wantipv4 wantipv6))) {
+        my @hosts = @$group;
         my $hosts = join(',', @hosts);
         my $h = $hosts[0];
         my $binary = $config{$h}{'login'};
@@ -6110,9 +6107,8 @@ EoEXAMPLE
 ######################################################################
 sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
-    my %groups = group_hosts_by(\@_, qw(login password));
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password))) {
+        my @hosts = @$group;
         my $hosts = join(',', @hosts);
         my $key = $hosts[0];
         my $headers = "Content-Type: application/json\n";
@@ -7278,9 +7274,8 @@ EoEXAMPLE
 }
 
 sub nic_cloudns_update {
-    my %groups = group_hosts_by(\@_, qw(dynurl wantip));
-    for my $hr (values(%groups)) {
-        my @hosts = @$hr;
+    for my $group (group_hosts_by(\@_, qw(dynurl wantip))) {
+        my @hosts = @$group;
         my $hosts = join(',', @hosts);
         my $ip = $config{$hosts[0]}{'wantip'};
         my $dynurl = $config{$hosts[0]}{'dynurl'};
