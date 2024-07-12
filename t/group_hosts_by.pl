@@ -74,7 +74,7 @@ my @test_cases = (
 );
 
 for my $tc (@test_cases) {
-    my %got = ddclient::group_hosts_by([$h1, $h2, $h3], $tc->{groupby});
+    my %got = ddclient::group_hosts_by([$h1, $h2, $h3], @{$tc->{groupby}});
     # %got is used as a set of sets.  Sort everything to make comparison easier.
     my @got = sort({
         for (my $i = 0; $i < @$a && $i < @$b; ++$i) {

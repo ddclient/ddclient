@@ -3458,9 +3458,9 @@ sub get_ipv6 {
 ## group_hosts_by
 ######################################################################
 sub group_hosts_by {
-    my ($hosts, $attributes) = @_;
-    my %attrs = map({ ($_ => undef); } @$attributes);
-    my @attrs = sort(keys(%attrs));
+    my ($hosts, @attrs) = @_;
+    my %attrs = map({ ($_ => undef); } @attrs);
+    @attrs = sort(keys(%attrs));
     my %groups;
     my $d = Data::Dumper->new([])->Indent(0)->Sortkeys(1)->Terse(1)->Useqq(1);
     for my $h (@$hosts) {
@@ -4011,7 +4011,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_dyndns2_update {
     debug("\nnic_dyndns2_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password server script static custom wildcard mx backupmx wantipv4 wantipv6)]);
+    my %groups = group_hosts_by(\@_, qw(login password server script static custom wildcard mx backupmx wantipv4 wantipv6));
     my %errors = (
        'badauth' => 'Bad authorization (username or password)',
        'badsys' => 'The system parameter given was not valid',
@@ -4289,7 +4289,7 @@ sub dnsexit2_update_host {
 ######################################################################
 sub nic_noip_update {
     debug("\nnic_noip_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password server wantipv4 wantipv6)]);
+    my %groups = group_hosts_by(\@_, qw(login password server wantipv4 wantipv6));
     my %errors = (
         'badauth' => 'Invalid username or password',
         'badagent' => 'Invalid user agent',
@@ -4632,7 +4632,7 @@ sub nic_zoneedit1_force_update {
 ######################################################################
 sub nic_zoneedit1_update {
     debug("\nnic_zoneedit1_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password server zone wantip)]);
+    my %groups = group_hosts_by(\@_, qw(login password server zone wantip));
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -5996,7 +5996,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password server tcp zone wantipv4 wantipv6)]);
+    my %groups = group_hosts_by(\@_, qw(login password server tcp zone wantipv4 wantipv6));
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -6110,7 +6110,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(login password)]);
+    my %groups = group_hosts_by(\@_, qw(login password));
     for my $sig (keys %groups) {
         my @hosts = @{$groups{$sig}};
         my $hosts = join(',', @hosts);
@@ -7278,7 +7278,7 @@ EoEXAMPLE
 }
 
 sub nic_cloudns_update {
-    my %groups = group_hosts_by(\@_, [qw(dynurl wantip)]);
+    my %groups = group_hosts_by(\@_, qw(dynurl wantip));
     for my $hr (values(%groups)) {
         my @hosts = @$hr;
         my $hosts = join(',', @hosts);
