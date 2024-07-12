@@ -4662,6 +4662,8 @@ sub nic_zoneedit1_update {
         next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
+        # TODO: This is awkward and fragile -- it assumes that each line in the response body
+        # corresponds with each host in @hosts (and in the same order).
         for my $line (@reply) {
             if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
@@ -4692,6 +4694,7 @@ sub nic_zoneedit1_update {
                 redo if $line;
             }
         }
+        # TODO: Shouldn't this log join(',' @hosts) instead of $hosts?
         failed("updating %s: no response from %s", $hosts, $config{$h}{'server'})
             if @hosts;
     }
