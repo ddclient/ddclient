@@ -3459,14 +3459,14 @@ sub get_ipv6 {
 ######################################################################
 sub group_hosts_by {
     my ($hosts, $attributes) = @_;
-    my %attrs = map({ ($_ => 1) } @$attributes);
+    my %attrs = map({ ($_ => undef); } @$attributes);
     my @attrs = sort(keys(%attrs));
-    my %groups = ();
+    my %groups;
     my $d = Data::Dumper->new([])->Indent(0)->Sortkeys(1)->Terse(1)->Useqq(1);
     for my $h (@$hosts) {
         my %cfg = map({ ($_ => $config{$h}{$_}); } grep(exists($config{$h}{$_}), @attrs));
         my $sig = $d->Reset()->Values([\%cfg])->Dump();
-        push @{$groups{$sig}}, $h;
+        push(@{$groups{$sig}}, $h);
     }
     return %groups;
 }
