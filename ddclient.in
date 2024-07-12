@@ -5831,39 +5831,31 @@ EoEXAMPLE
 ######################################################################
 sub nic_googledomains_update {
     debug("\nnic_googledomains_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(server login password wantip)]);
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
-        my $key = $hosts[0];
-        my $ip = $config{$key}{'wantip'};
+    for my $host (@_) {
+        my $ip = delete $config{$host}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $host);
+        verbose("UPDATE:", "updating %s", $host);
 
-        for my $host (@hosts) {
-            delete $config{$host}{'wantip'};
+        my $url = "https://$config{$host}{'server'}/nic/update";
+        $url .= "?hostname=$host";
+        $url .= "&myip=";
+        $url .= $ip if $ip;
 
-            info("setting IP address to %s for %s", $ip, $host);
-            verbose("UPDATE:", "updating %s", $host);
-
-            my $url = "https://$config{$host}{'server'}/nic/update";
-            $url .= "?hostname=$host";
-            $url .= "&myip=";
-            $url .= $ip if $ip;
-
-            my $reply = geturl(
-                proxy => opt('proxy'),
-                url => $url,
-                login => $config{$host}{'login'},
-                password => $config{$host}{'password'},
-            );
-            unless ($reply) {
-                failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-                next;
-            }
-            next if !header_ok($host, $reply);
-
-            $config{$host}{'ip'} = $ip;
-            $config{$host}{'mtime'} = $now;
-            $config{$host}{'status'} = 'good';
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$host}{'login'},
+            password => $config{$host}{'password'},
+        );
+        unless ($reply) {
+            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
         }
+        next if !header_ok($host, $reply);
+
+        $config{$host}{'ip'} = $ip;
+        $config{$host}{'mtime'} = $now;
+        $config{$host}{'status'} = 'good';
     }
 }
 
