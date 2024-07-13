@@ -921,7 +921,7 @@ our %protocols = (
         'examples'   => \&nic_hetzner_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
+            'login' => undef,
             'min-interval' => setv(T_DELAY,  0, 0, interval('1m'),                 0),
             'server'       => setv(T_FQDNP,  0, 0, 'dns.hetzner.com/api/v1',       undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 60,                             60),
@@ -977,9 +977,7 @@ our %protocols = (
         'examples'   => \&nic_noip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
-            'server'                    => setv(T_FQDNP,  0, 0, 'dynupdate.no-ip.com', undef),
-            'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
+            'server' => setv(T_FQDNP, 0, 0, 'dynupdate.no-ip.com', undef),
         },
     },
     'nsupdate' => {
@@ -3460,17 +3458,19 @@ sub get_ipv6 {
 ## group_hosts_by
 ######################################################################
 sub group_hosts_by {
-    my ($hosts, $attributes) = @_;
-    my %attrs = map({ ($_ => 1) } @$attributes);
-    my @attrs = sort(keys(%attrs));
-    my %groups = ();
+    my ($hosts, @attrs) = @_;
+    my %attrs = map({ ($_ => undef); } @attrs);
+    @attrs = sort(keys(%attrs));
+    my %groups;
+    my %cfgs;
     my $d = Data::Dumper->new([])->Indent(0)->Sortkeys(1)->Terse(1)->Useqq(1);
     for my $h (@$hosts) {
         my %cfg = map({ ($_ => $config{$h}{$_}); } grep(exists($config{$h}{$_}), @attrs));
         my $sig = $d->Reset()->Values([\%cfg])->Dump();
-        push @{$groups{$sig}}, $h;
+        push(@{$groups{$sig}}, $h);
+        $cfgs{$sig} = \%cfg;
     }
-    return %groups;
+    return map({ {cfg => $cfgs{$_}, hosts => $groups{$_}}; } keys(%groups));
 }
 
 ######################################################################
@@ -4007,62 +4007,48 @@ Example ${program}.conf file entries:
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_dyndns2_update
 ######################################################################
 sub nic_dyndns2_update {
     debug("\nnic_dyndns2_update -------------------");
-
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
-
+    my @groups = group_hosts_by(\@_, qw(login password server script static custom wildcard mx backupmx wantipv4 wantipv6));
     my %errors = (
-       'badauth'  => 'Bad authorization (username or password)',
-       'badsys'   => 'The system parameter given was not valid',
-
-       'notfqdn'  => 'A Fully-Qualified Domain Name was not provided',
-       'nohost'   => 'The hostname specified does not exist in the database',
-       '!yours'   => 'The hostname specified exists, but not under the username currently being used',
+       'badauth' => 'Bad authorization (username or password)',
+       'badsys' => 'The system parameter given was not valid',
+       'notfqdn' => 'A Fully-Qualified Domain Name was not provided',
+       'nohost' => 'The hostname specified does not exist in the database',
+       '!yours' => 'The hostname specified exists, but not under the username currently being used',
        '!donator' => 'The offline setting was set, when the user is not a donator',
-       '!active'  => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
-       'abuse',   => 'The hostname specified is blocked for abuse; you should receive an email notification ' .
-                     'which provides an unblock request link.  More info can be found on ' .
-                     'https://www.dyndns.com/support/abuse.html',
-
-       'numhost'  => 'System error: Too many or too few hosts found. Contact support@dyndns.org',
-       'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
-
-       'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+       '!active' => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+       'abuse', => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.  More info can be found on https://www.dyndns.com/support/abuse.html',
+       'numhost' => 'System error: Too many or too few hosts found. Contact support@dyndns.org',
+       'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
+       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
-
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (@groups) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h     = $hosts[0];
-        my $ipv4  = $config{$h}{'wantipv4'};
-        my $ipv6  = $config{$h}{'wantipv6'};
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
-
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
-
         ## Select the DynDNS system to update
-        my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
-        if ($config{$h}{'custom'}) {
+        my $url = "http://$groupcfg{'server'}$groupcfg{'script'}?system=";
+        if ($groupcfg{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
-                if $config{$h}{'static'};
+                if $groupcfg{'static'};
             $url .= 'custom';
-
-        } elsif ($config{$h}{'static'}) {
+        } elsif ($groupcfg{'static'}) {
             $url .= 'statdns';
-
         } else {
             $url .= 'dyndns';
         }
-
         $url .= "&hostname=$hosts";
         $url .= "&myip=";
         $url .= $ipv4 if $ipv4;
@@ -4070,62 +4056,50 @@ sub nic_dyndns2_update {
             $url .= "," if $ipv4;
             $url .= $ipv6;
         }
-
         ## some args are not valid for a custom domain.
-        $url .= "&wildcard=ON" if ynu($config{$h}{'wildcard'}, 1, 0, 0);
-        if ($config{$h}{'mx'}) {
-            $url .= "&mx=$config{$h}{'mx'}";
-            $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
+        $url .= "&wildcard=ON" if ynu($groupcfg{'wildcard'}, 1, 0, 0);
+        if ($groupcfg{'mx'}) {
+            $url .= "&mx=$groupcfg{'mx'}";
+            $url .= "&backmx=" . ynu($groupcfg{'backupmx'}, 'YES', 'NO');
         }
-
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
         next if !header_ok($hosts, $reply);
-
-        my @reply      = split /\n/, $reply;
-        my $state      = 'header';
-
+        my @reply = split /\n/, $reply;
+        my $state = 'header';
         for my $line (@reply) {
             if ($state eq 'header') {
                 $state = 'body';
-
             } elsif ($state eq 'body') {
                 $state = 'results' if $line eq '';
-
             } elsif ($state =~ /^results/) {
                 $state = 'results2';
-
                 # bug #10: some dyndns providers does not return the IP so
                 # we can't use the returned IP
                 my ($status, $returnedips) = split / /, lc $line;
-
                 for my $h (@hosts) {
                     $config{$h}{'status-ipv4'} = $status if $ipv4;
                     $config{$h}{'status-ipv6'} = $status if $ipv6;
                 }
-
                 if ($status eq 'good') {
                     for my $h (@hosts) {
                         $config{$h}{'ipv4'} = $ipv4 if $ipv4;
                         $config{$h}{'ipv6'} = $ipv6 if $ipv6;
                         $config{$h}{'mtime'} = $now;
                     }
-
                     success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
                     success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
-
                 } elsif (exists $errors{$status}) {
                     if ($status eq 'nochg') {
                         warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
-
                         for my $h (@hosts) {
                             $config{$h}{'ipv4'} = $ipv4 if $ipv4;
                             $config{$h}{'ipv6'} = $ipv6 if $ipv6;
@@ -4133,32 +4107,26 @@ sub nic_dyndns2_update {
                             $config{$h}{'status-ipv4'} = 'good' if $ipv4;
                             $config{$h}{'status-ipv6'} = 'good' if $ipv6;
                         }
-
                     } else {
                         failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
                     }
-
                 } elsif ($status =~ /w(\d+)(.)/) {
                     my ($wait, $units) = ($1, lc $2);
-                    my ($sec,  $scale) = ($wait, 1);
-
-                    ($scale, $units) = (1, 'seconds')   if $units eq 's';
-                    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
+                    my ($sec, $scale) = ($wait, 1);
+                    ($scale, $units) = (1, 'seconds') if $units eq 's';
+                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
                     ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-
                     $sec = $wait * $scale;
                     for my $h (@hosts) {
                         $config{$h}{'wtime'} = $now + $sec;
                     }
-
                     warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
-
                 } else {
                     failed("updating %s: unexpected status (%s)", $hosts, $line);
                 }
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
             if $state ne 'results2';
     }
 }
@@ -4323,28 +4291,22 @@ sub dnsexit2_update_host {
 ######################################################################
 sub nic_noip_update {
     debug("\nnic_noip_update -------------------");
-
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server static custom wildcard mx backupmx wantipv4 wantipv6)]);
-
     my %errors = (
-        'badauth'  => 'Invalid username or password',
+        'badauth' => 'Invalid username or password',
         'badagent' => 'Invalid user agent',
-        'nohost'   => 'The hostname specified does not exist in the database',
+        'nohost' => 'The hostname specified does not exist in the database',
         '!donator' => 'The offline setting was set, when the user is not a donator',
-        'abuse',   => 'The hostname specified is blocked for abuse; open a trouble ticket at https://www.no-ip.com',
-        'numhost'  => 'System error: Too many or too few hosts found. open a trouble ticket at https://www.no-ip.com',
-        'dnserr'   => 'System error: DNS error encountered. Contact support@dyndns.org',
-        'nochg'    => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+        'abuse', => 'The hostname specified is blocked for abuse; open a trouble ticket at https://www.no-ip.com',
+        'numhost' => 'System error: Too many or too few hosts found. open a trouble ticket at https://www.no-ip.com',
+        'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
+        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
-
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password server wantipv4 wantipv6))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h     = $hosts[0];
-        my $ipv4    = $config{$h}{'wantipv4'};
-        my $ipv6    = $config{$h}{'wantipv6'};
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
 
@@ -4352,7 +4314,7 @@ sub nic_noip_update {
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
 
-        my $url = "https://$config{$h}{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
+        my $url = "https://$groupcfg{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
         $url .= $ipv4 if $ipv4;
         if ($ipv6) {
             $url .= "," if $ipv4;
@@ -4362,11 +4324,11 @@ sub nic_noip_update {
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
         next if !header_ok($hosts, $reply);
@@ -4417,10 +4379,10 @@ sub nic_noip_update {
 
                 } elsif ($status =~ /w(\d+)(.)/) {
                     my ($wait, $units) = ($1, lc $2);
-                    my ($sec,  $scale) = ($wait, 1);
+                    my ($sec, $scale) = ($wait, 1);
 
-                    ($scale, $units) = (1, 'seconds')   if $units eq 's';
-                    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
+                    ($scale, $units) = (1, 'seconds') if $units eq 's';
+                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
                     ($scale, $units) = (60*60, 'hours') if $units eq 'h';
 
                     $sec = $wait * $scale;
@@ -4432,10 +4394,11 @@ sub nic_noip_update {
                 }
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
             if $state ne 'results2';
     }
 }
+
 ######################################################################
 ## nic_noip_examples
 ######################################################################
@@ -4670,40 +4633,38 @@ sub nic_zoneedit1_force_update {
 ######################################################################
 sub nic_zoneedit1_update {
     debug("\nnic_zoneedit1_update -------------------");
-
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server zone wantip)]);
-
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password server zone wantip))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $h     = $hosts[0];
-        my $ip    = $config{$h}{'wantip'};
+        my $ip = $groupcfg{'wantip'};
         delete $config{$_}{'wantip'} for @hosts;
 
         info("setting IP address to %s for %s", $ip, $hosts);
         verbose("UPDATE:", "updating %s", $hosts);
 
         my $url = '';
-        $url .= "https://$config{$h}{'server'}/auth/dynamic.html";
+        $url .= "https://$groupcfg{'server'}/auth/dynamic.html";
         $url .= "?host=$hosts";
-        $url .= "&dnsto=$ip"   if $ip;
-        $url .= "&zone=$config{$h}{'zone'}" if defined $config{$h}{'zone'};
+        $url .= "&dnsto=$ip" if $ip;
+        $url .= "&zone=$groupcfg{'zone'}" if defined $groupcfg{'zone'};
 
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
         next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
+        # TODO: This is awkward and fragile -- it assumes that each line in the response body
+        # corresponds with each host in @hosts (and in the same order).
+        my $h = $hosts[0];
         for my $line (@reply) {
             if ($h && $line =~ /^[^<]*<(SUCCESS|ERROR)\s+([^>]+)>(.*)/) {
                 my ($status, $assignments, $rest) = ($1, $2, $3);
@@ -4713,7 +4674,7 @@ sub nic_zoneedit1_update {
                     my ($status_code, $status_text, $status_ip) = ('999', '', $ip);
                     $status_code = $var{'CODE'} if exists $var{'CODE'};
                     $status_text = $var{'TEXT'} if exists $var{'TEXT'};
-                    $status_ip   = $var{'IP'}   if exists $var{'IP'};
+                    $status_ip = $var{'IP'} if exists $var{'IP'};
 
                     if ($status eq 'SUCCESS' || ($status eq 'ERROR' && $var{'CODE'} eq '707')) {
                         $config{$h}{'ip'} = $status_ip;
@@ -4727,17 +4688,19 @@ sub nic_zoneedit1_update {
                         failed("updating %s: %s: %s", $h, $status_code, $status_text);
                     }
                     shift @hosts;
-                    $h     = $hosts[0];
+                    $h = $hosts[0];
                     $hosts = join(',', @hosts);
                 }
                 $line = $rest;
                 redo if $line;
             }
         }
-        failed("updating %s: no response from %s", $hosts, $config{$h}{'server'})
+        # TODO: Shouldn't this log join(',' @hosts) instead of $hosts?
+        failed("updating %s: no response from %s", $hosts, $groupcfg{'server'})
             if @hosts;
     }
 }
+
 ######################################################################
 ## nic_easydns_force_update
 ######################################################################
@@ -4761,6 +4724,7 @@ sub nic_easydns_force_update {
     }
     return $update;
 }
+
 ######################################################################
 ## nic_easydns_examples
 ######################################################################
@@ -4805,40 +4769,30 @@ Example ${program}.conf file entries:
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_easydns_update
 ######################################################################
 sub nic_easydns_update {
     debug("\nnic_easydns_update -------------------");
-
-    ## each host is in a group by itself
-    my %groups = map { $_ => [ $_ ] } @_;
-
     my %errors = (
-        'NOACCESS'  => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
+        'NOACCESS' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
-        'ILLEGAL'   => 'Client sent data that is not allowed in a dynamic DNS update.',
-        'TOOSOON'   => 'Update frequency is too short.',
+        'ILLEGAL' => 'Client sent data that is not allowed in a dynamic DNS update.',
+        'TOOSOON' => 'Update frequency is too short.',
     );
+    for my $h (@_) {
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
 
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
-        my $hosts = join(',', @hosts);
-        my $h     = $hosts[0];
-        my $ipv4  = $config{$h}{'wantipv4'};
-        my $ipv6  = $config{$h}{'wantipv6'};
-        delete $config{$_}{'wantipv4'} for @hosts;
-        delete $config{$_}{'wantipv6'} for @hosts;
-
-        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $hosts);
-        verbose("UPDATE:", "updating %s", $hosts);
+        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $h);
+        verbose("UPDATE:", "updating %s", $h);
 
         #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
 
         my $url;
-        $url  = "https://$config{$h}{'server'}$config{$h}{'script'}?";
-        $url .= "hostname=$hosts";
+        $url = "https://$config{$h}{'server'}$config{$h}{'script'}?";
+        $url .= "hostname=$h";
         $url .= "&myip=";
         $url .= $ipv4 if $ipv4;
         for my $ipv6a ($ipv6) {
@@ -4859,10 +4813,10 @@ sub nic_easydns_update {
             password => $config{$h}{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'});
+            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
-        next if !header_ok($hosts, $reply);
+        next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
         my $state = 'header';
@@ -4877,7 +4831,6 @@ sub nic_easydns_update {
                 $state = 'results2';
 
                 my ($status) = $line =~ /^(\S*)\b.*/;
-                my $h = shift @hosts;
 
                 $config{$h}{'status-ipv4'} = $status if $ipv4;
                 $config{$h}{'status-ipv6'} = $status if $ipv6;
@@ -4890,10 +4843,10 @@ sub nic_easydns_update {
                 } elsif ($status =~ /TOOSOON/) {
                     ## make sure we wait at least a little
                     my ($wait, $units) = (5, 'm');
-                    my ($sec,  $scale) = ($wait, 1);
+                    my ($sec, $scale) = ($wait, 1);
 
-                    ($scale, $units) = (1, 'seconds')   if $units eq 's';
-                    ($scale, $units) = (60, 'minutes')  if $units eq 'm';
+                    ($scale, $units) = (1, 'seconds') if $units eq 's';
+                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
                     ($scale, $units) = (60*60, 'hours') if $units eq 'h';
                     $config{$h}{'wtime'} = $now + $sec;
                     warning("updating %s: %s: wait %d %s before further updates", $h, $status, $wait, $units);
@@ -4907,11 +4860,10 @@ sub nic_easydns_update {
                 last;
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $config{$h}{'server'})
+        failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
             if $state ne 'results2';
     }
 }
-######################################################################
 
 ######################################################################
 ## nic_namecheap_examples
@@ -5746,107 +5698,98 @@ Example ${program}.conf file entries:
   host1.example.com,host2.example.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_godaddy_update
 ######################################################################
 sub nic_godaddy_update {
     debug("\nnic_godaddy_update --------------------");
+    for my $host (@_) {
+        my $ipv4 = delete $config{$host}{'wantipv4'};
+        my $ipv6 = delete $config{$host}{'wantipv6'};
 
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(server login password zone wantipv4 wantipv6)]);
+        my $zone = $config{$host}{'zone'};
+        (my $hostname = $host) =~ s/\.\Q$zone\E$//;
 
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+        for my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
 
-        # Update each set configured host.
-        for my $host (@hosts) {
-            my $ipv4 = delete $config{$host}{'wantipv4'};
-            my $ipv6 = delete $config{$host}{'wantipv6'};
+            info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
+            verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
 
-            my $zone = $config{$host}{'zone'};
-            (my $hostname = $host) =~ s/\.\Q$zone\E$//;
+            my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $status = \$config{$host}{"status-ipv$ipversion"};
+            my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
+            my $data = encode_json([ {
+                data => $ip,
+                defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
+                name => $hostname,
+                type => $rrset_type,
+            } ]);
 
-            for my $ip ($ipv4, $ipv6) {
-                next if (!$ip);
+            my $url = "https://$config{$host}{'server'}";
+            $url .= "/${zone}/records/${rrset_type}/${hostname}";
 
-                info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
-                verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
-
-                my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                my $status = \$config{$host}{"status-ipv$ipversion"};
-                my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
-                my $data = encode_json([ {
-                    data => $ip,
-                    defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
-                    name => $hostname,
-                    type => $rrset_type,
-                } ]);
-
-                my $url = "https://$config{$host}{'server'}";
-                $url .= "/${zone}/records/${rrset_type}/${hostname}";
-
-                my $header = "Content-Type: application/json\n";
-                $header .= "Accept: application/json\n";
-                $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
-                my $reply = geturl(
-                    proxy   => opt('proxy'),
-                    url     => $url,
-                    headers => $header,
-                    method  => 'PUT',
-                    data    => $data,
-                );
-                unless ($reply) {
-                    failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
-                    next;
-                }
-
-                (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
-                my $ok = header_ok($host, $reply);
-                my $msg;
-                $reply =~ s/^.*?\n\n//s; # extract payload
-                my $response = eval {decode_json($reply)};
-                if (!defined($response) && $code != "200") {
-                    $$status = "bad";
-
-                    failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
-                } elsif (defined($response->{code})) {
-                    info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
-                }
-                if ($ok) {
-                    # read data
-                    $config{$host}{"ipv$ipversion"} = $ip;
-                    $config{$host}{'mtime'} = $now;
-                    $$status = 'good';
-
-                    success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
-                    next;
-                } elsif ($code == "400") {
-                    $msg = 'GoDaddy API URL ($url) was malformed.';
-                } elsif ($code == "401") { # authentication error
-                    if ($config{$host}{'login'} && $config{$host}{'login'}) {
-                        $msg = 'login or password option incorrect.';
-                    } else {
-                        $msg = 'login or password option missing.';
-                    }
-                    $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
-                } elsif ($code == "403") {
-                    $msg = 'Customer identified by login and password options denied permission.';
-                } elsif ($code == "404") {
-                    $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
-                } elsif ($code == "422") {
-                    $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
-                } elsif ($code == "429") {
-                    $msg = 'Too many requests to GoDaddy within brief period.';
-                } elsif ($code == "503") {
-                    $msg = "\"${hostname}.${zone}\" is unavailable.";
-                } else {
-                    $msg = 'Unexpected service response.';
-                }
-
-                $$status = 'bad';
-                failed("%s.%s -- %s", $hostname, $zone, $msg);
+            my $header = "Content-Type: application/json\n";
+            $header .= "Accept: application/json\n";
+            $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                headers => $header,
+                method => 'PUT',
+                data => $data,
+            );
+            unless ($reply) {
+                failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
+                next;
             }
+
+            (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
+            my $ok = header_ok($host, $reply);
+            my $msg;
+            $reply =~ s/^.*?\n\n//s; # extract payload
+            my $response = eval {decode_json($reply)};
+            if (!defined($response) && $code != "200") {
+                $$status = "bad";
+
+                failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
+            } elsif (defined($response->{code})) {
+                info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
+            }
+            if ($ok) {
+                # read data
+                $config{$host}{"ipv$ipversion"} = $ip;
+                $config{$host}{'mtime'} = $now;
+                $$status = 'good';
+
+                success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
+                next;
+            } elsif ($code == "400") {
+                $msg = 'GoDaddy API URL ($url) was malformed.';
+            } elsif ($code == "401") { # authentication error
+                if ($config{$host}{'login'} && $config{$host}{'login'}) {
+                    $msg = 'login or password option incorrect.';
+                } else {
+                    $msg = 'login or password option missing.';
+                }
+                $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
+            } elsif ($code == "403") {
+                $msg = 'Customer identified by login and password options denied permission.';
+            } elsif ($code == "404") {
+                $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
+            } elsif ($code == "422") {
+                $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
+            } elsif ($code == "429") {
+                $msg = 'Too many requests to GoDaddy within brief period.';
+            } elsif ($code == "503") {
+                $msg = "\"${hostname}.${zone}\" is unavailable.";
+            } else {
+                $msg = 'Unexpected service response.';
+            }
+
+            $$status = 'bad';
+            failed("%s.%s -- %s", $hostname, $zone, $msg);
         }
     }
 }
@@ -5883,50 +5826,37 @@ Example ${program}.conf file entries:
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_googledomains_update
 ######################################################################
 sub nic_googledomains_update {
     debug("\nnic_googledomains_update -------------------");
+    for my $host (@_) {
+        my $ip = delete $config{$host}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $host);
+        verbose("UPDATE:", "updating %s", $host);
 
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(server login password wantip)]);
+        my $url = "https://$config{$host}{'server'}/nic/update";
+        $url .= "?hostname=$host";
+        $url .= "&myip=";
+        $url .= $ip if $ip;
 
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
-        my $key   = $hosts[0];
-        my $ip    = $config{$key}{'wantip'};
-
-        # FQDNs
-        for my $host (@hosts) {
-            delete $config{$host}{'wantip'};
-
-            info("setting IP address to %s for %s", $ip, $host);
-            verbose("UPDATE:", "updating %s", $host);
-
-            # Update the DNS record
-            my $url = "https://$config{$host}{'server'}/nic/update";
-            $url .= "?hostname=$host";
-            $url .= "&myip=";
-            $url .= $ip if $ip;
-
-            my $reply = geturl(
-                proxy => opt('proxy'),
-                url => $url,
-                login => $config{$host}{'login'},
-                password => $config{$host}{'password'},
-            );
-            unless ($reply) {
-                failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-                next;
-            }
-            next if !header_ok($host, $reply);
-
-            $config{$host}{'ip'} = $ip;
-            $config{$host}{'mtime'} = $now;
-            $config{$host}{'status'} = 'good';
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $config{$host}{'login'},
+            password => $config{$host}{'password'},
+        );
+        unless ($reply) {
+            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
         }
+        next if !header_ok($host, $reply);
+
+        $config{$host}{'ip'} = $ip;
+        $config{$host}{'mtime'} = $now;
+        $config{$host}{'status'} = 'good';
     }
 }
 
@@ -6067,23 +5997,18 @@ EoEXAMPLE
 ######################################################################
 sub nic_nsupdate_update {
     debug("\nnic_nsupdate_update -------------------");
-
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(login password server zone wantipv4 wantipv6)]);
-
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts   = @{$groups{$sig}};
-        my $hosts   = join(',', @hosts);
-        my $h       = $hosts[0];
-        my $binary  = $config{$h}{'login'};
-        my $keyfile = $config{$h}{'password'};
-        my $server  = $config{$h}{'server'};
+    for my $group (group_hosts_by(\@_, qw(login password server tcp zone wantipv4 wantipv6))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
+        my $hosts = join(',', @hosts);
+        my $binary = $groupcfg{'login'};
+        my $keyfile = $groupcfg{'password'};
+        my $server = $groupcfg{'server'};
         ## nsupdate requires a port number to be separated by whitepace, not colon
         $server =~ s/:/ /;
-        my $zone       = $config{$h}{'zone'};
-        my $ipv4       = $config{$h}{'wantipv4'};
-        my $ipv6       = $config{$h}{'wantipv6'};
+        my $zone = $groupcfg{'zone'};
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
 
@@ -6099,7 +6024,7 @@ EoINSTR1
         for (@hosts) {
             for my $ip ($ipv4, $ipv6) {
                 next if (!$ip);
-                my $type  = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+                my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
                 $instructions .= <<"EoINSTR2";
 update delete $_. $type
 update add $_. $config{$_}{'ttl'} $type $ip
@@ -6110,7 +6035,7 @@ EoINSTR2
 send
 EoINSTR4
         my $command = "$binary -k $keyfile";
-        $command .= " -v" if ynu($config{$h}{'tcp'}, 1, 0, 0);
+        $command .= " -v" if ynu($groupcfg{'tcp'}, 1, 0, 0);
         $command .= " -d" if (opt('debug'));
         verbose("UPDATE:", "nsupdate command is: %s", $command);
         verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
@@ -6121,7 +6046,7 @@ EoINSTR4
                 $config{$_}{'mtime'} = $now;
                 for my $ip ($ipv4, $ipv6) {
                     next if (!$ip);
-                    my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                    my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                     $config{$_}{"ipv$ipv"} = $ip;
                     $config{$_}{"status-ipv$ipv"} = 'good';
                     success("updating %s: good: IPv%s address set to %s", $_, $ipv, $ip);
@@ -6179,46 +6104,40 @@ Example ${program}.conf file entries:
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_cloudflare_update
 ######################################################################
 sub nic_cloudflare_update {
     debug("\nnic_cloudflare_update -------------------");
-
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
-
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
+    for my $group (group_hosts_by(\@_, qw(login password))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $key   = $hosts[0];
-
         my $headers = "Content-Type: application/json\n";
-        if ($config{$key}{'login'} eq 'token') {
-            $headers .= "Authorization: Bearer $config{$key}{'password'}\n";
+        if ($groupcfg{'login'} eq 'token') {
+            $headers .= "Authorization: Bearer $groupcfg{'password'}\n";
         } else {
-            $headers .= "X-Auth-Email: $config{$key}{'login'}\n";
-            $headers .= "X-Auth-Key: $config{$key}{'password'}\n";
+            $headers .= "X-Auth-Email: $groupcfg{'login'}\n";
+            $headers .= "X-Auth-Key: $groupcfg{'password'}\n";
         }
 
-        # FQDNs
         for my $domain (@hosts) {
-            my $ipv4  = delete $config{$domain}{'wantipv4'};
-            my $ipv6  = delete $config{$domain}{'wantipv6'};
+            my $ipv4 = delete $config{$domain}{'wantipv4'};
+            my $ipv6 = delete $config{$domain}{'wantipv6'};
 
             info("getting Cloudflare Zone ID for %s", $domain);
 
             # Get zone ID
-            my $url = "https://$config{$key}{'server'}/zones/?";
-            $url .= "name=" . $config{$key}{'zone'};
+            my $url = "https://$config{$domain}{'server'}/zones/?";
+            $url .= "name=" . $config{$domain}{'zone'};
 
             my $reply = geturl(proxy => opt('proxy'),
                                url => $url,
                                headers => $headers
                               );
             unless ($reply && header_ok($domain, $reply)) {
-                failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+                failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
 
@@ -6231,9 +6150,9 @@ sub nic_cloudflare_update {
             }
 
             # Pull the ID out of the json, messy
-            my ($zone_id) = map {$_->{name} eq $config{$key}{'zone'} ? $_->{id} : ()} @{$response->{result}};
+            my ($zone_id) = map {$_->{name} eq $config{$domain}{'zone'} ? $_->{id} : ()} @{$response->{result}};
             unless ($zone_id) {
-                failed("updating %s: No zone ID found.", $config{$key}{'zone'});
+                failed("updating %s: No zone ID found.", $config{$domain}{'zone'});
                 next;
             }
             info("Zone ID is %s", $zone_id);
@@ -6242,21 +6161,21 @@ sub nic_cloudflare_update {
             # IPv4 and IPv6 handling are similar enough to do in a loop...
             for my $ip ($ipv4, $ipv6) {
                 next if (!$ip);
-                my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                 my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
 
                 info("updating %s: setting IPv$ipv address to %s", $domain, $ip);
                 $config{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records?";
+                $url = "https://$config{$domain}{'server'}/zones/$zone_id/dns_records?";
                 $url .= "type=$type&name=$domain";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
                                 headers => $headers
                                );
                 unless ($reply && header_ok($domain, $reply)) {
-                    failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+                    failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                     next;
                 }
                 # Strip header
@@ -6274,7 +6193,7 @@ sub nic_cloudflare_update {
                 }
                 debug("updating %s: DNS '$type' record ID: $dns_rec_id", $domain);
                 # Set domain
-                $url = "https://$config{$key}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
+                $url = "https://$config{$domain}{'server'}/zones/$zone_id/dns_records/$dns_rec_id";
                 my $data = "{\"content\":\"$ip\"}";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
@@ -6327,125 +6246,113 @@ Example ${program}.conf file entries:
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_hetzner_update
 ######################################################################
 sub nic_hetzner_update {
     debug("\nnic_hetzner_update -------------------");
-
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(ssh login password server wildcard mx backupmx zone wantipv4 wantipv6)]);
-
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
-        my $hosts = join(',', @hosts);
-        my $key   = $hosts[0];
-
-        my $headers = "Auth-API-Token: $config{$key}{'password'}\n";
+    for my $domain (@_) {
+        my $headers = "Auth-API-Token: $config{$domain}{'password'}\n";
         $headers .= "Content-Type: application/json";
 
-        # FQDNs
-        for my $domain (@hosts) {
-            (my $hostname = $domain) =~ s/\.$config{$key}{zone}$//;
-            my $ipv4  = delete $config{$domain}{'wantipv4'};
-            my $ipv6  = delete $config{$domain}{'wantipv6'};
+        (my $hostname = $domain) =~ s/\.$config{$domain}{zone}$//;
+        my $ipv4 = delete $config{$domain}{'wantipv4'};
+        my $ipv6 = delete $config{$domain}{'wantipv6'};
 
-            info("getting Hetzner Zone ID for %s", $domain);
+        info("getting Hetzner Zone ID for %s", $domain);
 
-            # Get zone ID
-            my $url = "https://$config{$key}{'server'}/zones?name=" . $config{$key}{'zone'};
+        # Get zone ID
+        my $url = "https://$config{$domain}{'server'}/zones?name=" . $config{$domain}{'zone'};
 
-            my $reply = geturl(proxy => opt('proxy'),
-                               url => $url,
-                               headers => $headers
-                              );
+        my $reply = geturl(proxy => opt('proxy'),
+                           url => $url,
+                           headers => $headers
+                          );
+        unless ($reply && header_ok($domain, $reply)) {
+            failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
+            next;
+        }
+
+        # Strip header
+        $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+        my $response = eval {decode_json(${^MATCH})};
+        unless ($response && $response->{zones}) {
+            failed("updating %s: invalid json or result.", $domain);
+            next;
+        }
+
+        # Pull the ID out of the json, messy
+        my ($zone_id) = map {$_->{name} eq $config{$domain}{'zone'} ? $_->{id} : ()} @{$response->{zones}};
+        unless ($zone_id) {
+            failed("updating %s: No zone ID found.", $config{$domain}{'zone'});
+            next;
+        }
+        info("Zone ID is %s", $zone_id);
+
+        # IPv4 and IPv6 handling are similar enough to do in a loop...
+        for my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+
+            info("updating %s: setting IPv$ipv address to %s", $domain, $ip);
+            $config{$domain}{"status-ipv$ipv"} = 'failed';
+
+            # Get DNS 'A' or 'AAAA' record ID
+            $url = "https://$config{$domain}{'server'}/records?zone_id=$zone_id";
+            $reply = geturl(proxy => opt('proxy'),
+                            url => $url,
+                            headers => $headers
+                           );
             unless ($reply && header_ok($domain, $reply)) {
-                failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
+                failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
-
             # Strip header
             $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-            my $response = eval {decode_json(${^MATCH})};
-            unless ($response && $response->{zones}) {
+            $response = eval {decode_json(${^MATCH})};
+            unless ($response && $response->{records}) {
                 failed("updating %s: invalid json or result.", $domain);
                 next;
             }
-
             # Pull the ID out of the json, messy
-            my ($zone_id) = map {$_->{name} eq $config{$key}{'zone'} ? $_->{id} : ()} @{$response->{zones}};
-            unless ($zone_id) {
-                failed("updating %s: No zone ID found.", $config{$key}{'zone'});
+            my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? $_->{id} : ()} @{$response->{records}};
+
+            # Set domain
+            my $http_method="";
+            if ($dns_rec_id)
+            {
+                debug("updating %s: DNS '$type' record ID: $dns_rec_id", $domain);
+                $url = "https://$config{$domain}{'server'}/records/$dns_rec_id";
+                $http_method = "PUT";
+            } else {
+                debug("creating %s: DNS '$type'", $domain);
+                $url = "https://$config{$domain}{'server'}/records";
+                $http_method = "POST";
+            }
+            my $data = "{\"zone_id\":\"$zone_id\", \"name\": \"$hostname\", \"value\": \"$ip\", \"type\": \"$type\", \"ttl\": $config{$domain}{'ttl'}}";
+
+            $reply = geturl(proxy => opt('proxy'),
+                            url => $url,
+                            headers => $headers,
+                            method => $http_method,
+                            data => $data
+                           );
+            unless ($reply && header_ok($domain, $reply)) {
+                failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
-            info("Zone ID is %s", $zone_id);
-
-
-            # IPv4 and IPv6 handling are similar enough to do in a loop...
-            for my $ip ($ipv4, $ipv6) {
-                next if (!$ip);
-                my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
-
-                info("updating %s: setting IPv$ipv address to %s", $domain, $ip);
-                $config{$domain}{"status-ipv$ipv"} = 'failed';
-
-                # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$key}{'server'}/records?zone_id=$zone_id";
-                $reply = geturl(proxy => opt('proxy'),
-                                url => $url,
-                                headers => $headers
-                               );
-                unless ($reply && header_ok($domain, $reply)) {
-                    failed("updating %s: Could not connect to %s.", $domain, $config{$key}{'server'});
-                    next;
-                }
-                # Strip header
-                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-                $response = eval {decode_json(${^MATCH})};
-                unless ($response && $response->{records}) {
-                    failed("updating %s: invalid json or result.", $domain);
-                    next;
-                }
-                # Pull the ID out of the json, messy
-                my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? $_->{id} : ()} @{$response->{records}};
-
-                # Set domain
-                my $http_method="";
-                if ($dns_rec_id)
-                {
-                    debug("updating %s: DNS '$type' record ID: $dns_rec_id", $domain);
-                    $url   = "https://$config{$key}{'server'}/records/$dns_rec_id";
-                    $http_method = "PUT";
-                } else {
-                    debug("creating %s: DNS '$type'", $domain);
-                    $url   = "https://$config{$key}{'server'}/records";
-                    $http_method = "POST";
-                }
-                my $data = "{\"zone_id\":\"$zone_id\", \"name\": \"$hostname\", \"value\": \"$ip\", \"type\": \"$type\", \"ttl\": $config{$domain}{'ttl'}}";
-
-                $reply = geturl(proxy => opt('proxy'),
-                                url => $url,
-                                headers => $headers,
-                                method => $http_method,
-                                data => $data
-                               );
-                unless ($reply && header_ok($domain, $reply)) {
-                    failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
-                    next;
-                }
-                # Strip header
-                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-                $response = eval {decode_json(${^MATCH})};
-                if ($response && $response->{record}) {
-                    success("updating %s: IPv$ipv address set to %s", $domain, $ip);
-                    $config{$domain}{"ipv$ipv"} = $ip;
-                    $config{$domain}{'mtime'} = $now;
-                    $config{$domain}{"status-ipv$ipv"} = 'good';
-                } else {
-                    failed("updating %s: invalid json or result.", $domain);
-                }
+            # Strip header
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            $response = eval {decode_json(${^MATCH})};
+            if ($response && $response->{record}) {
+                success("updating %s: IPv$ipv address set to %s", $domain, $ip);
+                $config{$domain}{"ipv$ipv"} = $ip;
+                $config{$domain}{'mtime'} = $now;
+                $config{$domain}{"status-ipv$ipv"} = 'good';
+            } else {
+                failed("updating %s: invalid json or result.", $domain);
             }
         }
     }
@@ -6481,6 +6388,7 @@ Example ${program}.conf file entries:
   record.myhost.com,other.myhost.com
 EoEXAMPLE
 }
+
 ######################################################################
 ## nic_yandex_update
 ##
@@ -6489,85 +6397,73 @@ EoEXAMPLE
 ######################################################################
 sub nic_yandex_update {
     debug("\nnic_yandex_update -------------------");
+    for my $host (@_) {
+        my $ip = delete $config{$host}{'wantip'};
+        my $headers = "PddToken: $config{$host}{'password'}\n";
 
-    ## group hosts with identical attributes together
-    my %groups = group_hosts_by(\@_, [qw(server login pasword wantip)]);
+        info("setting IP address to %s for %s", $ip, $host);
+        verbose("UPDATE:", "updating %s", $host);
 
-    ## update each set of hosts that had similar configurations
-    for my $sig (keys %groups) {
-        my @hosts   = @{$groups{$sig}};
-        my $key     = $hosts[0];
-        my $ip      = $config{$key}{'wantip'};
-        my $headers = "PddToken: $config{$key}{'password'}\n";
-
-        # FQDNs
-        for my $host (@hosts) {
-            delete $config{$host}{'wantip'};
-
-            info("setting IP address to %s for %s", $ip, $host);
-            verbose("UPDATE:", "updating %s", $host);
-
-            # Get record ID for host
-            my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
-            $url .= "domain=";
-            $url .= $config{$key}{'login'};
-            my $reply = geturl(proxy => opt('proxy'), url => $url, headers => $headers);
-            unless ($reply) {
-                failed("updating %s: Could not connect to %s.", $host, $config{$key}{'server'});
-                next;
-            }
-            next if !header_ok($host, $reply);
-
-            # Strip header
-            $reply =~ s/^.*?\n\n//s;
-            my $response = eval { decode_json($reply) };
-            if ($response->{success} eq 'error') {
-                failed("%s", $response->{error});
-                next;
-            }
-
-            # Pull the ID out of the json
-            my ($id) = map { $_->{fqdn} eq $host ? $_->{record_id} : () } @{$response->{records}};
-            unless ($id) {
-                failed("updating %s: DNS record ID not found.", $host);
-                next;
-            }
-
-            # Update the DNS record
-            $url = "https://$config{$host}{'server'}/api2/admin/dns/edit";
-            my $data = "domain=";
-            $data .= $config{$key}{'login'};
-            $data .= "&record_id=";
-            $data .= $id;
-            $data .= "&content=";
-            $data .= $ip if $ip;
-
-            $reply = geturl(
-                proxy => opt('proxy'),
-                url => $url,
-                headers => $headers,
-                method => 'POST',
-                data => $data,
-            );
-            unless ($reply) {
-                failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-                next;
-            }
-            next if !header_ok($host, $reply);
-
-            # Strip header
-            $reply =~ s/^.*?\n\n//s;
-            $response = eval { decode_json($reply) };
-            if ($response->{success} eq 'error') {
-                failed("%s", $response->{error});
-            } else {
-                success("%s -- Updated Successfully to %s", $host, $ip);
-            }
-
-            $config{$host}{'ip'} = $ip;
-            $config{$host}{'mtime'} = $now;
-            $config{$host}{'status'} = 'good';
+        # Get record ID for host
+        my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
+        $url .= "domain=";
+        $url .= $config{$host}{'login'};
+        my $reply = geturl(proxy => opt('proxy'), url => $url, headers => $headers);
+        unless ($reply) {
+            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
         }
+        next if !header_ok($host, $reply);
+
+        # Strip header
+        $reply =~ s/^.*?\n\n//s;
+        my $response = eval { decode_json($reply) };
+        if ($response->{success} eq 'error') {
+            failed("%s", $response->{error});
+            next;
+        }
+
+        # Pull the ID out of the json
+        my ($id) = map { $_->{fqdn} eq $host ? $_->{record_id} : () } @{$response->{records}};
+        unless ($id) {
+            failed("updating %s: DNS record ID not found.", $host);
+            next;
+        }
+
+        # Update the DNS record
+        $url = "https://$config{$host}{'server'}/api2/admin/dns/edit";
+        my $data = "domain=";
+        $data .= $config{$host}{'login'};
+        $data .= "&record_id=";
+        $data .= $id;
+        $data .= "&content=";
+        $data .= $ip if $ip;
+
+        $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            headers => $headers,
+            method => 'POST',
+            data => $data,
+        );
+        unless ($reply) {
+            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
+        }
+        next if !header_ok($host, $reply);
+
+        # Strip header
+        $reply =~ s/^.*?\n\n//s;
+        $response = eval { decode_json($reply) };
+        if ($response->{success} eq 'error') {
+            failed("%s", $response->{error});
+        } else {
+            success("%s -- Updated Successfully to %s", $host, $ip);
+        }
+
+        $config{$host}{'ip'} = $ip;
+        $config{$host}{'mtime'} = $now;
+        $config{$host}{'status'} = 'good';
     }
 }
 
@@ -7381,12 +7277,12 @@ EoEXAMPLE
 }
 
 sub nic_cloudns_update {
-    my %groups = group_hosts_by(\@_, [qw(dynurl wantip)]);
-    for my $hr (values(%groups)) {
-        my @hosts = @$hr;
+    for my $group (group_hosts_by(\@_, qw(dynurl wantip))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
-        my $ip = $config{$hosts[0]}{'wantip'};
-        my $dynurl = $config{$hosts[0]}{'dynurl'};
+        my $ip = $groupcfg{'wantip'};
+        my $dynurl = $groupcfg{'dynurl'};
         delete $config{$_}{'wantip'} for @hosts;
         # https://www.cloudns.net/wiki/article/36/ says, "If you are behind a proxy and your real
         # IP is set in the header X-Forwarded-For you need to add &proxy=1 at the end of the
