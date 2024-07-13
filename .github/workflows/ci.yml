@@ -80,10 +80,10 @@ jobs:
           dnf --refresh install -y 'dnf-command(config-manager)' epel-release &&
           dnf config-manager --set-enabled crb
       - name: install dependencies
-        # The --skip-broken argument works around RedHat UBI's missing packages.
-        # (They're only used for testing, so it's OK to not install them.)
+        # The --skip-broken argument works around missing packages.  (They're
+        # only used for testing, so it's OK to not install them.)
         run: |
-          dnf --refresh --skip-broken install -y \
+          dnf --refresh install --skip-broken -y \
               automake \
               findutils \
               iproute \
