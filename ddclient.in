@@ -6398,80 +6398,73 @@ EoEXAMPLE
 ######################################################################
 sub nic_yandex_update {
     debug("\nnic_yandex_update -------------------");
-    my %groups = group_hosts_by(\@_, [qw(server login pasword wantip)]);
-    for my $sig (keys %groups) {
-        my @hosts = @{$groups{$sig}};
-        my $key = $hosts[0];
-        my $ip = $config{$key}{'wantip'};
-        my $headers = "PddToken: $config{$key}{'password'}\n";
+    for my $host (@_) {
+        my $ip = delete $config{$host}{'wantip'};
+        my $headers = "PddToken: $config{$host}{'password'}\n";
 
-        for my $host (@hosts) {
-            delete $config{$host}{'wantip'};
+        info("setting IP address to %s for %s", $ip, $host);
+        verbose("UPDATE:", "updating %s", $host);
 
-            info("setting IP address to %s for %s", $ip, $host);
-            verbose("UPDATE:", "updating %s", $host);
-
-            # Get record ID for host
-            my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
-            $url .= "domain=";
-            $url .= $config{$key}{'login'};
-            my $reply = geturl(proxy => opt('proxy'), url => $url, headers => $headers);
-            unless ($reply) {
-                failed("updating %s: Could not connect to %s.", $host, $config{$key}{'server'});
-                next;
-            }
-            next if !header_ok($host, $reply);
-
-            # Strip header
-            $reply =~ s/^.*?\n\n//s;
-            my $response = eval { decode_json($reply) };
-            if ($response->{success} eq 'error') {
-                failed("%s", $response->{error});
-                next;
-            }
-
-            # Pull the ID out of the json
-            my ($id) = map { $_->{fqdn} eq $host ? $_->{record_id} : () } @{$response->{records}};
-            unless ($id) {
-                failed("updating %s: DNS record ID not found.", $host);
-                next;
-            }
-
-            # Update the DNS record
-            $url = "https://$config{$host}{'server'}/api2/admin/dns/edit";
-            my $data = "domain=";
-            $data .= $config{$key}{'login'};
-            $data .= "&record_id=";
-            $data .= $id;
-            $data .= "&content=";
-            $data .= $ip if $ip;
-
-            $reply = geturl(
-                proxy => opt('proxy'),
-                url => $url,
-                headers => $headers,
-                method => 'POST',
-                data => $data,
-            );
-            unless ($reply) {
-                failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-                next;
-            }
-            next if !header_ok($host, $reply);
-
-            # Strip header
-            $reply =~ s/^.*?\n\n//s;
-            $response = eval { decode_json($reply) };
-            if ($response->{success} eq 'error') {
-                failed("%s", $response->{error});
-            } else {
-                success("%s -- Updated Successfully to %s", $host, $ip);
-            }
-
-            $config{$host}{'ip'} = $ip;
-            $config{$host}{'mtime'} = $now;
-            $config{$host}{'status'} = 'good';
+        # Get record ID for host
+        my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
+        $url .= "domain=";
+        $url .= $config{$host}{'login'};
+        my $reply = geturl(proxy => opt('proxy'), url => $url, headers => $headers);
+        unless ($reply) {
+            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
         }
+        next if !header_ok($host, $reply);
+
+        # Strip header
+        $reply =~ s/^.*?\n\n//s;
+        my $response = eval { decode_json($reply) };
+        if ($response->{success} eq 'error') {
+            failed("%s", $response->{error});
+            next;
+        }
+
+        # Pull the ID out of the json
+        my ($id) = map { $_->{fqdn} eq $host ? $_->{record_id} : () } @{$response->{records}};
+        unless ($id) {
+            failed("updating %s: DNS record ID not found.", $host);
+            next;
+        }
+
+        # Update the DNS record
+        $url = "https://$config{$host}{'server'}/api2/admin/dns/edit";
+        my $data = "domain=";
+        $data .= $config{$host}{'login'};
+        $data .= "&record_id=";
+        $data .= $id;
+        $data .= "&content=";
+        $data .= $ip if $ip;
+
+        $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            headers => $headers,
+            method => 'POST',
+            data => $data,
+        );
+        unless ($reply) {
+            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
+            next;
+        }
+        next if !header_ok($host, $reply);
+
+        # Strip header
+        $reply =~ s/^.*?\n\n//s;
+        $response = eval { decode_json($reply) };
+        if ($response->{success} eq 'error') {
+            failed("%s", $response->{error});
+        } else {
+            success("%s -- Updated Successfully to %s", $host, $ip);
+        }
+
+        $config{$host}{'ip'} = $ip;
+        $config{$host}{'mtime'} = $now;
+        $config{$host}{'status'} = 'good';
     }
 }
 
