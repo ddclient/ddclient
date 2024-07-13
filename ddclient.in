@@ -4136,6 +4136,10 @@ sub nic_dyndns2_update {
             # bug #10: some dyndns providers does not return the IP so
             # we can't use the returned IP
             my ($status, $returnedips) = split / /, lc $line;
+            if ($status eq 'nochg') {
+                warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
+                $status = 'good';
+            }
             for my $h (@hosts) {
                 $config{$h}{'status-ipv4'} = $status if $ipv4;
                 $config{$h}{'status-ipv6'} = $status if $ipv6;
@@ -4149,18 +4153,7 @@ sub nic_dyndns2_update {
                 success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
                 success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
             } elsif (exists $errors{$status}) {
-                if ($status eq 'nochg') {
-                    warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
-                    for my $h (@hosts) {
-                        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                        $config{$h}{'mtime'} = $now;
-                        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-                        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
-                    }
-                } else {
-                    failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
-                }
+                failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
             } elsif ($status =~ /w(\d+)(.)/) {
                 # TODO: <https://help.dyn.com/remote-access-api/return-codes/> does not mention
                 # anything about wait statuses.  Is this obsolete (this code has been here
