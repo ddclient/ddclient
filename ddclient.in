@@ -4073,61 +4073,56 @@ sub nic_dyndns2_update {
             next;
         }
         next if !header_ok($hosts, $reply);
-        my @reply = split /\n/, $reply;
-        my $state = 'header';
-        for my $line (@reply) {
-            if ($state eq 'header') {
-                $state = 'body';
-            } elsif ($state eq 'body') {
-                $state = 'results' if $line eq '';
-            } elsif ($state =~ /^results/) {
-                $state = 'results2';
-                # bug #10: some dyndns providers does not return the IP so
-                # we can't use the returned IP
-                my ($status, $returnedips) = split / /, lc $line;
-                for my $h (@hosts) {
-                    $config{$h}{'status-ipv4'} = $status if $ipv4;
-                    $config{$h}{'status-ipv6'} = $status if $ipv6;
-                }
-                if ($status eq 'good') {
-                    for my $h (@hosts) {
-                        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                        $config{$h}{'mtime'} = $now;
-                    }
-                    success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
-                    success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
-                } elsif (exists $errors{$status}) {
-                    if ($status eq 'nochg') {
-                        warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
-                        for my $h (@hosts) {
-                            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                            $config{$h}{'mtime'} = $now;
-                            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-                            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
-                        }
-                    } else {
-                        failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
-                    }
-                } elsif ($status =~ /w(\d+)(.)/) {
-                    my ($wait, $units) = ($1, lc $2);
-                    my ($sec, $scale) = ($wait, 1);
-                    ($scale, $units) = (1, 'seconds') if $units eq 's';
-                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-                    $sec = $wait * $scale;
-                    for my $h (@hosts) {
-                        $config{$h}{'wtime'} = $now + $sec;
-                    }
-                    warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
-                } else {
-                    failed("updating %s: unexpected status (%s)", $hosts, $line);
-                }
-            }
+        # Some services can return 200 OK even if there is an error (e.g., bad authentication,
+        # updates too frequent) so the body of the response must also be checked.
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my ($line) = grep(qr/^results/, split(qr/\n/, $body));
+        if (!$line) {
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
+            next;
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
-            if $state ne 'results2';
+        # bug #10: some dyndns providers does not return the IP so
+        # we can't use the returned IP
+        my ($status, $returnedips) = split / /, lc $line;
+        for my $h (@hosts) {
+            $config{$h}{'status-ipv4'} = $status if $ipv4;
+            $config{$h}{'status-ipv6'} = $status if $ipv6;
+        }
+        if ($status eq 'good') {
+            for my $h (@hosts) {
+                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $config{$h}{'mtime'} = $now;
+            }
+            success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
+            success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
+        } elsif (exists $errors{$status}) {
+            if ($status eq 'nochg') {
+                warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
+                for my $h (@hosts) {
+                    $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                    $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                    $config{$h}{'mtime'} = $now;
+                    $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+                    $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+                }
+            } else {
+                failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
+            }
+        } elsif ($status =~ /w(\d+)(.)/) {
+            my ($wait, $units) = ($1, lc $2);
+            my ($sec, $scale) = ($wait, 1);
+            ($scale, $units) = (1, 'seconds') if $units eq 's';
+            ($scale, $units) = (60, 'minutes') if $units eq 'm';
+            ($scale, $units) = (60*60, 'hours') if $units eq 'h';
+            $sec = $wait * $scale;
+            for my $h (@hosts) {
+                $config{$h}{'wtime'} = $now + $sec;
+            }
+            warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
+        } else {
+            failed("updating %s: unexpected status (%s)", $hosts, $line);
+        }
     }
 }
 
