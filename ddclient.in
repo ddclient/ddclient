@@ -4081,9 +4081,9 @@ sub nic_dyndns2_update {
             failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
-        # bug #10: some dyndns providers does not return the IP so
-        # we can't use the returned IP
-        my ($status, $returnedips) = split / /, lc $line;
+        # The IP address normally comes after the status, but we ignore it.  (Some services do not
+        # return the IP so we can't rely on it anyway.)
+        (my $status = $line) =~ s/ .*$//;
         if ($status eq 'nochg') {
             warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
             $status = 'good';
