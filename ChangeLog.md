@@ -10,6 +10,11 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Unencrypted (plain) HTTP is now used instead of encrypted (TLS) HTTP if the
     URL uses `http://` instead of `https://`, even if the `--ssl` option is
     enabled.  [#608](https://github.com/ddclient/ddclient/pull/608)
+  * The `googledomains` built-in web IP discovery service
+    (`--webv4=googledomains`, `--webv6=googledomains`, and
+    `--web=googledomains`) is deprecated due to the service shutting down.  It
+    will be removed in a future version of ddclient.
+    [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
   * The default web service for `--webv4` and `--webv6` has changed from Google
     Domains (which is shutting down) to ipify.
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
@@ -19,6 +24,14 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     `Digest::SHA` is now required.  Previously, `Digest::SHA1` was used (if
     available) as an alternative to `Digest::SHA`.
     [#685](https://github.com/ddclient/ddclient/pull/685)
+  * The `he` built-in web IP discovery service (`--webv4=he`, `--webv6=he`, and
+    `--web=he`) was renamed to `he.net` for consistency with the new `he.net`
+    protocol.  The old name is still accepted but is deprecated and will be
+    removed in a future version of ddclient.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
+  * Deprecated built-in web IP discovery services are not listed in the output
+    of `--list-web-services`.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
 
 ### New features
 
@@ -47,6 +60,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#676](https://github.com/ddclient/ddclient/pull/676)
   * `emailonly`: New `protocol` option that simply emails you when your IP
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
+  * `he.net`: Added support for updating Hurricane Electric records.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
 
 ### Bug fixes
 
@@ -150,7 +165,7 @@ Refer to [v3.11 release plan discussions](https://github.com/ddclient/ddclient/i
 
   * Added support for domaindiscount24.com
   * Added support for njal.la
- 
+
 ## 2022-05-15 v3.10.0_2
 
 ### Bug fixes
