@@ -4072,8 +4072,7 @@ sub nic_dyndns2_update {
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
-        ## Select the DynDNS system to update
-        my $url = "http://$groupcfg{'server'}$groupcfg{'script'}?system=";
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?system=";
         if ($groupcfg{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
                 if $groupcfg{'static'};
