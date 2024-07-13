@@ -193,8 +193,14 @@ sub T_POSTS  { 'postscript' }
 our %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
-    'googledomains' => {'url' => 'https://domains.google.com/checkip'}, #  Deprecated! See https://github.com/ddclient/ddclient/issues/622 for more details
-    'he' => {'url' => 'https://checkip.dns.he.net/'},
+    'googledomains' => {
+        url => 'https://domains.google.com/checkip',
+        deprecated => 'See https://github.com/ddclient/ddclient/issues/622 for more info.',
+    },
+    'he' => {
+        url => 'https://checkip.dns.he.net/',
+        deprecated => "Use 'he.net' instead.",
+    },
     'he.net' => {'url' => 'https://checkip.dns.he.net/'},
     'ip4only.me' => {'url' => 'https://ip4only.me/api/'},
     'ip6only.me' => {'url' => 'https://ip6only.me/api/'},
@@ -1166,7 +1172,11 @@ $opt{'list-protocols'} = sub {
     exit(0);
 };
 $opt{'list-web-services'} = sub {
-    printf("%s %s\n", $_, $builtinweb{$_}{url}) for sort(keys(%builtinweb));
+    # This intentionally does not list deprecated services, although they are still accepted.
+    # Excluding deprecated services from the output discourages their selection by configuration
+    # wizards (e.g., Debian's debconf) that present this list to users.
+    printf("%s %s\n", $_, $builtinweb{$_}{url})
+        for sort(grep(!$builtinweb{$_}{deprecated}, keys(%builtinweb)));
     exit(0);
 };
 $opt{'version'} = sub {
@@ -2912,11 +2922,10 @@ sub get_ip {
     } elsif ($use eq 'web') {
         $url = opt('web', $h) // '';
         $skip = opt('web-skip', $h);
-        if (exists $builtinweb{$url}) {
-            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
-            warning("'he' is deprecated; use 'he.net' instead.") if ($url eq 'he');
-            $skip //= $builtinweb{$url}->{'skip'};
-            $url = $builtinweb{$url}->{'url'};
+        if (my $biw = $builtinweb{$url}) {
+            warning("'--web=$url' is deprecated!  $biw->{deprecated}") if $biw->{deprecated};
+            $skip //= $biw->{skip};
+            $url = $biw->{url};
         }
         $arg = $url;
         if ($url) {
@@ -3308,11 +3317,10 @@ sub get_ipv4 {
         ## Obtain IPv4 address by accessing website at url in "webv4=<url>"
         $url = $arg;
         $skip = opt('webv4-skip', $h);
-        if (exists $builtinweb{$url}) {
-            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
-            warning("'he' is deprecated; use 'he.net' instead.") if ($url eq 'he');
-            $skip //= $builtinweb{$url}->{'skip'};
-            $url = $builtinweb{$url}->{'url'};
+        if (my $biw = $builtinweb{$url}) {
+            warning("'--webv4=$url' is deprecated!  $biw->{deprecated}") if $biw->{deprecated};
+            $skip //= $biw->{skip};
+            $url = $biw->{url};
             $arg  = $url;
         }
         if ($url) {
@@ -3426,11 +3434,10 @@ sub get_ipv6 {
             if (!defined(opt('webv6-skip', $h)) && defined(opt('web-skip', $h)));
         $url = $arg;
         $skip = opt('webv6-skip', $h);
-        if (exists $builtinweb{$url}) {
-            warning("googledomains is deprecated! See https://github.com/ddclient/ddclient/issues/622 for more info.") if ($url eq 'googledomains');
-            warning("'he' is deprecated; use 'he.net' instead.") if ($url eq 'he');
-            $skip //= $builtinweb{$url}->{'skip'};
-            $url = $builtinweb{$url}->{'url'};
+        if (my $biw = $builtinweb{$url}) {
+            warning("'--webv6=$url' is deprecated!  $biw->{deprecated}") if $biw->{deprecated};
+            $skip //= $biw->{skip};
+            $url = $biw->{url};
             $arg  = $url;
         }
         if ($url) {

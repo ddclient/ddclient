@@ -29,6 +29,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     protocol.  The old name is still accepted but is deprecated and will be
     removed in a future version of ddclient.
     [#682](https://github.com/ddclient/ddclient/pull/682)
+  * Deprecated built-in web IP discovery services are not listed in the output
+    of `--list-web-services`.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
 
 ### New features
 
