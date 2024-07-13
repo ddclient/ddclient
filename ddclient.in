@@ -1054,7 +1054,12 @@ our %protocols = (
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'mx'                        => setv(T_OFQDN,  0, 1, undef,           undef),
             'script'                    => setv(T_STRING, 0, 1, '/nic/update',   undef),
-            'server'                    => setv(T_FQDNP,  0, 0, 'dyn.woima.fi',  undef),
+            # As of 2024-07-13, dyn.woima.fi does not have a valid TLS certificate so the `http:`
+            # scheme is explicitly specified here.  Once a proper certificate is deployed, or if
+            # the user overrides certificate validation, the user can manually set the `server`
+            # option and either change http: to https: or omit the scheme (in which case ddclient
+            # will use the value of the `ssl` option to determine the scheme).
+            'server' => setv(T_FQDNP, 0, 0, 'http://dyn.woima.fi', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'wildcard'                  => setv(T_BOOL,   0, 1, 0,               undef),
         },
@@ -6802,10 +6807,7 @@ sub nic_woima_update {
 
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
-
-        ## Select the DynDNS system to update
-        ## TODO: endpoint does not support https with functioning certificate. Remove?
-        my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
+        my $url = "$config{$h}{'server'}$config{$h}{'script'}?system=";
         if ($config{$h}{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $h)
                 if $config{$h}{'static'};

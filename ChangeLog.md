@@ -62,9 +62,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
   * `he.net`: Added support for updating Hurricane Electric records.
     [#682](https://github.com/ddclient/ddclient/pull/682)
-  * `dyndns2`, `domeneshop`, `dnsmadeeasy`, `keysystems`: The `server` option
-    can now include `http://` or `https://` to control the use of TLS.  If
-    omitted, the value of the `ssl` option is used to determine the scheme.
+  * `dyndns2`, `domeneshop`, `dnsmadeeasy`, `keysystems`, `woima`: The `server`
+    option can now include `http://` or `https://` to control the use of TLS.
+    If omitted, the value of the `ssl` option is used to determine the scheme.
     [#703](https://github.com/ddclient/ddclient/pull/703)
 
 ### Bug fixes
