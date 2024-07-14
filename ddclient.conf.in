@@ -18,9 +18,8 @@
 ######################################################################
 
 ## Use encryption (TLS) when the scheme (either "http://" or "https://") is
-## missing from a URL.  Defaults to "no" for compatibility reasons, but you are
-## strongly encouraged to set this to "yes".
-ssl=yes
+## missing from a URL.  Defaults to "yes".
+#ssl=yes
 
 daemon=300				# check every 300 seconds
 syslog=yes				# log update msgs to syslog

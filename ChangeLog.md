@@ -7,6 +7,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Breaking changes
 
+  * The `--ssl` option is now enabled by default.
+    [#705](https://github.com/ddclient/ddclient/pull/705)
   * Unencrypted (plain) HTTP is now used instead of encrypted (TLS) HTTP if the
     URL uses `http://` instead of `https://`, even if the `--ssl` option is
     enabled.  [#608](https://github.com/ddclient/ddclient/pull/608)
