@@ -22,6 +22,7 @@ Dynamic DNS services currently supported include:
 * [DonDominio](https://www.dondominio.com)
 * [DNS Made Easy](https://dnsmadeeasy.com)
 * [DNSExit](https://dnsexit.com/dns/dns-api)
+* [dnsHome.de](https://www.dnshome.de)
 * [Domeneshop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
 * [DslReports](https://www.dslreports.com)
 * [Duck DNS](https://duckdns.org)
