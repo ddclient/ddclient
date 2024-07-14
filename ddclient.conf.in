@@ -404,3 +404,12 @@ ssl=yes					# use ssl-support.  Works with
 ##
 # protocol=emailonly
 # host.example.com
+
+##
+## dnsHome.de
+##
+# protocol=dyndns2           \
+# server=www.dnshome.de      \
+# login=subdomain.domain.tld \
+# password=your_password     \
+# subdomain.domain.tld
