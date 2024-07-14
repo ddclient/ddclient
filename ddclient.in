@@ -1054,7 +1054,12 @@ our %protocols = (
             'custom'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'mx'                        => setv(T_OFQDN,  0, 1, undef,           undef),
             'script'                    => setv(T_STRING, 0, 1, '/nic/update',   undef),
-            'server'                    => setv(T_FQDNP,  0, 0, 'dyn.woima.fi',  undef),
+            # As of 2024-07-13, dyn.woima.fi does not have a valid TLS certificate so the `http:`
+            # scheme is explicitly specified here.  Once a proper certificate is deployed, or if
+            # the user overrides certificate validation, the user can manually set the `server`
+            # option and either change http: to https: or omit the scheme (in which case ddclient
+            # will use the value of the `ssl` option to determine the scheme).
+            'server' => setv(T_FQDNP, 0, 0, 'http://dyn.woima.fi', undef),
             'static'                    => setv(T_BOOL,   0, 1, 0,               undef),
             'wildcard'                  => setv(T_BOOL,   0, 1, 0,               undef),
         },
@@ -4072,8 +4077,7 @@ sub nic_dyndns2_update {
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
         verbose("UPDATE:", "updating %s", $hosts);
-        ## Select the DynDNS system to update
-        my $url = "http://$groupcfg{'server'}$groupcfg{'script'}?system=";
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?system=";
         if ($groupcfg{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
                 if $groupcfg{'static'};
@@ -4571,16 +4575,9 @@ sub nic_domeneshop_update {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "Updating %s", $h);
-
-        # Set the URL that we're going to to update
-        my $url;
-        $url  = $globals{'ssl'} ? "https://" : "http://";
-        $url .= "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip";
-
-        # Try to get URL
         my $reply = geturl(
             proxy => opt('proxy'),
-            url => $url,
+            url => "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip",
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         );
@@ -6810,10 +6807,7 @@ sub nic_woima_update {
 
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
-
-        ## Select the DynDNS system to update
-        ## TODO: endpoint does not support https with functioning certificate. Remove?
-        my $url = "http://$config{$h}{'server'}$config{$h}{'script'}?system=";
+        my $url = "$config{$h}{'server'}$config{$h}{'script'}?system=";
         if ($config{$h}{'custom'}) {
             warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $h)
                 if $config{$h}{'static'};
@@ -7033,11 +7027,7 @@ sub nic_dnsmadeeasy_update {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "Updating %s", $h);
-
-        # Set the URL that we're going to to update
-        my $url;
-        $url  = $globals{'ssl'} ? "https://" : "http://";
-        $url .= $config{$h}{'server'} . $config{$h}{'script'};
+        my $url = $config{$h}{'server'} . $config{$h}{'script'};
         $url .= "?username=$config{$h}{'login'}";
         $url .= "&password=$config{$h}{'password'}";
         $url .= "&ip=$ip";
@@ -7666,10 +7656,7 @@ sub nic_keysystems_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
-
-        my $url = "http://$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
-
-        # Try to get URL
+        my $url = "$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
         my $reply = geturl(proxy => opt('proxy'), url => $url) // '';
 
         # No response, declare as failed
