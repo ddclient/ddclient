@@ -63,7 +63,7 @@ use Sys::Hostname;
 #
 # For consistency and to match user expectations, the release part of the version is always three
 # components: MAJOR.MINOR.PATCH.
-use version 0.77; our $VERSION = version->declare('v3.12.0.0_0');
+use version 0.77; our $VERSION = version->declare('v4.0.0.0_0');
 
 sub parse_version {
     my ($v) = @_;
@@ -604,7 +604,7 @@ our %variables = (
         'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
         'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
-        'ssl'                 => setv(T_BOOL,  0, 0, 0,                    undef),
+        'ssl'                 => setv(T_BOOL,  0, 0, 1,                    undef),
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
         'facility'            => setv(T_STRING,0, 0, 'daemon',             undef),
         'priority'            => setv(T_STRING,0, 0, 'notice',             undef),
@@ -1259,7 +1259,7 @@ my @opt = (
     "",
     ["options",           "=s", "--options=<opt>=<val>[,<opt>=<val>,...]\n                         : optional per-service arguments (see below)"],
     "",
-    ["ssl",               "!",  "--{no}ssl              : do updates over encrypted SSL connection"],
+    ["ssl",               "!",  '--{no}ssl              : use encryption (TLS) when the scheme (either "http://" or "https://") is missing from a URL'],
     ["ssl_ca_dir",        "=s", "--ssl_ca_dir=<dir>     : look in <dir> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["ssl_ca_file",       "=s", "--ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["fw-ssl-validate",   "!",  "--{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],

@@ -136,11 +136,11 @@ If a fix is committed but not yet part of any tagged release, the notes here wil
 The `ssl` parameter forces all connections to use HTTPS.  While technically
 working as expected, this behavior keeps coming up as a pain point when using
 HTTP-only IP querying sites such as http://checkip.dyndns.org.  Starting with
-v3.12.0, the behavior is changed to respect `http://` in a URL.  A separate
+v4.0.0, the behavior is changed to respect `http://` in a URL.  A separate
 parameter to disallow all HTTP connections or warn about them may be added
 later.
 
-**Fix**: v3.12.0 uses HTTP to connect to URLs starting with `http://`.  See
+**Fix**: v4.0.0 uses HTTP to connect to URLs starting with `http://`.  See
 [here](https://github.com/ddclient/ddclient/pull/608) for more info.
 
 **Workaround**: Disable the SSL parameter
