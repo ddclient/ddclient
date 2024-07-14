@@ -16,13 +16,17 @@
 ##          are mentioned here.
 ##
 ######################################################################
+
+## Use encryption (TLS) when the scheme (either "http://" or "https://") is
+## missing from a URL.  Defaults to "no" for compatibility reasons, but you are
+## strongly encouraged to set this to "yes".
+ssl=yes
+
 daemon=300				# check every 300 seconds
 syslog=yes				# log update msgs to syslog
 mail=root				# mail all msgs to root
 mail-failure=root		# mail failed update msgs to root
 pid=@runstatedir@/ddclient.pid		# record PID in file.
-ssl=yes					# use ssl-support.  Works with
-						# ssl-library
 # postscript=script		# run script after updating.  The
 						# new IP is added as argument.
 #
