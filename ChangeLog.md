@@ -68,6 +68,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     option can now include `http://` or `https://` to control the use of TLS.
     If omitted, the value of the `ssl` option is used to determine the scheme.
     [#703](https://github.com/ddclient/ddclient/pull/703)
+  * `ddns.fm`: New `protocol` option for updating [DDNS.FM](https://ddns.fm/)
+    records.  [#695](https://github.com/ddclient/ddclient/pull/695)
 
 ### Bug fixes
 
