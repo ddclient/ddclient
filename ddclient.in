@@ -6409,8 +6409,7 @@ sub nic_hetzner_update {
                     $config{$domain}{"ipv$ipv"} = $ip;
                     $config{$domain}{'mtime'} = $now;
                     $config{$domain}{"status-ipv$ipv"} = 'good';
-                }
-                else {
+                } else {
                     # Set domain
                     if ($dns_rec_id)
                     {
