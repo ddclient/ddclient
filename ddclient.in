@@ -4161,21 +4161,6 @@ sub nic_dyndns2_update {
             if ($status ne 'good') {
                 if (exists($errors{$status})) {
                     failed("$hosts: $status: $errors{$status}");
-                } elsif ($status =~ qr/w(\d+)(.)/) {
-                    # TODO: <https://help.dyn.com/remote-access-api/return-codes/> does not mention
-                    # anything about wait statuses.  Is this obsolete (this code has been here
-                    # since at least 2006)?  Or does a different DynDNS-like service emit wait
-                    # lines?
-                    my ($wait, $units) = ($1, lc $2);
-                    my ($sec, $scale) = ($wait, 1);
-                    ($scale, $units) = (1, 'seconds') if $units eq 's';
-                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-                    $sec = $wait * $scale;
-                    for my $h (@hosts) {
-                        $config{$h}{'wtime'} = $now + $sec;
-                    }
-                    warning("$hosts: wait $wait $units before further updates");
                 } else {
                     failed("$hosts: unexpected status: $line");
                 }
