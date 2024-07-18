@@ -4129,8 +4129,11 @@ sub nic_dyndns2_update {
             failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
             next;
         }
-        # The IP address normally comes after the status, but we ignore it.  (Some services do not
-        # return the IP so we can't rely on it anyway.)
+        # The IP address normally comes after the status, but we ignore it.  We could compare it
+        # with the expected address and mark the update as failed if it differs, but (1) some
+        # services do not return the IP; and (2) comparison is brittle (e.g., 192.000.002.001
+        # vs. 192.0.2.1) and false errors could cause high load on the service (an update attempt
+        # every min-error-interval instead of every max-interval).
         (my $status = $line) =~ s/ .*$//;
         if ($status eq 'nochg') {
             warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
