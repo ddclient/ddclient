@@ -4084,12 +4084,11 @@ sub nic_dyndns2_update {
         my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
-        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
-        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
-        verbose("UPDATE:", "updating %s", $hosts);
+        info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
+        info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
         my $url = "$groupcfg{'server'}$groupcfg{'script'}?system=";
         if ($groupcfg{'custom'}) {
-            warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
+            warning("$hosts: 'custom' and 'static' may not be used together ('static' ignored)")
                 if $groupcfg{'static'};
             $url .= 'custom';
         } elsif ($groupcfg{'static'}) {
@@ -4117,7 +4116,7 @@ sub nic_dyndns2_update {
             password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
             next;
         }
         next if !header_ok($hosts, $reply);
@@ -4126,7 +4125,7 @@ sub nic_dyndns2_update {
         (my $body = $reply) =~ s/^.*?\n\n//s;
         my @reply = split(qr/\n/, $body);
         if (!@reply) {
-            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
             next;
         }
         # From <https://help.dyn.com/remote-access-api/return-codes/>:
@@ -4152,7 +4151,7 @@ sub nic_dyndns2_update {
             # (an update attempt every min-error-interval instead of every max-interval).
             (my $status = $line) =~ s/ .*$//;
             if ($status eq 'nochg') {
-                warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
+                warning("$hosts: $status: $errors{$status}");
                 $status = 'good';
             }
             for my $h (@hosts) {
@@ -4161,7 +4160,7 @@ sub nic_dyndns2_update {
             }
             if ($status ne 'good') {
                 if (exists($errors{$status})) {
-                    failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
+                    failed("$hosts: $status: $errors{$status}");
                 } elsif ($status =~ qr/w(\d+)(.)/) {
                     # TODO: <https://help.dyn.com/remote-access-api/return-codes/> does not mention
                     # anything about wait statuses.  Is this obsolete (this code has been here
@@ -4176,9 +4175,9 @@ sub nic_dyndns2_update {
                     for my $h (@hosts) {
                         $config{$h}{'wtime'} = $now + $sec;
                     }
-                    warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
+                    warning("$hosts: wait $wait $units before further updates");
                 } else {
-                    failed("updating %s: unexpected status (%s)", $hosts, $line);
+                    failed("$hosts: unexpected status: $line");
                 }
                 next;
             }
@@ -4187,8 +4186,8 @@ sub nic_dyndns2_update {
                 $config{$h}{'ipv6'} = $ipv6 if $ipv6;
                 $config{$h}{'mtime'} = $now;
             }
-            success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
-            success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
+            success("$hosts: IPv4 address set to $ipv4") if $ipv4;
+            success("$hosts: IPv6 address set to $ipv6") if $ipv6;
         }
     }
 }
