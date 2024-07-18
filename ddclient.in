@@ -4144,34 +4144,36 @@ sub nic_dyndns2_update {
                 $config{$h}{'status-ipv4'} = $status if $ipv4;
                 $config{$h}{'status-ipv6'} = $status if $ipv6;
             }
-            if ($status eq 'good') {
-                for my $h (@hosts) {
-                    $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                    $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                    $config{$h}{'mtime'} = $now;
+            if ($status ne 'good') {
+                if (exists($errors{$status})) {
+                    failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
+                } elsif ($status =~ qr/w(\d+)(.)/) {
+                    # TODO: <https://help.dyn.com/remote-access-api/return-codes/> does not mention
+                    # anything about wait statuses.  Is this obsolete (this code has been here
+                    # since at least 2006)?  Or does a different DynDNS-like service emit wait
+                    # lines?
+                    my ($wait, $units) = ($1, lc $2);
+                    my ($sec, $scale) = ($wait, 1);
+                    ($scale, $units) = (1, 'seconds') if $units eq 's';
+                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
+                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
+                    $sec = $wait * $scale;
+                    for my $h (@hosts) {
+                        $config{$h}{'wtime'} = $now + $sec;
+                    }
+                    warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
+                } else {
+                    failed("updating %s: unexpected status (%s)", $hosts, $line);
                 }
-                success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
-                success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
-            } elsif (exists $errors{$status}) {
-                failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
-            } elsif ($status =~ /w(\d+)(.)/) {
-                # TODO: <https://help.dyn.com/remote-access-api/return-codes/> does not mention
-                # anything about wait statuses.  Is this obsolete (this code has been here
-                # since at least 2006)?  Or does a different DynDNS-like service emit wait
-                # lines?
-                my ($wait, $units) = ($1, lc $2);
-                my ($sec, $scale) = ($wait, 1);
-                ($scale, $units) = (1, 'seconds') if $units eq 's';
-                ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-                $sec = $wait * $scale;
-                for my $h (@hosts) {
-                    $config{$h}{'wtime'} = $now + $sec;
-                }
-                warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
-            } else {
-                failed("updating %s: unexpected status (%s)", $hosts, $line);
+                next;
             }
+            for my $h (@hosts) {
+                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $config{$h}{'mtime'} = $now;
+            }
+            success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
+            success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
         }
     }
 }
