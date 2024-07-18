@@ -4111,6 +4111,21 @@ sub nic_dyndns2_update {
         next if !header_ok($hosts, $reply);
         my @reply = split /\n/, $reply;
         my $state = 'header';
+        # From <https://help.dyn.com/remote-access-api/return-codes/>:
+        #
+        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
+        #   in the same order as the hostnames were specified.  Return codes indicating a failure
+        #   with the account or the system are given only once.
+        #
+        # TODO: There is no mention of what happens if multiple IP addresses are supplied (e.g.,
+        # IPv4 and IPv6) for a host.  If one address fails to update and the other doesn't, is that
+        # one error status line?  An error status line and a success status line?  Or is an update
+        # considered to be all-or-nothing and the status applies to the operation as a whole?  If
+        # the IPv4 address changes but not the IPv6 address does that result in a status of "good"
+        # because the set of addresses for a host changed even if a subset did not?
+        #
+        # TODO: The logic below applies the last line's status to all hosts.  Change it to apply
+        # each status to its corresponding host.
         for my $line (@reply) {
             if ($state eq 'header') {
                 $state = 'body';
@@ -4147,6 +4162,10 @@ sub nic_dyndns2_update {
                         failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
                     }
                 } elsif ($status =~ /w(\d+)(.)/) {
+                    # TODO: <https://help.dyn.com/remote-access-api/return-codes/> does not mention
+                    # anything about wait statuses.  Is this obsolete (this code has been here
+                    # since at least 2006)?  Or does a different DynDNS-like service emit wait
+                    # lines?
                     my ($wait, $units) = ($1, lc $2);
                     my ($sec, $scale) = ($wait, 1);
                     ($scale, $units) = (1, 'seconds') if $units eq 's';
