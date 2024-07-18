@@ -36,7 +36,18 @@ AC_PROG_MKDIR_P
 AC_PATH_PROG([FIND], [find])
 AS_IF([test -z "${FIND}"], [AC_MSG_ERROR(['find' utility not found])])
 
-AC_PATH_PROG([CURL], [curl])
+AC_ARG_WITH([curl],
+  [AS_HELP_STRING([[--with-curl[=CURL]]], [use CURL as absolute path to curl executable])],
+  [],
+  [with_curl=yes])
+AS_CASE([${with_curl}],
+  [[yes]], [AC_PATH_PROG([CURL], [curl])],
+  [[no]], [CURL=],
+  [
+    AC_MSG_CHECKING([for curl])
+    CURL=${with_curl}
+    AC_MSG_RESULT([${CURL}])
+  ]);
 AS_IF([test -z "${CURL}"], [AC_MSG_ERROR([curl not found])])
 
 AX_WITH_PROG([PERL], perl)
@@ -49,6 +60,7 @@ AC_SUBST([PERL])
 # package doesn't depend on all of them, so their availability can't
 # be assumed.
 m4_foreach_w([_m], [
+    Data::Dumper
     File::Basename
     File::Path
     File::Temp
@@ -63,7 +75,6 @@ m4_foreach_w([_m], [
 # then some tests will fail. Only prints a warning if not installed.
 m4_foreach_w([_m], [
     B
-    Data::Dumper
     File::Spec::Functions
     File::Temp
   ], [AX_PROG_PERL_MODULES([_m], [],
@@ -80,6 +91,8 @@ m4_foreach_w([_m], [
     HTTP::Message::PSGI
     HTTP::Request
     HTTP::Response
+    JSON::PP
+    LWP::UserAgent
     Scalar::Util
     Test::MockModule
     Test::TCP

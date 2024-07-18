@@ -17,11 +17,13 @@ Dynamic DNS services currently supported include:
 * [ChangeIP](https://www.changeip.com)
 * [CloudFlare](https://www.cloudflare.com)
 * [ClouDNS](https://www.cloudns.net)
+* [DDNS.fm](https://www.ddns.fm/)
 * [DigitalOcean](https://www.digitalocean.com/)
 * [dinahosting](https://dinahosting.com)
 * [DonDominio](https://www.dondominio.com)
 * [DNS Made Easy](https://dnsmadeeasy.com)
 * [DNSExit](https://dnsexit.com/dns/dns-api)
+* [dnsHome.de](https://www.dnshome.de)
 * [Domeneshop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
 * [DslReports](https://www.dslreports.com)
 * [Duck DNS](https://duckdns.org)
@@ -33,6 +35,7 @@ Dynamic DNS services currently supported include:
 * [Gandi](https://gandi.net)
 * [GoDaddy](https://www.godaddy.com)
 * [Google](https://domains.google)
+* [Hurricane Electric](https://dns.he.net)
 * [Infomaniak](https://faq.infomaniak.com/2376)
 * [Loopia](https://www.loopia.se)
 * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
@@ -130,9 +133,16 @@ Note that any issues prior to version v3.9.1 will not be listed here.
 If a fix is committed but not yet part of any tagged release, the notes here will reference the not-yet-released version number.
 
 ### v3.11.2 - v3.9.1: SSL parameter breaks HTTP-only IP acquisition
-The `ssl` parameter forces all connections to use HTTPS. While technically working as expected, this behavior keeps coming up as a pain point when using HTTP-only IP querying sites such as http://checkip.dyndns.org. For the future (v3.11.3), the behavior is changed to respect `http://` in a URL. A separate parameter to disallow all HTTP connections or warn about them may be added later.
 
-**Fix**: v3.11.3 will use HTTP to connect to URLs starting with `http://`. See [here](https://github.com/ddclient/ddclient/pull/608) for more info.
+The `ssl` parameter forces all connections to use HTTPS.  While technically
+working as expected, this behavior keeps coming up as a pain point when using
+HTTP-only IP querying sites such as http://checkip.dyndns.org.  Starting with
+v4.0.0, the behavior is changed to respect `http://` in a URL.  A separate
+parameter to disallow all HTTP connections or warn about them may be added
+later.
+
+**Fix**: v4.0.0 uses HTTP to connect to URLs starting with `http://`.  See
+[here](https://github.com/ddclient/ddclient/pull/608) for more info.
 
 **Workaround**: Disable the SSL parameter
 

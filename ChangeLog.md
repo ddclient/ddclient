@@ -3,18 +3,37 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/master).
 
-## v3.11.3~alpha (unreleased work-in-progress)
+## v4.0.0~alpha (unreleased work-in-progress)
 
 ### Breaking changes
 
+  * The `--ssl` option is now enabled by default.
+    [#705](https://github.com/ddclient/ddclient/pull/705)
   * Unencrypted (plain) HTTP is now used instead of encrypted (TLS) HTTP if the
     URL uses `http://` instead of `https://`, even if the `--ssl` option is
     enabled.  [#608](https://github.com/ddclient/ddclient/pull/608)
+  * The `googledomains` built-in web IP discovery service
+    (`--webv4=googledomains`, `--webv6=googledomains`, and
+    `--web=googledomains`) is deprecated due to the service shutting down.  It
+    will be removed in a future version of ddclient.
+    [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
   * The default web service for `--webv4` and `--webv6` has changed from Google
     Domains (which is shutting down) to ipify.
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
   * All log messages are now written to STDERR, not a mix of STDOUT and STDERR.
     [#676](https://github.com/ddclient/ddclient/pull/676)
+  * For `--protocol=freedns` and `--protocol=nfsn`, the core module
+    `Digest::SHA` is now required.  Previously, `Digest::SHA1` was used (if
+    available) as an alternative to `Digest::SHA`.
+    [#685](https://github.com/ddclient/ddclient/pull/685)
+  * The `he` built-in web IP discovery service (`--webv4=he`, `--webv6=he`, and
+    `--web=he`) was renamed to `he.net` for consistency with the new `he.net`
+    protocol.  The old name is still accepted but is deprecated and will be
+    removed in a future version of ddclient.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
+  * Deprecated built-in web IP discovery services are not listed in the output
+    of `--list-web-services`.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
 
 ### New features
 
@@ -41,6 +60,16 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The second and subsequent lines in a multi-line log message are now prefixed
     with a `|` character.
     [#676](https://github.com/ddclient/ddclient/pull/676)
+  * `emailonly`: New `protocol` option that simply emails you when your IP
+    address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
+  * `he.net`: Added support for updating Hurricane Electric records.
+    [#682](https://github.com/ddclient/ddclient/pull/682)
+  * `dyndns2`, `domeneshop`, `dnsmadeeasy`, `keysystems`, `woima`: The `server`
+    option can now include `http://` or `https://` to control the use of TLS.
+    If omitted, the value of the `ssl` option is used to determine the scheme.
+    [#703](https://github.com/ddclient/ddclient/pull/703)
+  * `ddns.fm`: New `protocol` option for updating [DDNS.FM](https://ddns.fm/)
+    records.  [#695](https://github.com/ddclient/ddclient/pull/695)
 
 ### Bug fixes
 
@@ -73,6 +102,14 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#667](https://github.com/ddclient/ddclient/pull/667)
   * Fixed unnecessary repeated updates for some services.
     [#670](https://github.com/ddclient/ddclient/pull/670)
+  * Fixed DNSExit provider when configured with a zone and non-identical
+    hostname.  [#673](https://github.com/ddclient/ddclient/issues/673)
+  * `infomaniak`: Fixed frequent forced updates after 25 days (`max-interval`).
+    [#691](https://github.com/ddclient/ddclient/issues/691)
+  * `infomaniak`: Fixed incorrect parsing of server response.
+    [#692](https://github.com/ddclient/ddclient/issues/692)
+  * `regfishde`: Fixed IPv6 support.
+    [#691](https://github.com/ddclient/ddclient/issues/691)
 
 ## 2023-11-23 v3.11.2
 
@@ -136,7 +173,7 @@ Refer to [v3.11 release plan discussions](https://github.com/ddclient/ddclient/i
 
   * Added support for domaindiscount24.com
   * Added support for njal.la
- 
+
 ## 2022-05-15 v3.10.0_2
 
 ### Bug fixes
