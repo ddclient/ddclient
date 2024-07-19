@@ -84,6 +84,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     records.  [#695](https://github.com/ddclient/ddclient/pull/695)
   * `inwx`: New `protocol` option for updating [INWX](https://www.inwx.com/)
     records.  [#690](https://github.com/ddclient/ddclient/pull/690)
+  * `domeneshop`: Add IPv6 support.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
 
 ### Bug fixes
 

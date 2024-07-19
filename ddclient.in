@@ -4314,23 +4314,25 @@ EoEXAMPLE
 sub nic_domeneshop_update {
     debug("\nnic_domeneshop_update -------------------");
     for my $h (@_) {
-        my $ip = delete $config{$h}{'wantip'};
-        info("$h: Setting IP address to $ip");
-        my $reply = geturl(
-            proxy => opt('proxy'),
-            url => "$config{$h}{'server'}/v0/dyndns/update?hostname=$h&myip=$ip",
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
-        );
-        if (!defined($reply) || !$reply) {
-            failed("$h: Request to $config{$h}{'server'} failed");
-            next;
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            info("$h: Setting IPv$ipv address to $ip");
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => "$config{$h}{'server'}/v0/dyndns/update?hostname=$h&myip=$ip",
+                login => $config{$h}{'login'},
+                password => $config{$h}{'password'},
+            );
+            if (!defined($reply) || !$reply) {
+                failed("$h: Request to $config{$h}{'server'} failed");
+                next;
+            }
+            next if !header_ok($h, $reply);
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            success("$h: IPv$ipv address set to $ip");
         }
-        next if !header_ok($h, $reply);
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
-        success("$h: IP address set to $ip");
     }
 }
 
