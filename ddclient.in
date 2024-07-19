@@ -618,7 +618,6 @@ our %variables = (
         'quiet'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'help'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'test'                => setv(T_BOOL,  0, 0, 0,                    undef),
-        'geturl'              => setv(T_STRING,0, 0, undef,                undef),
 
         'postscript'          => setv(T_POSTS, 0, 0, undef,                undef),
         'ssl_ca_dir'          => setv(T_FILE,  0, 0, undef,                undef),
@@ -709,7 +708,6 @@ our %variables = (
     'dyndns-common-defaults' => {
         'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
         'mx'                  => setv(T_OFQDN, 0, 1, undef,                undef),
-        'static'              => setv(T_BOOL,  0, 1, 0,                    undef),
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
@@ -848,6 +846,7 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
+            'static' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
     'dyndns2' => {
@@ -857,7 +856,6 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
-            'custom' => setv(T_BOOL,   0, 1, 0,             undef),
             'script' => setv(T_STRING, 0, 1, '/nic/update', undef),
         },
     },
@@ -954,6 +952,16 @@ our %protocols = (
             'server'       => setv(T_FQDNP,  0, 0, 'dns.hetzner.com/api/v1',       undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 60,                             60),
             'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
+        },
+    },
+    'inwx' => {
+        'force_update' => undef,
+        'update' => \&nic_inwx_update,
+        'examples' => \&nic_inwx_examples,
+        'variables' => {
+            %{$variables{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 0, 'dyndns.inwx.com', undef),
+            'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
         },
     },
     'mythicdyn' => {
@@ -1294,7 +1302,6 @@ my @opt = (
     ["fw-banlocal",       "!",  ""], ## deprecated
     ["if-skip",           "=s", ""], ## deprecated
     ["test",              "!",  ""], ## hidden
-    ["geturl",            "=s", ""], ## hidden
     ["redirect",          "=i", "--redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
@@ -1306,9 +1313,6 @@ sub main {
     $saved_recap = '';
     %saved_opt = %opt;
     $result = 'OK';
-
-    test_geturl(opt('geturl')) if opt('geturl');
-
     if (opt('help')) {
         printf "%s\n", $opt_usage;
         $opt{'version'}('', '');
@@ -2263,22 +2267,7 @@ sub test_possible_ip {
 
     exit 0 unless opt('debug');
 }
-######################################################################
-## test_geturl - print (and save if -test) result of fetching a URL
-######################################################################
-sub test_geturl {
-    my $url = shift;
 
-    my $reply = geturl(
-        proxy => opt('proxy'),
-        url => $url,
-        login => opt('login'),
-        password => opt('password'),
-    );
-    print "URL $url\n";
-    print $reply // "<undefined>\n";
-    exit;
-}
 ######################################################################
 ## load_file
 ######################################################################
@@ -2864,7 +2853,7 @@ sub geturl {
         push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
 
         # Each header line is added individually
-        @header_lines = split('\n', $headers);
+        @header_lines = ref($headers) eq 'ARRAY' ? @$headers : split('\n', $headers);
         $_ = "header=\"".escape_curl_param($_).'"' for (@header_lines);
         push(@curlopt, @header_lines);
 
@@ -4015,8 +4004,6 @@ Configuration variables applicable to the 'dyndns2' protocol are:
   server=fqdn.of.service       ## defaults to members.dyndns.org
   script=/path/to/script       ## defaults to /nic/update
   backupmx=no|yes              ## indicates that this host is the primary MX for the domain.
-  static=no|yes                ## indicates that this host has a static IP address.
-  custom=no|yes                ## indicates that this host is a 'custom' top-level domain name.
   mx=any.host.domain           ## a host MX'ing for this host definition.
   wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
   login=service-login          ## login name and password  registered with the service
@@ -4050,7 +4037,6 @@ EoEXAMPLE
 ######################################################################
 sub nic_dyndns2_update {
     debug("\nnic_dyndns2_update -------------------");
-    my @groups = group_hosts_by(\@_, qw(login password server script static custom wildcard mx backupmx wantipv4 wantipv6));
     my %errors = (
        'badauth' => 'Bad authorization (username or password)',
        'badsys' => 'The system parameter given was not valid',
@@ -4064,7 +4050,18 @@ sub nic_dyndns2_update {
        'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
-    for my $group (@groups) {
+    my @group_by_attrs = qw(
+        backupmx
+        login
+        mx
+        password
+        script
+        server
+        wantipv4
+        wantipv6
+        wildcard
+    );
+    for my $group (group_hosts_by(\@_, @group_by_attrs)) {
         my @hosts = @{$group->{hosts}};
         my %groupcfg = %{$group->{cfg}};
         my $hosts = join(',', @hosts);
@@ -4072,21 +4069,9 @@ sub nic_dyndns2_update {
         my $ipv6 = $groupcfg{'wantipv6'};
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
-        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
-        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
-        verbose("UPDATE:", "updating %s", $hosts);
-        my $url = "$groupcfg{'server'}$groupcfg{'script'}?system=";
-        if ($groupcfg{'custom'}) {
-            warning("updating %s: 'custom' and 'static' may not be used together. ('static' ignored)", $hosts)
-                if $groupcfg{'static'};
-            $url .= 'custom';
-        } elsif ($groupcfg{'static'}) {
-            $url .= 'statdns';
-        } else {
-            $url .= 'dyndns';
-        }
-        $url .= "&hostname=$hosts";
-        $url .= "&myip=";
+        info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
+        info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?hostname=$hosts&myip=";
         $url .= $ipv4 if $ipv4;
         if ($ipv6) {
             $url .= "," if $ipv4;
@@ -4105,65 +4090,64 @@ sub nic_dyndns2_update {
             password => $groupcfg{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
             next;
         }
         next if !header_ok($hosts, $reply);
-        my @reply = split /\n/, $reply;
-        my $state = 'header';
-        for my $line (@reply) {
-            if ($state eq 'header') {
-                $state = 'body';
-            } elsif ($state eq 'body') {
-                $state = 'results' if $line eq '';
-            } elsif ($state =~ /^results/) {
-                $state = 'results2';
-                # bug #10: some dyndns providers does not return the IP so
-                # we can't use the returned IP
-                my ($status, $returnedips) = split / /, lc $line;
-                for my $h (@hosts) {
-                    $config{$h}{'status-ipv4'} = $status if $ipv4;
-                    $config{$h}{'status-ipv6'} = $status if $ipv6;
-                }
-                if ($status eq 'good') {
-                    for my $h (@hosts) {
-                        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                        $config{$h}{'mtime'} = $now;
-                    }
-                    success("updating %s: %s: IPv4 address set to %s", $hosts, $status, $ipv4) if $ipv4;
-                    success("updating %s: %s: IPv6 address set to %s", $hosts, $status, $ipv6) if $ipv6;
-                } elsif (exists $errors{$status}) {
-                    if ($status eq 'nochg') {
-                        warning("updating %s: %s: %s", $hosts, $status, $errors{$status});
-                        for my $h (@hosts) {
-                            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                            $config{$h}{'mtime'} = $now;
-                            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-                            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
-                        }
-                    } else {
-                        failed("updating %s: %s: %s", $hosts, $status, $errors{$status});
-                    }
-                } elsif ($status =~ /w(\d+)(.)/) {
-                    my ($wait, $units) = ($1, lc $2);
-                    my ($sec, $scale) = ($wait, 1);
-                    ($scale, $units) = (1, 'seconds') if $units eq 's';
-                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-                    $sec = $wait * $scale;
-                    for my $h (@hosts) {
-                        $config{$h}{'wtime'} = $now + $sec;
-                    }
-                    warning("updating %s: %s: wait %s %s before further updates", $hosts, $status, $wait, $units);
-                } else {
-                    failed("updating %s: unexpected status (%s)", $hosts, $line);
-                }
-            }
+        # Some services can return 200 OK even if there is an error (e.g., bad authentication,
+        # updates too frequent) so the body of the response must also be checked.
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my @reply = split(qr/\n/, $body);
+        if (!@reply) {
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
+            next;
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
-            if $state ne 'results2';
+        # From <https://help.dyn.com/remote-access-api/return-codes/>:
+        #
+        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
+        #   in the same order as the hostnames were specified.  Return codes indicating a failure
+        #   with the account or the system are given only once.
+        #
+        # TODO: There is no mention of what happens if multiple IP addresses are supplied (e.g.,
+        # IPv4 and IPv6) for a host.  If one address fails to update and the other doesn't, is that
+        # one error status line?  An error status line and a success status line?  Or is an update
+        # considered to be all-or-nothing and the status applies to the operation as a whole?  If
+        # the IPv4 address changes but not the IPv6 address does that result in a status of "good"
+        # because the set of addresses for a host changed even if a subset did not?
+        #
+        # TODO: The logic below applies the last line's status to all hosts.  Change it to apply
+        # each status to its corresponding host.
+        for my $line (@reply) {
+            # The IP address normally comes after the status, but we ignore it.  We could compare
+            # it with the expected address and mark the update as failed if it differs, but (1)
+            # some services do not return the IP; and (2) comparison is brittle (e.g.,
+            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
+            # (an update attempt every min-error-interval instead of every max-interval).
+            (my $status = $line) =~ s/ .*$//;
+            if ($status eq 'nochg') {
+                warning("$hosts: $status: $errors{$status}");
+                $status = 'good';
+            }
+            for my $h (@hosts) {
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
+            }
+            if ($status ne 'good') {
+                if (exists($errors{$status})) {
+                    failed("$hosts: $status: $errors{$status}");
+                } else {
+                    failed("$hosts: unexpected status: $line");
+                }
+                next;
+            }
+            for my $h (@hosts) {
+                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $config{$h}{'mtime'} = $now;
+            }
+            success("$hosts: IPv4 address set to $ipv4") if $ipv4;
+            success("$hosts: IPv6 address set to $ipv6") if $ipv6;
+        }
     }
 }
 
@@ -5733,92 +5717,75 @@ EoEXAMPLE
 ######################################################################
 sub nic_godaddy_update {
     debug("\nnic_godaddy_update --------------------");
-    for my $host (@_) {
-        my $ipv4 = delete $config{$host}{'wantipv4'};
-        my $ipv6 = delete $config{$host}{'wantipv6'};
-
-        my $zone = $config{$host}{'zone'};
-        (my $hostname = $host) =~ s/\.\Q$zone\E$//;
-
-        for my $ip ($ipv4, $ipv6) {
-            next if (!$ip);
-
-            info("%s.%s -- Setting IP address to %s.", $hostname, $zone, $ip);
-            verbose("UPDATE:", "updating %s.%s", $hostname, $zone);
-
-            my $ipversion = ($ip eq ($ipv6 // '')) ? '6' : '4';
-            my $status = \$config{$host}{"status-ipv$ipversion"};
-            my $rrset_type = ($ipversion eq '6') ? 'AAAA' : 'A';
-            my $data = encode_json([ {
-                data => $ip,
-                defined($config{$host}{'ttl'}) ? (ttl => $config{$host}{'ttl'}) : (),
-                name => $hostname,
-                type => $rrset_type,
-            } ]);
-
-            my $url = "https://$config{$host}{'server'}";
-            $url .= "/${zone}/records/${rrset_type}/${hostname}";
-
-            my $header = "Content-Type: application/json\n";
-            $header .= "Accept: application/json\n";
-            $header .= "Authorization: sso-key $config{$host}{'login'}:$config{$host}{'password'}\n";
+    for my $h (@_) {
+        my $zone = $config{$h}{'zone'};
+        (my $hostname = $h) =~ s/\.\Q$zone\E$//;
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            info("$h: Setting IPv$ipv address to $ip");
+            my $rrset_type = ($ipv eq '6') ? 'AAAA' : 'A';
+            my $url = "https://$config{$h}{'server'}/$zone/records/$rrset_type/$hostname";
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
-                headers => $header,
+                headers => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                    "Authorization: sso-key $config{$h}{'login'}:$config{$h}{'password'}",
+                ],
                 method => 'PUT',
-                data => $data,
+                data => encode_json([{
+                    data => $ip,
+                    defined($config{$h}{'ttl'}) ? (ttl => $config{$h}{'ttl'}) : (),
+                    name => $hostname,
+                    type => $rrset_type,
+                }]),
             );
             unless ($reply) {
-                failed("%s.%s -- Could not connect to %s.", $hostname, $zone, $config{$host}{'server'});
+                failed("$h: Could not connect to $config{$h}{'server'}");
                 next;
             }
-
             (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
-            my $ok = header_ok($host, $reply);
-            my $msg;
-            $reply =~ s/^.*?\n\n//s; # extract payload
+            my $ok = header_ok($h, $reply);
+            $reply =~ s/^.*?\n\n//s;
             my $response = eval {decode_json($reply)};
-            if (!defined($response) && $code != "200") {
-                $$status = "bad";
-
-                failed("%s.%s -- Unexpected or empty service response, cannot parse data.", $hostname, $zone);
-            } elsif (defined($response->{code})) {
-                info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
-            }
-            if ($ok) {
-                # read data
-                $config{$host}{"ipv$ipversion"} = $ip;
-                $config{$host}{'mtime'} = $now;
-                $$status = 'good';
-
-                success("%s.%s -- Updated successfully to %s (status: %s).", $hostname, $zone, $ip, $code);
+            if (!defined($response)) {
+                failed("$h: Unexpected or empty service response, cannot parse data");
                 next;
-            } elsif ($code == "400") {
-                $msg = 'GoDaddy API URL ($url) was malformed.';
-            } elsif ($code == "401") { # authentication error
-                if ($config{$host}{'login'} && $config{$host}{'login'}) {
-                    $msg = 'login or password option incorrect.';
-                } else {
-                    $msg = 'login or password option missing.';
-                }
-                $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
-            } elsif ($code == "403") {
-                $msg = 'Customer identified by login and password options denied permission.';
-            } elsif ($code == "404") {
-                $msg = "\"${hostname}.${zone}\" not found at GoDaddy, please check zone option and login/password.";
-            } elsif ($code == "422") {
-                $msg = "\"${hostname}.${zone}\" has invalid domain or lacks A/AAAA record.";
-            } elsif ($code == "429") {
-                $msg = 'Too many requests to GoDaddy within brief period.';
-            } elsif ($code == "503") {
-                $msg = "\"${hostname}.${zone}\" is unavailable.";
-            } else {
-                $msg = 'Unexpected service response.';
+            } elsif (defined($response->{code})) {
+                info("$h: $response->{code} - $response->{message}");
             }
-
-            $$status = 'bad';
-            failed("%s.%s -- %s", $hostname, $zone, $msg);
+            if (!$ok) {
+                my $msg;
+                if ($code eq "400") {
+                    $msg = 'GoDaddy API URL ($url) was malformed.';
+                } elsif ($code eq "401") {
+                    if ($config{$h}{'login'} && $config{$h}{'login'}) {
+                        $msg = 'login or password option incorrect.';
+                    } else {
+                        $msg = 'login or password option missing.';
+                    }
+                    $msg .= ' Correct values can be obtained from from https://developer.godaddy.com/keys/.';
+                } elsif ($code eq "403") {
+                    $msg = 'Customer identified by login and password options denied permission.';
+                } elsif ($code eq "404") {
+                    $msg = "\"$h\" not found at GoDaddy, please check zone option and login/password.";
+                } elsif ($code eq "422") {
+                    $msg = "\"$h\" has invalid domain or lacks A/AAAA record.";
+                } elsif ($code eq "429") {
+                    $msg = 'Too many requests to GoDaddy within brief period.';
+                } elsif ($code eq "503") {
+                    $msg = "\"$h\" is unavailable.";
+                } else {
+                    $msg = 'Unexpected service response.';
+                }
+                failed("$h: $msg");
+                next;
+            }
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            success("$h: Updated successfully to $ip (status: $code)");
         }
     }
 }
@@ -6468,6 +6435,167 @@ sub nic_hetzner_update {
                     failed("updating %s: invalid json or result.", $domain);
                 }
             }
+        }
+    }
+}
+
+######################################################################
+## nic_inwx_examples
+######################################################################
+sub nic_inwx_examples {
+    return <<"EoEXAMPLE";
+o 'inwx'
+
+The 'inwx' protocol is designed for DynDNS accounts at INWX
+<https://www.inwx.com/>.  It is similar to the 'dyndns2' protocol except IPv6
+addresses are passed in a separate 'myipv6' URL parameter (rather than included
+in the 'myip' parameter):
+
+    https://dyndns.inwx.com/nic/update?myip=<ipaddr>&myipv6=<ip6addr>
+
+The 'inwx' protocol was designed around INWX's behavior as of June 2024:
+  - Omitting the IPv4 address (either no 'myip' URL parameter or '<ipaddr>' is
+    the empty string) will cause INWX to silently set the IPv4 address (A
+    record) to '127.0.0.1'. No error message is returned.
+  - Omitting the IPv6 address (either no 'myipv6' URL parameter or '<ip6addr>'
+    is the empty string) will cause INWX to delete the IPv6 address (AAAA
+    record) if it exists.
+  - INWX will automatically create an IPv6 AAAA record for your hostname if
+    necessary.
+  - 'dyndns.inwx.com' is not reachable via IPv6 (there is no AAAA record).
+  - GET 'https://dyndns.inwx.com/nic/update' without further parameters will set
+    the IPv4 A record to the public IP of the requesting host and delete the
+    IPv6 AAAA record.
+  - You can ask INWX support to manually convert a DynDNS account into an
+    IPv6-only account.  No A record will be created in that case.
+
+Configuration variables applicable to the 'inwx' protocol are:
+  protocol=inwx                ##
+  server=fqdn.of.service       ## defaults to dyndns.inwx.com
+  script=/path/to/script       ## defaults to /nic/update
+  login=service-login          ## login name and password registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=inwx                             \\
+  login=my-inwx-DynDNS-account-username     \\
+  password=my-inwx-DynDNS-account-password  \\
+  myhost.example.org
+EoEXAMPLE
+}
+
+######################################################################
+## nic_inwx_update
+######################################################################
+sub nic_inwx_update {
+    debug("\nnic_inwx_update -------------------");
+    my %errors = (
+       'badauth' => 'Bad authorization (username or password)',
+       'badsys' => 'The system parameter given was not valid',
+       'notfqdn' => 'A Fully-Qualified Domain Name was not provided',
+       'nohost' => 'The hostname specified does not exist in the database',
+       '!yours' => 'The hostname specified exists, but not under the username currently being used',
+       '!donator' => 'The offline setting was set, when the user is not a donator',
+       '!active' => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+       'abuse' => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.',
+       'numhost' => 'System error: Too many or too few hosts found.',
+       'dnserr' => 'System error: DNS error encountered.',
+       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+    );
+    my @group_by_attrs = qw(
+        login
+        password
+        server
+        script
+        wantipv4
+        wantipv6
+    );
+    for my $group (group_hosts_by(\@_, @group_by_attrs)) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
+        my $hosts = join(',', @hosts);
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
+        info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
+        info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?";
+        $url .= "myip=$ipv4" if $ipv4;
+        if ($ipv6) {
+            if (!$ipv4 && opt('usev4', $hosts) ne 'disabled') {
+                warning("Skipping IPv6 AAAA record update because INWX requires the IPv4 A record to be updated at the same time but the IPv4 address is unknown.");
+                next;
+            }
+            $url .= "&" if $ipv4;
+            $url .= "myipv6=$ipv6";
+        }
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
+        ) // '';
+        if ($reply eq '') {
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
+            next;
+        }
+        next if !header_ok($hosts, $reply);
+        # INWX can return 200 OK even if there is an error (e.g., bad authentication,
+        # updates too frequent) so the body of the response must also be checked.
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my @reply = split(qr/\n/, $body);
+        if (!@reply) {
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
+            next;
+        }
+        # From <https://help.dyn.com/remote-access-api/return-codes/>:
+        #
+        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
+        #   in the same order as the hostnames were specified.  Return codes indicating a failure
+        #   with the account or the system are given only once.
+        #
+        # TODO: There is no mention of what happens if multiple IP addresses are supplied (e.g.,
+        # IPv4 and IPv6) for a host.  If one address fails to update and the other doesn't, is that
+        # one error status line?  An error status line and a success status line?  Or is an update
+        # considered to be all-or-nothing and the status applies to the operation as a whole?  If
+        # the IPv4 address changes but not the IPv6 address does that result in a status of "good"
+        # because the set of addresses for a host changed even if a subset did not?
+        #
+        # TODO: The logic below applies the last line's status to all hosts.  Change it to apply
+        # each status to its corresponding host.
+        for my $line (@reply) {
+            # The IP address normally comes after the status, but we ignore it.  We could compare
+            # it with the expected address and mark the update as failed if it differs, but (1)
+            # some services do not return the IP; and (2) comparison is brittle (e.g.,
+            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
+            # (an update attempt every min-error-interval instead of every max-interval).
+            (my $status = $line) =~ s/ .*$//;
+            if ($status eq 'nochg') {
+                warning("$hosts: $status: $errors{$status}");
+                $status = 'good';
+            }
+            for my $h (@hosts) {
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
+            }
+            if ($status ne 'good') {
+                if (exists($errors{$status})) {
+                    failed("$hosts: $status: $errors{$status}");
+                } else {
+                    failed("$hosts: unexpected status: $line");
+                }
+                next;
+            }
+            for my $h (@hosts) {
+                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $config{$h}{'mtime'} = $now;
+            }
+            success("$hosts: IPv4 address set to $ipv4") if $ipv4;
+            success("$hosts: IPv6 address set to $ipv6") if $ipv6;
         }
     }
 }

@@ -34,6 +34,15 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Deprecated built-in web IP discovery services are not listed in the output
     of `--list-web-services`.
     [#682](https://github.com/ddclient/ddclient/pull/682)
+  * `dyndns2`: Support for "wait" response lines has been removed.  The Dyn
+    documentation does not mention such responses, and the code to handle them,
+    untouched since at least 2006, is believed to be obsolete.
+    [#709](https://github.com/ddclient/ddclient/pull/709)
+  * `dyndns2`: The obsolete `static` and `custom` options have been removed.
+    Setting the options may produce a warning.
+    [#709](https://github.com/ddclient/ddclient/pull/709)
+  * The diagnostic `--geturl` command-line argument was removed.
+    [#TODO](https://github.com/ddclient/ddclient/pull/TODO)
 
 ### New features
 
@@ -70,6 +79,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#703](https://github.com/ddclient/ddclient/pull/703)
   * `ddns.fm`: New `protocol` option for updating [DDNS.FM](https://ddns.fm/)
     records.  [#695](https://github.com/ddclient/ddclient/pull/695)
+  * `inwx`: New `protocol` option for updating [INWX](https://www.inwx.com/)
+    records.  [#690](https://github.com/ddclient/ddclient/pull/690)
 
 ### Bug fixes
 

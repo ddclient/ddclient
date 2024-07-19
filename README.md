@@ -37,6 +37,7 @@ Dynamic DNS services currently supported include:
 * [Google](https://domains.google)
 * [Hurricane Electric](https://dns.he.net)
 * [Infomaniak](https://faq.infomaniak.com/2376)
+* [INWX](https://www.inwx.com/)
 * [Loopia](https://www.loopia.se)
 * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
 * [NameCheap](https://www.namecheap.com)
@@ -167,41 +168,56 @@ This issue arises when using the `use` parameter in the config and using one of 
 
 ## TROUBLESHOOTING
 
-  1. enable debugging and verbose messages: ``$ ddclient --daemon=0 --debug --verbose --noquiet``
+  * Enable debugging and verbose messages: `ddclient --daemon=0 --debug --verbose`
 
-  2. Do you need to specify a proxy?
-     If so, just add a ``proxy=your.isp.proxy`` to the ddclient.conf file.
+  * Do you need to specify a proxy?
+    If so, just add a `proxy=your.isp.proxy` to the `ddclient.conf` file.
 
-  3. Define the IP address of your router with ``fw=xxx.xxx.xxx.xxx`` in
-     ``/etc/ddclient/ddclient.conf`` and then try ``$ ddclient --daemon=0 --query`` to see if the router status web page can be understood.
+  * Define the IP address of your router with `fwv4=xxx.xxx.xxx.xxx` in
+    `/etc/ddclient/ddclient.conf` and then try `$ ddclient --daemon=0 --query`
+    to see if the router status web page can be understood.
 
-  4. Need support for another router/firewall?
-     Define the router status page yourself with: ``fw=url-to-your-router``'s-status-page ``fw-skip=any-string-preceding-your-IP-address``
+  * Need support for another router/firewall?
+    Define the router yourself with:
 
-     ddclient does something like this to provide builtin support for
-     common routers.
-     For example, the Linksys routers could have been added with:
+    ```
+    usev4=fwv4
+    fwv4=url-to-your-router-status-page
+    fwv4-skip="regular expression matching any string preceding your IP address, if necessary"
+    ```
 
-    fw=192.168.1.1/Status.htm
-    fw-skip=WAN.*?IP Address
+    ddclient does something like this to provide builtin support for common
+    routers.
+    For example, the Linksys routers could have been added with:
 
-OR
-     Send me the output from:
-      ``$ ddclient --geturl {fw-ip-status-url} [--login login [--password password]]``
-     and I'll add it to the next release!
+    ```
+    usev4=fwv4
+    fwv4=192.168.1.1/Status.htm
+    fwv4-skip=WAN.*?IP Address
+    ```
 
-ie. for my fw/router I used: ``$ ddclient --geturl 192.168.1.254/status.htm``
+    OR [create a new issue](https://github.com/ddclient/ddclient/issues/new)
+    containing the output from:
 
-  5. Some broadband routers require the use of a password when ddclient
-     accesses its status page to determine the router's WAN IP address.
-     If this is the case for your router, add
+    ```
+    curl --include --location http://url.of.your.firewall/ip-status-page
+    ```
 
+    so that we can add a new firewall definition to a future release of
+    ddclient.
+
+  * Some broadband routers require the use of a password when ddclient accesses
+    its status page to determine the router's WAN IP address.
+    If this is the case for your router, add
+
+    ```
     fw-login=your-router-login
     fw-password=your-router-password
+    ```
 
-to the beginning of your ddclient.conf file.
-Note that some routers use either 'root' or 'admin' as their login
-while some others accept anything.
+    to the beginning of your ddclient.conf file.
+    Note that some routers use either 'root' or 'admin' as their login while
+    some others accept anything.
 
 ## USING DDCLIENT WITH `ppp`
 
