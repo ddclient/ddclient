@@ -38,6 +38,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     documentation does not mention such responses, and the code to handle them,
     untouched since at least 2006, is believed to be obsolete.
     [#709](https://github.com/ddclient/ddclient/pull/709)
+  * `dyndns2`: The obsolete `static` and `custom` options have been removed.
+    Setting the options may produce a warning.
+    [#709](https://github.com/ddclient/ddclient/pull/709)
 
 ### New features
 

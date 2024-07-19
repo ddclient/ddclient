@@ -709,7 +709,6 @@ our %variables = (
     'dyndns-common-defaults' => {
         'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
         'mx'                  => setv(T_OFQDN, 0, 1, undef,                undef),
-        'static'              => setv(T_BOOL,  0, 1, 0,                    undef),
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
@@ -848,6 +847,7 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
+            'static' => setv(T_BOOL, 0, 1, 0, undef),
         },
     },
     'dyndns2' => {
@@ -857,7 +857,6 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             %{$variables{'dyndns-common-defaults'}},
-            'custom' => setv(T_BOOL,   0, 1, 0,             undef),
             'script' => setv(T_STRING, 0, 1, '/nic/update', undef),
         },
     },
@@ -4015,8 +4014,6 @@ Configuration variables applicable to the 'dyndns2' protocol are:
   server=fqdn.of.service       ## defaults to members.dyndns.org
   script=/path/to/script       ## defaults to /nic/update
   backupmx=no|yes              ## indicates that this host is the primary MX for the domain.
-  static=no|yes                ## indicates that this host has a static IP address.
-  custom=no|yes                ## indicates that this host is a 'custom' top-level domain name.
   mx=any.host.domain           ## a host MX'ing for this host definition.
   wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
   login=service-login          ## login name and password  registered with the service
@@ -4065,13 +4062,11 @@ sub nic_dyndns2_update {
     );
     my @group_by_attrs = qw(
         backupmx
-        custom
         login
         mx
         password
         script
         server
-        static
         wantipv4
         wantipv6
         wildcard
@@ -4086,18 +4081,7 @@ sub nic_dyndns2_update {
         delete $config{$_}{'wantipv6'} for @hosts;
         info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
         info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
-        my $url = "$groupcfg{'server'}$groupcfg{'script'}?system=";
-        if ($groupcfg{'custom'}) {
-            warning("$hosts: 'custom' and 'static' may not be used together ('static' ignored)")
-                if $groupcfg{'static'};
-            $url .= 'custom';
-        } elsif ($groupcfg{'static'}) {
-            $url .= 'statdns';
-        } else {
-            $url .= 'dyndns';
-        }
-        $url .= "&hostname=$hosts";
-        $url .= "&myip=";
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?hostname=$hosts&myip=";
         $url .= $ipv4 if $ipv4;
         if ($ipv6) {
             $url .= "," if $ipv4;
