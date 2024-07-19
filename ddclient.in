@@ -955,6 +955,16 @@ our %protocols = (
             'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
         },
     },
+    'inwx' => {
+        'force_update' => undef,
+        'update' => \&nic_inwx_update,
+        'examples' => \&nic_inwx_examples,
+        'variables' => {
+            %{$variables{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 0, 'dyndns.inwx.com', undef),
+            'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
+        },
+    },
     'mythicdyn' => {
         'force_update' => undef,
         'update'     => \&nic_mythicdyn_update,
@@ -6455,6 +6465,167 @@ sub nic_hetzner_update {
             } else {
                 failed("updating %s: invalid json or result.", $domain);
             }
+        }
+    }
+}
+
+######################################################################
+## nic_inwx_examples
+######################################################################
+sub nic_inwx_examples {
+    return <<"EoEXAMPLE";
+o 'inwx'
+
+The 'inwx' protocol is designed for DynDNS accounts at INWX
+<https://www.inwx.com/>.  It is similar to the 'dyndns2' protocol except IPv6
+addresses are passed in a separate 'myipv6' URL parameter (rather than included
+in the 'myip' parameter):
+
+    https://dyndns.inwx.com/nic/update?myip=<ipaddr>&myipv6=<ip6addr>
+
+The 'inwx' protocol was designed around INWX's behavior as of June 2024:
+  - Omitting the IPv4 address (either no 'myip' URL parameter or '<ipaddr>' is
+    the empty string) will cause INWX to silently set the IPv4 address (A
+    record) to '127.0.0.1'. No error message is returned.
+  - Omitting the IPv6 address (either no 'myipv6' URL parameter or '<ip6addr>'
+    is the empty string) will cause INWX to delete the IPv6 address (AAAA
+    record) if it exists.
+  - INWX will automatically create an IPv6 AAAA record for your hostname if
+    necessary.
+  - 'dyndns.inwx.com' is not reachable via IPv6 (there is no AAAA record).
+  - GET 'https://dyndns.inwx.com/nic/update' without further parameters will set
+    the IPv4 A record to the public IP of the requesting host and delete the
+    IPv6 AAAA record.
+  - You can ask INWX support to manually convert a DynDNS account into an
+    IPv6-only account.  No A record will be created in that case.
+
+Configuration variables applicable to the 'inwx' protocol are:
+  protocol=inwx                ##
+  server=fqdn.of.service       ## defaults to dyndns.inwx.com
+  script=/path/to/script       ## defaults to /nic/update
+  login=service-login          ## login name and password registered with the service
+  password=service-password    ##
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=inwx                             \\
+  login=my-inwx-DynDNS-account-username     \\
+  password=my-inwx-DynDNS-account-password  \\
+  myhost.example.org
+EoEXAMPLE
+}
+
+######################################################################
+## nic_inwx_update
+######################################################################
+sub nic_inwx_update {
+    debug("\nnic_inwx_update -------------------");
+    my %errors = (
+       'badauth' => 'Bad authorization (username or password)',
+       'badsys' => 'The system parameter given was not valid',
+       'notfqdn' => 'A Fully-Qualified Domain Name was not provided',
+       'nohost' => 'The hostname specified does not exist in the database',
+       '!yours' => 'The hostname specified exists, but not under the username currently being used',
+       '!donator' => 'The offline setting was set, when the user is not a donator',
+       '!active' => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+       'abuse' => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.',
+       'numhost' => 'System error: Too many or too few hosts found.',
+       'dnserr' => 'System error: DNS error encountered.',
+       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+    );
+    my @group_by_attrs = qw(
+        login
+        password
+        server
+        script
+        wantipv4
+        wantipv6
+    );
+    for my $group (group_hosts_by(\@_, @group_by_attrs)) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
+        my $hosts = join(',', @hosts);
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
+        info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
+        info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?";
+        $url .= "myip=$ipv4" if $ipv4;
+        if ($ipv6) {
+            if (!$ipv4 && opt('usev4', $hosts) ne 'disabled') {
+                warning("Skipping IPv6 AAAA record update because INWX requires the IPv4 A record to be updated at the same time but the IPv4 address is unknown.");
+                next;
+            }
+            $url .= "&" if $ipv4;
+            $url .= "myipv6=$ipv6";
+        }
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url => $url,
+            login => $groupcfg{'login'},
+            password => $groupcfg{'password'},
+        ) // '';
+        if ($reply eq '') {
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
+            next;
+        }
+        next if !header_ok($hosts, $reply);
+        # INWX can return 200 OK even if there is an error (e.g., bad authentication,
+        # updates too frequent) so the body of the response must also be checked.
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my @reply = split(qr/\n/, $body);
+        if (!@reply) {
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
+            next;
+        }
+        # From <https://help.dyn.com/remote-access-api/return-codes/>:
+        #
+        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
+        #   in the same order as the hostnames were specified.  Return codes indicating a failure
+        #   with the account or the system are given only once.
+        #
+        # TODO: There is no mention of what happens if multiple IP addresses are supplied (e.g.,
+        # IPv4 and IPv6) for a host.  If one address fails to update and the other doesn't, is that
+        # one error status line?  An error status line and a success status line?  Or is an update
+        # considered to be all-or-nothing and the status applies to the operation as a whole?  If
+        # the IPv4 address changes but not the IPv6 address does that result in a status of "good"
+        # because the set of addresses for a host changed even if a subset did not?
+        #
+        # TODO: The logic below applies the last line's status to all hosts.  Change it to apply
+        # each status to its corresponding host.
+        for my $line (@reply) {
+            # The IP address normally comes after the status, but we ignore it.  We could compare
+            # it with the expected address and mark the update as failed if it differs, but (1)
+            # some services do not return the IP; and (2) comparison is brittle (e.g.,
+            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
+            # (an update attempt every min-error-interval instead of every max-interval).
+            (my $status = $line) =~ s/ .*$//;
+            if ($status eq 'nochg') {
+                warning("$hosts: $status: $errors{$status}");
+                $status = 'good';
+            }
+            for my $h (@hosts) {
+                $config{$h}{'status-ipv4'} = $status if $ipv4;
+                $config{$h}{'status-ipv6'} = $status if $ipv6;
+            }
+            if ($status ne 'good') {
+                if (exists($errors{$status})) {
+                    failed("$hosts: $status: $errors{$status}");
+                } else {
+                    failed("$hosts: unexpected status: $line");
+                }
+                next;
+            }
+            for my $h (@hosts) {
+                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $config{$h}{'mtime'} = $now;
+            }
+            success("$hosts: IPv4 address set to $ipv4") if $ipv4;
+            success("$hosts: IPv6 address set to $ipv6") if $ipv6;
         }
     }
 }

@@ -37,6 +37,7 @@ Dynamic DNS services currently supported include:
 * [Google](https://domains.google)
 * [Hurricane Electric](https://dns.he.net)
 * [Infomaniak](https://faq.infomaniak.com/2376)
+* [INWX](https://www.inwx.com/)
 * [Loopia](https://www.loopia.se)
 * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
 * [NameCheap](https://www.namecheap.com)
