@@ -82,26 +82,6 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 # your-dynamic-host.dyndns.org
 
 ##
-## dyndns.org static addresses
-##
-## (supports variables: wildcard,mx,backupmx)
-##
-# static=yes,				\
-# server=members.dyndns.org,		\
-# protocol=dyndns2			\
-# your-static-host.dyndns.org
-
-##
-## dyndns.org custom addresses
-##
-## (supports variables: wildcard,mx,backupmx)
-##
-# custom=yes,				\
-# server=members.dyndns.org,		\
-# protocol=dyndns2			\
-# your-domain.top-level,your-other-domain.top-level
-
-##
 ## ZoneEdit (zoneedit.com)
 ##
 # server=dynamic.zoneedit.com, 		\
