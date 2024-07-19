@@ -43,6 +43,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#709](https://github.com/ddclient/ddclient/pull/709)
   * The diagnostic `--geturl` command-line argument was removed.
     [#712](https://github.com/ddclient/ddclient/pull/712)
+  * `easydns`: The default value for `min-interval` was increased from 5m to 10m
+    to match easyDNS documentation.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
 
 ### New features
 

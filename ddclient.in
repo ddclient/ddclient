@@ -866,7 +866,9 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
-            'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),       0),
+            # From <https://kb.easydns.com/knowledge/dynamic-dns/>: "You need to wait at least 10
+            # minutes between updates."
+            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'), 0),
             'mx'           => setv(T_OFQDN,  0, 1, undef,                undef),
             'server'       => setv(T_FQDNP,  0, 0, 'api.cp.easydns.com', undef),
             'script'       => setv(T_STRING, 0, 1, '/dyn/generic.php',   undef),
