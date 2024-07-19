@@ -618,7 +618,6 @@ our %variables = (
         'quiet'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'help'                => setv(T_BOOL,  0, 0, 0,                    undef),
         'test'                => setv(T_BOOL,  0, 0, 0,                    undef),
-        'geturl'              => setv(T_STRING,0, 0, undef,                undef),
 
         'postscript'          => setv(T_POSTS, 0, 0, undef,                undef),
         'ssl_ca_dir'          => setv(T_FILE,  0, 0, undef,                undef),
@@ -1303,7 +1302,6 @@ my @opt = (
     ["fw-banlocal",       "!",  ""], ## deprecated
     ["if-skip",           "=s", ""], ## deprecated
     ["test",              "!",  ""], ## hidden
-    ["geturl",            "=s", ""], ## hidden
     ["redirect",          "=i", "--redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
@@ -1315,9 +1313,6 @@ sub main {
     $saved_recap = '';
     %saved_opt = %opt;
     $result = 'OK';
-
-    test_geturl(opt('geturl')) if opt('geturl');
-
     if (opt('help')) {
         printf "%s\n", $opt_usage;
         $opt{'version'}('', '');
@@ -2272,22 +2267,7 @@ sub test_possible_ip {
 
     exit 0 unless opt('debug');
 }
-######################################################################
-## test_geturl - print (and save if -test) result of fetching a URL
-######################################################################
-sub test_geturl {
-    my $url = shift;
 
-    my $reply = geturl(
-        proxy => opt('proxy'),
-        url => $url,
-        login => opt('login'),
-        password => opt('password'),
-    );
-    print "URL $url\n";
-    print $reply // "<undefined>\n";
-    exit;
-}
 ######################################################################
 ## load_file
 ######################################################################

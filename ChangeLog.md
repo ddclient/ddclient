@@ -41,6 +41,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * `dyndns2`: The obsolete `static` and `custom` options have been removed.
     Setting the options may produce a warning.
     [#709](https://github.com/ddclient/ddclient/pull/709)
+  * The diagnostic `--geturl` command-line argument was removed.
+    [#TODO](https://github.com/ddclient/ddclient/pull/TODO)
 
 ### New features
 
