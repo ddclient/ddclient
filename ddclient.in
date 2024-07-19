@@ -4823,15 +4823,17 @@ sub nic_easydns_update {
             };
             my ($status) = $body =~ qr/^(\S*)\b/;
             $config{$h}{"status-ipv$ipv"} = $status;
-            if ($status eq 'NOERROR') {
-                $config{$h}{"ipv$ipv"} = $ip;
-                $config{$h}{'mtime'} = $now;
-                success("$h: IPv$ipv address set to $ip");
-            } elsif (exists $errors{$status}) {
-                failed("$h: $status: $errors{$status}");
-            } else {
-                failed("$h: unexpected result: $body");
+            if ($status ne 'NOERROR') {
+                if (exists $errors{$status}) {
+                    failed("$h: $status: $errors{$status}");
+                } else {
+                    failed("$h: unexpected result: $body");
+                }
+                next;
             }
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            success("$h: IPv$ipv address set to $ip");
         }
     }
 }
