@@ -5781,7 +5781,7 @@ sub nic_godaddy_update {
             (my $code) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
             my $ok = header_ok($host, $reply);
             my $msg;
-            $reply =~ s/^.*?\n\n//s; # extract payload
+            $reply =~ s/^.*?\n\n//s;
             my $response = eval {decode_json($reply)};
             if (!defined($response) && $code != "200") {
                 $$status = "bad";
@@ -5791,7 +5791,6 @@ sub nic_godaddy_update {
                 info("%s.%s -- %s - %s.", $hostname, $zone, $response->{code}, $response->{message});
             }
             if ($ok) {
-                # read data
                 $config{$host}{"ipv$ipversion"} = $ip;
                 $config{$host}{'mtime'} = $now;
                 $$status = 'good';
@@ -5800,7 +5799,7 @@ sub nic_godaddy_update {
                 next;
             } elsif ($code == "400") {
                 $msg = 'GoDaddy API URL ($url) was malformed.';
-            } elsif ($code == "401") { # authentication error
+            } elsif ($code == "401") {
                 if ($config{$host}{'login'} && $config{$host}{'login'}) {
                     $msg = 'login or password option incorrect.';
                 } else {
