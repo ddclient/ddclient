@@ -4833,15 +4833,6 @@ sub nic_easydns_update {
             $config{$h}{'mtime'} = $now;
             success("$h: IPv4 address set to $ipv4") if $ipv4;
             success("$h: IPv6 address set to $ipv6") if $ipv6;
-        } elsif ($status =~ /TOOSOON/) {
-            ## make sure we wait at least a little
-            my ($wait, $units) = (5, 'm');
-            my ($sec, $scale) = ($wait, 1);
-            ($scale, $units) = (1, 'seconds') if $units eq 's';
-            ($scale, $units) = (60, 'minutes') if $units eq 'm';
-            ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-            $config{$h}{'wtime'} = $now + $sec;
-            warning("$h: $status: wait $wait $units before further updates");
         } elsif (exists $errors{$status}) {
             failed("$h: $status: $errors{$status}");
         } else {
