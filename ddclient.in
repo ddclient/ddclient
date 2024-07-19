@@ -6406,12 +6406,52 @@ sub nic_hetzner_update {
             info("updating %s: setting IPv$ipv address to %s", $domain, $ip);
             $config{$domain}{"status-ipv$ipv"} = 'failed';
 
-                # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://$config{$domain}{'server'}/records?zone_id=$zone_id";
+            # Get DNS 'A' or 'AAAA' record ID
+            $url = "https://$config{$domain}{'server'}/records?zone_id=$zone_id";
+            $reply = geturl(proxy => opt('proxy'),
+                            url => $url,
+                            headers => $headers
+                            );
+            unless ($reply && header_ok($domain, $reply)) {
+                failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
+                next;
+            }
+            # Strip header
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            $response = eval {decode_json(${^MATCH})};
+            unless ($response && $response->{records}) {
+                failed("updating %s: invalid json or result.", $domain);
+                next;
+            }
+            # Pull the ID out of the json, messy
+            my ($dns_rec_id, $current_ip) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? ($_->{id}, $_ ->{value}) : ()} @{$response->{records}};
+
+            my $http_method="";
+            if ($current_ip && $current_ip eq $ip) {
+                info("updating %s %s: IP is already %s, no update needed.", $hostname, $ipv, $ip);
+                $config{$domain}{"ipv$ipv"} = $ip;
+                $config{$domain}{'mtime'} = $now;
+                $config{$domain}{"status-ipv$ipv"} = 'good';
+            } else {
+                # Set domain
+                if ($dns_rec_id)
+                {
+                    debug("updating %s: DNS '$type' record ID: $dns_rec_id", $domain);
+                    $url   = "https://$config{$domain}{'server'}/records/$dns_rec_id";
+                    $http_method = "PUT";
+                } else {
+                    debug("creating %s: DNS '$type'", $domain);
+                    $url   = "https://$config{$domain}{'server'}/records";
+                    $http_method = "POST";
+                }
+                my $data = "{\"zone_id\":\"$zone_id\", \"name\": \"$hostname\", \"value\": \"$ip\", \"type\": \"$type\", \"ttl\": $config{$domain}{'ttl'}}";
+
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
-                                headers => $headers
-                               );
+                                headers => $headers,
+                                method => $http_method,
+                                data => $data
+                            );
                 unless ($reply && header_ok($domain, $reply)) {
                     failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                     next;
@@ -6419,54 +6459,13 @@ sub nic_hetzner_update {
                 # Strip header
                 $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
                 $response = eval {decode_json(${^MATCH})};
-                unless ($response && $response->{records}) {
-                    failed("updating %s: invalid json or result.", $domain);
-                    next;
-                }
-                # Pull the ID out of the json, messy
-                my ($dns_rec_id, $current_ip) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? ($_->{id}, $_ ->{value}) : ()} @{$response->{records}};
-
-                my $http_method="";
-                if ($current_ip && $current_ip eq $ip) {
-                    info("updating %s %s: IP is already %s, no update needed.", $hostname, $ipv, $ip);
+                if ($response && $response->{record}) {
+                    success("updating %s: IPv$ipv address set to %s", $domain, $ip);
                     $config{$domain}{"ipv$ipv"} = $ip;
                     $config{$domain}{'mtime'} = $now;
                     $config{$domain}{"status-ipv$ipv"} = 'good';
                 } else {
-                    # Set domain
-                    if ($dns_rec_id)
-                    {
-                        debug("updating %s: DNS '$type' record ID: $dns_rec_id", $domain);
-                        $url   = "https://$config{$domain}{'server'}/records/$dns_rec_id";
-                        $http_method = "PUT";
-                    } else {
-                        debug("creating %s: DNS '$type'", $domain);
-                        $url   = "https://$config{$domain}{'server'}/records";
-                        $http_method = "POST";
-                    }
-                    my $data = "{\"zone_id\":\"$zone_id\", \"name\": \"$hostname\", \"value\": \"$ip\", \"type\": \"$type\", \"ttl\": $config{$domain}{'ttl'}}";
-
-                    $reply = geturl(proxy => opt('proxy'),
-                                    url => $url,
-                                    headers => $headers,
-                                    method => $http_method,
-                                    data => $data
-                                );
-                    unless ($reply && header_ok($domain, $reply)) {
-                        failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
-                        next;
-                    }
-                    # Strip header
-                    $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-                    $response = eval {decode_json(${^MATCH})};
-                    if ($response && $response->{record}) {
-                        success("updating %s: IPv$ipv address set to %s", $domain, $ip);
-                        $config{$domain}{"ipv$ipv"} = $ip;
-                        $config{$domain}{'mtime'} = $now;
-                        $config{$domain}{"status-ipv$ipv"} = 'good';
-                    } else {
-                        failed("updating %s: invalid json or result.", $domain);
-                    }
+                    failed("updating %s: invalid json or result.", $domain);
                 }
             }
         }
