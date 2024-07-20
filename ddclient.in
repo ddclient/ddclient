@@ -4821,9 +4821,10 @@ sub nic_easydns_update {
                 failed("$h: Could not connect to $config{$h}{'server'}");
                 next;
             };
-            my ($status) = $body =~ qr/^(\S*)\b/;
+            my $resultcode_re = join('|', map({quotemeta} 'NOERROR', keys(%errors)));
+            my ($status) = $body =~ qr/\b($resultcode_re)\b/;
             $config{$h}{"status-ipv$ipv"} = $status;
-            if ($status ne 'NOERROR') {
+            if (($status // '') ne 'NOERROR') {
                 if (exists $errors{$status}) {
                     failed("$h: $status: $errors{$status}");
                 } else {
