@@ -4824,8 +4824,12 @@ sub nic_easydns_update {
             };
             my $resultcode_re = join('|', map({quotemeta} 'NOERROR', keys(%errors)));
             my ($status) = $body =~ qr/\b($resultcode_re)\b/;
+            # 'good' is the only status value that ddclient considers to be successful.  All other
+            # values are considered to be failures and will result in frequent retries (every
+            # min-error-interval, which defaults to 5m).
+            $status = 'good' if ($status // '') =~ qr/^NOERROR|OK$/;
             $config{$h}{"status-ipv$ipv"} = $status;
-            if (($status // '') !~ qr/^NOERROR|OK$/) {
+            if ($status ne 'good') {
                 if (exists $errors{$status}) {
                     failed("$h: $status: $errors{$status}");
                 } else {

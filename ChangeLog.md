@@ -129,6 +129,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#713](https://github.com/ddclient/ddclient/pull/713)
   * `easydns`: Fixed parsing of result code from server response.
     [#713](https://github.com/ddclient/ddclient/pull/713)
+  * `easydns`: Fixed successful updates treated as failed updates.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
 
 ## 2023-11-23 v3.11.2
 
