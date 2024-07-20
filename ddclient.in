@@ -4799,8 +4799,8 @@ sub nic_easydns_update {
     for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
-        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $h);
-        verbose("UPDATE:", "updating %s", $h);
+        info("$h: setting IPv4 address to $ipv4") if $ipv4;
+        info("$h: setting IPv6 address to $ipv6") if $ipv6;
         #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
         my $url;
         $url = "https://$config{$h}{'server'}$config{$h}{'script'}?";
@@ -4823,7 +4823,7 @@ sub nic_easydns_update {
             password => $config{$h}{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            failed("$h: Could not connect to $config{$h}{'server'}");
             next;
         }
         next if !header_ok($h, $reply);
@@ -4843,7 +4843,8 @@ sub nic_easydns_update {
                     $config{$h}{'ipv4'} = $ipv4;
                     $config{$h}{'ipv6'} = $ipv6;
                     $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IP address set to %s %s", $h, $status, $ipv4, $ipv6);
+                    success("$h: IPv4 address set to $ipv4") if $ipv4;
+                    success("$h: IPv6 address set to $ipv6") if $ipv6;
                 } elsif ($status =~ /TOOSOON/) {
                     ## make sure we wait at least a little
                     my ($wait, $units) = (5, 'm');
@@ -4852,17 +4853,16 @@ sub nic_easydns_update {
                     ($scale, $units) = (60, 'minutes') if $units eq 'm';
                     ($scale, $units) = (60*60, 'hours') if $units eq 'h';
                     $config{$h}{'wtime'} = $now + $sec;
-                    warning("updating %s: %s: wait %d %s before further updates", $h, $status, $wait, $units);
+                    warning("$h: $status: wait $wait $units before further updates");
                 } elsif (exists $errors{$status}) {
-                    failed("updating %s: %s: %s", $h, $line, $errors{$status});
+                    failed("$h: $status: $errors{$status}");
                 } else {
-                    failed("updating %s: unexpected status (%s)", $h, $line);
+                    failed("$h: unexpected result: $line");
                 }
                 last;
             }
         }
-        failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
-            if $state ne 'results2';
+        failed("$h: Could not connect to $config{$h}{'server'}") if $state ne 'results2';
     }
 }
 
