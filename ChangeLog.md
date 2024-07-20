@@ -42,7 +42,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     Setting the options may produce a warning.
     [#709](https://github.com/ddclient/ddclient/pull/709)
   * The diagnostic `--geturl` command-line argument was removed.
-    [#TODO](https://github.com/ddclient/ddclient/pull/TODO)
+    [#712](https://github.com/ddclient/ddclient/pull/712)
 
 ### New features
 
