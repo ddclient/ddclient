@@ -4802,20 +4802,13 @@ sub nic_easydns_update {
         info("$h: setting IPv4 address to $ipv4") if $ipv4;
         info("$h: setting IPv6 address to $ipv6") if $ipv6;
         #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
-        my $url;
-        $url = "https://$config{$h}{'server'}$config{$h}{'script'}?";
-        $url .= "hostname=$h";
-        $url .= "&myip=";
+        my $url = "https://$config{$h}{'server'}$config{$h}{'script'}?hostname=$h&myip=";
         $url .= $ipv4 if $ipv4;
-        for my $ipv6a ($ipv6) {
-            $url .= "&myip=";
-            $url .= $ipv6a
-        }
-        $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF') if defined $config{$h}{'wildcard'};
-        if ($config{$h}{'mx'}) {
-            $url .= "&mx=$config{$h}{'mx'}";
-            $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
-        }
+        $url .= "&myip=$_" for $ipv6;
+        $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF')
+            if defined($config{$h}{'wildcard'});
+        $url .= "&mx=$config{$h}{'mx'}&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO')
+            if $config{$h}{'mx'};
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
