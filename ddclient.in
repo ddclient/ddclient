@@ -4797,46 +4797,41 @@ sub nic_easydns_update {
         'TOOSOON' => 'Update frequency is too short.',
     );
     for my $h (@_) {
-        my $ipv4 = delete $config{$h}{'wantipv4'};
-        my $ipv6 = delete $config{$h}{'wantipv6'};
-        info("$h: setting IPv4 address to $ipv4") if $ipv4;
-        info("$h: setting IPv6 address to $ipv6") if $ipv6;
-        #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
-        my $url = "https://$config{$h}{'server'}$config{$h}{'script'}?hostname=$h&myip=";
-        $url .= $ipv4 if $ipv4;
-        $url .= "&myip=$_" for $ipv6;
-        $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF')
-            if defined($config{$h}{'wildcard'});
-        $url .= "&mx=$config{$h}{'mx'}&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO')
-            if $config{$h}{'mx'};
-        my $reply = geturl(
-            proxy => opt('proxy'),
-            url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("$h: Could not connect to $config{$h}{'server'}");
-            next;
-        }
-        next if !header_ok($h, $reply);
-        (my $body = $reply) =~ s/^.*?\n\n//s or do {
-            failed("$h: Could not connect to $config{$h}{'server'}");
-            next;
-        };
-        my ($status) = $body =~ qr/^(\S*)\b/;
-        $config{$h}{'status-ipv4'} = $status if $ipv4;
-        $config{$h}{'status-ipv6'} = $status if $ipv6;
-        if ($status eq 'NOERROR') {
-            $config{$h}{'ipv4'} = $ipv4;
-            $config{$h}{'ipv6'} = $ipv6;
-            $config{$h}{'mtime'} = $now;
-            success("$h: IPv4 address set to $ipv4") if $ipv4;
-            success("$h: IPv6 address set to $ipv6") if $ipv6;
-        } elsif (exists $errors{$status}) {
-            failed("$h: $status: $errors{$status}");
-        } else {
-            failed("$h: unexpected result: $body");
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            info("$h: setting IPv$ipv address to $ip");
+            #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
+            my $url = "https://$config{$h}{'server'}$config{$h}{'script'}?hostname=$h&myip=$ip";
+            $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF')
+                if defined($config{$h}{'wildcard'});
+            $url .= "&mx=$config{$h}{'mx'}&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO')
+                if $config{$h}{'mx'};
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                login => $config{$h}{'login'},
+                password => $config{$h}{'password'},
+            ) // '';
+            if ($reply eq '') {
+                failed("$h: Could not connect to $config{$h}{'server'}");
+                next;
+            }
+            next if !header_ok($h, $reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s or do {
+                failed("$h: Could not connect to $config{$h}{'server'}");
+                next;
+            };
+            my ($status) = $body =~ qr/^(\S*)\b/;
+            $config{$h}{"status-ipv$ipv"} = $status;
+            if ($status eq 'NOERROR') {
+                $config{$h}{"ipv$ipv"} = $ip;
+                $config{$h}{'mtime'} = $now;
+                success("$h: IPv$ipv address set to $ip");
+            } elsif (exists $errors{$status}) {
+                failed("$h: $status: $errors{$status}");
+            } else {
+                failed("$h: unexpected result: $body");
+            }
         }
     }
 }

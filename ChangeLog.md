@@ -124,6 +124,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#692](https://github.com/ddclient/ddclient/pull/692)
   * `regfishde`: Fixed IPv6 support.
     [#691](https://github.com/ddclient/ddclient/pull/691)
+  * `easydns`: IPv4 and IPv6 addresses are now updated separately to be
+    consistent with the easyDNS documentation.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
 
 ## 2023-11-23 v3.11.2
 
