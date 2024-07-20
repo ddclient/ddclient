@@ -4827,42 +4827,33 @@ sub nic_easydns_update {
             next;
         }
         next if !header_ok($h, $reply);
-        my @reply = split /\n/, $reply;
-        my $state = 'header';
-        for my $line (@reply) {
-            if ($state eq 'header') {
-                $state = 'body';
-            } elsif ($state eq 'body') {
-                $state = 'results' if $line eq '';
-            } elsif ($state =~ /^results/) {
-                $state = 'results2';
-                my ($status) = $line =~ /^(\S*)\b.*/;
-                $config{$h}{'status-ipv4'} = $status if $ipv4;
-                $config{$h}{'status-ipv6'} = $status if $ipv6;
-                if ($status eq 'NOERROR') {
-                    $config{$h}{'ipv4'} = $ipv4;
-                    $config{$h}{'ipv6'} = $ipv6;
-                    $config{$h}{'mtime'} = $now;
-                    success("$h: IPv4 address set to $ipv4") if $ipv4;
-                    success("$h: IPv6 address set to $ipv6") if $ipv6;
-                } elsif ($status =~ /TOOSOON/) {
-                    ## make sure we wait at least a little
-                    my ($wait, $units) = (5, 'm');
-                    my ($sec, $scale) = ($wait, 1);
-                    ($scale, $units) = (1, 'seconds') if $units eq 's';
-                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-                    $config{$h}{'wtime'} = $now + $sec;
-                    warning("$h: $status: wait $wait $units before further updates");
-                } elsif (exists $errors{$status}) {
-                    failed("$h: $status: $errors{$status}");
-                } else {
-                    failed("$h: unexpected result: $line");
-                }
-                last;
-            }
+        (my $body = $reply) =~ s/^.*?\n\n//s or do {
+            failed("$h: Could not connect to $config{$h}{'server'}");
+            next;
+        };
+        my ($status) = $body =~ qr/^(\S*)\b/;
+        $config{$h}{'status-ipv4'} = $status if $ipv4;
+        $config{$h}{'status-ipv6'} = $status if $ipv6;
+        if ($status eq 'NOERROR') {
+            $config{$h}{'ipv4'} = $ipv4;
+            $config{$h}{'ipv6'} = $ipv6;
+            $config{$h}{'mtime'} = $now;
+            success("$h: IPv4 address set to $ipv4") if $ipv4;
+            success("$h: IPv6 address set to $ipv6") if $ipv6;
+        } elsif ($status =~ /TOOSOON/) {
+            ## make sure we wait at least a little
+            my ($wait, $units) = (5, 'm');
+            my ($sec, $scale) = ($wait, 1);
+            ($scale, $units) = (1, 'seconds') if $units eq 's';
+            ($scale, $units) = (60, 'minutes') if $units eq 'm';
+            ($scale, $units) = (60*60, 'hours') if $units eq 'h';
+            $config{$h}{'wtime'} = $now + $sec;
+            warning("$h: $status: wait $wait $units before further updates");
+        } elsif (exists $errors{$status}) {
+            failed("$h: $status: $errors{$status}");
+        } else {
+            failed("$h: unexpected result: $body");
         }
-        failed("$h: Could not connect to $config{$h}{'server'}") if $state ne 'results2';
     }
 }
 
