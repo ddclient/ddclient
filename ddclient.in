@@ -4793,7 +4793,7 @@ sub nic_easydns_update {
     my %errors = (
         'NOACCESS' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
-        'ILLEGAL' => 'Client sent data that is not allowed in a dynamic DNS update.',
+        'ILLEGAL INPUT' => 'Client sent data that is not allowed in a dynamic DNS update.',
         'TOOSOON' => 'Update frequency is too short.',
     );
     for my $h (@_) {
