@@ -4758,13 +4758,13 @@ sub nic_nfsn_handle_error {
     $resp =~ s/^.*?\n\n//s;  # Strip header
     my $json = eval { decode_json($resp) };
     if ($@ || ref($json) ne 'HASH' || not defined $json->{'error'}) {
-        failed("Invalid error response: %s", $resp);
+        failed("$h: Invalid error response: $resp");
         return;
     }
 
     failed("%s", $json->{'error'});
     if (defined $json->{'debug'}) {
-        failed("%s", $json->{'debug'});
+        failed("$h: $json->{'debug'}");
     }
 }
 
@@ -4833,7 +4833,7 @@ sub nic_nfsn_update {
                                                 'POST', $rm_body);
             if (!header_ok($h, $rm_resp)) {
                 $config{$h}{'status'} = 'failed';
-                nic_nfsn_handle_error($rm_resp);
+                nic_nfsn_handle_error($rm_resp, $h);
                 next;
             }
         }
