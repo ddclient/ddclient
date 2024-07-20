@@ -4792,6 +4792,7 @@ sub nic_easydns_update {
     debug("\nnic_easydns_update -------------------");
     my %errors = (
         'NOACCESS' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
+        'NO_AUTH' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
         'ILLEGAL INPUT' => 'Client sent data that is not allowed in a dynamic DNS update.',
         'TOOSOON' => 'Update frequency is too short.',
@@ -4824,7 +4825,7 @@ sub nic_easydns_update {
             my $resultcode_re = join('|', map({quotemeta} 'NOERROR', keys(%errors)));
             my ($status) = $body =~ qr/\b($resultcode_re)\b/;
             $config{$h}{"status-ipv$ipv"} = $status;
-            if (($status // '') ne 'NOERROR') {
+            if (($status // '') !~ qr/^NOERROR|OK$/) {
                 if (exists $errors{$status}) {
                     failed("$h: $status: $errors{$status}");
                 } else {
