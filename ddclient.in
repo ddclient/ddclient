@@ -6341,35 +6341,29 @@ EoEXAMPLE
 ######################################################################
 sub nic_duckdns_update {
     debug("\nnic_duckdns_update -------------------");
-
     for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
         info("setting IPv4 address to %s for %s", $ipv4, $h) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $h) if $ipv6;
         verbose("UPDATE:", "updating %s", $h);
-
         my $url;
-        $url  = "https://$config{$h}{'server'}/update";
+        $url = "https://$config{$h}{'server'}/update";
         $url .= "?domains=";
         $url .= $h;
         $url .= "&token=";
         $url .= $config{$h}{'password'};
         $url .= "&ip=$ipv4" if $ipv4;
         $url .= "&ipv6=$ipv6" if $ipv6;
-
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
         next if !header_ok($h, $reply);
-
         my @reply = split /\n/, $reply;
         my $state = 'noresult';
         my $line = '';
-
         for $line (@reply) {
             if ($line eq 'OK') {
                 $config{$h}{'ipv4'} = $ipv4 if $ipv4;
@@ -6380,7 +6374,6 @@ sub nic_duckdns_update {
                 $state = 'result';
                 success("updating %s: good: IPv4 address set to %s", $h, $ipv4) if $ipv4;
                 success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
-
             } elsif ($line eq 'KO') {
                 $config{$h}{'status-ipv4'} = 'failed' if $ipv4;
                 $config{$h}{'status-ipv6'} = 'failed' if $ipv6;
@@ -6388,7 +6381,6 @@ sub nic_duckdns_update {
                 failed("updating %s: Server said: '%s'", $h, $line);
             }
         }
-
         if ($state eq 'noresult') {
             failed("updating %s: Server said: '%s'", $h, $line);
         }
