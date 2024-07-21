@@ -6347,12 +6347,7 @@ sub nic_duckdns_update {
         info("setting IPv4 address to %s for %s", $ipv4, $h) if $ipv4;
         info("setting IPv6 address to %s for %s", $ipv6, $h) if $ipv6;
         verbose("UPDATE:", "updating %s", $h);
-        my $url;
-        $url = "https://$config{$h}{'server'}/update";
-        $url .= "?domains=";
-        $url .= $h;
-        $url .= "&token=";
-        $url .= $config{$h}{'password'};
+        my $url = "https://$config{$h}{'server'}/update?domains=$h&token=$config{$h}{'password'}";
         $url .= "&ip=$ipv4" if $ipv4;
         $url .= "&ipv6=$ipv6" if $ipv6;
         my $reply = geturl(proxy => opt('proxy'), url => $url);
