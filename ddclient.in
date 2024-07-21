@@ -6342,8 +6342,6 @@ EoEXAMPLE
 sub nic_duckdns_update {
     debug("\nnic_duckdns_update -------------------");
 
-    ## update each configured host
-    ## should improve to update in one pass
     for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
@@ -6351,7 +6349,6 @@ sub nic_duckdns_update {
         info("setting IPv6 address to %s for %s", $ipv6, $h) if $ipv6;
         verbose("UPDATE:", "updating %s", $h);
 
-        # Set the URL that we're going to to update
         my $url;
         $url  = "https://$config{$h}{'server'}/update";
         $url .= "?domains=";
@@ -6361,10 +6358,8 @@ sub nic_duckdns_update {
         $url .= "&ip=$ipv4" if $ipv4;
         $url .= "&ipv6=$ipv6" if $ipv6;
 
-        # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
 
-        # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
