@@ -6344,9 +6344,8 @@ sub nic_duckdns_update {
     for my $h (@_) {
         my $ipv4 = delete $config{$h}{'wantipv4'};
         my $ipv6 = delete $config{$h}{'wantipv6'};
-        info("setting IPv4 address to %s for %s", $ipv4, $h) if $ipv4;
-        info("setting IPv6 address to %s for %s", $ipv6, $h) if $ipv6;
-        verbose("UPDATE:", "updating %s", $h);
+        info("$h: setting IPv4 address to $ipv4") if $ipv4;
+        info("$h: setting IPv6 address to $ipv6") if $ipv6;
         my $url = "https://$config{$h}{'server'}/update?domains=$h&token=$config{$h}{'password'}";
         $url .= "&ip=$ipv4" if $ipv4;
         $url .= "&ipv6=$ipv6" if $ipv6;
