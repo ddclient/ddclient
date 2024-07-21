@@ -138,6 +138,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     web-based IP discovery service (`--usev4=webv4`, `--usev6=webv6`) or from a
     router/firewall device.
     [#719](https://github.com/ddclient/ddclient/pull/719)
+  * `yandex`: Errors are now retried.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
 
 ## 2023-11-23 v3.11.2
 

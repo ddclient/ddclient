@@ -6298,13 +6298,12 @@ sub nic_yandex_update {
         $response = eval { decode_json($reply) };
         if ($response->{success} eq 'error') {
             failed("%s", $response->{error});
-        } else {
-            success("%s -- Updated Successfully to %s", $host, $ip);
+            next;
         }
-
         $config{$host}{'ip'} = $ip;
         $config{$host}{'mtime'} = $now;
         $config{$host}{'status'} = 'good';
+        success("%s -- Updated Successfully to %s", $host, $ip);
     }
 }
 
