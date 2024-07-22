@@ -6432,7 +6432,6 @@ sub nic_freemyip_update {
             $config{$h}{'status'} = 'good';
             success("$h: good: IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
             failed("$h: Server said: $returned");
         }
     }
