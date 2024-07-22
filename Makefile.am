@@ -77,6 +77,7 @@ handwritten_tests = \
 	t/parse_assignments.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
+	t/use_web.pl \
 	t/variable_defaults.pl \
 	t/write_recap.pl
 generated_tests = \
