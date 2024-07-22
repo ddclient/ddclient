@@ -6414,27 +6414,22 @@ EoEXAMPLE
 ######################################################################
 sub nic_freemyip_update {
     debug("\nnic_freemyip_update -------------------");
-
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
-
         my $url;
-        $url  = "https://$config{$h}{'server'}/update";
+        $url = "https://$config{$h}{'server'}/update";
         $url .= "?token=";
         $url .= $config{$h}{'password'};
         $url .= "&domain=";
         $url .= $h;
-
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
         next if !header_ok($h, $reply);
-
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
         if ($returned =~ /OK/) {
