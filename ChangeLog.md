@@ -86,6 +86,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     records.  [#690](https://github.com/ddclient/ddclient/pull/690)
   * `domeneshop`: Add IPv6 support.
     [#719](https://github.com/ddclient/ddclient/pull/719)
+  * `duckdns`: Multiple hosts with the same IP address are now updated together.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
 
 ### Bug fixes
 

@@ -6341,38 +6341,43 @@ EoEXAMPLE
 ######################################################################
 sub nic_duckdns_update {
     debug("\nnic_duckdns_update -------------------");
-    for my $h (@_) {
-        my $ipv4 = delete $config{$h}{'wantipv4'};
-        my $ipv6 = delete $config{$h}{'wantipv6'};
-        info("$h: setting IPv4 address to $ipv4") if $ipv4;
-        info("$h: setting IPv6 address to $ipv6") if $ipv6;
-        my $url = "https://$config{$h}{'server'}/update?domains=$h&token=$config{$h}{'password'}";
+    for my $group (group_hosts_by(\@_, qw(password server wantipv4 wantipv6))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
+        my $hosts = join(',', @hosts);
+        my $ipv4 = $groupcfg{'wantipv4'};
+        my $ipv6 = $groupcfg{'wantipv6'};
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
+        info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
+        info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
+        my $url = "https://$groupcfg{'server'}/update?domains=$hosts&token=$groupcfg{'password'}";
         $url .= "&ip=$ipv4" if $ipv4;
         $url .= "&ipv6=$ipv6" if $ipv6;
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         if (!defined($reply) || !$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            failed("$hosts: Could not connect to $groupcfg{'server'}");
             next;
         }
-        next if !header_ok($h, $reply);
+        next if !header_ok($hosts, $reply);
         (my $body = $reply) =~ s/^.*?\n\n//s or do {
-            failed("$h: Invalid response from server");
+            failed("$hosts: Invalid response from server");
             next;
         };
         chomp($body);
         if ($body ne 'OK') {
-            $config{$h}{'status-ipv4'} = 'failed' if $ipv4;
-            $config{$h}{'status-ipv6'} = 'failed' if $ipv6;
-            failed("updating %s: Server said: '%s'", $h, $body);
+            failed("$hosts: Server said: $body");
             next;
         }
-        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
-        success("updating %s: good: IPv4 address set to %s", $h, $ipv4) if $ipv4;
-        success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
+        for my $h (@hosts) {
+            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+        }
+        success("$hosts: good: IPv4 address set to $ipv4") if $ipv4;
+        success("$hosts: good: IPv6 address set to $ipv6") if $ipv6;
     }
 }
 
