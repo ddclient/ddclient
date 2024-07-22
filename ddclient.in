@@ -6420,7 +6420,6 @@ sub nic_freemyip_update {
         info("setting IP address to %s for %s", $ip, $h);
         verbose("UPDATE:", "updating %s", $h);
 
-        # Set the URL that we're going to to update
         my $url;
         $url  = "https://$config{$h}{'server'}/update";
         $url .= "?token=";
@@ -6428,10 +6427,8 @@ sub nic_freemyip_update {
         $url .= "&domain=";
         $url .= $h;
 
-        # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
 
-        # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
