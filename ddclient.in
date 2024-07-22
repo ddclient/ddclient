@@ -6360,19 +6360,19 @@ sub nic_duckdns_update {
             next;
         };
         chomp($body);
-        if ($body eq 'OK') {
-            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
-            success("updating %s: good: IPv4 address set to %s", $h, $ipv4) if $ipv4;
-            success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
-        } else {
+        if ($body ne 'OK') {
             $config{$h}{'status-ipv4'} = 'failed' if $ipv4;
             $config{$h}{'status-ipv6'} = 'failed' if $ipv6;
             failed("updating %s: Server said: '%s'", $h, $body);
+            next;
         }
+        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
+        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+        $config{$h}{'mtime'} = $now;
+        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
+        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+        success("updating %s: good: IPv4 address set to %s", $h, $ipv4) if $ipv4;
+        success("updating %s: good: IPv6 address set to %s", $h, $ipv6) if $ipv6;
     }
 }
 
