@@ -6425,10 +6425,8 @@ sub nic_freemyip_update {
         }
         next if !header_ok($h, $reply);
         (my $body = $reply) =~ s/^.*?\n\n//s;
-        my @reply = split(/\n/, $body);
-        my $returned = pop(@reply);
-        if ($returned !~ /OK/) {
-            failed("$h: Server said: $returned");
+        if ($body !~ /OK/) {
+            failed("$h: Server said: $body");
             next;
         }
         $config{$h}{'ip'} = $ip;
