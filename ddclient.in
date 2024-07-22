@@ -866,7 +866,9 @@ our %protocols = (
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
             'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
-            'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),       0),
+            # From <https://kb.easydns.com/knowledge/dynamic-dns/>: "You need to wait at least 10
+            # minutes between updates."
+            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'), 0),
             'mx'           => setv(T_OFQDN,  0, 1, undef,                undef),
             'server'       => setv(T_FQDNP,  0, 0, 'api.cp.easydns.com', undef),
             'script'       => setv(T_STRING, 0, 1, '/dyn/generic.php',   undef),
@@ -4790,91 +4792,55 @@ sub nic_easydns_update {
     debug("\nnic_easydns_update -------------------");
     my %errors = (
         'NOACCESS' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
+        'NO_AUTH' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
-        'ILLEGAL' => 'Client sent data that is not allowed in a dynamic DNS update.',
+        'ILLEGAL INPUT' => 'Client sent data that is not allowed in a dynamic DNS update.',
         'TOOSOON' => 'Update frequency is too short.',
     );
     for my $h (@_) {
-        my $ipv4 = delete $config{$h}{'wantipv4'};
-        my $ipv6 = delete $config{$h}{'wantipv6'};
-
-        info("setting IP address to %s %s for %s", $ipv4, $ipv6, $h);
-        verbose("UPDATE:", "updating %s", $h);
-
-        #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
-
-        my $url;
-        $url = "https://$config{$h}{'server'}$config{$h}{'script'}?";
-        $url .= "hostname=$h";
-        $url .= "&myip=";
-        $url .= $ipv4 if $ipv4;
-        for my $ipv6a ($ipv6) {
-            $url .= "&myip=";
-            $url .= $ipv6a
-        }
-        $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF') if defined $config{$h}{'wildcard'};
-
-        if ($config{$h}{'mx'}) {
-            $url .= "&mx=$config{$h}{'mx'}";
-            $url .= "&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO');
-        }
-
-        my $reply = geturl(
-            proxy => opt('proxy'),
-            url => $url,
-            login => $config{$h}{'login'},
-            password => $config{$h}{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            next;
-        }
-        next if !header_ok($h, $reply);
-
-        my @reply = split /\n/, $reply;
-        my $state = 'header';
-        for my $line (@reply) {
-            if ($state eq 'header') {
-                $state = 'body';
-
-            } elsif ($state eq 'body') {
-                $state = 'results' if $line eq '';
-
-            } elsif ($state =~ /^results/) {
-                $state = 'results2';
-
-                my ($status) = $line =~ /^(\S*)\b.*/;
-
-                $config{$h}{'status-ipv4'} = $status if $ipv4;
-                $config{$h}{'status-ipv6'} = $status if $ipv6;
-                if ($status eq 'NOERROR') {
-                    $config{$h}{'ipv4'} = $ipv4;
-                    $config{$h}{'ipv6'} = $ipv6;
-                    $config{$h}{'mtime'} = $now;
-                    success("updating %s: %s: IP address set to %s %s", $h, $status, $ipv4, $ipv6);
-
-                } elsif ($status =~ /TOOSOON/) {
-                    ## make sure we wait at least a little
-                    my ($wait, $units) = (5, 'm');
-                    my ($sec, $scale) = ($wait, 1);
-
-                    ($scale, $units) = (1, 'seconds') if $units eq 's';
-                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-                    $config{$h}{'wtime'} = $now + $sec;
-                    warning("updating %s: %s: wait %d %s before further updates", $h, $status, $wait, $units);
-
-                } elsif (exists $errors{$status}) {
-                    failed("updating %s: %s: %s", $h, $line, $errors{$status});
-
-                } else {
-                    failed("updating %s: unexpected status (%s)", $h, $line);
-                }
-                last;
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            info("$h: setting IPv$ipv address to $ip");
+            #'https://api.cp.easydns.com/dyn/generic.php?hostname=test.burry.ca&myip=10.20.30.40&wildcard=ON'
+            my $url = "https://$config{$h}{'server'}$config{$h}{'script'}?hostname=$h&myip=$ip";
+            $url .= "&wildcard=" . ynu($config{$h}{'wildcard'}, 'ON', 'OFF', 'OFF')
+                if defined($config{$h}{'wildcard'});
+            $url .= "&mx=$config{$h}{'mx'}&backmx=" . ynu($config{$h}{'backupmx'}, 'YES', 'NO')
+                if $config{$h}{'mx'};
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                login => $config{$h}{'login'},
+                password => $config{$h}{'password'},
+            ) // '';
+            if ($reply eq '') {
+                failed("$h: Could not connect to $config{$h}{'server'}");
+                next;
             }
+            next if !header_ok($h, $reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s or do {
+                failed("$h: Could not connect to $config{$h}{'server'}");
+                next;
+            };
+            my $resultcode_re = join('|', map({quotemeta} 'NOERROR', keys(%errors)));
+            my ($status) = $body =~ qr/\b($resultcode_re)\b/;
+            # 'good' is the only status value that ddclient considers to be successful.  All other
+            # values are considered to be failures and will result in frequent retries (every
+            # min-error-interval, which defaults to 5m).
+            $status = 'good' if ($status // '') =~ qr/^NOERROR|OK$/;
+            $config{$h}{"status-ipv$ipv"} = $status;
+            if ($status ne 'good') {
+                if (exists $errors{$status}) {
+                    failed("$h: $status: $errors{$status}");
+                } else {
+                    failed("$h: unexpected result: $body");
+                }
+                next;
+            }
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{'mtime'} = $now;
+            success("$h: IPv$ipv address set to $ip");
         }
-        failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'})
-            if $state ne 'results2';
     }
 }
 

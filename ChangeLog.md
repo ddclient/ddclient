@@ -43,6 +43,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#709](https://github.com/ddclient/ddclient/pull/709)
   * The diagnostic `--geturl` command-line argument was removed.
     [#712](https://github.com/ddclient/ddclient/pull/712)
+  * `easydns`: The default value for `min-interval` was increased from 5m to 10m
+    to match easyDNS documentation.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
 
 ### New features
 
@@ -121,6 +124,13 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#692](https://github.com/ddclient/ddclient/pull/692)
   * `regfishde`: Fixed IPv6 support.
     [#691](https://github.com/ddclient/ddclient/pull/691)
+  * `easydns`: IPv4 and IPv6 addresses are now updated separately to be
+    consistent with the easyDNS documentation.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
+  * `easydns`: Fixed parsing of result code from server response.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
+  * `easydns`: Fixed successful updates treated as failed updates.
+    [#713](https://github.com/ddclient/ddclient/pull/713)
 
 ## 2023-11-23 v3.11.2
 
