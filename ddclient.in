@@ -6819,46 +6819,44 @@ sub nic_porkbun_update {
                 next;
             }
             my $records = $response->{records};
-            if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
-                warning("$h: There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
-                    if @$records > 1;
-                if ($records->[0]{'content'} eq $ip) {
-                    $config{$h}{"status-ipv$ipv"} = "good";
-                    success("$h: skipped: IPv$ipv address was already set to $ip");
-                    next;
-                }
-                my $ttl = $records->[0]->{'ttl'};
-                my $notes = $records->[0]->{'notes'};
-                debug("ttl = %s", $ttl);
-                debug("notes = %s", $notes);
-                $reply = geturl(
-                    proxy => opt('proxy'),
-                    url => "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
-                    headers => ['Content-Type: application/json'],
-                    method => 'POST',
-                    data => encode_json({
-                        secretapikey => $config{$h}{'secretapikey'},
-                        apikey => $config{$h}{'apikey'},
-                        content => $ip,
-                        ttl => $ttl,
-                        notes => $notes,
-                    }),
-                );
-                if (!defined($reply) || !$reply) {
-                    failed("$h: request to porkbun.com failed");
-                    next;
-                }
-                if (!header_ok($h, $reply)) {
-                    failed("$h: $reply");
-                    next;
-                }
-                $config{$h}{"status-ipv$ipv"} = "good";
-                success("$h: IPv%s address set to $ip");
-                next;
-            } else {
+            if (ref($records) ne 'ARRAY' || !defined($records->[0]{'id'})) {
                 failed("$h: no applicable existing records");
                 next;
             }
+            warning("$h: There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
+                if @$records > 1;
+            if ($records->[0]{'content'} eq $ip) {
+                $config{$h}{"status-ipv$ipv"} = "good";
+                success("$h: skipped: IPv$ipv address was already set to $ip");
+                next;
+            }
+            my $ttl = $records->[0]->{'ttl'};
+            my $notes = $records->[0]->{'notes'};
+            debug("ttl = %s", $ttl);
+            debug("notes = %s", $notes);
+            $reply = geturl(
+                proxy => opt('proxy'),
+                url => "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
+                headers => ['Content-Type: application/json'],
+                method => 'POST',
+                data => encode_json({
+                    secretapikey => $config{$h}{'secretapikey'},
+                    apikey => $config{$h}{'apikey'},
+                    content => $ip,
+                    ttl => $ttl,
+                    notes => $notes,
+                }),
+            );
+            if (!defined($reply) || !$reply) {
+                failed("$h: request to porkbun.com failed");
+                next;
+            }
+            if (!header_ok($h, $reply)) {
+                failed("$h: $reply");
+                next;
+            }
+            $config{$h}{"status-ipv$ipv"} = "good";
+            success("$h: IPv%s address set to $ip");
         }
     }
 }
