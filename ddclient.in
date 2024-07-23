@@ -205,7 +205,8 @@ our %builtinweb = (
 
 sub query_cisco {
     my ($h, $asa, $v4) = @_;
-    warning("'--if' is deprecated for '--usev4=cisco%s; use '--ifv4' instead", $asa ? '-asa' : '')
+    my $pfx = "'--use${\($v4 ? 'v4' : '')}=cisco${\($asa ? '-asa' : '')}'";
+    warning("$pfx: '--if' is deprecated; use '--ifv4' instead")
         if ($v4 && !defined(opt('ifv4', $h)) && defined(opt('if', $h)));
     my $if = ($v4 ? opt('ifv4', $h) : undef) // opt('if', $h);
     my $fw = ($v4 ? opt('fwv4', $h) : undef) // opt('fw', $h);
@@ -221,7 +222,8 @@ sub query_cisco {
         password => opt('fw-password', $h),
         ignore_ssl_option => 1,
         ssl_validate => opt('fw-ssl-validate', $h),
-    ) // '';
+    );
+    return undef if !header_ok($pfx, $reply, \&warning);
     $reply =~ s/^.*?\n\n//s;
     return $reply;
 }
@@ -2788,8 +2790,12 @@ sub get_ip {
                 proxy => opt('proxy', $h),
                 url => $url,
                 ssl_validate => opt('web-ssl-validate', $h),
-            ) // '';
-            $reply =~ s/^.*?\n\n//s;
+            );
+            if (header_ok("'--use=web --web=$arg'", $reply, \&warning)) {
+                $reply =~ s/^.*?\n\n//s;
+            } else {
+                $reply = undef;
+            }
         }
     } elsif ($use eq 'disabled') {
         ## This is a no-op... Do not get an IP address for this host/service
@@ -2815,8 +2821,12 @@ sub get_ip {
                 password => opt('fw-password', $h),
                 ignore_ssl_option => 1,
                 ssl_validate => opt('fw-ssl-validate', $h),
-            ) // '';
-            $reply =~ s/^.*?\n\n//s;
+            );
+            if (header_ok("'--use=$use --fw=$arg'", $reply, \&warning)) {
+                $reply =~ s/^.*?\n\n//s;
+            } else {
+                $reply = undef;
+            }
         }
     } else {
         warning("ignoring unsupported '--use' strategy: $use");
@@ -3183,8 +3193,12 @@ sub get_ipv4 {
                 url => $url,
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ssl_validate => opt('web-ssl-validate', $h),
-            ) // '';
-            $reply =~ s/^.*?\n\n//s;
+            );
+            if (header_ok("'--usev4=webv4 --webv4=$arg'", $reply, \&warning)) {
+                $reply =~ s/^.*?\n\n//s;
+            } else {
+                $reply = undef;
+            }
         }
     } elsif ($usev4 eq 'disabled') {
         ## This is a no-op... Do not get an IPv4 address for this host/service
@@ -3215,8 +3229,12 @@ sub get_ipv4 {
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ignore_ssl_option => 1,
                 ssl_validate => opt('fw-ssl-validate', $h),
-            ) // '';
-            $reply =~ s/^.*?\n\n//s;
+            );
+            if (header_ok("'--usev4=$usev4 --fwv4=$arg'", $reply, \&warning)) {
+                $reply =~ s/^.*?\n\n//s;
+            } else {
+                $reply = undef;
+            }
         }
     } else {
         warning("ignoring unsupported '--usev4' strategy: $usev4");
@@ -3293,8 +3311,12 @@ sub get_ipv6 {
                 url => $url,
                 ipversion => 6, # when using a URL to find IPv6 address we should force use of IPv6
                 ssl_validate => opt('web-ssl-validate', $h),
-            ) // '';
-            $reply =~ s/^.*?\n\n//s;
+            );
+            if (header_ok("'--usev6=webv6 --webv6=$arg'", $reply, \&warning)) {
+                $reply =~ s/^.*?\n\n//s;
+            } else {
+                $reply = undef;
+            }
         }
     } elsif ($usev6 eq 'disabled') {
         $reply = '';

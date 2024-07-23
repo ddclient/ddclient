@@ -131,9 +131,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#713](https://github.com/ddclient/ddclient/pull/713)
   * `easydns`: Fixed successful updates treated as failed updates.
     [#713](https://github.com/ddclient/ddclient/pull/713)
-  * Any IP addresses in an HTTP response's headers are now ignored when
-    obtaining the IP address from a web-based IP discovery service
-    (`--usev4=webv4`, `--usev6=webv6`) or from a router/firewall device.
+  * Any IP addresses in an HTTP response's headers or in an HTTP error
+    response's body are now ignored when obtaining the IP address from a
+    web-based IP discovery service (`--usev4=webv4`, `--usev6=webv6`) or from a
+    router/firewall device.
     [#719](https://github.com/ddclient/ddclient/pull/719)
 
 ## 2023-11-23 v3.11.2
