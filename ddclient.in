@@ -6790,18 +6790,15 @@ sub nic_porkbun_update {
             my $rrset_type = $ipv eq '4' ? 'A' : 'AAAA';
             info("setting ipv%s address to %s for %s", $ipv, $ip, $h);
             verbose("UPDATE:","updating %s", $h);
-            my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain";
-            my $data = encode_json({
-                secretapikey => $config{$h}{'secretapikey'},
-                apikey => $config{$h}{'apikey'},
-            });
-            my $header = "Content-Type: application/json\n";
             my $reply = geturl(
                 proxy => opt('proxy'),
-                url => $url,
-                headers => $header,
+                url => "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain",
+                headers => ['Content-Type: application/json'],
                 method => 'POST',
-                data => $data,
+                data => encode_json({
+                    secretapikey => $config{$h}{'secretapikey'},
+                    apikey => $config{$h}{'apikey'},
+                }),
             );
             if (!defined($reply) || !$reply) {
                 $config{$h}{"status-ipv$ipv"} = "bad";
@@ -6841,20 +6838,18 @@ sub nic_porkbun_update {
                 my $notes = $records->[0]->{'notes'};
                 debug("ttl = %s", $ttl);
                 debug("notes = %s", $notes);
-                $url = "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain";
-                $data = encode_json({
-                    secretapikey => $config{$h}{'secretapikey'},
-                    apikey => $config{$h}{'apikey'},
-                    content => $ip,
-                    ttl => $ttl,
-                    notes => $notes,
-                });
                 $reply = geturl(
                     proxy => opt('proxy'),
-                    url => $url,
-                    headers => $header,
+                    url => "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
+                    headers => ['Content-Type: application/json'],
                     method => 'POST',
-                    data => $data,
+                    data => encode_json({
+                        secretapikey => $config{$h}{'secretapikey'},
+                        apikey => $config{$h}{'apikey'},
+                        content => $ip,
+                        ttl => $ttl,
+                        notes => $notes,
+                    }),
                 );
                 if (!defined($reply) || !$reply) {
                     failed("updating %s: Could not connect to porkbun.com.", $h);
