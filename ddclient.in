@@ -4316,8 +4316,7 @@ sub nic_domeneshop_update {
     my $endpointPath = "/v0/dyndns/update";
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
-        info("Setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "Updating %s", $h);
+        info("$h: Setting IP address to $ip");
         my $reply = geturl(
             proxy => opt('proxy'),
             url => "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip",
@@ -4325,7 +4324,7 @@ sub nic_domeneshop_update {
             password => $config{$h}{'password'},
         );
         if (!defined($reply) || !$reply) {
-            failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            failed("$h: Request to $config{$h}{'server'} failed");
             next;
         }
         next if !header_ok($h, $reply);
@@ -4336,10 +4335,10 @@ sub nic_domeneshop_update {
             $config{$h}{'ip'} = $ip;
             $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
+            success("$h: IP address set to $ip");
         } else {
             $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s' '%s'", $h, $status, $message);
+            failed("$h: Server said: $status $message");
         }
     }
 }
