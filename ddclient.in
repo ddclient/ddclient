@@ -6801,24 +6801,20 @@ sub nic_porkbun_update {
                 }),
             );
             if (!defined($reply) || !$reply) {
-                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("updating %s: Could not connect to porkbun.com.", $h);
                 next;
             }
             if (!header_ok($h, $reply)) {
-                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("updating %s: failed (%s)", $h, $reply);
                 next;
             }
             $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
-                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("%s -- Unexpected service response.", $h);
                 next;
             }
             if ($response->{status} ne 'SUCCESS') {
-                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("%s -- Unexpected status. (status = %s)", $h, $response->{status});
                 next;
             }
@@ -6863,7 +6859,6 @@ sub nic_porkbun_update {
                 success("updating %s: good: ipv%s address set to %s", $ipv, $h, $ip);
                 next;
             } else {
-                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("updating %s: No applicable existing records.", $h);
                 next;
             }
