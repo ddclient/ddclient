@@ -6772,12 +6772,7 @@ sub nic_porkbun_update {
         if ($config{$h}{'root-domain'}) {
             $domain = $config{$h}{'root-domain'};
             $sub_domain = $h;
-            if ($h eq $domain) {
-                $sub_domain = '';
-            } else {
-                $sub_domain =~ s/\.\Q$domain\E//;
-            }
-            if ($sub_domain eq $h) {
+            if ($sub_domain !~ s/(?:^|\.)\Q$domain\E$//) {
                 failed("'root-domain' (%s) is not part of the full host name (%s)!", $domain, $h);
                 next;
             }
