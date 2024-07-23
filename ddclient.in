@@ -4313,13 +4313,12 @@ EoEXAMPLE
 ######################################################################
 sub nic_domeneshop_update {
     debug("\nnic_domeneshop_update -------------------");
-    my $endpointPath = "/v0/dyndns/update";
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("$h: Setting IP address to $ip");
         my $reply = geturl(
             proxy => opt('proxy'),
-            url => "$config{$h}{'server'}$endpointPath?hostname=$h&myip=$ip",
+            url => "$config{$h}{'server'}/v0/dyndns/update?hostname=$h&myip=$ip",
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         );
