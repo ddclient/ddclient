@@ -6771,7 +6771,6 @@ sub nic_porkbun_update {
     for my $host (@_) {
         my ($sub_domain, $domain);
         if ($config{$host}{'root-domain'}) {
-            # Process 'root-domain' option
             $domain = $config{$host}{'root-domain'};
             $sub_domain = $host;
             if ($host eq $domain) {
@@ -6779,18 +6778,15 @@ sub nic_porkbun_update {
             } else {
                 $sub_domain =~ s/\.$domain//;
             }
-            # Not valid if not an exact match and the root domain not stripped
             if ($sub_domain eq $host) {
                 failed("'root-domain' (%s) is not part of the full host name (%s)!", $domain, $host);
                 next;
             }
             warning("%s has both 'root-domain' and 'on-root-domain' defined. The latter is ignored") if $config{$host}{'on-root-domain'};
         } elsif ($config{$host}{'on-root-domain'}) {
-            # Process legacy 'on-root-domain' option
             $sub_domain = '';
             $domain = $host;
         } else {
-            # Default to the subdomain/domain being split at the first dot
             ($sub_domain, $domain) = split(/\./, $host, 2);
         }
         info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
@@ -6818,7 +6814,6 @@ sub nic_porkbun_update {
                 method    => 'POST',
                 data      => $data,
             );
-            # No response, declare as failed
             if (!defined($reply) || !$reply) {
                 $config{$host}{"status-$ipv"} = "bad";
                 failed("updating %s: Could not connect to porkbun.com.", $host);
@@ -6829,8 +6824,6 @@ sub nic_porkbun_update {
                 failed("updating %s: failed (%s)", $host, $reply);
                 next;
             }
-            # Strip header
-            # Porkbun sends data in chunks, so it is assumed to be one chunk and parsed forcibly.
             $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
@@ -6874,7 +6867,6 @@ sub nic_porkbun_update {
                     method    => 'POST',
                     data      => $data,
                 );
-                # No response, declare as failed
                 if (!defined($reply) || !$reply) {
                     failed("updating %s: Could not connect to porkbun.com.", $host);
                     next;
