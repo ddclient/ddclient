@@ -6589,8 +6589,6 @@ sub nic_dnsmadeeasy_update {
         'success' => 'Record successfully updated!',
     );
 
-    ## update each configured host
-    ## should improve to update in one pass
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
@@ -6601,10 +6599,8 @@ sub nic_dnsmadeeasy_update {
         $url .= "&ip=$ip";
         $url .= "&id=$h";
 
-        # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
 
-        # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
