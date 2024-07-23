@@ -6522,8 +6522,7 @@ sub nic_dondominio_update {
     debug("\nnic_dondominio_update -------------------");
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
+        info("$h: setting IP address to $ip");
         my $url;
         $url = "https://$config{$h}{'server'}/plain/";
         $url .= "?user=";
@@ -6536,7 +6535,7 @@ sub nic_dondominio_update {
         $url .= $ip if $ip;
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         if (!defined($reply) || !$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            failed("$h: Request to $config{$h}{'server'} failed");
             next;
         }
         next if !header_ok($h, $reply);
@@ -6546,10 +6545,10 @@ sub nic_dondominio_update {
             $config{$h}{'ip'} = $ip;
             $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
+            success("$h: IP address set to $ip");
         } else {
             $config{$h}{'status'} = 'failed';
-            failed("updating %s: Server said: '%s'", $h, $returned);
+            failed("$h: Server said: $returned");
         }
     }
 }
