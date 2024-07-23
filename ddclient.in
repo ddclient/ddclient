@@ -6770,26 +6770,25 @@ sub nic_porkbun_update {
     for my $h (@_) {
         my ($sub_domain, $domain);
         if ($config{$h}{'root-domain'}) {
+            warning("$h: both 'root-domain' and 'on-root-domain' are set; ignoring the latter")
+                if $config{$h}{'on-root-domain'};
             $domain = $config{$h}{'root-domain'};
             $sub_domain = $h;
             if ($sub_domain !~ s/(?:^|\.)\Q$domain\E$//) {
-                failed("'root-domain' (%s) is not part of the full host name (%s)!", $domain, $h);
+                failed("$h: hostname does not end with the 'root-domain' value: $domain");
                 next;
             }
-            warning("%s has both 'root-domain' and 'on-root-domain' defined. The latter is ignored")
-                if $config{$h}{'on-root-domain'};
         } elsif ($config{$h}{'on-root-domain'}) {
             $sub_domain = '';
             $domain = $h;
         } else {
             ($sub_domain, $domain) = split(/\./, $h, 2);
         }
-        info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
+        info("$h: subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
         for my $ipv ('4', '6') {
             my $ip = delete $config{$h}{"wantipv$ipv"} or next;
             my $rrset_type = $ipv eq '4' ? 'A' : 'AAAA';
-            info("setting ipv%s address to %s for %s", $ipv, $ip, $h);
-            verbose("UPDATE:","updating %s", $h);
+            info("$h: setting IPv$ipv address to $ip");
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain",
@@ -6801,31 +6800,31 @@ sub nic_porkbun_update {
                 }),
             );
             if (!defined($reply) || !$reply) {
-                failed("updating %s: Could not connect to porkbun.com.", $h);
+                failed("$h: request to porkbun.com failed");
                 next;
             }
             if (!header_ok($h, $reply)) {
-                failed("updating %s: failed (%s)", $h, $reply);
+                failed("$h: $reply");
                 next;
             }
             (my $body = $reply) =~ s/^.*?\n\n//s;
             $body =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
-                failed("%s -- Unexpected service response.", $h);
+                failed("$h: unexpected service response: $body");
                 next;
             }
             if ($response->{status} ne 'SUCCESS') {
-                failed("%s -- Unexpected status. (status = %s)", $h, $response->{status});
+                failed("$h: unexpected status: $response->{status}");
                 next;
             }
             my $records = $response->{records};
             if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
-                warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
+                warning("$h: There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
                     if @$records > 1;
                 if ($records->[0]{'content'} eq $ip) {
                     $config{$h}{"status-ipv$ipv"} = "good";
-                    success("updating %s: skipped: ipv%s address was already set to %s.", $ipv, $h, $ip);
+                    success("$h: skipped: IPv$ipv address was already set to $ip");
                     next;
                 }
                 my $ttl = $records->[0]->{'ttl'};
@@ -6846,18 +6845,18 @@ sub nic_porkbun_update {
                     }),
                 );
                 if (!defined($reply) || !$reply) {
-                    failed("updating %s: Could not connect to porkbun.com.", $h);
+                    failed("$h: request to porkbun.com failed");
                     next;
                 }
                 if (!header_ok($h, $reply)) {
-                    failed("updating %s: failed (%s)", $h, $reply);
+                    failed("$h: $reply");
                     next;
                 }
                 $config{$h}{"status-ipv$ipv"} = "good";
-                success("updating %s: good: ipv%s address set to %s", $ipv, $h, $ip);
+                success("$h: IPv%s address set to $ip");
                 next;
             } else {
-                failed("updating %s: No applicable existing records.", $h);
+                failed("$h: no applicable existing records");
                 next;
             }
         }
