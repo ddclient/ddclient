@@ -6532,14 +6532,14 @@ sub nic_dondominio_update {
         next if !header_ok($h, $reply);
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
-        if ($returned =~ /OK|IP:$ip/) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
-            success("$h: IP address set to $ip");
-        } else {
+        if ($returned !~ /OK|IP:$ip/) {
             failed("$h: Server said: $returned");
+            next;
         }
+        $config{$h}{'ip'} = $ip;
+        $config{$h}{'mtime'} = $now;
+        $config{$h}{'status'} = 'good';
+        success("$h: IP address set to $ip");
     }
 }
 
