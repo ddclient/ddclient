@@ -6810,7 +6810,7 @@ sub nic_porkbun_update {
             (my $body = $reply) =~ s/^.*?\n\n//s;
             $body =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
-            if (!defined($response)) {
+            if (ref($response) ne 'HASH') {
                 failed("$h: unexpected service response: $body");
                 next;
             }
