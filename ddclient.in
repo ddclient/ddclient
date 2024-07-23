@@ -6590,11 +6590,7 @@ sub nic_dnsmadeeasy_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("$h: Setting IP address to $ip");
-        my $url = $config{$h}{'server'} . $config{$h}{'script'};
-        $url .= "?username=$config{$h}{'login'}";
-        $url .= "&password=$config{$h}{'password'}";
-        $url .= "&ip=$ip";
-        $url .= "&id=$h";
+        my $url = "$config{$h}{'server'}$config{$h}{'script'}?username=$config{$h}{'login'}&password=$config{$h}{'password'}&ip=$ip&id=$h";
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         if (!defined($reply) || !$reply) {
             failed("$h: Request to $config{$h}{'server'} failed");
