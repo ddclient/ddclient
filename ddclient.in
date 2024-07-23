@@ -6576,7 +6576,6 @@ EoEXAMPLE
 ######################################################################
 sub nic_dnsmadeeasy_update {
     debug("\nnic_dnsmadeeasy_update -------------------");
-
     my %messages = (
         'error-auth' => 'Invalid username or password, or invalid IP syntax',
         'error-auth-suspend' => 'User has had their account suspended due to complaints or misuse of the service.',
@@ -6588,7 +6587,6 @@ sub nic_dnsmadeeasy_update {
         'error' => 'General system error unrecognized by the system.',
         'success' => 'Record successfully updated!',
     );
-
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
@@ -6598,15 +6596,12 @@ sub nic_dnsmadeeasy_update {
         $url .= "&password=$config{$h}{'password'}";
         $url .= "&ip=$ip";
         $url .= "&id=$h";
-
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-
         if (!defined($reply) || !$reply) {
             failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
         next if !header_ok($h, $reply);
-
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
         if ($returned =~ 'success') {
