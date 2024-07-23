@@ -6821,10 +6821,8 @@ sub nic_porkbun_update {
             }
             my $records = $response->{records};
             if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
-                my $count = scalar(@{$records});
-                if ($count > 1) {
-                    warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.");
-                }
+                warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
+                    if @$records > 1;
                 my $current_content = $records->[0]->{'content'};
                 if ($current_content eq $ip) {
                     $config{$h}{"status-ipv$ipv"} = "good";
