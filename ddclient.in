@@ -3604,22 +3604,23 @@ sub nic_updateable {
 ## header_ok
 ######################################################################
 sub header_ok {
-    my ($host, $line) = @_;
+    my ($pfx, $line, $errlog) = @_;
+    $errlog //= \&failed;
     if (!$line) {
-        failed("updating %s: no response from server", $host);
+        $errlog->("$pfx: no response from server");
         return 0;
     }
     $line =~ s/\r?\n.*//s;
     my ($code, $msg) = ($line =~ qr%^\s*HTTP/.*\s+(\d+)\s*(?:\s+([^\s].*))?$%i);
     if (!defined($code)) {
-        failed('updating %s: unexpected HTTP response: %s', $host, $line);
+        $errlog->("$pfx: unexpected HTTP response: $line");
         return 0;
     } elsif ($code !~ qr/^2\d\d$/) {
         my %msgs = (
             '401' => 'authentication failed',
             '403' => 'not authorized',
         );
-        failed('updating %s: %s %s', $host, $code, $msg // $msgs{$code} // '');
+        $errlog->("$pfx: $code " . ($msg // $msgs{$code} // ''));
         return 0;
     }
     return 1;
