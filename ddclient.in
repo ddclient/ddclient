@@ -6790,10 +6790,10 @@ sub nic_porkbun_update {
             ($sub_domain, $domain) = split(/\./, $h, 2);
         }
         info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
-        for my $ipv ('ipv4', 'ipv6') {
-            my $ip = delete $config{$h}{"want$ipv"} or next;
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
             my $rrset_type = is_ipv6($ip) ? "AAAA" : "A";
-            info("setting %s address to %s for %s", $ipv, $ip, $h);
+            info("setting ipv%s address to %s for %s", $ipv, $ip, $h);
             verbose("UPDATE:","updating %s", $h);
             my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain";
             my $data = encode_json({
@@ -6809,24 +6809,24 @@ sub nic_porkbun_update {
                 data => $data,
             );
             if (!defined($reply) || !$reply) {
-                $config{$h}{"status-$ipv"} = "bad";
+                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("updating %s: Could not connect to porkbun.com.", $h);
                 next;
             }
             if (!header_ok($h, $reply)) {
-                $config{$h}{"status-$ipv"} = "bad";
+                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("updating %s: failed (%s)", $h, $reply);
                 next;
             }
             $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
-                $config{$h}{"status-$ipv"} = "bad";
+                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("%s -- Unexpected service response.", $h);
                 next;
             }
             if ($response->{status} ne 'SUCCESS') {
-                $config{$h}{"status-$ipv"} = "bad";
+                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("%s -- Unexpected status. (status = %s)", $h, $response->{status});
                 next;
             }
@@ -6838,8 +6838,8 @@ sub nic_porkbun_update {
                 }
                 my $current_content = $records->[0]->{'content'};
                 if ($current_content eq $ip) {
-                    $config{$h}{"status-$ipv"} = "good";
-                    success("updating %s: skipped: %s address was already set to %s.", $ipv, $h, $ip);
+                    $config{$h}{"status-ipv$ipv"} = "good";
+                    success("updating %s: skipped: ipv%s address was already set to %s.", $ipv, $h, $ip);
                     next;
                 }
                 my $ttl = $records->[0]->{'ttl'};
@@ -6869,11 +6869,11 @@ sub nic_porkbun_update {
                     failed("updating %s: failed (%s)", $h, $reply);
                     next;
                 }
-                $config{$h}{"status-$ipv"} = "good";
-                success("updating %s: good: %s address set to %s", $ipv, $h, $ip);
+                $config{$h}{"status-ipv$ipv"} = "good";
+                success("updating %s: good: ipv%s address set to %s", $ipv, $h, $ip);
                 next;
             } else {
-                $config{$h}{"status-$ipv"} = "bad";
+                $config{$h}{"status-ipv$ipv"} = "bad";
                 failed("updating %s: No applicable existing records.", $h);
                 next;
             }
