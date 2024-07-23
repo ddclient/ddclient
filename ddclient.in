@@ -6808,7 +6808,8 @@ sub nic_porkbun_update {
                 failed("updating %s: failed (%s)", $h, $reply);
                 next;
             }
-            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            $body =~ qr/{(?:[^{}]*|(?R))*}/mp;
             my $response = eval { decode_json(${^MATCH}) };
             if (!defined($response)) {
                 failed("%s -- Unexpected service response.", $h);
