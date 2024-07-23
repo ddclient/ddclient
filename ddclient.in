@@ -4313,9 +4313,7 @@ EoEXAMPLE
 ######################################################################
 sub nic_domeneshop_update {
     debug("\nnic_domeneshop_update -------------------");
-
     my $endpointPath = "/v0/dyndns/update";
-
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
@@ -4326,13 +4324,11 @@ sub nic_domeneshop_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         );
-
         if (!defined($reply) || !$reply) {
             failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
         next if !header_ok($h, $reply);
-
         my @reply = split /\n/, $reply;
         my $status = shift(@reply);
         my $message = pop(@reply);
