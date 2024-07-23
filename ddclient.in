@@ -6538,7 +6538,6 @@ sub nic_dondominio_update {
             $config{$h}{'status'} = 'good';
             success("$h: IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
             failed("$h: Server said: $returned");
         }
     }
