@@ -6532,7 +6532,7 @@ sub nic_dondominio_update {
         next if !header_ok($h, $reply);
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
-        if ($returned !~ /OK|IP:$ip/) {
+        if ($returned !~ /OK|IP:\Q$ip\E/) {
             failed("$h: Server said: $returned");
             next;
         }
