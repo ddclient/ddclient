@@ -6610,7 +6610,8 @@ sub nic_dnsmadeeasy_update {
             success("$h: IP address set to $ip");
         } else {
             $config{$h}{'status'} = 'failed';
-            failed("$h: Server said: $returned: $messages{$returned}");
+            my $err = $messages{$returned} ? "$returned: $messages{$returned}" : $returned;
+            failed("$h: Server said: $err");
         }
     }
 }
