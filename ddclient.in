@@ -6603,15 +6603,15 @@ sub nic_dnsmadeeasy_update {
         next if !header_ok($h, $reply);
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
-        if ($returned =~ qr/success/) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
-            success("$h: IP address set to $ip");
-        } else {
+        if ($returned !~ qr/success/) {
             my $err = $messages{$returned} ? "$returned: $messages{$returned}" : $returned;
             failed("$h: Server said: $err");
+            next;
         }
+        $config{$h}{'ip'} = $ip;
+        $config{$h}{'mtime'} = $now;
+        $config{$h}{'status'} = 'good';
+        success("$h: IP address set to $ip");
     }
 }
 
