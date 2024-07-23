@@ -6609,7 +6609,6 @@ sub nic_dnsmadeeasy_update {
             $config{$h}{'status'} = 'good';
             success("$h: IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
             my $err = $messages{$returned} ? "$returned: $messages{$returned}" : $returned;
             failed("$h: Server said: $err");
         }
