@@ -6473,21 +6473,20 @@ sub nic_ddnsfm_update {
         #   - IPv6 updates do not affect the IPv4 A record (if present).
         for my $ipv ('4', '6') {
             my $ip = delete $config{$h}{"wantipv$ipv"} or next;
-            info("setting IPv$ipv address to $ip for $h");
-            verbose("UPDATE:", "updating %s", $h);
+            info("$h: setting IPv$ipv address to $ip");
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => "$config{$h}{server}/update?key=$config{$h}{password}&domain=$h&myip=$ip",
             );
             if (!$reply) {
-                failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+                failed("$h: Request to $config{$h}{'server'} failed");
                 next;
             }
             next if !header_ok($h, $reply);
             $config{$h}{"ipv$ipv"} = $ip;
             $config{$h}{'mtime'} = $now;
             $config{$h}{"status-ipv$ipv"} = 'good';
-            success("updating $h: good: IPv$ipv address set to $ip");
+            success("$h: IPv$ipv address set to $ip");
         }
     }
 }
