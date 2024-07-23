@@ -46,6 +46,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * `easydns`: The default value for `min-interval` was increased from 5m to 10m
     to match easyDNS documentation.
     [#713](https://github.com/ddclient/ddclient/pull/713)
+  * `woima`: The dyn.woima.fi service appears to be defunct so support was
+    removed.  [#716](https://github.com/ddclient/ddclient/pull/716)
 
 ### New features
 
@@ -76,9 +78,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
   * `he.net`: Added support for updating Hurricane Electric records.
     [#682](https://github.com/ddclient/ddclient/pull/682)
-  * `dyndns2`, `domeneshop`, `dnsmadeeasy`, `keysystems`, `woima`: The `server`
-    option can now include `http://` or `https://` to control the use of TLS.
-    If omitted, the value of the `ssl` option is used to determine the scheme.
+  * `dyndns2`, `domeneshop`, `dnsmadeeasy`, `keysystems`: The `server` option
+    can now include `http://` or `https://` to control the use of TLS.  If
+    omitted, the value of the `ssl` option is used to determine the scheme.
     [#703](https://github.com/ddclient/ddclient/pull/703)
   * `ddns.fm`: New `protocol` option for updating [DDNS.FM](https://ddns.fm/)
     records.  [#695](https://github.com/ddclient/ddclient/pull/695)

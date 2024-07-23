@@ -49,7 +49,6 @@ Dynamic DNS services currently supported include:
 * [Porkbun](https://porkbun.com)
 * [regfish.de](https://www.regfish.de/domains/dyndns)
 * [Sitelutions](https://www.sitelutions.com)
-* [woima.fi](https://woima.fi)
 * [Yandex](https://dns.yandex.com)
 * [Zoneedit](https://www.zoneedit.com)
 
