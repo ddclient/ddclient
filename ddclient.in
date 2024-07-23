@@ -6787,7 +6787,7 @@ sub nic_porkbun_update {
         info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
         for my $ipv ('4', '6') {
             my $ip = delete $config{$h}{"wantipv$ipv"} or next;
-            my $rrset_type = is_ipv6($ip) ? "AAAA" : "A";
+            my $rrset_type = $ipv eq '4' ? 'A' : 'AAAA';
             info("setting ipv%s address to %s for %s", $ipv, $ip, $h);
             verbose("UPDATE:","updating %s", $h);
             my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain";
