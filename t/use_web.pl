@@ -27,7 +27,11 @@ sub run_httpd {
         host => $ipv eq '4' ? '127.0.0.1' : '::1',
         daemon_args => {V6Only => 1},
     );
-    my $headers = ['content-type' => 'text/plain'];
+    my $headers = [
+        'content-type' => 'text/plain',
+        'this-ipv4-should-be-ignored' => 'skip skip2 192.0.2.255',
+        'this-ipv6-should-be-ignored' => 'skip skip2 2001:db8::ff',
+    ];
     my $content = $ipv eq '4'
         ? '192.0.2.1 skip 192.0.2.2 skip2 192.0.2.3'
         : '2001:db8::1 skip 2001:db8::2 skip2 2001:db8::3';

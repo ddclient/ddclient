@@ -222,6 +222,7 @@ sub query_cisco {
         ignore_ssl_option => 1,
         ssl_validate => opt('fw-ssl-validate', $h),
     ) // '';
+    $reply =~ s/^.*?\n\n//s;
     return $reply;
 }
 
@@ -2788,6 +2789,7 @@ sub get_ip {
                 url => $url,
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
+            $reply =~ s/^.*?\n\n//s;
         }
     } elsif ($use eq 'disabled') {
         ## This is a no-op... Do not get an IP address for this host/service
@@ -2814,6 +2816,7 @@ sub get_ip {
                 ignore_ssl_option => 1,
                 ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
+            $reply =~ s/^.*?\n\n//s;
         }
     } else {
         warning("ignoring unsupported '--use' strategy: $use");
@@ -3181,6 +3184,7 @@ sub get_ipv4 {
                 ipversion => 4, # when using a URL to find IPv4 address we should force use of IPv4
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
+            $reply =~ s/^.*?\n\n//s;
         }
     } elsif ($usev4 eq 'disabled') {
         ## This is a no-op... Do not get an IPv4 address for this host/service
@@ -3212,6 +3216,7 @@ sub get_ipv4 {
                 ignore_ssl_option => 1,
                 ssl_validate => opt('fw-ssl-validate', $h),
             ) // '';
+            $reply =~ s/^.*?\n\n//s;
         }
     } else {
         warning("ignoring unsupported '--usev4' strategy: $usev4");
@@ -3289,6 +3294,7 @@ sub get_ipv6 {
                 ipversion => 6, # when using a URL to find IPv6 address we should force use of IPv6
                 ssl_validate => opt('web-ssl-validate', $h),
             ) // '';
+            $reply =~ s/^.*?\n\n//s;
         }
     } elsif ($usev6 eq 'disabled') {
         $reply = '';
