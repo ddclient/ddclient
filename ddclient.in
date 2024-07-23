@@ -6823,8 +6823,7 @@ sub nic_porkbun_update {
             if (ref($records) eq 'ARRAY' && defined $records->[0]->{'id'}) {
                 warning("updating %s: There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
                     if @$records > 1;
-                my $current_content = $records->[0]->{'content'};
-                if ($current_content eq $ip) {
+                if ($records->[0]{'content'} eq $ip) {
                     $config{$h}{"status-ipv$ipv"} = "good";
                     success("updating %s: skipped: ipv%s address was already set to %s.", $ipv, $h, $ip);
                     next;
