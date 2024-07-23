@@ -6767,7 +6767,6 @@ EoEXAMPLE
 ######################################################################
 sub nic_porkbun_update {
     debug("\nnic_porkbun_update -------------------");
-
     for my $host (@_) {
         my ($sub_domain, $domain);
         if ($config{$host}{'root-domain'}) {
@@ -6790,29 +6789,26 @@ sub nic_porkbun_update {
             ($sub_domain, $domain) = split(/\./, $host, 2);
         }
         info("subdomain %s, root domain %s", $sub_domain, $domain) if $sub_domain ne '';
-
         for my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$host}{"want$ipv"};
             if (!$ip) {
                 next;
             }
             my $rrset_type = is_ipv6($ip) ? "AAAA" : "A";
-
             info("setting %s address to %s for %s", $ipv, $ip, $host);
             verbose("UPDATE:","updating %s", $host);
-
             my $url = "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain";
             my $data = encode_json({
                 secretapikey => $config{$host}{'secretapikey'},
-                apikey       => $config{$host}{'apikey'},
+                apikey => $config{$host}{'apikey'},
             });
             my $header = "Content-Type: application/json\n";
             my $reply = geturl(
-                proxy     => opt('proxy'),
-                url       => $url,
-                headers   => $header,
-                method    => 'POST',
-                data      => $data,
+                proxy => opt('proxy'),
+                url => $url,
+                headers => $header,
+                method => 'POST',
+                data => $data,
             );
             if (!defined($reply) || !$reply) {
                 $config{$host}{"status-$ipv"} = "bad";
@@ -6855,17 +6851,17 @@ sub nic_porkbun_update {
                 $url = "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain";
                 $data = encode_json({
                     secretapikey => $config{$host}{'secretapikey'},
-                    apikey       => $config{$host}{'apikey'},
-                    content      => $ip,
-                    ttl          => $ttl,
-                    notes        => $notes,
+                    apikey => $config{$host}{'apikey'},
+                    content => $ip,
+                    ttl => $ttl,
+                    notes => $notes,
                 });
                 $reply = geturl(
-                    proxy     => opt('proxy'),
-                    url       => $url,
-                    headers   => $header,
-                    method    => 'POST',
-                    data      => $data,
+                    proxy => opt('proxy'),
+                    url => $url,
+                    headers => $header,
+                    method => 'POST',
+                    data => $data,
                 );
                 if (!defined($reply) || !$reply) {
                     failed("updating %s: Could not connect to porkbun.com.", $host);
