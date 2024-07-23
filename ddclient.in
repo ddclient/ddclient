@@ -4316,8 +4316,6 @@ sub nic_domeneshop_update {
 
     my $endpointPath = "/v0/dyndns/update";
 
-    ## update each configured host
-    ## should improve to update in one pass
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("Setting IP address to %s for %s", $ip, $h);
@@ -4329,14 +4327,12 @@ sub nic_domeneshop_update {
             password => $config{$h}{'password'},
         );
 
-        # No response, declare as failed
         if (!defined($reply) || !$reply) {
             failed("Updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
             next;
         }
         next if !header_ok($h, $reply);
 
-        # evaluate response
         my @reply = split /\n/, $reply;
         my $status = shift(@reply);
         my $message = pop(@reply);
