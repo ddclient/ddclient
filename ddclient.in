@@ -193,10 +193,6 @@ sub T_POSTS  { 'postscript' }
 our %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
-    'googledomains' => {
-        url => 'https://domains.google.com/checkip',
-        deprecated => 'See https://github.com/ddclient/ddclient/issues/622 for more info.',
-    },
     'he' => {
         url => 'https://checkip.dns.he.net/',
         deprecated => "Use 'he.net' instead.",
@@ -920,16 +916,6 @@ our %protocols = (
             'server'       => setv(T_FQDNP,  0, 0, 'api.godaddy.com/v1/domains',   undef),
             'ttl'          => setv(T_NUMBER, 0, 0, 600,                            undef),
             'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
-        },
-    },
-    'googledomains' => {
-        'force_update' => undef,
-        'update'     => \&nic_googledomains_update,
-        'examples'   => \&nic_googledomains_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
-            'server'       => setv(T_FQDNP, 0, 0, 'domains.google.com', undef),
         },
     },
     'he.net' => {
@@ -5733,72 +5719,6 @@ sub nic_godaddy_update {
             $config{$h}{"status-ipv$ipv"} = 'good';
             success("$h: Updated successfully to $ip (status: $code)");
         }
-    }
-}
-
-######################################################################
-## nic_googledomains_examples
-##
-## written by Nelson Araujo
-##
-######################################################################
-sub nic_googledomains_examples {
-    return <<"EoEXAMPLE";
-o 'googledomains'
-
-The 'googledomains' protocol is used by DNS service offered by www.google.com/domains.
-
-Configuration variables applicable to the 'googledomains' protocol are:
-  protocol=googledomains       ##
-  login=service-login          ## the user name provided by the admin interface
-  password=service-password    ## the password provided by the admin interface
-  fully.qualified.host         ## the host registered with the service.
-
-Example ${program}.conf file entries:
-  ## single host update
-  protocol=googledomains,                                      \\
-  login=my-generated-user-name,                                \\
-  password=my-genereated-password                              \\
-  myhost.com
-
-  ## multiple host update to the custom DNS service
-  protocol=googledomains,                                      \\
-  login=my-generated-user-name,                                \\
-  password=my-genereated-password                              \\
-  my-toplevel-domain.com,my-other-domain.com
-EoEXAMPLE
-}
-
-######################################################################
-## nic_googledomains_update
-######################################################################
-sub nic_googledomains_update {
-    debug("\nnic_googledomains_update -------------------");
-    for my $host (@_) {
-        my $ip = delete $config{$host}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $host);
-        verbose("UPDATE:", "updating %s", $host);
-
-        my $url = "https://$config{$host}{'server'}/nic/update";
-        $url .= "?hostname=$host";
-        $url .= "&myip=";
-        $url .= $ip if $ip;
-
-        my $reply = geturl(
-            proxy => opt('proxy'),
-            url => $url,
-            login => $config{$host}{'login'},
-            password => $config{$host}{'password'},
-        );
-        unless ($reply) {
-            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-            next;
-        }
-        next if !header_ok($host, $reply);
-
-        $config{$host}{'ip'} = $ip;
-        $config{$host}{'mtime'} = $now;
-        $config{$host}{'status'} = 'good';
     }
 }
 

@@ -34,7 +34,6 @@ Dynamic DNS services currently supported include:
 * [Freemyip](https://freemyip.com)
 * [Gandi](https://gandi.net)
 * [GoDaddy](https://www.godaddy.com)
-* [Google](https://domains.google)
 * [Hurricane Electric](https://dns.he.net)
 * [Infomaniak](https://faq.infomaniak.com/2376)
 * [INWX](https://www.inwx.com/)

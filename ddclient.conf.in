@@ -198,14 +198,6 @@ pid=@runstatedir@/ddclient.pid		# record PID in file.
 # myhost.example.com,nexthost.example.com
 
 ##
-## Google Domains (www.google.com/domains)
-##
-# protocol=googledomains,
-# login=my-auto-generated-username,
-# password=my-auto-generated-password
-# my.domain.tld, otherhost.domain.tld
-
-##
 ## Hurricane Electric (dns.he.net)
 ##
 # protocol=he.net,                      \

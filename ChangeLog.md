@@ -12,13 +12,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * Unencrypted (plain) HTTP is now used instead of encrypted (TLS) HTTP if the
     URL uses `http://` instead of `https://`, even if the `--ssl` option is
     enabled.  [#608](https://github.com/ddclient/ddclient/pull/608)
-  * The `googledomains` built-in web IP discovery service
-    (`--webv4=googledomains`, `--webv6=googledomains`, and
-    `--web=googledomains`) is deprecated due to the service shutting down.  It
-    will be removed in a future version of ddclient.
-    [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
   * The default web service for `--webv4` and `--webv6` has changed from Google
-    Domains (which is shutting down) to ipify.
+    Domains (which has shut down) to ipify.
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
   * All log messages are now written to STDERR, not a mix of STDOUT and STDERR.
     [#676](https://github.com/ddclient/ddclient/pull/676)
@@ -48,6 +43,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#713](https://github.com/ddclient/ddclient/pull/713)
   * `woima`: The dyn.woima.fi service appears to be defunct so support was
     removed.  [#716](https://github.com/ddclient/ddclient/pull/716)
+  * `googledomains`: Support was removed because the service shut down.
+    [#716](https://github.com/ddclient/ddclient/pull/716)
 
 ### New features
 
