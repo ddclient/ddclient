@@ -6523,15 +6523,7 @@ sub nic_dondominio_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("$h: setting IP address to $ip");
-        my $url;
-        $url = "https://$config{$h}{'server'}/plain/";
-        $url .= "?user=";
-        $url .= $config{$h}{'login'};
-        $url .= "&password=";
-        $url .= $config{$h}{'password'};
-        $url .= "&host=";
-        $url .= $h;
-        $url .= "&ip=";
+        my $url = "https://$config{$h}{'server'}/plain/?user=$config{$h}{'login'}&password=$config{$h}{'password'}&host=$h&ip=";
         $url .= $ip if $ip;
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         if (!defined($reply) || !$reply) {
