@@ -208,8 +208,6 @@ sub query_cisco {
     my ($h, $asa, $v4) = @_;
     warning("'--if' is deprecated for '--usev4=cisco%s; use '--ifv4' instead", $asa ? '-asa' : '')
         if ($v4 && !defined(opt('ifv4')) && defined(opt('if', $h)));
-    warning("'--fw' is deprecated for '--usev4=cisco%s; use '--fwv4' instead", $asa ? '-asa' : '')
-        if ($v4 && !defined(opt('fwv4')) && defined(opt('fw', $h)));
     my $if = ($v4 ? opt('ifv4', $h) : undef) // opt('if', $h);
     my $fw = ($v4 ? opt('fwv4', $h) : undef) // opt('fw', $h);
     # Convert slashes to protected value "\/"
