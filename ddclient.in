@@ -4014,7 +4014,10 @@ sub dnsexit2_update_host {
     my $reply = geturl(
         proxy => opt('proxy'),
         url => $url,
-        headers => "Content-Type: application/json\nAccept: application/json",
+        headers => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
         method => 'POST',
         data => encode_json({
             apikey => $config{$h}{'password'},
