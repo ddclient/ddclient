@@ -119,12 +119,6 @@ sub subst_var {
 
 my $etc = subst_var('@sysconfdir@', '/etc/ddclient');
 my $cachedir = subst_var('@localstatedir@', '/var') . '/cache/ddclient';
-my $savedir = '/tmp';
-if ($program =~ /test/i) {
-    $etc = '.';
-    $cachedir = '.';
-    $savedir = 'URL';
-}
 our @curl = (subst_var('@CURL@', 'curl'));
 
 our $emailbody = '';
@@ -1229,7 +1223,6 @@ my @opt = (
     ["query",             "!",  "--{no}query            : print {no} ip addresses and exit"],
     ["fw-banlocal",       "!",  ""], ## deprecated
     ["if-skip",           "=s", ""], ## deprecated
-    ["test",              "!",  ""], ## hidden
     ["redirect",          "=i", "--redirect=<max>       : enable and follow at most <max> HTTP 30x redirections"],
     "",
     nic_examples(),
@@ -2196,54 +2189,6 @@ sub test_possible_ip {
 }
 
 ######################################################################
-## load_file
-######################################################################
-sub load_file {
-    my $file   = shift;
-    my $buffer = '';
-
-    if (exists($ENV{'TEST_CASE'})) {
-        my $try = "$file-$ENV{'TEST_CASE'}";
-        $file = $try if -f $try;
-    }
-
-    local *FD;
-    if (open(FD, "< $file")) {
-        read(FD, $buffer, -s FD);
-        close(FD);
-        debug("Loaded %d bytes from %s", length($buffer), $file);
-    } else {
-        debug("Load failed from %s (%s)", $file, $!);
-    }
-    return $buffer;
-}
-######################################################################
-## save_file
-######################################################################
-sub save_file {
-    my ($file, $buffer, $opt) = @_;
-
-    $file .= "-$ENV{'TEST_CASE'}" if exists $ENV{'TEST_CASE'};
-    if (defined $opt) {
-        my $i = 0;
-        while (-f "$file-$i") {
-            if ('unique' =~ /^$opt/i) {
-                my $a = join('\n', grep {!/^Date:/} split /\n/, $buffer);
-                my $b = join('\n', grep {!/^Date:/} split /\n/, load_file("$file-$i"));
-                last if $a eq $b;
-            }
-            $i++;
-        }
-        $file = "$file-$i";
-    }
-    debug("Saving to %s", $file);
-    local *FD;
-    open(FD, "> $file") or return;
-    print FD $buffer;
-    close(FD);
-    return $buffer;
-}
-######################################################################
 ## print_opt
 ## print_globals
 ## print_config
@@ -2809,18 +2754,6 @@ sub geturl {
             }
         }
     }
-
-    ## during testing simulate reading the URL
-    if (opt('test')) {
-        my $filename = "$server/$url";
-        $filename =~ s|/|%2F|g;
-        if (opt('exec')) {
-            $reply = save_file("$savedir/$filename", $reply, 'unique');
-        } else {
-            $reply = load_file("$savedir/$filename");
-        }
-    }
-
     $reply =~ s/\r//g if defined $reply;
     return $reply;
 }
