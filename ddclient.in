@@ -4121,11 +4121,7 @@ sub nic_noip_update {
             url => $url,
             login => $groupcfg{'login'},
             password => $groupcfg{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
-            next;
-        }
+        );
         next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
