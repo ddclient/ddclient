@@ -72,6 +72,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     different prefix to distinguish them from separate log messages.
     [#676](https://github.com/ddclient/ddclient/pull/676)
     [#719](https://github.com/ddclient/ddclient/pull/719)
+  * Log messages now include context, making it easier to troubleshoot issues.
+    [#725](https://github.com/ddclient/ddclient/pull/725)
   * `emailonly`: New `protocol` option that simply emails you when your IP
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
   * `he.net`: Added support for updating Hurricane Electric records.

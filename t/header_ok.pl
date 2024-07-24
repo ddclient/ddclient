@@ -63,7 +63,7 @@ my @test_cases = (
 for my $tc (@test_cases) {
     subtest $tc->{desc} => sub {
         $failmsg = '';
-        is(ddclient::header_ok('host', $tc->{input}), $tc->{want}, 'return value matches');
+        is(ddclient::header_ok($tc->{input}), $tc->{want}, 'return value matches');
         SKIP: {
             skip('Test::MockModule not available') if !$have_mock;
             like($failmsg, $tc->{wantmsg} // qr/^$/, 'fail message matches');
