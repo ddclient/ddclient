@@ -4600,13 +4600,6 @@ EoEXAMPLE
 }
 
 ######################################################################
-## nic_zoneedit1_force_update
-######################################################################
-sub nic_zoneedit1_force_update {
-    return 0;
-}
-
-######################################################################
 ## nic_zoneedit1_update
 # <SUCCESS CODE="200" TEXT="Update succeeded." ZONE="trialdomain.com" IP="127.0.0.12">
 # <SUCCESS CODE="201" TEXT="No records need updating." ZONE="bannedware.com">
