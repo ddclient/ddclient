@@ -4022,7 +4022,7 @@ sub dnsexit2_update_host {
             update => \@updates,
         }),
     );
-    unless ($reply && header_ok($h, $reply)) {
+    if (!header_ok($h, $reply)) {
         failed("$h: request to $url failed");
         return;
     };
