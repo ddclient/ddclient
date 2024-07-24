@@ -4026,7 +4026,6 @@ sub dnsexit2_update_host {
         failed("updating %s: Could not connect to %s", $h, $url);
         return;
     };
-    debug("%s", $reply);
     (my $http_status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
     debug("HTTP response code: %s", $http_status);
     if ($http_status ne '200') {
