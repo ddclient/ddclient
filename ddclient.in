@@ -134,9 +134,8 @@ my $last_emailbody = '';
 ## flags and options to override).
 my $daemon_default = ($programd =~ /d$/) ? interval('5m') : undef;
 
-use vars qw($file $lineno);
-local $file   = '';
-local $lineno = '';
+our $file = '';
+our $lineno = '';
 
 $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin:/usr/bin:/etc:/usr/lib:";
 
