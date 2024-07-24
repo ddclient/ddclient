@@ -4028,8 +4028,8 @@ sub dnsexit2_update_host {
     }
     (my $body = $reply) =~ s/^.*?\r?\n\r?\n//s;
     my $response = eval { decode_json($body); };
-    if (!$response) {
-        failed("$h: failed to parse response: $@");
+    if (ref($response) ne 'HASH') {
+        failed("$h: response is not a JSON object:\n$body");
         return;
     }
     if (!defined($response->{'code'}) || !defined($response->{'message'})) {
