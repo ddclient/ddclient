@@ -4025,7 +4025,7 @@ sub dnsexit2_update_host {
     if (!header_ok($h, $reply)) {
         failed("$h: request to $url failed");
         return;
-    };
+    }
     (my $body = $reply) =~ s/^.*?\r?\n\r?\n//s;
     my $response = eval { decode_json($body); };
     if (!$response) {
