@@ -2769,7 +2769,7 @@ sub get_ip {
     if ($use eq 'ip') {
         $ip = opt('ip', $h);
         if (!is_ipv4($ip) && !is_ipv6($ip)) {
-            warning("'%s' is not a valid IPv4 or IPv6 address", $ip // '');
+            warning('not a valid IPv4 or IPv6 address: ' . ($ip // '<undefined>'));
             $ip = undef;
         }
     } elsif ($use eq 'if') {
@@ -2822,7 +2822,7 @@ sub get_ip {
             ) // '';
         }
     } else {
-        warning("ignoring unsupported '--use=$use'");
+        warning("ignoring unsupported '--use' strategy: $use");
     }
     if (!defined $reply) {
         $reply = '';
@@ -2832,12 +2832,11 @@ sub get_ip {
         $reply =~ s/^.*?${skip}//is;
     }
     $ip //= extract_ipv4($reply) // extract_ipv6($reply);
-    warning("found neither IPv4 nor IPv6 address") if !defined($ip);
     if ($use ne 'ip' && ($ip // '') eq '0.0.0.0') {
         $ip = undef;
     }
-
-    debug("get_ip: using %s, %s reports %s", $use, $arg // '<undefined>', $ip // '<undefined>');
+    warning('did not find an IPv4 or IPv6 address') if !defined($ip);
+    debug("get_ip: using %s, %s reports %s", $use, $arg // '<undefined>', $ip) if $ip;
     return $ip;
 }
 
@@ -3158,7 +3157,7 @@ sub get_ipv4 {
         ## Static IPv4 address is provided in "ipv4=<address>"
         $ipv4 = $arg;
         if (!is_ipv4($ipv4)) {
-            warning("'%s' is not a valid IPv4", $ipv4 // '');
+            warning('not a valid IPv4 address: ' . ($ipv4 // '<undefined>'));
             $ipv4 = undef;
         }
     } elsif ($usev4 eq 'ifv4') {
@@ -3221,7 +3220,7 @@ sub get_ipv4 {
             ) // '';
         }
     } else {
-        warning("ignoring unsupported '--usev4=$usev4'");
+        warning("ignoring unsupported '--usev4' strategy: $usev4");
     }
 
     ## Set to loopback address if no text set yet
@@ -3234,8 +3233,8 @@ sub get_ipv4 {
     $ipv4 //= extract_ipv4($reply);
     ## Return undef for loopback address unless statically assigned by "ipv4=0.0.0.0"
     $ipv4 = undef if (($usev4 ne 'ipv4') && (($ipv4 // '') eq '0.0.0.0'));
-    debug("get_ipv4: using (%s, %s) reports %s",
-          $usev4, $arg // "<undefined>", $ipv4 // "<undefined>");
+    warning('did not find an IPv4 address') if !defined($ipv4);
+    debug("get_ipv4: using (%s, %s) reports %s", $usev4, $arg // "<undefined>", $ipv4) if $ipv4;
     return $ipv4;
 }
 
@@ -3260,7 +3259,7 @@ sub get_ipv6 {
         }
         $ipv6 = $arg;
         if (!is_ipv6($ipv6)) {
-            warning("'%s' is not a valid IPv6", $ipv6 // '');
+            warning('not a valid IPv6 address: ' . ($ipv6 // ''));
             $ipv6 = undef;
         }
     } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if') {
@@ -3316,7 +3315,7 @@ sub get_ipv6 {
             warning("'--usev6=%s' is not implemented and does nothing", $usev6);
         }
     } else {
-        warning("ignoring unsupported '--usev6=$usev6'");
+        warning("ignoring unsupported '--usev6' strategy: $usev6");
     }
 
     ## Set to loopback address if no text set yet
@@ -3329,8 +3328,8 @@ sub get_ipv6 {
     $ipv6 //= extract_ipv6($reply);
     ## Return undef for loopback address unless statically assigned by "ipv6=::"
     $ipv6 = undef if (($usev6 ne 'ipv6') && ($usev6 ne 'ip') && (($ipv6 // '') eq '::'));
-    debug("get_ipv6: using (%s, %s) reports %s",
-          $usev6, $arg // '<undefined>', $ipv6 // '<undefined>');
+    warning('did not find an IPv6 address') if !defined($ipv6);
+    debug("get_ipv6: using (%s, %s) reports %s", $usev6, $arg // '<undefined>', $ipv6) if $ipv6;
     return $ipv6;
 }
 
