@@ -4035,7 +4035,7 @@ sub dnsexit2_update_host {
         failed("Full reply\n%s", $reply) unless opt('verbose');
         return;
     }
-    my $body = ($reply =~ s/^.*?\r?\n\r?\n//sr);
+    (my $body = $reply) =~ s/^.*?\r?\n\r?\n//s;
     my $response = eval { decode_json($body); };
     if (!$response) {
         failed("failed to parse response: $@");
