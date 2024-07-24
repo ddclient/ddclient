@@ -3993,7 +3993,7 @@ sub dnsexit2_update_host {
     if ($name =~ s/(?:^|\.)\Q$config{$h}{'zone'}\E$//) {
         # The zone was successfully trimmed from $name.
     } else {
-        fatal("Hostname %s does not end with the zone %s", $h, $config{$h}{'zone'});
+        fatal("$h: hostname does not end with the zone: $config{$h}{'zone'}");
     }
     # The IPv4 and IPv6 addresses must be updated together in a single API call.
     my %ips;
@@ -4001,7 +4001,7 @@ sub dnsexit2_update_host {
     for my $ipv ('4', '6') {
         my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
         $ips{$ipv} = $ip;
-        info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
+        info("$h: updating IPv$ipv address to $ip");
         $config{$h}{"status-ipv$ipv"} = 'failed';
         push(@updates, {
             name => $name,
@@ -4023,18 +4023,17 @@ sub dnsexit2_update_host {
         }),
     );
     unless ($reply && header_ok($h, $reply)) {
-        failed("updating %s: Could not connect to %s", $h, $url);
+        failed("$h: request to $url failed");
         return;
     };
     (my $body = $reply) =~ s/^.*?\r?\n\r?\n//s;
     my $response = eval { decode_json($body); };
     if (!$response) {
-        failed("failed to parse response: $@");
+        failed("$h: failed to parse response: $@");
         return;
     }
     if (!defined($response->{'code'}) || !defined($response->{'message'})) {
-        failed("Did not receive expected 'code' and 'message' keys in server response:\n%s",
-               $body);
+        failed("$h: missing 'code' and 'message' properties in server response:\n$body");
         return;
     }
     my %codemeaning = (
@@ -4048,32 +4047,33 @@ sub dnsexit2_update_host {
         '7' => ['error', 'Error getting post data. Our server has problem to receive your JSON posting.'],
     );
     if (!exists($codemeaning{$response->{'code'}})) {
-        failed("Status code %s is unknown!", $response->{'code'});
+        failed("$h: unknown status code: $response->{'code'}");
         return;
     }
     my ($status, $message) = @{$codemeaning{$response->{'code'}}};
-    info("Status: %s -- Message: %s", $status, $message);
-    info("Server Message: %s -- Server Details: %s", $response->{'message'},
-         defined($response->{'details'}) ? $response->{'details'}[0] : "no details received");
+    info("$h: $status: $message");
+    info("$h: server message: $response->{'message'}");
+    info("$h: server details: " .
+         (defined($response->{'details'}) ? $response->{'details'}[0] : "no details received"));
     if ($status ne 'good') {
         if ($status eq 'warning') {
-            warning("%s", $message);
-            warning("Server response: %s", $response->{'message'});
+            warning("$h: $message");
+            warning("$h: server response: $response->{'message'}");
         } elsif ($status =~ m'^(badauth|error)$') {
-            failed("%s", $message);
-            failed("Server response: %s", $response->{'message'});
+            failed("$h: $message");
+            failed("$h: server response: $response->{'message'}");
         } else {
-            failed("Unexpected status: %s", $status);
+            failed("$h: unexpected status: $status");
         }
         return;
     }
-    success("%s", $message);
+    success("$h: $message");
     $config{$h}{'mtime'} = $now;
     keys(%ips);  # Reset internal iterator.
     while (my ($ipv, $ip) = each(%ips)) {
         $config{$h}{"ipv$ipv"} = $ip;
         $config{$h}{"status-ipv$ipv"} = 'good';
-        success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $ip, prettytime($config{$h}{'mtime'}));
+        success("$h: updated IPv$ipv address to $ip");
     }
 }
 
