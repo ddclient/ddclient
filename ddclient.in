@@ -3249,14 +3249,18 @@ sub get_ipv6 {
     my $reply = '';         ## Text returned from various methods
     my $url   = '';         ## URL of website or firewall
     my $skip  = undef;      ## Regex of pattern to skip before looking for IP
-    my $arg = opt($usev6, $h);  ## Value assigned to the "usev6" method
+    my $argvar = $usev6;
+    if (grep($usev6 eq $_, qw(ip if cmd web))) {
+        my $new = $usev6 . 'v6';
+        warning("'--usev6=$usev6' is deprecated; use '--usev6=$new'");
+        $argvar = $new if defined(opt($new, $h));
+    }
+    # Note that --usev6=firewallname uses --fwv6=arg, not --firewallname=arg.
+    $argvar = 'fwv6' if $builtinfw{$usev6};
+    my $arg = opt($argvar, $h);
 
     if ($usev6 eq 'ipv6' || $usev6 eq 'ip') {
         ## Static IPv6 address is provided in "ipv6=<address>"
-        if ($usev6 eq 'ip') {
-            warning("'--usev6=ip' is deprecated. Use '--usev6=ipv6'");
-            $arg = opt('ipv6', $h) // $arg;
-        }
         $ipv6 = $arg;
         if (!is_ipv6($ipv6)) {
             warning('not a valid IPv6 address: ' . ($ipv6 // ''));
@@ -3264,17 +3268,9 @@ sub get_ipv6 {
         }
     } elsif ($usev6 eq 'ifv6' || $usev6 eq 'if') {
         ## Obtain IPv6 address from interface mamed in "ifv6=<if>"
-        if ($usev6 eq 'if') {
-            warning("'--usev6=if' is deprecated. Use '--usev6=ifv6'");
-            $arg = opt('ifv6', $h) // $arg;
-        }
         $ipv6 = get_ip_from_interface($arg, 6);
     }  elsif ($usev6 eq 'cmdv6' || $usev6 eq 'cmd') {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
-        if ($usev6 eq 'cmd') {
-            warning("'--usev6=cmd' is deprecated. Use '--usev6=cmdv6'");
-            $arg = opt('cmdv6', $h) // $arg;
-        }
         warning("'--cmd-skip' ignored for '--usev6=$usev6'") if (opt('verbose') && opt('cmd-skip', $h));
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
@@ -3283,10 +3279,6 @@ sub get_ipv6 {
         }
     } elsif ($usev6 eq 'webv6' || $usev6 eq 'web') {
         ## Obtain IPv6 address by accessing website at url in "webv6=<url>"
-        if ($usev6 eq 'web') {
-            warning("'--usev6=web' is deprecated. Use '--usev6=webv6'");
-            $arg = opt('webv6', $h) // $arg;
-        }
         warning("'--web-skip' ignored for '--usev6=$usev6'; use '--webv6-skip' instead")
             if (!defined(opt('webv6-skip', $h)) && defined(opt('web-skip', $h)));
         $url = $arg;
