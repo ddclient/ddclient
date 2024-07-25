@@ -2348,7 +2348,7 @@ my $_in_logmsg = 0;
 sub logmsg {
     my %args = (
         msg => '',
-        pfx => '',
+        label => '',
         fh => *STDERR,
         email => 0,  # If truthy, the message is also included in the next email.
         (@_ % 2) ? (msg => pop) : (),
@@ -2357,7 +2357,7 @@ sub logmsg {
     my $buffer = $args{msg};
     chomp($buffer);
 
-    my $prefix = $args{pfx};
+    my $prefix = $args{label};
     $prefix = sprintf "%-8s ", $prefix if $prefix;
     if ($file) {
         $prefix .= "file $file";
@@ -2383,12 +2383,13 @@ sub logmsg {
     }
 }
 sub _logmsg_fmt { return (@_ > 1) ? sprintf(shift, @_) : shift; }
-sub info    { logmsg(email => 1, pfx => 'INFO:',    _logmsg_fmt(@_)) if opt('verbose'); }
-sub debug   { logmsg(            pfx => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug'); }
-sub warning { logmsg(email => 1, pfx => 'WARNING:', _logmsg_fmt(@_)); }
-sub fatal   { logmsg(email => 1, pfx => 'FATAL:',   _logmsg_fmt(@_)); sendmail(); exit(1); }
-sub success { logmsg(email => 1, pfx => 'SUCCESS:', _logmsg_fmt(@_)); }
-sub failed  { logmsg(email => 1, pfx => 'FAILED:',  _logmsg_fmt(@_)); $result = 'FAILED'; }
+sub info    { logmsg(email => 1, label => 'INFO:',    _logmsg_fmt(@_)) if opt('verbose'); }
+sub debug   { logmsg(            label => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug'); }
+sub warning { logmsg(email => 1, label => 'WARNING:', _logmsg_fmt(@_)); }
+sub fatal   { logmsg(email => 1, label => 'FATAL:',   _logmsg_fmt(@_)); sendmail(); exit(1); }
+sub success { logmsg(email => 1, label => 'SUCCESS:', _logmsg_fmt(@_)); }
+sub failed  { logmsg(email => 1, label => 'FAILED:',  _logmsg_fmt(@_)); $result = 'FAILED'; }
+
 sub prettytime { return scalar(localtime(shift)); }
 
 sub prettyinterval {
