@@ -2702,8 +2702,7 @@ sub geturl {
     }
 
     if (!opt('exec')) {
-        debug("skipped network connection");
-        verbose("SENDING:", "%s", "${server}/${url}");
+        info("would request: ${protocol}://${server}/${url}");
     } else {
         push(@curlopt, "silent");
         push(@curlopt, "include"); ## Include HTTP response for compatibility
@@ -2736,11 +2735,9 @@ sub geturl {
 
         # don't include ${url} as that might expose login credentials
         $0 = sprintf("%s - Curl system cmd sending to %s", $program, "${protocol}://${server}");
-        verbose("SENDING:", "Curl system cmd to %s", "${protocol}://${server}");
-        verbose("SENDING:", "%s", $_) for (@curlopt);
-
+        debug("REQUEST: curl config:\n" . join("\n", @curlopt));
         $reply = curl_cmd(@curlopt);
-        verbose("RECEIVE:", "%s", $reply // "<undefined>");
+        debug("RESPONSE: " . (defined($reply) ? "reply:\n$reply" : '<undefined>'));
         if (!$reply) {
             # don't include ${url} as that might expose login credentials
             if ($ipversion != 0) {
