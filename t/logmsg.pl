@@ -122,18 +122,20 @@ for my $tc (@test_cases) {
     my $output;
     open(my $fh, '>', \$output);
     local *STDERR = $fh;
-    ddclient::msg('%%');
+    local $ddclient::globals{debug} = 1;
+    ddclient::debug('%%');
     close($fh);
-    is($output, "%%\n", 'single argument is printed directly, not via sprintf');
+    is($output, "DEBUG:   > %%\n", 'single argument is printed directly, not via sprintf');
 }
 
 {
     my $output;
     open(my $fh, '>', \$output);
     local *STDERR = $fh;
-    ddclient::msg('%s', 'foo');
+    local $ddclient::globals{debug} = 1;
+    ddclient::debug('%s', 'foo');
     close($fh);
-    is($output, "foo\n", 'multiple arguments are formatted via sprintf');
+    is($output, "DEBUG:   > foo\n", 'multiple arguments are formatted via sprintf');
 }
 
 done_testing();

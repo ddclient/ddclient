@@ -2389,7 +2389,6 @@ sub logmsg {
     }
 }
 sub _logmsg_fmt { return (@_ > 1) ? sprintf(shift, @_) : shift; }
-sub msg     { logmsg(                               _logmsg_fmt(@_)); }
 sub verbose { logmsg(email => 1, pfx => shift,      _logmsg_fmt(@_)) if opt('verbose'); }
 sub info    { logmsg(email => 1, pfx => 'INFO:',    _logmsg_fmt(@_)) if opt('verbose'); }
 sub debug   { logmsg(            pfx => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug'); }
