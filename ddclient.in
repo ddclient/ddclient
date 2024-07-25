@@ -4123,70 +4123,60 @@ sub nic_noip_update {
             password => $groupcfg{'password'},
         );
         next if !header_ok($hosts, $reply);
-
-        my @reply = split /\n/, $reply;
-        my $state = 'header';
+        (my $body = $reply) =~ s/^.*?\n\n//s or do {
+            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
+            next;
+        };
+        my @reply = split(/\n/, $body);
         for my $line (@reply) {
-            if ($state eq 'header') {
-                $state = 'body';
+            my ($status, $returnedips) = split / /, lc $line;
+            my $h = shift @hosts;
 
-            } elsif ($state eq 'body') {
-                $state = 'results' if $line eq '';
+            for my $ip (split_by_comma($returnedips)) {
+                next if (!$ip);
+                my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                $config{$h}{"status-ipv$ipv"} = $status;
+            }
 
-            } elsif ($state =~ /^results/) {
-                $state = 'results2';
-
-                my ($status, $returnedips) = split / /, lc $line;
-                my $h = shift @hosts;
-
+            if ($status eq 'good') {
+                $config{$h}{'mtime'} = $now;
                 for my $ip (split_by_comma($returnedips)) {
                     next if (!$ip);
                     my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                    $config{$h}{"status-ipv$ipv"} = $status;
+                    $config{$h}{"ipv$ipv"} = $ip;
+                    success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $ip);
                 }
 
-                if ($status eq 'good') {
+            } elsif (exists $errors{$status}) {
+                if ($status eq 'nochg') {
+                    warning("updating %s: %s: %s", $h, $status, $errors{$status});
                     $config{$h}{'mtime'} = $now;
                     for my $ip (split_by_comma($returnedips)) {
                         next if (!$ip);
                         my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                         $config{$h}{"ipv$ipv"} = $ip;
-                        success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $ip);
+                        $config{$h}{"status-ipv$ipv"} = 'good';
                     }
-
-                } elsif (exists $errors{$status}) {
-                    if ($status eq 'nochg') {
-                        warning("updating %s: %s: %s", $h, $status, $errors{$status});
-                        $config{$h}{'mtime'} = $now;
-                        for my $ip (split_by_comma($returnedips)) {
-                            next if (!$ip);
-                            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                            $config{$h}{"ipv$ipv"} = $ip;
-                            $config{$h}{"status-ipv$ipv"} = 'good';
-                        }
-                    } else {
-                        failed("updating %s: %s: %s", $h, $status, $errors{$status});
-                    }
-
-                } elsif ($status =~ /w(\d+)(.)/) {
-                    my ($wait, $units) = ($1, lc $2);
-                    my ($sec, $scale) = ($wait, 1);
-
-                    ($scale, $units) = (1, 'seconds') if $units eq 's';
-                    ($scale, $units) = (60, 'minutes') if $units eq 'm';
-                    ($scale, $units) = (60*60, 'hours') if $units eq 'h';
-
-                    $sec = $wait * $scale;
-                    $config{$h}{'wtime'} = $now + $sec;
-                    warning("updating %s: %s: wait %s %s before further updates", $h, $status, $wait, $units);
-
                 } else {
-                    failed("updating %s: unexpected status (%s)", $h, $line);
+                    failed("updating %s: %s: %s", $h, $status, $errors{$status});
                 }
+
+            } elsif ($status =~ /w(\d+)(.)/) {
+                my ($wait, $units) = ($1, lc $2);
+                my ($sec, $scale) = ($wait, 1);
+
+                ($scale, $units) = (1, 'seconds') if $units eq 's';
+                ($scale, $units) = (60, 'minutes') if $units eq 'm';
+                ($scale, $units) = (60*60, 'hours') if $units eq 'h';
+
+                $sec = $wait * $scale;
+                $config{$h}{'wtime'} = $now + $sec;
+                warning("updating %s: %s: wait %s %s before further updates", $h, $status, $wait, $units);
+
+            } else {
+                failed("updating %s: unexpected status (%s)", $h, $line);
             }
         }
-        failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'})
-            if $state ne 'results2';
     }
 }
 
