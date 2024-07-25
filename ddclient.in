@@ -4105,9 +4105,8 @@ sub nic_noip_update {
         delete $config{$_}{'wantipv4'} for @hosts;
         delete $config{$_}{'wantipv6'} for @hosts;
 
-        info("setting IPv4 address to %s for %s", $ipv4, $hosts) if $ipv4;
-        info("setting IPv6 address to %s for %s", $ipv6, $hosts) if $ipv6;
-        verbose("UPDATE:", "updating %s", $hosts);
+        info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
+        info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
 
         my $url = "https://$groupcfg{'server'}/nic/update?system=noip&hostname=$hosts&myip=";
         $url .= $ipv4 if $ipv4;
@@ -4124,7 +4123,7 @@ sub nic_noip_update {
         );
         next if !header_ok($hosts, $reply);
         (my $body = $reply) =~ s/^.*?\n\n//s or do {
-            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
+            failed("$hosts: request to $groupcfg{'server'} failed");
             next;
         };
         my @reply = split(/\n/, $body);
@@ -4144,12 +4143,12 @@ sub nic_noip_update {
                     next if (!$ip);
                     my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                     $config{$h}{"ipv$ipv"} = $ip;
-                    success("updating %s: %s: IPv%s address set to %s", $h, $status, $ipv, $ip);
+                    success("$h: $status: IPv$ipv address set to $ip");
                 }
 
             } elsif (exists $errors{$status}) {
                 if ($status eq 'nochg') {
-                    warning("updating %s: %s: %s", $h, $status, $errors{$status});
+                    warning("$h: $status: $errors{$status}");
                     $config{$h}{'mtime'} = $now;
                     for my $ip (split_by_comma($returnedips)) {
                         next if (!$ip);
@@ -4158,7 +4157,7 @@ sub nic_noip_update {
                         $config{$h}{"status-ipv$ipv"} = 'good';
                     }
                 } else {
-                    failed("updating %s: %s: %s", $h, $status, $errors{$status});
+                    failed("$h: $status: $errors{$status}");
                 }
 
             } elsif ($status =~ /w(\d+)(.)/) {
@@ -4171,10 +4170,10 @@ sub nic_noip_update {
 
                 $sec = $wait * $scale;
                 $config{$h}{'wtime'} = $now + $sec;
-                warning("updating %s: %s: wait %s %s before further updates", $h, $status, $wait, $units);
+                warning("$h: $status: wait $wait $units before further updates");
 
             } else {
-                failed("updating %s: unexpected status (%s)", $h, $line);
+                failed("$h: unexpected status: $line");
             }
         }
     }
