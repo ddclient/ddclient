@@ -68,9 +68,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#639](https://github.com/ddclient/ddclient/pull/639)
   * Updated sample systemd service unit file to improve logging in the systemd
     journal.  [#669](https://github.com/ddclient/ddclient/pull/669)
-  * The second and subsequent lines in a multi-line log message are now prefixed
-    with a `|` character.
+  * The second and subsequent lines in a multi-line log message now have a
+    different prefix to distinguish them from separate log messages.
     [#676](https://github.com/ddclient/ddclient/pull/676)
+    [#719](https://github.com/ddclient/ddclient/pull/719)
   * `emailonly`: New `protocol` option that simply emails you when your IP
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
   * `he.net`: Added support for updating Hurricane Electric records.

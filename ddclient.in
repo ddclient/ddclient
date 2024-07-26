@@ -2364,15 +2364,16 @@ sub logmsg {
     chomp($buffer);
 
     my $prefix = $args{pfx};
-    $prefix = sprintf "%-9s  ", $prefix if $prefix;
+    $prefix = sprintf "%-8s ", $prefix if $prefix;
     if ($file) {
         $prefix .= "file $file";
         $prefix .= ", line $lineno" if $lineno;
-        $prefix .= ":  ";
+        $prefix .= ": ";
     }
     if ($prefix) {
+        $prefix .= "> ";
         $buffer = "$prefix$buffer";
-        $prefix =~ s/  $/| /;
+        $prefix =~ s/> $/  /;
         $buffer =~ s/\n/\n$prefix/g;
     }
     $buffer .= "\n";
