@@ -1366,7 +1366,6 @@ sub update_nics {
 
     for my $p (sort keys %protocols) {
         my (@hosts, %ipsv4, %ipsv6) = ();
-        my $force_update = $protocols{$p}{'force_update'};
         my $update = $protocols{$p}{'update'};
 
         for my $h (sort keys %config) {
@@ -1461,7 +1460,7 @@ sub update_nics {
                 next;
             }
 
-            next if !nic_updateable($h, $force_update);
+            next if !nic_updateable($h);
             push @hosts, $h;
 
             $ipsv4{$ipv4} = $h if ($ipv4);
@@ -3527,8 +3526,8 @@ EoEXAMPLE
 ## Returns true if we can go ahead and update the IP address at server
 ######################################################################
 sub nic_updateable {
-    my $host   = shift;
-    my $sub    = shift;
+    my ($host) = @_;
+    my $force_update = $protocols{$config{$host}{protocol}}{force_update};
     my $update = 0;
     my $ip     = $config{$host}{'wantip'};
     my $ipv4   = $config{$host}{'wantipv4'};
@@ -3708,7 +3707,7 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif (defined($sub) && &$sub($host)) {
+    } elsif (defined($force_update) && $force_update->($host)) {
         $update = 1;
     } elsif ((defined($recap{$host}{'static'}) && defined($config{$host}{'static'}) &&
               ($recap{$host}{'static'} ne $config{$host}{'static'})) ||
