@@ -157,7 +157,6 @@ my %saved_opt;
 my $daemon;
 # Control how many times warning message logged for invalid IP addresses
 my (%warned_ip, %warned_ipv4, %warned_ipv6);
-my $inv_ip_warn_count = opt('max-warn') // 1;
 
 sub T_ANY    { 'any' }
 sub T_STRING { 'string' }
@@ -3453,6 +3452,7 @@ sub nic_updateable {
     $use       = 'disabled' if ($use eq 'no');   # backward compatibility
     $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
     $use       = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
+    my $inv_ip_warn_count = opt('max-warn');
 
     $warned_ip{$host} = 0 if $use ne 'disabled' && $ip;
     $warned_ipv4{$host} = 0 if $usev4 ne 'disabled' && $ipv4;
