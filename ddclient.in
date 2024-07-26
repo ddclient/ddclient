@@ -4163,61 +4163,70 @@ EoEXAMPLE
 ######################################################################
 sub nic_dnsexit2_update {
     debug("\nnic_dnsexit2_update -------------------");
-    # The DNSExit API does not support updating hosts with different zones at the same time,
-    # handling update per host.
     for my $h (@_) {
         $config{$h}{'zone'} //= $h;
-        dnsexit2_update_host($h);
+    }
+    my %groups = group_hosts_by(\@_, [qw(password path server ssl zone)]);
+    for my $hosts (values(%groups)) {
+        dnsexit2_update_hostgroup(@$hosts);
     }
 }
 
-sub dnsexit2_update_host {
-    my ($h) = @_;
-    my $name = $h;
-    # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
-    # set to the empty string; both have identical semantics.  For consistency, always
-    # remove the zone even if it means $name becomes the empty string.
-    if ($name =~ s/(?:^|\.)\Q$config{$h}{'zone'}\E$//) {
-        # The zone was successfully trimmed from $name.
-    } else {
-        fatal("Hostname %s does not end with the zone %s", $h, $config{$h}{'zone'});
-    }
-    # The IPv4 and IPv6 addresses must be updated together in a single API call.
-    my %ips;
+sub dnsexit2_update_hostgroup {
+    my @hosts = @_;
+    return unless @hosts > 0;
+    # All hosts in @hosts are assumed to have common password, path, server, ssl, and zone.  This
+    # hashref is used to access those settings (and only those settings).
+    my $common = $config{$hosts[0]};
+    my %hostips;
     my @updates;
-    for my $ipv ('4', '6') {
-        my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
-        $ips{$ipv} = $ip;
-        info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
-        $config{$h}{"status-ipv$ipv"} = 'failed';
-        push(@updates, {
-            name => $name,
-            type => ($ipv eq '6') ? 'AAAA' : 'A',
-            content => $ip,
-            ttl => $config{$h}{'ttl'},
-        });
-    };
-    my $url = $config{$h}{'server'} . $config{$h}{'path'};
+    for my $h (@hosts) {
+        my $name = $h;
+        # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
+        # set to the empty string; both have identical semantics.  For consistency, always
+        # remove the zone even if it means $name becomes the empty string.
+        if ($name =~ s/(?:^|\.)\Q$common->{'zone'}\E$//) {
+            # The zone was successfully trimmed from $name.
+        } else {
+            fatal("Hostname %s does not end with the zone %s", $h, $common->{'zone'});
+        }
+        # The IPv4 and IPv6 addresses must be updated together in a single API call.
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            $hostips{$h}{$ipv} = $ip;
+            info("Going to update IPv%s address to %s for %s.", $ipv, $ip, $h);
+            $config{$h}{"status-ipv$ipv"} = 'failed';
+            push(@updates, {
+                name => $name,
+                type => ($ipv eq '6') ? 'AAAA' : 'A',
+                content => $ip,
+                ttl => $config{$h}{'ttl'},
+            });
+        }
+    }
+    return unless @updates > 0;
+    my $url = $common->{'server'} . $common->{'path'};
     my $reply = geturl(
         proxy => opt('proxy'),
         url => $url,
         headers => "Content-Type: application/json\nAccept: application/json",
         method => 'POST',
         data => encode_json({
-            apikey => $config{$h}{'password'},
-            domain => $config{$h}{'zone'},
+            apikey => $common->{'password'},
+            domain => $common->{'zone'},
             update => \@updates,
         }),
     );
-    unless ($reply && header_ok($h, $reply)) {
-        failed("updating %s: Could not connect to %s", $h, $url);
+    my $hosts = join(', ', @hosts);
+    unless ($reply && header_ok($hosts, $reply)) {
+        failed("updating %s: Could not connect to %s", $hosts, $url);
         return;
     };
     debug("%s", $reply);
     (my $http_status) = ($reply =~ m%^s*HTTP/.*\s+(\d+)%i);
     debug("HTTP response code: %s", $http_status);
     if ($http_status ne '200') {
-        failed("Failed to update Host\n%s", $h);
+        failed("Failed to update hosts %s", $hosts);
         failed("HTTP response code\n%s", $http_status);
         failed("Full reply\n%s", $reply) unless opt('verbose');
         return;
@@ -4264,12 +4273,15 @@ sub dnsexit2_update_host {
         return;
     }
     success("%s", $message);
-    $config{$h}{'mtime'} = $now;
-    keys(%ips);  # Reset internal iterator.
-    while (my ($ipv, $ip) = each(%ips)) {
-        $config{$h}{"ipv$ipv"} = $ip;
-        $config{$h}{"status-ipv$ipv"} = 'good';
-        success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $ip, prettytime($config{$h}{'mtime'}));
+    keys(%hostips);  # Reset internal iterator.
+    while (my ($h, $ips) = each(%hostips)) {
+        $config{$h}{'mtime'} = $now;
+        keys(%$ips);  # Reset internal iterator.
+        while (my ($ipv, $ip) = each(%$ips)) {
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            success("Updated %s successfully to IPv%s address %s at time %s", $h, $ipv, $ip, prettytime($config{$h}{'mtime'}));
+        }
     }
 }
 
