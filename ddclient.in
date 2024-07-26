@@ -4272,13 +4272,12 @@ sub nic_dslreports1_update {
         if ($return_code !~ /NOERROR/) {
             $config{$h}{'status'} = 'failed';
             failed("$h: $reply");
-
-        } else {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
-            success("$h: $return_code: IP address set to $ip");
+            next;
         }
+        $config{$h}{'ip'} = $ip;
+        $config{$h}{'mtime'} = $now;
+        $config{$h}{'status'} = 'good';
+        success("$h: $return_code: IP address set to $ip");
     }
 }
 
