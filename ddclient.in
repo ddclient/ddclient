@@ -4243,8 +4243,7 @@ sub nic_dslreports1_update {
     ## update each configured host
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
-        info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
+        info("$h: setting IP address to $ip");
 
         my $url;
         $url  = "https://$config{$h}{'server'}/nic/";
@@ -4260,7 +4259,7 @@ sub nic_dslreports1_update {
             password => $config{$h}{'password'},
         ) // '';
         if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
+            failed("$h: request to $config{$h}{'server'} failed");
             next;
         }
 
@@ -4272,15 +4271,13 @@ sub nic_dslreports1_update {
 
         if ($return_code !~ /NOERROR/) {
             $config{$h}{'status'} = 'failed';
-            warning("SENT:    %s", $url) unless opt('verbose');
-            warning("REPLIED: %s", $reply);
-            failed("updating %s", $h);
+            failed("$h: $reply");
 
         } else {
             $config{$h}{'ip'} = $ip;
             $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
-            success("updating %s: %s: IP address set to %s", $h, $return_code, $ip);
+            success("$h: $return_code: IP address set to $ip");
         }
     }
 }
