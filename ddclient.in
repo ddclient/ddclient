@@ -3453,47 +3453,38 @@ sub nic_updateable {
     $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
     $use       = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
     my $inv_ip_warn_count = opt('max-warn');
+    my $previp = $recap{$host}{'ip'} || '<nothing>';
+    my $previpv4 = $recap{$host}{'ipv4'} || '<nothing>';
+    my $previpv6 = $recap{$host}{'ipv6'} || '<nothing>';
+    my %prettyt = map({ ($_ => $recap{$host}{$_} ? prettytime($recap{$host}{$_}) : '<never>'); }
+                      qw(atime mtime wtime));
+    my %prettyi = map({ ($_ => prettyinterval($config{$host}{$_})); }
+                      qw(max-interval min-error-interval min-interval));
 
     $warned_ip{$host} = 0 if $use ne 'disabled' && $ip;
     $warned_ipv4{$host} = 0 if $usev4 ne 'disabled' && $ipv4;
     $warned_ipv6{$host} = 0 if $usev6 ne 'disabled' && $ipv6;
 
     if ($opt{'force'}) {
-        info("forcing update of %s.", $host);
+        info("$host: update forced via 'force' option");
         $update = 1;
 
     } elsif (!exists($recap{$host})) {
-        info("forcing updating %s because no recap entry exists in cache file.", $host);
+        info("$host: update forced because the time of the previous update (or attempt) is unknown");
         $update = 1;
 
     } elsif ($recap{$host}{'wtime'} && $recap{$host}{'wtime'} > $now) {
-        warning("cannot update %s from %s to %s until after %s.",
-                $host,
-                ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'), $ip,
-                prettytime($recap{$host}{'wtime'})
-        );
+        warning("$host: cannot update IP from $previp to $ip until after $prettyt{'wtime'}");
 
     } elsif ($recap{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
-        warning("forcing update of %s from %s to %s; %s since last update on %s.",
-                $host,
-                ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'), $ip,
-                prettyinterval($config{$host}{'max-interval'}),
-                prettytime($recap{$host}{'mtime'})
-        );
+        info("$host: update forced because it has been $prettyi{'max-interval'} since the previous update (on $prettyt{'mtime'})");
         $update = 1;
 
-    } elsif ($use ne 'disabled' && ($recap{$host}{'ip'} // '') ne $ip) {
+    } elsif ($use ne 'disabled' && $previp ne $ip) {
         ## Check whether to update IP address for the "--use" method"
         if (($recap{$host}{'status'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
-
-            warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
-                    $host,
-                    ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'),
-                    $ip,
-                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
-                    prettyinterval($config{$host}{'min-interval'})
-            )
+            warning("$host: skipped update from $previp to $ip because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
                 if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
             $recap{$host}{'warned-min-interval'} = $now;
@@ -3503,18 +3494,10 @@ sub nic_updateable {
 
             if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ip{$host} // 0) < $inv_ip_warn_count)) {
-
-                warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
-                        $host,
-                        ($recap{$host}{'ip'} ? $recap{$host}{'ip'} : '<nothing>'),
-                        $ip,
-                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
-                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
-                        prettyinterval($config{$host}{'min-error-interval'})
-                );
+                warning("$host: skipped update from $previp to $ip because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}), which failed");
                 if (!$ip && !opt('verbose')) {
                     $warned_ip{$host} = ($warned_ip{$host} // 0) + 1;
-                    warning("IP address for %s undefined. Warned %s times, suppressing further warnings", $host, $inv_ip_warn_count)
+                    warning("$host: IP address undefined. Warned $inv_ip_warn_count times, suppressing further warnings")
                         if ($warned_ip{$host} >= $inv_ip_warn_count);
                 }
             }
@@ -3525,18 +3508,11 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif ($usev4 ne 'disabled' && ($recap{$host}{'ipv4'} // '') ne $ipv4) {
+    } elsif ($usev4 ne 'disabled' && $previpv4 ne $ipv4) {
         ## Check whether to update IPv4 address for the "--usev4" method"
         if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
-
-            warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
-                    $host,
-                    ($recap{$host}{'ipv4'} ? $recap{$host}{'ipv4'} : '<nothing>'),
-                    $ipv4,
-                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
-                    prettyinterval($config{$host}{'min-interval'})
-            )
+            warning("$host: skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
                 if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
             $recap{$host}{'warned-min-interval'} = $now;
@@ -3546,18 +3522,10 @@ sub nic_updateable {
 
             if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) {
-
-                warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
-                        $host,
-                        ($recap{$host}{'ipv4'} ? $recap{$host}{'ipv4'} : '<nothing>'),
-                        $ipv4,
-                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
-                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
-                        prettyinterval($config{$host}{'min-error-interval'})
-                );
+                warning("$host: skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}), which failed");
                 if (!$ipv4 && !opt('verbose')) {
                     $warned_ipv4{$host} = ($warned_ipv4{$host} // 0) + 1;
-                    warning("IPv4 address for %s undefined. Warned %s times, suppressing further warnings", $host, $inv_ip_warn_count)
+                    warning("$host: IPv4 address undefined. Warned $inv_ip_warn_count times, suppressing further warnings")
                         if ($warned_ipv4{$host} >= $inv_ip_warn_count);
                 }
             }
@@ -3568,18 +3536,11 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif ($usev6 ne 'disabled' && ($recap{$host}{'ipv6'} // '') ne $ipv6) {
+    } elsif ($usev6 ne 'disabled' && $previpv6 ne $ipv6) {
         ## Check whether to update IPv6 address for the "--usev6" method"
         if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
-
-            warning("skipping update of %s from %s to %s.\nlast updated %s.\nWait at least %s between update attempts.",
-                    $host,
-                    ($recap{$host}{'ipv6'} ? $recap{$host}{'ipv6'} : '<nothing>'),
-                    $ipv6,
-                    ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
-                    prettyinterval($config{$host}{'min-interval'})
-            )
+            warning("$host: skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
                 if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
             $recap{$host}{'warned-min-interval'} = $now;
@@ -3589,18 +3550,10 @@ sub nic_updateable {
 
             if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) {
-
-                warning("skipping update of %s from %s to %s.\nlast updated %s but last attempt on %s failed.\nWait at least %s between update attempts.",
-                        $host,
-                        ($recap{$host}{'ipv6'} ? $recap{$host}{'ipv6'} : '<nothing>'),
-                        $ipv6,
-                        ($recap{$host}{'mtime'} ? prettytime($recap{$host}{'mtime'}) : '<never>'),
-                        ($recap{$host}{'atime'} ? prettytime($recap{$host}{'atime'}) : '<never>'),
-                        prettyinterval($config{$host}{'min-error-interval'})
-                );
+                warning("$host: skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}, which failed");
                 if (!$ipv6 && !opt('verbose')) {
                     $warned_ipv6{$host} = ($warned_ipv6{$host} // 0) + 1;
-                    warning("IPv6 address for %s undefined. Warned %s times, suppressing further warnings", $host, $inv_ip_warn_count)
+                    warning("$host: IPv6 address undefined. Warned $inv_ip_warn_count times, suppressing further warnings")
                         if ($warned_ipv6{$host} >= $inv_ip_warn_count);
                 }
             }
@@ -3621,15 +3574,12 @@ sub nic_updateable {
 
     } else {
         if (opt('verbose')) {
-            if ($use ne 'disabled') {
-                success("%s: skipped: IP address was already set to %s.", $host, $ip);
-            }
-            if ($usev4 ne 'disabled') {
-                success("%s: skipped: IPv4 address was already set to %s.", $host, $ipv4);
-            }
-            if ($usev6 ne 'disabled') {
-                success("%s: skipped: IPv6 address was already set to %s.", $host, $ipv6);
-            }
+            success("$host: skipped update because IP address is already set to $ip")
+                if $use ne 'disabled';
+            success("$host: skipped update because IPv4 address is already set to $ipv4")
+                if $usev4 ne 'disabled';
+            success("$host: skipped update because IPv6 address is already set to $ipv6")
+                if $usev6 ne 'disabled';
         }
     }
 
