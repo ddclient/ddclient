@@ -3454,20 +3454,9 @@ sub nic_updateable {
     $usev6     = 'disabled' if ($usev6 eq 'no'); # backward compatibility
     $use       = 'disabled' if ($usev4 ne 'disabled') || ($usev6 ne 'disabled');
 
-    # If we have a valid IP address and we have previously warned that it was invalid.
-    # reset the warning count back to zero.
-    if (($use ne 'disabled') && $ip && $warned_ip{$host}) {
-        $warned_ip{$host} = 0;
-        warning("IP address for %s valid: %s. Reset warning count", $host, $ip);
-    }
-    if (($usev4 ne 'disabled') && $ipv4 && $warned_ipv4{$host}) {
-        $warned_ipv4{$host} = 0;
-        warning("IPv4 address for %s valid: %s. Reset warning count", $host, $ipv4);
-    }
-    if (($usev6 ne 'disabled') && $ipv6 && $warned_ipv6{$host}) {
-        $warned_ipv6{$host} = 0;
-        warning("IPv6 address for %s valid: %s. Reset warning count", $host, $ipv6);
-    }
+    $warned_ip{$host} = 0 if $use ne 'disabled' && $ip;
+    $warned_ipv4{$host} = 0 if $usev4 ne 'disabled' && $ipv4;
+    $warned_ipv6{$host} = 0 if $usev6 ne 'disabled' && $ipv6;
 
     if ($opt{'force'}) {
         info("forcing update of %s.", $host);
