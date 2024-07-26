@@ -3709,15 +3709,10 @@ sub nic_updateable {
 
     } elsif (defined($force_update) && $force_update->($host)) {
         $update = 1;
-    } elsif ((defined($recap{$host}{'static'}) && defined($config{$host}{'static'}) &&
-              ($recap{$host}{'static'} ne $config{$host}{'static'})) ||
-             (defined($recap{$host}{'wildcard'}) && defined($config{$host}{'wildcard'}) &&
-              ($recap{$host}{'wildcard'} ne $config{$host}{'wildcard'})) ||
-             (defined($recap{$host}{'mx'}) && defined($config{$host}{'mx'}) &&
-              ($recap{$host}{'mx'} ne $config{$host}{'mx'})) ||
-             (defined($recap{$host}{'backupmx'}) && defined($config{$host}{'backupmx'}) &&
-              ($recap{$host}{'backupmx'} ne $config{$host}{'backupmx'}))) {
-        info("updating %s because host settings have been changed.", $host);
+    } elsif (my @changed = grep({ my $rv = $recap{$host}{$_}; my $cv = $config{$host}{$_};
+                                  defined($rv) && defined($cv) && $rv ne $cv; }
+                                qw(static wildcard mx backupmx))) {
+        info("$host: update forced because options changed: " . join(', ', @changed));
         $update = 1;
 
     } else {
