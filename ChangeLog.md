@@ -68,9 +68,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#639](https://github.com/ddclient/ddclient/pull/639)
   * Updated sample systemd service unit file to improve logging in the systemd
     journal.  [#669](https://github.com/ddclient/ddclient/pull/669)
-  * The second and subsequent lines in a multi-line log message are now prefixed
-    with a `|` character.
+  * The second and subsequent lines in a multi-line log message now have a
+    different prefix to distinguish them from separate log messages.
     [#676](https://github.com/ddclient/ddclient/pull/676)
+    [#719](https://github.com/ddclient/ddclient/pull/719)
   * `emailonly`: New `protocol` option that simply emails you when your IP
     address changes.  [#654](https://github.com/ddclient/ddclient/pull/654)
   * `he.net`: Added support for updating Hurricane Electric records.
@@ -83,6 +84,10 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     records.  [#695](https://github.com/ddclient/ddclient/pull/695)
   * `inwx`: New `protocol` option for updating [INWX](https://www.inwx.com/)
     records.  [#690](https://github.com/ddclient/ddclient/pull/690)
+  * `domeneshop`: Add IPv6 support.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
+  * `duckdns`: Multiple hosts with the same IP address are now updated together.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
 
 ### Bug fixes
 
@@ -130,6 +135,13 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#713](https://github.com/ddclient/ddclient/pull/713)
   * `easydns`: Fixed successful updates treated as failed updates.
     [#713](https://github.com/ddclient/ddclient/pull/713)
+  * Any IP addresses in an HTTP response's headers or in an HTTP error
+    response's body are now ignored when obtaining the IP address from a
+    web-based IP discovery service (`--usev4=webv4`, `--usev6=webv6`) or from a
+    router/firewall device.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
+  * `yandex`: Errors are now retried.
+    [#719](https://github.com/ddclient/ddclient/pull/719)
 
 ## 2023-11-23 v3.11.2
 
