@@ -3718,7 +3718,6 @@ sub nic_dyndns1_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
 
         my $url;
         $url  = "https://$config{$h}{'server'}/nic/";
@@ -4371,7 +4370,6 @@ sub nic_zoneedit1_update {
         delete $config{$_}{'wantip'} for @hosts;
 
         info("setting IP address to %s for %s", $ip, $hosts);
-        verbose("UPDATE:", "updating %s", $hosts);
 
         my $url = '';
         $url .= "https://$groupcfg{'server'}/auth/dynamic.html";
@@ -4572,7 +4570,6 @@ sub nic_namecheap_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
 
         my $url;
         $url = "https://$config{$h}{'server'}/update";
@@ -4774,7 +4771,6 @@ sub nic_nfsn_update {
 
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
 
         my $list_path = "/dns/$zone/listRRs";
         my $list_body = encode_www_form_urlencoded({name => $name, type => 'A'});
@@ -4893,7 +4889,6 @@ sub nic_njalla_update {
         $url .= (($quietreply eq 1)) ? '&quiet' : '';
 
         info("setting address to%s for %s", ($ip_output eq '') ? ' auto' : $ip_output, $h);
-        verbose("UPDATE:", "updating %s", $h);
         debug("url: %s", $url);
 
         # Try to get URL
@@ -4983,7 +4978,6 @@ sub nic_sitelutions_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
 
         my $url;
         $url  = "https://$config{$h}{'server'}/dnsup";
@@ -5196,7 +5190,6 @@ sub nic_1984_update {
     for my $host (@_) {
         my $ip = delete $config{$host}{'wantip'};
         info("setting IP address to %s for %s", $ip, $host);
-        verbose("UPDATE:", "updating %s", $host);
 
         my $url;
         $url  = "https://$config{$host}{'server'}/1.0/freedns/";
@@ -5274,7 +5267,6 @@ sub nic_changeip_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
 
         my $url;
         $url  = "https://$config{$h}{'server'}/nic/update";
@@ -5465,7 +5457,6 @@ sub nic_henet_update {
         for my $ipv ('4', '6') {
             my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
             info("Setting IPv%s address to %s for %s", $ipv, $ip, $h);
-            verbose("UPDATE:", "updating %s", $h);
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => "https://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
@@ -5642,7 +5633,6 @@ sub nic_nsupdate_update {
 
         info("setting IPv4 address to %s for %s", $ipv4, $hosts) if ($ipv4);
         info("setting IPv6 address to %s for %s", $ipv6, $hosts) if ($ipv6);
-        verbose("UPDATE:", "updating %s", $hosts);
 
         ## send separate requests for each zone with all hosts in that zone
         my $instructions = <<"EoINSTR1";
@@ -6167,7 +6157,6 @@ sub nic_yandex_update {
         my $headers = "PddToken: $config{$host}{'password'}\n";
 
         info("setting IP address to %s for %s", $ip, $host);
-        verbose("UPDATE:", "updating %s", $host);
 
         # Get record ID for host
         my $url = "https://$config{$host}{'server'}/api2/admin/dns/list?";
@@ -6546,7 +6535,6 @@ sub nic_ovh_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:","updating %s", $h);
 
         # Set the URL that we're going to update
         my $url;
@@ -6835,7 +6823,6 @@ sub nic_dinahosting_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:", "updating %s", $h);
         my ($hostname, $domain) = split(/\./, $h, 2);
         my $url = "https://$config{$h}{'server'}$config{$h}{'script'}";
         $url .= "?hostname=$hostname";
@@ -6928,7 +6915,6 @@ sub nic_gandi_update {
             }
             (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
             info("%s -- Setting IP address to %s.", $h, $ip);
-            verbose("UPDATE:", "updating %s", $h);
 
             my $headers;
             $headers  = "Content-Type: application/json\n";
@@ -7158,7 +7144,6 @@ sub nic_enom_update {
     for my $h (@_) {
         my $ip = delete $config{$h}{'wantip'};
         info("setting IP address to %s for %s", $ip, $h);
-        verbose("UPDATE:","updating %s", $h);
 
         my $url;
         $url   = "https://$config{$h}{'server'}/interface.asp?Command=SetDNSHost";
