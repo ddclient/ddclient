@@ -5655,8 +5655,8 @@ EoINSTR4
         my $command = "$binary -k $keyfile";
         $command .= " -v" if ynu($groupcfg{'tcp'}, 1, 0, 0);
         $command .= " -d" if (opt('debug'));
-        verbose("UPDATE:", "nsupdate command is: %s", $command);
-        verbose("UPDATE:", "nsupdate instructions are:\n%s", $instructions);
+        debug("nsupdate command: $command");
+        debug("nsupdate instructions:\n$instructions");
 
         my $status = pipecmd($command, $instructions);
         if ($status eq 1) {
