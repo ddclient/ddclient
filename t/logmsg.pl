@@ -54,22 +54,22 @@ my @test_cases = (
     },
     {
         desc => 'single-line label',
-        args => [label => 'LBL:', 'foo'],
+        args => [label => 'LBL', 'foo'],
         want => "LBL:     > foo\n",
     },
     {
         desc => 'multi-line label',
-        args => [label => 'LBL:', "foo\nbar"],
+        args => [label => 'LBL', "foo\nbar"],
         want => "LBL:     > foo\nLBL:       bar\n",
     },
     {
         desc => 'single-line long label',
-        args => [label => 'VERY LONG LABEL:', 'foo'],
+        args => [label => 'VERY LONG LABEL', 'foo'],
         want => "VERY LONG LABEL: > foo\n",
     },
     {
         desc => 'multi-line long label',
-        args => [label => 'VERY LONG LABEL:', "foo\nbar"],
+        args => [label => 'VERY LONG LABEL', "foo\nbar"],
         want => "VERY LONG LABEL: > foo\nVERY LONG LABEL:   bar\n",
     },
     {
@@ -87,14 +87,14 @@ my @test_cases = (
     },
     {
         desc => 'single line, label, file, and line number',
-        args => [label => 'LBL:', 'foo'],
+        args => [label => 'LBL', 'foo'],
         file => 'name',
         lineno => 42,
         want => "LBL:     file name, line 42: > foo\n",
     },
     {
         desc => 'multiple lines, label, file, and line number',
-        args => [label => 'LBL:', "foo\nbar"],
+        args => [label => 'LBL', "foo\nbar"],
         file => 'name',
         lineno => 42,
         want => "LBL:     file name, line 42: > foo\nLBL:     file name, line 42:   bar\n",
