@@ -128,8 +128,9 @@ my $last_emailbody = '';
 ## flags and options to override).
 my $daemon_default = ($programd =~ /d$/) ? interval('5m') : undef;
 
-our $file = '';
-our $lineno = '';
+# Current Logger instance.  To push a context prefix onto the context stack:
+#    local _l = pushlogctx('additional context goes here');
+our $_l = ddclient::Logger->new();
 
 $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin:/usr/bin:/etc:/usr/lib:";
 
@@ -1679,10 +1680,8 @@ sub _read_config {
     #     accumulated thus far and stored in $1->{$host} for each
     #     referenced host.
 
-    my $config  = shift;
-    my $globals = shift;
-    my $stamp   = shift;
-    local $file = shift;
+    my ($config, $globals, $stamp, $file) = @_;
+    local $_l = pushlogctx("file $file");
     my %globals = ();
     my %config  = ();
     my $content = '';
@@ -1710,13 +1709,14 @@ sub _read_config {
         warning("file $file must not be accessible by others.");
     }
 
-    local $lineno = 0;
+    my $lineno = 0;
     my $continuation = '';
     my %passwords    = ();
     while (<FD>) {
         s/[\r\n]//g;
 
         $lineno++;
+        local $_l = $_l->{parent}; $_l = pushlogctx("file $file, line $lineno");
 
         ## check for the program version stamp
         if (($. == 1) && $stamp && ($_ !~ /^$stamp$/i)) {
@@ -2344,45 +2344,62 @@ sub ynu {
 ######################################################################
 ## Logging
 ######################################################################
-my $_in_logmsg = 0;
-sub logmsg {
-    my %args = (
-        msg => '',
-        label => '',
-        fh => *STDERR,
-        email => 0,  # If truthy, the message is also included in the next email.
-        (@_ % 2) ? (msg => pop) : (),
-        @_,
-    );
-    my $buffer = $args{msg};
-    chomp($buffer);
+{
+    package ddclient::Logger;
 
-    my $prefix = $args{label};
-    $prefix = sprintf("%-8s ", $prefix . ':') if $prefix;
-    if ($file) {
-        $prefix .= "file $file";
-        $prefix .= ", line $lineno" if $lineno;
-        $prefix .= ": ";
+    sub new {
+        my ($class, $ctx, $parent) = @_;
+        return bless({ctx => $ctx, parent => $parent, _in_logger => 0}, $class);
     }
-    if ($prefix) {
-        $prefix .= "> ";
-        $buffer = "$prefix$buffer";
-        $prefix =~ s/> $/  /;
-        $buffer =~ s/\n/\n$prefix/g;
-    }
-    $buffer .= "\n";
-    print({$args{fh}} $buffer);
 
-    if ($args{email}) {
-        $emailbody .= $buffer;
-        if (!$_in_logmsg) {
-            ++$_in_logmsg;  # avoid infinite recursion if logger calls logmsg
-            logger($buffer);
-            --$_in_logmsg;
+    sub _ctxs {
+        my ($self) = @_;
+        return ($self->{parent} ? $self->{parent}->_ctxs() : (),
+                defined($self->{ctx}) ? ($self->{ctx}) : ());
+    }
+
+    sub log {
+        my $self = shift;
+        my %args = (
+            msg => '',
+            label => '',
+            fh => *STDERR,
+            email => 0,  # If truthy, the message is also included in the next email.
+            raw => 0,  # If truthy, label and contexts are not included.
+            ctx => undef,  # If defined, temporarily push this onto the context stack.
+            (@_ % 2) ? (msg => pop) : (),
+            @_,
+        );
+        my $buffer = $args{msg};
+        chomp($buffer);
+        if (!$args{raw}) {
+            my $prefix = $args{label} ? sprintf("%-8s ", $args{label} . ':') : '';
+            $prefix .= join('', map("[$_]", $self->_ctxs(), $args{ctx} // ()));
+            $prefix .= '> ' if $prefix;
+            $buffer = "$prefix$buffer";
+            $prefix =~ s/> $/  /;
+            $buffer =~ s/\n/\n$prefix/g;
+        }
+        $buffer .= "\n";
+        print({$args{fh}} $buffer);
+
+        if ($args{email}) {
+            $emailbody .= $buffer;
+            if (!$self->{_in_logger}) {
+                ++$self->{_in_logger};  # Avoid infinite recursion if logger itself logs.
+                ddclient::logger($buffer);
+                --$self->{_in_logger};
+            }
         }
     }
 }
-sub _logmsg_fmt { return (@_ > 1) ? sprintf(shift, @_) : shift; }
+
+# Intended use:
+#     local $_l = pushlogctx('additional prefix goes here');
+sub pushlogctx { my ($ctx) = @_; return ddclient::Logger->new($ctx, $_l); }
+
+sub logmsg { $_l->log(@_); }
+sub _logmsg_fmt { $_[0] eq 'ctx' ? (shift, shift) : (), (@_ > 1) ? sprintf(shift, @_) : shift; }
 sub info    { logmsg(email => 1, label => 'INFO',    _logmsg_fmt(@_)) if opt('verbose'); }
 sub debug   { logmsg(            label => 'DEBUG',   _logmsg_fmt(@_)) if opt('debug'); }
 sub warning { logmsg(email => 1, label => 'WARNING', _logmsg_fmt(@_)); }
@@ -7365,7 +7382,7 @@ sub nic_emailonly_update {
     debug("\nnic_emailonly_update -------------------");
     # Note: This is logged after $config{$_}{'max-interval'] even if the IP address hasn't changed,
     # so it is best to avoid phrasing like, "IP address has changed."
-    logmsg(email => 1, join("\n", 'Host IP addresses:', map({
+    logmsg(email => 1, raw => 1, join("\n", 'Host IP addresses:', map({
         my $ipv4 = delete($config{$_}{'wantipv4'});
         my $ipv6 = delete($config{$_}{'wantipv6'});
         $config{$_}{'status-ipv4'} = 'good' if $ipv4;
