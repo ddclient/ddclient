@@ -6950,13 +6950,7 @@ sub nic_gandi_update {
                     rrset_values => [$ip],
                 }),
             );
-            my $ok = header_ok($h, $reply);
-            if ($ok) {
-                $config{$h}{'ip'} = $ip;
-                $config{$h}{'mtime'} = $now;
-                $config{$h}{"status-$ipv"} = "good";
-                success("$h: updated successfully to $ip");
-            } else {
+            if (!header_ok($h, $reply)) {
                 $config{$h}{"status-$ipv"} = "bad";
                 if (defined($response->{status}) && $response->{status} eq "error") {
                     my @errors;
@@ -6967,7 +6961,12 @@ sub nic_gandi_update {
                 } else {
                     failed("$h: unexpected service response");
                 }
+                next;
             }
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-$ipv"} = "good";
+            success("$h: updated successfully to $ip");
         }
     }
 }
