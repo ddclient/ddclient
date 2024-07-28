@@ -6924,7 +6924,7 @@ sub nic_gandi_update {
                 headers => $headers,
                 method => 'GET',
             );
-            my $ok = header_ok($h, $reply);
+            next if !header_ok($h, $reply);
             $reply =~ s/^.*?\n\n//s;
             my $response = eval { decode_json($reply) };
             if (!defined($response)) {
@@ -6951,7 +6951,7 @@ sub nic_gandi_update {
                 method => 'PUT',
                 data => $data,
             );
-            $ok = header_ok($h, $reply);
+            my $ok = header_ok($h, $reply);
             if ($ok) {
                 $config{$h}{'ip'} = $ip;
                 $config{$h}{'mtime'} = $now;
