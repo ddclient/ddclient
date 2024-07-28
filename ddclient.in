@@ -4580,12 +4580,10 @@ sub nic_namecheap_update {
             $config{$h}{'ip'} = $ip;
             $config{$h}{'mtime'} = $now;
             $config{$h}{'status'} = 'good';
-            success("updating %s: good: IP address set to %s", $h, $ip);
+            success("$h: IP address set to $ip");
         } else {
             $config{$h}{'status'} = 'failed';
-            warning("SENT:    %s", $url) unless opt('verbose');
-            warning("REPLIED: %s", $reply);
-            failed("updating %s: Invalid reply.", $h);
+            failed("$h: invalid reply: $reply");
         }
     }
 }
