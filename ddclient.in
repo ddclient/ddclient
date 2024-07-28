@@ -6905,7 +6905,6 @@ EoEXAMPLE
 ######################################################################
 sub nic_gandi_update {
     debug("\nnic_gandi_update -------------------");
-    # Update each set configured host.
     for my $h (@_) {
         for my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$h}{"want$ipv"};
