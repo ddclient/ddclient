@@ -6907,30 +6907,22 @@ sub nic_gandi_update {
     debug("\nnic_gandi_update -------------------");
     for my $h (@_) {
         for my $ipv ('ipv4', 'ipv6') {
-            my $ip = delete $config{$h}{"want$ipv"};
-            if (!$ip) {
-                next;
-            }
+            my $ip = delete $config{$h}{"want$ipv"} or next;
             (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
             info("%s -- Setting IP address to %s.", $h, $ip);
-            my $headers;
-            $headers = "Content-Type: application/json\n";
+            my $headers = "Content-Type: application/json\n";
             if ($config{$h}{'use-personal-access-token'} == 1) {
                 $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
-            }
-            else
-            {
+            } else {
                 $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
             }
             my $rrset_type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
-            my $url;
-            $url = "https://$config{$h}{'server'}$config{$h}{'script'}";
-            $url .= "/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
+            my $url = "https://$config{$h}{'server'}$config{$h}{'script'}/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
                 headers => $headers,
-                method => 'GET'
+                method => 'GET',
             );
             my $ok = header_ok($h, $reply);
             $reply =~ s/^.*?\n\n//s;
