@@ -3737,11 +3737,7 @@ sub nic_dyndns1_update {
             url => $url,
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            next;
-        }
+        );
         next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
@@ -3868,11 +3864,7 @@ sub nic_dyndns2_update {
             url => $url,
             login => $groupcfg{'login'},
             password => $groupcfg{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("$hosts: Could not connect to $groupcfg{'server'}");
-            next;
-        }
+        );
         next if !header_ok($hosts, $reply);
         # Some services can return 200 OK even if there is an error (e.g., bad authentication,
         # updates too frequent) so the body of the response must also be checked.
@@ -4323,10 +4315,6 @@ sub nic_domeneshop_update {
                 login => $config{$h}{'login'},
                 password => $config{$h}{'password'},
             );
-            if (!defined($reply) || !$reply) {
-                failed("$h: Request to $config{$h}{'server'} failed");
-                next;
-            }
             next if !header_ok($h, $reply);
             $config{$h}{"ipv$ipv"} = $ip;
             $config{$h}{'mtime'} = $now;
@@ -4399,11 +4387,7 @@ sub nic_zoneedit1_update {
             url => $url,
             login => $groupcfg{'login'},
             password => $groupcfg{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $hosts, $groupcfg{'server'});
-            next;
-        }
+        );
         next if !header_ok($hosts, $reply);
 
         my @reply = split /\n/, $reply;
@@ -4518,11 +4502,7 @@ sub nic_easydns_update {
                 url => $url,
                 login => $config{$h}{'login'},
                 password => $config{$h}{'password'},
-            ) // '';
-            if ($reply eq '') {
-                failed("$h: Could not connect to $config{$h}{'server'}");
-                next;
-            }
+            );
             next if !header_ok($h, $reply);
             (my $body = $reply) =~ s/^.*?\n\n//s or do {
                 failed("$h: Could not connect to $config{$h}{'server'}");
@@ -4608,12 +4588,8 @@ sub nic_namecheap_update {
         $url .= "&ip=";
         $url .= $ip if $ip;
 
-        my $reply = geturl(proxy => opt('proxy'), url => $url) // '';
-        if ($reply eq '') {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            next;
-        }
-        next if !header_ok($h, $reply);
+        my $reply = geturl(proxy => opt('proxy'), url => $url);
+        next if !header_ok($reply);
 
         my @reply = split /\n/, $reply;
         if (grep /<ErrCount>0/i, @reply) {
@@ -5021,10 +4997,6 @@ sub nic_sitelutions_update {
         $url .= $ip if $ip;
 
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-        if (!defined($reply) || !$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            next;
-        }
         next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
@@ -5112,7 +5084,7 @@ sub nic_freedns_update {
                        url => $url
                       );
     my $record_list_error = '';
-    if ($reply && header_ok($_[0], $reply)) {
+    if (header_ok($_[0], $reply)) {
         $reply =~ s/^.*?\n\n//s;  # Strip the headers.
         for (split("\n", $reply)) {
             my @rec = split(/\|/);
@@ -5171,7 +5143,7 @@ sub nic_freedns_update {
                 my $reply = geturl(proxy => opt('proxy'),
                                    url => $url
                                   );
-                if ($reply && header_ok($h, $reply)) {
+                if (header_ok($h, $reply)) {
                     $reply =~ s/^.*?\n\n//s;  # Strip the headers.
                     if ($reply =~ /Updated.*$h.*to.*$ip/) {
                         $config{$h}{"ipv$ipv"} = $ip;
@@ -5240,11 +5212,7 @@ sub nic_1984_update {
         my $reply = geturl(
             proxy => opt('proxy'),
             url => $url,
-        ) // '';
-        if ($reply eq '') {
-            failed("Updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-            next;
-        }
+        );
         next if !header_ok($host, $reply);
 
         # Strip header
@@ -5325,10 +5293,6 @@ sub nic_changeip_update {
             login => $config{$h}{'login'},
             password => $config{$h}{'password'},
         );
-        if (!defined($reply) || !$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            next;
-        }
         next if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
@@ -5512,11 +5476,7 @@ sub nic_henet_update {
                 url => "https://$config{$h}{'server'}/nic/update?hostname=$h&myip=$ip",
                 login => $h,
                 password => $config{$h}{'password'},
-            ) // '';
-            if ($reply eq '') {
-                failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-                next;
-            }
+            );
             next if !header_ok($h, $reply);
             # dyn.dns.he.net can return 200 OK even if there is an error (e.g., bad authentication,
             # updates too frequent) so the body of the response must also be checked.
@@ -5603,11 +5563,6 @@ sub nic_mythicdyn_update {
                     password  => $config{$h}{'password'},
                     ipversion => $mythver,
                 );
-                unless ($reply) {
-                    failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
-                    next;
-                }
-
                 my $ok = header_ok($h, $reply);
                 if ($ok) {
                     $config{$h}{'mtime'} = $now;
@@ -5816,7 +5771,7 @@ sub nic_cloudflare_update {
                                url => $url,
                                headers => $headers
                               );
-            unless ($reply && header_ok($domain, $reply)) {
+            unless (header_ok($domain, $reply)) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
@@ -5854,7 +5809,7 @@ sub nic_cloudflare_update {
                                 url => $url,
                                 headers => $headers
                                );
-                unless ($reply && header_ok($domain, $reply)) {
+                unless (header_ok($domain, $reply)) {
                     failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                     next;
                 }
@@ -5881,7 +5836,7 @@ sub nic_cloudflare_update {
                                 method => "PATCH",
                                 data => $data
                                );
-                unless ($reply && header_ok($domain, $reply)) {
+                unless (header_ok($domain, $reply)) {
                     failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                     next;
                 }
@@ -5949,7 +5904,7 @@ sub nic_hetzner_update {
                            url => $url,
                            headers => $headers
                           );
-        unless ($reply && header_ok($domain, $reply)) {
+        unless (header_ok($domain, $reply)) {
             failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
             next;
         }
@@ -5985,7 +5940,7 @@ sub nic_hetzner_update {
                             url => $url,
                             headers => $headers
                            );
-            unless ($reply && header_ok($domain, $reply)) {
+            unless (header_ok($domain, $reply)) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
@@ -6019,7 +5974,7 @@ sub nic_hetzner_update {
                             method => $http_method,
                             data => $data
                            );
-            unless ($reply && header_ok($domain, $reply)) {
+            unless (header_ok($domain, $reply)) {
                 failed("updating %s: Could not connect to %s.", $domain, $config{$domain}{'server'});
                 next;
             }
@@ -6136,11 +6091,7 @@ sub nic_inwx_update {
             url => $url,
             login => $groupcfg{'login'},
             password => $groupcfg{'password'},
-        ) // '';
-        if ($reply eq '') {
-            failed("$hosts: Could not connect to $groupcfg{'server'}");
-            next;
-        }
+        );
         next if !header_ok($hosts, $reply);
         # INWX can return 200 OK even if there is an error (e.g., bad authentication,
         # updates too frequent) so the body of the response must also be checked.
@@ -6250,10 +6201,6 @@ sub nic_yandex_update {
         $url .= "domain=";
         $url .= $config{$host}{'login'};
         my $reply = geturl(proxy => opt('proxy'), url => $url, headers => $headers);
-        unless ($reply) {
-            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-            next;
-        }
         next if !header_ok($host, $reply);
 
         # Strip header
@@ -6287,10 +6234,6 @@ sub nic_yandex_update {
             method => 'POST',
             data => $data,
         );
-        unless ($reply) {
-            failed("updating %s: Could not connect to %s.", $host, $config{$host}{'server'});
-            next;
-        }
         next if !header_ok($host, $reply);
 
         # Strip header
@@ -6355,10 +6298,6 @@ sub nic_duckdns_update {
         $url .= "&ip=$ipv4" if $ipv4;
         $url .= "&ipv6=$ipv6" if $ipv6;
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-        if (!defined($reply) || !$reply) {
-            failed("$hosts: Could not connect to $groupcfg{'server'}");
-            next;
-        }
         next if !header_ok($hosts, $reply);
         (my $body = $reply) =~ s/^.*?\n\n//s or do {
             failed("$hosts: Invalid response from server");
@@ -6419,10 +6358,6 @@ sub nic_freemyip_update {
         info("$h: setting IP address to $ip");
         my $url = "https://$config{$h}{'server'}/update?token=$config{$h}{'password'}&domain=$h";
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-        if (!defined($reply) || !$reply) {
-            failed("$h: Request to $config{$h}{'server'} failed");
-            next;
-        }
         next if !header_ok($h, $reply);
         (my $body = $reply) =~ s/^.*?\n\n//s;
         if ($body !~ /OK/) {
@@ -6478,10 +6413,6 @@ sub nic_ddnsfm_update {
                 proxy => opt('proxy'),
                 url => "$config{$h}{server}/update?key=$config{$h}{password}&domain=$h&myip=$ip",
             );
-            if (!$reply) {
-                failed("$h: Request to $config{$h}{'server'} failed");
-                next;
-            }
             next if !header_ok($h, $reply);
             $config{$h}{"ipv$ipv"} = $ip;
             $config{$h}{'mtime'} = $now;
@@ -6525,10 +6456,6 @@ sub nic_dondominio_update {
         info("$h: setting IP address to $ip");
         my $url = "https://$config{$h}{'server'}/plain/?user=$config{$h}{'login'}&password=$config{$h}{'password'}&host=$h&ip=$ip";
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-        if (!defined($reply) || !$reply) {
-            failed("$h: Request to $config{$h}{'server'} failed");
-            next;
-        }
         next if !header_ok($h, $reply);
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
@@ -6592,10 +6519,6 @@ sub nic_dnsmadeeasy_update {
         info("$h: Setting IP address to $ip");
         my $url = "$config{$h}{'server'}$config{$h}{'script'}?username=$config{$h}{'login'}&password=$config{$h}{'password'}&ip=$ip&id=$h";
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-        if (!defined($reply) || !$reply) {
-            failed("$h: Request to $config{$h}{'server'} failed");
-            next;
-        }
         next if !header_ok($h, $reply);
         my @reply = split /\n/, $reply;
         my $returned = pop(@reply);
@@ -6799,10 +6722,6 @@ sub nic_porkbun_update {
                     apikey => $config{$h}{'apikey'},
                 }),
             );
-            if (!defined($reply) || !$reply) {
-                failed("$h: request to porkbun.com failed");
-                next;
-            }
             if (!header_ok($h, $reply)) {
                 failed("$h: $reply");
                 next;
@@ -6847,10 +6766,6 @@ sub nic_porkbun_update {
                     notes => $notes,
                 }),
             );
-            if (!defined($reply) || !$reply) {
-                failed("$h: request to porkbun.com failed");
-                next;
-            }
             if (!header_ok($h, $reply)) {
                 failed("$h: $reply");
                 next;
@@ -6905,7 +6820,7 @@ sub nic_cloudns_update {
             url => $dynurl . '&proxy=1',
             headers => "X-Forwarded-For: $ip\n",
         );
-        if (($reply // '') eq '' || !header_ok($hosts, $reply)) {
+        if (!header_ok($hosts, $reply)) {
             $config{$_}{'status'} = 'failed' for @hosts;
             failed("updating %s: failed to visit DynURL", $hosts);
             next;
@@ -6971,10 +6886,6 @@ sub nic_dinahosting_update {
             url => $url,
         );
         $config{$h}{'status'} = 'failed';  # assume failure until otherwise determined
-        if (!$reply) {
-            failed("updating %s: failed to visit URL %s", $h, $url);
-            next;
-        }
         next if !header_ok($h, $reply);
         $reply =~ s/^.*?\n\n//s;  # Strip the headers.
         if ($reply !~ /Success/i) {
@@ -7079,10 +6990,6 @@ sub nic_gandi_update {
                 headers  => $headers,
                 method   => 'GET'
             );
-            unless ($reply) {
-                failed("%s -- Could not connect to %s.", $h, $config{$h}{'server'});
-                next;
-            }
             my $ok = header_ok($h, $reply);
 
             $reply =~ s/^.*?\n\n//s;
@@ -7113,10 +7020,6 @@ sub nic_gandi_update {
                 method   => 'PUT',
                 data     => $data,
             );
-            unless ($reply) {
-                failed("%s -- Could not connect to %s.", $h, $config{$h}{'server'});
-                next;
-            }
             $ok = header_ok($h, $reply);
             if ($ok) {
                 $config{$h}{'ip'} = $ip;
@@ -7177,13 +7080,7 @@ sub nic_keysystems_update {
         my $ip = delete $config{$h}{'wantip'};
         info("KEYSYSTEMS setting IP address to %s for %s", $ip, $h);
         my $url = "$config{$h}{'server'}/update.php?hostname=$h&password=$config{$h}{'password'}&ip=$ip";
-        my $reply = geturl(proxy => opt('proxy'), url => $url) // '';
-
-        # No response, declare as failed
-        if (!defined($reply) || !$reply) {
-            failed("KEYSYSTEMS updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
-        }
+        my $reply = geturl(proxy => opt('proxy'), url => $url);
         last if !header_ok($h, $reply);
 
         if ($reply =~ /code = 200/) {
@@ -7237,12 +7134,6 @@ sub nic_regfishde_update {
 
         # Try to get URL
         my $reply = geturl(proxy => opt('proxy'), url => $url);
-
-        # No response, give error
-        if (!defined($reply) || !$reply) {
-            failed("regfish.de updating %s: failed: %s.", $h, $config{$h}{'server'});
-            last;
-        }
         last if !header_ok($h, $reply);
         if ($reply !~ /success/) {
             failed("updating %s: Server said: '%s'", $h, $reply);
@@ -7318,12 +7209,6 @@ sub nic_enom_update {
             proxy => opt('proxy'),
             url => $url
         );
-
-        if (!defined($reply) || !$reply) {
-            failed("updating %s: Could not connect to %s.", $h, $config{$h}{'server'});
-            last;
-        }
-
         last if !header_ok($h, $reply);
 
         my @reply = split /\n/, $reply;
@@ -7393,7 +7278,7 @@ sub nic_digitalocean_update_one {
         url => $list_url,
         headers => $headers,
     );
-    unless ($list_resp && header_ok($h, $list_resp)) {
+    unless (header_ok($h, $list_resp)) {
         $config{$h}{"status-$ipv"} = 'failed';
         failed("listing %s %s: Failed connection or bad response from %s.", $h, $ipv, $server);
         return;
@@ -7430,7 +7315,7 @@ sub nic_digitalocean_update_one {
             headers => $headers,
             data => $update_data,
         );
-        unless ($update_resp && header_ok($h, $update_resp)) {
+        unless (header_ok($h, $update_resp)) {
             $config{$h}{"status-$ipv"} = 'failed';
             failed("updating %s %s: Failed connection or bad response from %s.", $h, $ipv, $server);
             return;
