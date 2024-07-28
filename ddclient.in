@@ -6910,18 +6910,18 @@ sub nic_gandi_update {
             my $ip = delete $config{$h}{"want$ipv"} or next;
             (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
             info("$h: setting IP address to $ip");
-            my $headers = "Content-Type: application/json\n";
+            my @headers = ('Content-Type: application/json');
             if ($config{$h}{'use-personal-access-token'} == 1) {
-                $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
+                push(@headers, "Authorization: Bearer $config{$h}{'password'}");
             } else {
-                $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
+                push(@headers, "Authorization: Apikey $config{$h}{'password'}");
             }
             my $rrset_type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
             my $url = "https://$config{$h}{'server'}$config{$h}{'script'}/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
             my $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
-                headers => $headers,
+                headers => \@headers,
                 method => 'GET',
             );
             next if !header_ok($h, $reply);
@@ -6947,7 +6947,7 @@ sub nic_gandi_update {
             $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
-                headers => $headers,
+                headers => \@headers,
                 method => 'PUT',
                 data => $data,
             );
