@@ -4409,8 +4409,8 @@ sub nic_zoneedit1_update {
                 redo if $line;
             }
         }
-        # TODO: Shouldn't this log join(',' @hosts) instead of $hosts?
-        failed("updating %s: no response from %s", $hosts, $groupcfg{'server'})
+        # @hosts was potentially mutated so $hosts is not used here.
+        failed("updating %s: no response from %s", join(',', @hosts), $groupcfg{'server'})
             if @hosts;
     }
 }
