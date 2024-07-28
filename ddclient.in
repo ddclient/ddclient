@@ -6940,16 +6940,15 @@ sub nic_gandi_update {
                 success("$h: skipped: address was already set to $ip");
                 next;
             }
-            my $data = encode_json({
-                defined($config{$h}{'ttl'}) ? (rrset_ttl => $config{$h}{'ttl'}) : (),
-                rrset_values => [$ip],
-            });
             $reply = geturl(
                 proxy => opt('proxy'),
                 url => $url,
                 headers => \@headers,
                 method => 'PUT',
-                data => $data,
+                data => encode_json({
+                    defined($config{$h}{'ttl'}) ? (rrset_ttl => $config{$h}{'ttl'}) : (),
+                    rrset_values => [$ip],
+                }),
             );
             my $ok = header_ok($h, $reply);
             if ($ok) {
