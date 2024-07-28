@@ -6927,9 +6927,9 @@ sub nic_gandi_update {
             next if !header_ok($h, $reply);
             $reply =~ s/^.*?\n\n//s;
             my $response = eval { decode_json($reply) };
-            if (!defined($response)) {
+            if (ref($response) ne 'HASH') {
                 $config{$h}{"status-$ipv"} = "bad";
-                failed("$h: unexpected service response");
+                failed("$h: response is not a JSON object: $reply");
                 next;
             }
             if ($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
