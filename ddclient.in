@@ -6909,7 +6909,7 @@ sub nic_gandi_update {
         for my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$h}{"want$ipv"} or next;
             (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
-            info("%s -- Setting IP address to %s.", $h, $ip);
+            info("$h: setting IP address to $ip");
             my $headers = "Content-Type: application/json\n";
             if ($config{$h}{'use-personal-access-token'} == 1) {
                 $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
@@ -6929,7 +6929,7 @@ sub nic_gandi_update {
             my $response = eval { decode_json($reply) };
             if (!defined($response)) {
                 $config{$h}{"status-$ipv"} = "bad";
-                failed("%s -- Unexpected service response.", $h);
+                failed("$h: unexpected service response");
                 next;
             }
             if ($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
@@ -6937,7 +6937,7 @@ sub nic_gandi_update {
                 $config{$h}{'ip'} = $ip;
                 $config{$h}{'mtime'} = $now;
                 $config{$h}{"status-$ipv"} = "good";
-                success("updating %s: skipped: address was already set to %s.", $h, $ip);
+                success("$h: skipped: address was already set to $ip");
                 next;
             }
             my $data = encode_json({
@@ -6956,7 +6956,7 @@ sub nic_gandi_update {
                 $config{$h}{'ip'} = $ip;
                 $config{$h}{'mtime'} = $now;
                 $config{$h}{"status-$ipv"} = "good";
-                success("%s -- Updated successfully to %s.", $h, $ip);
+                success("$h: updated successfully to $ip");
             } else {
                 $config{$h}{"status-$ipv"} = "bad";
                 if (defined($response->{status}) && $response->{status} eq "error") {
@@ -6964,9 +6964,9 @@ sub nic_gandi_update {
                     for my $err (@{$response->{errors}}) {
                         push(@errors, $err->{description});
                     }
-                    failed("%s -- %s.", $h, join(", ", @errors));
+                    failed("$h: " . join(", ", @errors));
                 } else {
-                    failed("%s -- Unexpected service response.", $h);
+                    failed("$h: unexpected service response");
                 }
             }
         }
