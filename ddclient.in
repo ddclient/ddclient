@@ -6952,14 +6952,12 @@ sub nic_gandi_update {
             );
             if (!header_ok($h, $reply)) {
                 $config{$h}{"status-$ipv"} = "bad";
-                if (defined($response->{status}) && $response->{status} eq "error") {
-                    my @errors;
-                    for my $err (@{$response->{errors}}) {
-                        push(@errors, $err->{description});
-                    }
-                    failed("$h: " . join(", ", @errors));
+                $reply =~ s/^.*?\n\n//s;
+                my $response = eval { decode_json($reply) };
+                if (ref($response) eq 'HASH' && ($response->{message} // '') ne '') {
+                    failed("$h: $response->{message}");
                 } else {
-                    failed("$h: unexpected service response");
+                    failed("$h: unexpected error response: $reply");
                 }
                 next;
             }
