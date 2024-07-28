@@ -6908,14 +6908,13 @@ sub nic_gandi_update {
     for my $h (@_) {
         for my $ipv ('ipv4', 'ipv6') {
             my $ip = delete $config{$h}{"want$ipv"};
-            if(!$ip) {
+            if (!$ip) {
                 next;
             }
             (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
             info("%s -- Setting IP address to %s.", $h, $ip);
-
             my $headers;
-            $headers  = "Content-Type: application/json\n";
+            $headers = "Content-Type: application/json\n";
             if ($config{$h}{'use-personal-access-token'} == 1) {
                 $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
             }
@@ -6923,31 +6922,25 @@ sub nic_gandi_update {
             {
                 $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
             }
-
-
-
             my $rrset_type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
             my $url;
-            $url  = "https://$config{$h}{'server'}$config{$h}{'script'}";
+            $url = "https://$config{$h}{'server'}$config{$h}{'script'}";
             $url .= "/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
-
             my $reply = geturl(
-                proxy    => opt('proxy'),
-                url      => $url,
-                headers  => $headers,
-                method   => 'GET'
+                proxy => opt('proxy'),
+                url => $url,
+                headers => $headers,
+                method => 'GET'
             );
             my $ok = header_ok($h, $reply);
-
             $reply =~ s/^.*?\n\n//s;
             my $response = eval { decode_json($reply) };
             if (!defined($response)) {
                 $config{$h}{"status-$ipv"} = "bad";
-
                 failed("%s -- Unexpected service response.", $h);
                 next;
             }
-            if($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
+            if ($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
                 $response->{'rrset_ttl'} eq $config{$h}{'ttl'})) {
                 $config{$h}{'ip'} = $ip;
                 $config{$h}{'mtime'} = $now;
@@ -6955,17 +6948,16 @@ sub nic_gandi_update {
                 success("updating %s: skipped: address was already set to %s.", $h, $ip);
                 next;
             }
-
             my $data = encode_json({
                 defined($config{$h}{'ttl'}) ? (rrset_ttl => $config{$h}{'ttl'}) : (),
                 rrset_values => [$ip],
             });
             $reply = geturl(
-                proxy    => opt('proxy'),
-                url      => $url,
-                headers  => $headers,
-                method   => 'PUT',
-                data     => $data,
+                proxy => opt('proxy'),
+                url => $url,
+                headers => $headers,
+                method => 'PUT',
+                data => $data,
             );
             $ok = header_ok($h, $reply);
             if ($ok) {
@@ -6988,6 +6980,7 @@ sub nic_gandi_update {
         }
     }
 }
+
 ######################################################################
 ## nic_keysystems_examples
 ######################################################################
