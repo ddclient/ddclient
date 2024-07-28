@@ -142,6 +142,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#719](https://github.com/ddclient/ddclient/pull/719)
   * `yandex`: Errors are now retried.
     [#719](https://github.com/ddclient/ddclient/pull/719)
+  * `gandi`: Fixed handling of error responses.
+    [#721](https://github.com/ddclient/ddclient/pull/721)
 
 ## 2023-11-23 v3.11.2
 

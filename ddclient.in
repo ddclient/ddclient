@@ -6905,90 +6905,70 @@ EoEXAMPLE
 ######################################################################
 sub nic_gandi_update {
     debug("\nnic_gandi_update -------------------");
-    # Update each set configured host.
     for my $h (@_) {
         for my $ipv ('ipv4', 'ipv6') {
-            my $ip = delete $config{$h}{"want$ipv"};
-            if(!$ip) {
-                next;
-            }
+            my $ip = delete $config{$h}{"want$ipv"} or next;
             (my $hostname = $h) =~ s/\.\Q$config{$h}{zone}\E$//;
-            info("%s -- Setting IP address to %s.", $h, $ip);
-
-            my $headers;
-            $headers  = "Content-Type: application/json\n";
+            info("$h: setting IP address to $ip");
+            my @headers = ('Content-Type: application/json');
             if ($config{$h}{'use-personal-access-token'} == 1) {
-                $headers .= "Authorization: Bearer $config{$h}{'password'}\n";
+                push(@headers, "Authorization: Bearer $config{$h}{'password'}");
+            } else {
+                push(@headers, "Authorization: Apikey $config{$h}{'password'}");
             }
-            else
-            {
-                $headers .= "Authorization: Apikey $config{$h}{'password'}\n";
-            }
-
-
-
             my $rrset_type = $ipv eq 'ipv6' ? 'AAAA' : 'A';
-            my $url;
-            $url  = "https://$config{$h}{'server'}$config{$h}{'script'}";
-            $url .= "/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
-
+            my $url = "https://$config{$h}{'server'}$config{$h}{'script'}/livedns/domains/$config{$h}{'zone'}/records/$hostname/$rrset_type";
             my $reply = geturl(
-                proxy    => opt('proxy'),
-                url      => $url,
-                headers  => $headers,
-                method   => 'GET'
+                proxy => opt('proxy'),
+                url => $url,
+                headers => \@headers,
+                method => 'GET',
             );
-            my $ok = header_ok($h, $reply);
-
+            next if !header_ok($h, $reply);
             $reply =~ s/^.*?\n\n//s;
             my $response = eval { decode_json($reply) };
-            if (!defined($response)) {
+            if (ref($response) ne 'HASH') {
                 $config{$h}{"status-$ipv"} = "bad";
-
-                failed("%s -- Unexpected service response.", $h);
+                failed("$h: response is not a JSON object: $reply");
                 next;
             }
-            if($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
+            if ($response->{'rrset_values'}->[0] eq $ip && (!defined($config{$h}{'ttl'}) ||
                 $response->{'rrset_ttl'} eq $config{$h}{'ttl'})) {
                 $config{$h}{'ip'} = $ip;
                 $config{$h}{'mtime'} = $now;
                 $config{$h}{"status-$ipv"} = "good";
-                success("updating %s: skipped: address was already set to %s.", $h, $ip);
+                success("$h: skipped: address was already set to $ip");
                 next;
             }
-
-            my $data = encode_json({
-                defined($config{$h}{'ttl'}) ? (rrset_ttl => $config{$h}{'ttl'}) : (),
-                rrset_values => [$ip],
-            });
             $reply = geturl(
-                proxy    => opt('proxy'),
-                url      => $url,
-                headers  => $headers,
-                method   => 'PUT',
-                data     => $data,
+                proxy => opt('proxy'),
+                url => $url,
+                headers => \@headers,
+                method => 'PUT',
+                data => encode_json({
+                    defined($config{$h}{'ttl'}) ? (rrset_ttl => $config{$h}{'ttl'}) : (),
+                    rrset_values => [$ip],
+                }),
             );
-            $ok = header_ok($h, $reply);
-            if ($ok) {
-                $config{$h}{'ip'} = $ip;
-                $config{$h}{'mtime'} = $now;
-                $config{$h}{"status-$ipv"} = "good";
-                success("%s -- Updated successfully to %s.", $h, $ip);
-            } else {
+            if (!header_ok($h, $reply)) {
                 $config{$h}{"status-$ipv"} = "bad";
-                if (defined($response->{status}) && $response->{status} eq "error") {
-                    my @errors;
-                    for my $err (@{$response->{errors}}) {
-                        push(@errors, $err->{description});
-                    }
-                    failed("%s -- %s.", $h, join(", ", @errors));
+                $reply =~ s/^.*?\n\n//s;
+                my $response = eval { decode_json($reply) };
+                if (ref($response) eq 'HASH' && ($response->{message} // '') ne '') {
+                    failed("$h: $response->{message}");
                 } else {
-                    failed("%s -- Unexpected service response.", $h);
+                    failed("$h: unexpected error response: $reply");
                 }
+                next;
             }
+            $config{$h}{'ip'} = $ip;
+            $config{$h}{'mtime'} = $now;
+            $config{$h}{"status-$ipv"} = "good";
+            success("$h: updated successfully to $ip");
         }
     }
 }
+
 ######################################################################
 ## nic_keysystems_examples
 ######################################################################
