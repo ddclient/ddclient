@@ -6716,7 +6716,7 @@ sub nic_porkbun_update {
             );
             next if !header_ok($h, $reply);
             $config{$h}{"status-ipv$ipv"} = "good";
-            success("$h: IPv%s address set to $ip");
+            success("$h: IPv$ipv address set to $ip");
         }
     }
 }
