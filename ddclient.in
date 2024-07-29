@@ -2385,7 +2385,6 @@ sub logmsg {
 sub _logmsg_fmt { return (@_ > 1) ? sprintf(shift, @_) : shift; }
 sub info    { logmsg(email => 1, pfx => 'INFO:',    _logmsg_fmt(@_)) if opt('verbose'); }
 sub debug   { logmsg(            pfx => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug'); }
-sub debug2  { logmsg(            pfx => 'DEBUG:',   _logmsg_fmt(@_)) if opt('debug') && opt('verbose'); }
 sub warning { logmsg(email => 1, pfx => 'WARNING:', _logmsg_fmt(@_)); }
 sub fatal   { logmsg(email => 1, pfx => 'FATAL:',   _logmsg_fmt(@_)); sendmail(); exit(1); }
 sub success { logmsg(email => 1, pfx => 'SUCCESS:', _logmsg_fmt(@_)); }
