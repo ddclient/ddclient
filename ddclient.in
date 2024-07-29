@@ -6038,15 +6038,14 @@ sub nic_inwx_update {
         delete $config{$_}{'wantipv6'} for @hosts;
         info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
         info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
-        my $url = "$groupcfg{'server'}$groupcfg{'script'}?";
-        $url .= "myip=$ipv4" if $ipv4;
+        my $url = "$groupcfg{'server'}$groupcfg{'script'}?hostname=$hosts";
+        $url .= "&myip=$ipv4" if $ipv4;
         if ($ipv6) {
             if (!$ipv4 && opt('usev4', $hosts) ne 'disabled') {
                 warning("Skipping IPv6 AAAA record update because INWX requires the IPv4 A record to be updated at the same time but the IPv4 address is unknown.");
                 next;
             }
-            $url .= "&" if $ipv4;
-            $url .= "myipv6=$ipv6";
+            $url .= "&myipv6=$ipv6";
         }
         my $reply = geturl(
             proxy => opt('proxy'),
