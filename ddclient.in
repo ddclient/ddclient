@@ -7331,10 +7331,10 @@ sub nic_infomaniak_update {
             # IP changed => good <xxxx::yyyy>
             # No domain name => Validation failed
             my %statuses = (
-                'good' => (1, "IP set to $ip for $h"),
-                'nochg' => (1, "IP already set to $ip for $h"),
-                'nohost' => (0, "Bad domain name $h or bad IP $ip"),
-                'badauth' => (0, "Bad authentication for $h"),
+                'good' => [1, "IP set to $ip for $h"],
+                'nochg' => [1, "IP already set to $ip for $h"],
+                'nohost' => [0, "Bad domain name $h or bad IP $ip"],
+                'badauth' => [0, "Bad authentication for $h"],
             );
             my $reply = geturl(
                 proxy => opt('proxy'),
@@ -7346,7 +7346,7 @@ sub nic_infomaniak_update {
             (my $body = $reply) =~ s/^.*?\n\n//s;
             my ($status) = split(/ /, $body, 2);
             my ($ok, $msg) =
-                $statuses{$status} // (0, "Unknown reply from Infomaniak: $body");
+                @{$statuses{$status} // [0, "Unknown reply from Infomaniak: $body"]};
             if (!$ok) {
                 failed($msg);
                 next;
