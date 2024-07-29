@@ -154,7 +154,7 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # ssl=yes,                              \
 # server=dynupdate.no-ip.com,           \
 # login=your-noip-login,                \
-# password=your-noip-password,          \
+# password=your-noip-password           \
 # your-host.domain.com, your-2nd-host.domain.com
 
 ##
