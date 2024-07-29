@@ -7331,9 +7331,9 @@ sub nic_infomaniak_update {
             # IP changed => good <xxxx::yyyy>
             # No domain name => Validation failed
             my %statuses = (
-                'good'    => (1, sprintf("IP set to %s for %s", $ip, $h)),
-                'nochg'   => (1, sprintf("IP already set to %s for %s", $ip, $h)),
-                'nohost'  => (0, sprintf("Bad domain name %s or bad IP %s", $h, $ip)),
+                'good' => (1, sprintf("IP set to %s for %s", $ip, $h)),
+                'nochg' => (1, sprintf("IP already set to %s for %s", $ip, $h)),
+                'nohost' => (0, sprintf("Bad domain name %s or bad IP %s", $h, $ip)),
                 'badauth' => (0, sprintf("Bad authentication for %s", $h)),
             );
             my $reply = geturl(
