@@ -6038,6 +6038,9 @@ sub nic_inwx_update {
         delete $config{$_}{'wantipv6'} for @hosts;
         info("$hosts: setting IPv4 address to $ipv4") if $ipv4;
         info("$hosts: setting IPv6 address to $ipv6") if $ipv6;
+        # Note: $hosts is intentionally omitted from the URL.  INWX does not support a `hostname`
+        # argument; instead, INWX determines the hostname from the login credentials.  (The user
+        # creates a DynDNS account at INWX and binds a hostname to it.)
         my $url = "$groupcfg{'server'}$groupcfg{'script'}?";
         $url .= "myip=$ipv4" if $ipv4;
         if ($ipv6) {
