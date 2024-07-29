@@ -126,6 +126,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#691](https://github.com/ddclient/ddclient/pull/691)
   * `infomaniak`: Fixed incorrect parsing of server response.
     [#692](https://github.com/ddclient/ddclient/pull/692)
+  * `infomaniak`: Fixed incorrect handling of `nochg` responses.
+    [#723](https://github.com/ddclient/ddclient/pull/723)
   * `regfishde`: Fixed IPv6 support.
     [#691](https://github.com/ddclient/ddclient/pull/691)
   * `easydns`: IPv4 and IPv6 addresses are now updated separately to be
