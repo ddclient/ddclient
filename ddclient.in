@@ -5655,13 +5655,12 @@ EoINSTR4
                     my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
                     $config{$_}{"ipv$ipv"} = $ip;
                     $config{$_}{"status-ipv$ipv"} = 'good';
-                    success("updating %s: good: IPv%s address set to %s", $_, $ipv, $ip);
                 }
             }
+            success("$hosts: IPv4 address set to $ipv4") if $ipv4;
+            success("$hosts: IPv6 address set to $ipv6") if $ipv6;
         } else {
-            for (@hosts) {
-                failed("updating %s", $_);
-            }
+            failed("$hosts: error running command");
         }
     }
 }
