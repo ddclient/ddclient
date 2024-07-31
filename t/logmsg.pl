@@ -53,51 +53,58 @@ my @test_cases = (
         want => "foo\n",
     },
     {
-        desc => 'single-line prefix',
-        args => [pfx => 'PFX:', 'foo'],
-        want => "PFX:     > foo\n",
+        desc => 'single-line label',
+        args => [label => 'LBL', 'foo'],
+        want => "LBL:     > foo\n",
     },
     {
-        desc => 'multi-line prefix',
-        args => [pfx => 'PFX:', "foo\nbar"],
-        want => "PFX:     > foo\nPFX:       bar\n",
+        desc => 'multi-line label',
+        args => [label => 'LBL', "foo\nbar"],
+        want => ("LBL:     > foo\n" .
+                 "LBL:       bar\n"),
     },
     {
-        desc => 'single-line long prefix',
-        args => [pfx => 'VERY LONG PREFIX:', 'foo'],
-        want => "VERY LONG PREFIX: > foo\n",
+        desc => 'single-line long label',
+        args => [label => 'VERY LONG LABEL', 'foo'],
+        want => "VERY LONG LABEL: > foo\n",
     },
     {
-        desc => 'multi-line long prefix',
-        args => [pfx => 'VERY LONG PREFIX:', "foo\nbar"],
-        want => "VERY LONG PREFIX: > foo\nVERY LONG PREFIX:   bar\n",
+        desc => 'multi-line long label',
+        args => [label => 'VERY LONG LABEL', "foo\nbar"],
+        want => ("VERY LONG LABEL: > foo\n" .
+                 "VERY LONG LABEL:   bar\n"),
     },
     {
-        desc => 'single line, no prefix, file',
+        desc => 'single line, no label, single context',
         args => ['foo'],
-        file => 'name',
-        want => "file name: > foo\n",
+        ctxs => ['only context'],
+        want => "[only context]> foo\n",
     },
     {
-        desc => 'single line, no prefix, file, and line number',
+        desc => 'single line, no label, two contexts',
         args => ['foo'],
-        file => 'name',
-        lineno => 42,
-        want => "file name, line 42: > foo\n",
+        ctxs => ['context one', 'context two'],
+        want => "[context one][context two]> foo\n",
     },
     {
-        desc => 'single line, prefix, file, and line number',
-        args => [pfx => 'PFX:', 'foo'],
-        file => 'name',
-        lineno => 42,
-        want => "PFX:     file name, line 42: > foo\n",
+        desc => 'single line, label, two contexts',
+        args => [label => 'LBL', 'foo'],
+        ctxs => ['context one', 'context two'],
+        want => "LBL:     [context one][context two]> foo\n",
     },
     {
-        desc => 'multiple lines, prefix, file, and line number',
-        args => [pfx => 'PFX:', "foo\nbar"],
-        file => 'name',
-        lineno => 42,
-        want => "PFX:     file name, line 42: > foo\nPFX:     file name, line 42:   bar\n",
+        desc => 'multiple lines, label, two contexts',
+        args => [label => 'LBL', "foo\nbar"],
+        ctxs => ['context one', 'context two'],
+        want => ("LBL:     [context one][context two]> foo\n" .
+                 "LBL:     [context one][context two]  bar\n"),
+    },
+    {
+        desc => 'ctx arg',
+        args => [label => 'LBL', ctx => 'three', "foo\nbar"],
+        ctxs => ['one', 'two'],
+        want => ("LBL:     [one][two][three]> foo\n" .
+                 "LBL:     [one][two][three]  bar\n"),
     },
 );
 
@@ -107,10 +114,8 @@ for my $tc (@test_cases) {
         my $output;
         open(my $fh, '>', \$output);
         $ddclient::emailbody = $tc->{init_email} // '';
-        local $ddclient::file = $tc->{file} // '';
-        $ddclient::file if 0;  # suppress spurious warning "Name used only once: possible typo"
-        local $ddclient::lineno = $tc->{lineno} // '';
-        $ddclient::lineno if 0;  # suppress spurious warning "Name used only once: possible typo"
+        local $ddclient::_l = $ddclient::_l;
+        $ddclient::_l = ddclient::pushlogctx($_) for @{$tc->{ctxs} // []};
         ddclient::logmsg(fh => $fh, @{$tc->{args}});
         close($fh);
         is($output, $tc->{want}, 'output text matches');
@@ -118,24 +123,38 @@ for my $tc (@test_cases) {
     }
 }
 
-{
-    my $output;
-    open(my $fh, '>', \$output);
-    local *STDERR = $fh;
-    local $ddclient::globals{debug} = 1;
-    ddclient::debug('%%');
-    close($fh);
-    is($output, "DEBUG:   > %%\n", 'single argument is printed directly, not via sprintf');
-}
+my @logfmt_test_cases = (
+    {
+        desc => 'single argument is printed directly, not via sprintf',
+        args => ['%%'],
+        want => "DEBUG:   > %%\n",
+    },
+    {
+        desc => 'multiple arguments are formatted via sprintf',
+        args => ['%s', 'foo'],
+        want => "DEBUG:   > foo\n",
+    },
+    {
+        desc => 'single argument with context',
+        args => [ctx => 'context', '%%'],
+        want => "DEBUG:   [context]> %%\n",
+    },
+    {
+        desc => 'multiple arguments with context',
+        args => [ctx => 'context', '%s', 'foo'],
+        want => "DEBUG:   [context]> foo\n",
+    },
+);
 
-{
-    my $output;
-    open(my $fh, '>', \$output);
+for my $tc (@logfmt_test_cases) {
+    my $got;
+    open(my $fh, '>', \$got);
     local *STDERR = $fh;
     local $ddclient::globals{debug} = 1;
-    ddclient::debug('%s', 'foo');
+    %ddclient::globals if 0;
+    ddclient::debug(@{$tc->{args}});
     close($fh);
-    is($output, "DEBUG:   > foo\n", 'multiple arguments are formatted via sprintf');
+    is($got, $tc->{want}, $tc->{desc});
 }
 
 done_testing();
