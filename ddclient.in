@@ -6833,7 +6833,7 @@ sub nic_dinahosting_update {
             my $code = $1 // '<undefined>';
             $reply =~ /^errors_0_message = '(.*)'$/m;
             my $message = $1 // '<undefined>';
-            failed("updating %s: error %d: %s", $code, $message);
+            failed("updating $h: error $code: $message");
             next;
         }
         $config{$h}{'ip'} = $ip;
