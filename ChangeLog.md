@@ -148,6 +148,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#719](https://github.com/ddclient/ddclient/pull/719)
   * `gandi`: Fixed handling of error responses.
     [#721](https://github.com/ddclient/ddclient/pull/721)
+  * `dyndns2`: Fixed handling of responses for multi-host updates.
+    [#728](https://github.com/ddclient/ddclient/pull/728)
 
 ## 2023-11-23 v3.11.2
 
