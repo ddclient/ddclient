@@ -3819,17 +3819,17 @@ EoEXAMPLE
 ######################################################################
 sub nic_dyndns2_update {
     my %errors = (
-       'badauth' => 'Bad authorization (username or password)',
-       'badsys' => 'The system parameter given was not valid',
-       'notfqdn' => 'A Fully-Qualified Domain Name was not provided',
-       'nohost' => 'The hostname specified does not exist in the database',
-       '!yours' => 'The hostname specified exists, but not under the username currently being used',
-       '!donator' => 'The offline setting was set, when the user is not a donator',
-       '!active' => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
-       'abuse', => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.  More info can be found on https://www.dyndns.com/support/abuse.html',
-       'numhost' => 'System error: Too many or too few hosts found. Contact support@dyndns.org',
-       'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
-       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+        'badauth' => 'Bad authorization (username or password)',
+        'badsys' => 'The system parameter given was not valid',
+        'notfqdn' => 'A Fully-Qualified Domain Name was not provided',
+        'nohost' => 'The hostname specified does not exist in the database',
+        '!yours' => 'The hostname specified exists, but not under the username currently being used',
+        '!donator' => 'The offline setting was set, when the user is not a donator',
+        '!active' => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+        'abuse', => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.  More info can be found on https://www.dyndns.com/support/abuse.html',
+        'numhost' => 'System error: Too many or too few hosts found. Contact support@dyndns.org',
+        'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
+        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
     );
     my @group_by_attrs = qw(
         backupmx
