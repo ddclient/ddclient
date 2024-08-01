@@ -3877,7 +3877,7 @@ sub nic_dyndns2_update {
         (my $body = $reply) =~ s/^.*?\n\n//s;
         my @reply = split(qr/\n/, $body);
         if (!@reply) {
-            failed("Could not connect to $groupcfg{'server'}");
+            failed("empty response from $groupcfg{'server'}");
             next;
         }
         # From <https://help.dyn.com/remote-access-api/return-codes/>:
