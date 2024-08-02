@@ -2352,13 +2352,13 @@ sub ynu {
 
     sub new {
         my ($class, $ctx, $parent) = @_;
+        $ctx = [$ctx // ()] if ref($ctx) eq '';
         return bless({ctx => $ctx, parent => $parent, _in_logger => 0}, $class);
     }
 
     sub _ctxs {
         my ($self) = @_;
-        return ($self->{parent} ? $self->{parent}->_ctxs() : (),
-                defined($self->{ctx}) ? ($self->{ctx}) : ());
+        return ($self->{parent} ? $self->{parent}->_ctxs() : (), @{$self->{ctx}});
     }
 
     # Takes the following keyword arguments:
@@ -2366,8 +2366,8 @@ sub ynu {
     #   * `label` (string): Severity ('DEBUG', 'WARNING', etc.) to prefix each line with.
     #   * `email` (boolean): Whether to include the message in the next email.
     #   * `raw` (boolean): Whether to omit `label` and the contexts (output `msg` as-is).
-    #   * `ctx` (optional string): If defined, this is temporarily pushed onto the context stack
-    #     (for this call only).
+    #   * `ctx` (optional string or arrayref of strings): Context or contexts to temporarily push
+    #     onto the context stack (for this call only).
     #
     # The keyword arguments may optionally be followed by a single positional argument, which
     # becomes the value for the `msg` keyword argument if the `msg` keyword argument is not
@@ -2380,11 +2380,12 @@ sub ynu {
             (@_ % 2) ? (msg => pop) : (),
             @_,
         );
+        $args{ctx} = [$args{ctx} // ()] if ref($args{ctx}) eq '';
         my $buffer = $args{msg};
         chomp($buffer);
         if (!$args{raw}) {
             my $prefix = $args{label} ? sprintf("%-8s ", $args{label} . ':') : '';
-            $prefix .= join('', map("[$_]", $self->_ctxs(), $args{ctx} // ()));
+            $prefix .= "[$_]" for $self->_ctxs(), @{$args{ctx}};
             $prefix .= '> ' if $prefix;
             $buffer = "$prefix$buffer";
             $prefix =~ s/> $/  /;

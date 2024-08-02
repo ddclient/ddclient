@@ -83,11 +83,30 @@ my @test_cases = (
                  "LBL:     [context one][context two]  bar\n"),
     },
     {
-        desc => 'ctx arg',
+        desc => 'string ctx arg',
         args => [label => 'LBL', ctx => 'three', "foo\nbar"],
         ctxs => ['one', 'two'],
         want => ("LBL:     [one][two][three]> foo\n" .
                  "LBL:     [one][two][three]  bar\n"),
+    },
+    {
+        desc => 'arrayref ctx arg',
+        args => [label => 'LBL', ctx => ['three', 'four'], "foo\nbar"],
+        ctxs => ['one', 'two'],
+        want => ("LBL:     [one][two][three][four]> foo\n" .
+                 "LBL:     [one][two][three][four]  bar\n"),
+    },
+    {
+        desc => 'undef ctx',
+        args => [label => 'LBL', "foo"],
+        ctxs => ['one', undef],
+        want => "LBL:     [one]> foo\n",
+    },
+    {
+        desc => 'arrayref ctx',
+        args => [label => 'LBL', "foo"],
+        ctxs => ['one', ['two', 'three']],
+        want => "LBL:     [one][two][three]> foo\n",
     },
 );
 
