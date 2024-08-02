@@ -2,23 +2,6 @@ use Test::More;
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
 
-{
-    my $output;
-    open(my $fh, '>', \$output);
-    local *STDERR = $fh;
-    ddclient::logmsg('to STDERR');
-    close($fh);
-    is($output, "to STDERR\n", 'logs to STDERR by default');
-}
-
-{
-    my $output;
-    open(my $fh, '>', \$output);
-    ddclient::logmsg(fh => $fh, 'to file handle');
-    close($fh);
-    is($output, "to file handle\n", 'logs to provided file handle');
-}
-
 my @test_cases = (
     {
         desc => 'adds a newline',
@@ -116,7 +99,10 @@ for my $tc (@test_cases) {
         local $ddclient::emailbody = $tc->{init_email} // '';
         local $ddclient::_l = $ddclient::_l;
         $ddclient::_l = ddclient::pushlogctx($_) for @{$tc->{ctxs} // []};
-        ddclient::logmsg(fh => $fh, @{$tc->{args}});
+        {
+            local *STDERR = $fh;
+            ddclient::logmsg(@{$tc->{args}});
+        }
         close($fh);
         is($output, $tc->{want}, 'output text matches');
         is($ddclient::emailbody, $tc->{want_email} // '', 'email content matches');

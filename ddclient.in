@@ -2364,7 +2364,6 @@ sub ynu {
     # Takes the following keyword arguments:
     #   * `msg` (string): The message to log.
     #   * `label` (string): Severity ('DEBUG', 'WARNING', etc.) to prefix each line with.
-    #   * `fh` (file handle): Where to write the log messages.
     #   * `email` (boolean): Whether to include the message in the next email.
     #   * `raw` (boolean): Whether to omit `label` and the contexts (output `msg` as-is).
     #   * `ctx` (optional string): If defined, this is temporarily pushed onto the context stack
@@ -2378,7 +2377,6 @@ sub ynu {
         my %args = (
             msg => '',
             label => '',
-            fh => *STDERR,
             (@_ % 2) ? (msg => pop) : (),
             @_,
         );
@@ -2393,7 +2391,7 @@ sub ynu {
             $buffer =~ s/\n/\n$prefix/g;
         }
         $buffer .= "\n";
-        print({$args{fh}} $buffer);
+        print(STDERR $buffer);
 
         if ($args{email}) {
             $emailbody .= $buffer;
