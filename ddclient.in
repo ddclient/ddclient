@@ -2380,7 +2380,7 @@ sub ynu {
         chomp($buffer);
         if (!$args{raw}) {
             $args{label} //= '';
-            my $prefix = $args{label} ? sprintf("%-8s ", $args{label} . ':') : '';
+            my $prefix = $args{label} ne '' ? sprintf("%-8s ", $args{label} . ':') : '';
             $prefix .= "[$_]" for $self->_ctxs(), @{$args{ctx}};
             $prefix .= '> ' if $prefix;
             $buffer = "$prefix$buffer";
