@@ -2374,16 +2374,12 @@ sub ynu {
     # provided (it is ignored if the `msg` keyword is present).
     sub log {
         my $self = shift;
-        my %args = (
-            msg => '',
-            label => '',
-            (@_ % 2) ? (msg => pop) : (),
-            @_,
-        );
+        my %args = (@_ % 2 ? (msg => pop) : (), @_);
         $args{ctx} = [$args{ctx} // ()] if ref($args{ctx}) eq '';
-        my $buffer = $args{msg};
+        my $buffer = $args{msg} // '';
         chomp($buffer);
         if (!$args{raw}) {
+            $args{label} //= '';
             my $prefix = $args{label} ? sprintf("%-8s ", $args{label} . ':') : '';
             $prefix .= "[$_]" for $self->_ctxs(), @{$args{ctx}};
             $prefix .= '> ' if $prefix;
