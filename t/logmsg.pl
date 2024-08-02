@@ -149,10 +149,12 @@ my @logfmt_test_cases = (
 for my $tc (@logfmt_test_cases) {
     my $got;
     open(my $fh, '>', \$got);
-    local *STDERR = $fh;
     local $ddclient::globals{debug} = 1;
     %ddclient::globals if 0;
-    ddclient::debug(@{$tc->{args}});
+    {
+        local *STDERR = $fh;
+        ddclient::debug(@{$tc->{args}});
+    }
     close($fh);
     is($got, $tc->{want}, $tc->{desc});
 }
