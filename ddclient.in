@@ -2674,7 +2674,6 @@ sub geturl {
     my $timeout  = opt('timeout');
     my $redirect  = opt('redirect');
     my @curlopt = ();
-    my @header_lines = ();
 
     ## canonify use_ssl, proxy and url
     if ($url =~ /^https:/) {
@@ -2721,11 +2720,8 @@ sub geturl {
         push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
         push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
         push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
-
-        # Each header line is added individually
-        @header_lines = ref($headers) eq 'ARRAY' ? @$headers : split('\n', $headers);
-        $_ = "header=\"".escape_curl_param($_).'"' for (@header_lines);
-        push(@curlopt, @header_lines);
+        push(@curlopt, map('header="' . escape_curl_param($_) . '"',
+                           ref($headers) eq 'ARRAY' ? @$headers : split('\n', $headers)));
 
         # Add in the data if any was provided (for POST/PATCH)
         push(@curlopt, "data=\"".escape_curl_param(${data}).'"') if ($data);
