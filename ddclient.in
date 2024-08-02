@@ -2356,11 +2356,6 @@ sub ynu {
         return bless({ctx => $ctx, parent => $parent, _in_logger => 0}, $class);
     }
 
-    sub _ctxs {
-        my ($self) = @_;
-        return ($self->{parent} ? $self->{parent}->_ctxs() : (), @{$self->{ctx}});
-    }
-
     # Takes the following keyword arguments:
     #   * `msg` (string): The message to log.
     #   * `label` (string): Severity ('DEBUG', 'WARNING', etc.) to prefix each line with.
@@ -2381,12 +2376,16 @@ sub ynu {
 
     sub _log {
         my ($self, $args) = @_;
+        # A new arrayref is created instead of unshifting into @{$args->{ctx}} to avoid mutating
+        # the caller's arrayref (in case it is reused in a future call).
+        $args->{ctx} = [@{$self->{ctx}}, @{$args->{ctx}}];
+        return $self->{parent}->_log($args) if defined($self->{parent});
         my $buffer = $args->{msg} // '';
         chomp($buffer);
         if (!$args->{raw}) {
             $args->{label} //= '';
             my $prefix = $args->{label} ne '' ? sprintf("%-8s ", $args->{label} . ':') : '';
-            $prefix .= "[$_]" for $self->_ctxs(), @{$args->{ctx}};
+            $prefix .= "[$_]" for @{$args->{ctx}};
             $prefix .= '> ' if $prefix;
             $buffer = "$prefix$buffer";
             $prefix =~ s/> $/  /;
