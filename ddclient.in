@@ -2376,12 +2376,17 @@ sub ynu {
         my $self = shift;
         my %args = (@_ % 2 ? (msg => pop) : (), @_);
         $args{ctx} = [$args{ctx} // ()] if ref($args{ctx}) eq '';
-        my $buffer = $args{msg} // '';
+        return $self->_log(\%args);
+    }
+
+    sub _log {
+        my ($self, $args) = @_;
+        my $buffer = $args->{msg} // '';
         chomp($buffer);
-        if (!$args{raw}) {
-            $args{label} //= '';
-            my $prefix = $args{label} ne '' ? sprintf("%-8s ", $args{label} . ':') : '';
-            $prefix .= "[$_]" for $self->_ctxs(), @{$args{ctx}};
+        if (!$args->{raw}) {
+            $args->{label} //= '';
+            my $prefix = $args->{label} ne '' ? sprintf("%-8s ", $args->{label} . ':') : '';
+            $prefix .= "[$_]" for $self->_ctxs(), @{$args->{ctx}};
             $prefix .= '> ' if $prefix;
             $buffer = "$prefix$buffer";
             $prefix =~ s/> $/  /;
@@ -2390,7 +2395,7 @@ sub ynu {
         $buffer .= "\n";
         print(STDERR $buffer);
 
-        if ($args{email}) {
+        if ($args->{email}) {
             $emailbody .= $buffer;
             if (!$self->{_in_logger}) {
                 ++$self->{_in_logger};  # Avoid infinite recursion if logger itself logs.
