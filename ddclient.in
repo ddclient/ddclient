@@ -2361,15 +2361,24 @@ sub ynu {
                 defined($self->{ctx}) ? ($self->{ctx}) : ());
     }
 
+    # Takes the following keyword arguments:
+    #   * `msg` (string): The message to log.
+    #   * `label` (string): Severity ('DEBUG', 'WARNING', etc.) to prefix each line with.
+    #   * `fh` (file handle): Where to write the log messages.
+    #   * `email` (boolean): Whether to include the message in the next email.
+    #   * `raw` (boolean): Whether to omit `label` and the contexts (output `msg` as-is).
+    #   * `ctx` (optional string): If defined, this is temporarily pushed onto the context stack
+    #     (for this call only).
+    #
+    # The keyword arguments may optionally be followed by a single positional argument, which
+    # becomes the value for the `msg` keyword argument if the `msg` keyword argument is not
+    # provided (it is ignored if the `msg` keyword is present).
     sub log {
         my $self = shift;
         my %args = (
             msg => '',
             label => '',
             fh => *STDERR,
-            email => 0,  # If truthy, the message is also included in the next email.
-            raw => 0,  # If truthy, label and contexts are not included.
-            ctx => undef,  # If defined, temporarily push this onto the context stack.
             (@_ % 2) ? (msg => pop) : (),
             @_,
         );
