@@ -113,7 +113,7 @@ for my $tc (@test_cases) {
         $tc->{wantemail} //= '';
         my $output;
         open(my $fh, '>', \$output);
-        $ddclient::emailbody = $tc->{init_email} // '';
+        local $ddclient::emailbody = $tc->{init_email} // '';
         local $ddclient::_l = $ddclient::_l;
         $ddclient::_l = ddclient::pushlogctx($_) for @{$tc->{ctxs} // []};
         ddclient::logmsg(fh => $fh, @{$tc->{args}});
