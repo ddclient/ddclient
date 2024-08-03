@@ -2,23 +2,6 @@ use Test::More;
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
 
-{
-    my $output;
-    open(my $fh, '>', \$output);
-    local *STDERR = $fh;
-    ddclient::logmsg('to STDERR');
-    close($fh);
-    is($output, "to STDERR\n", 'logs to STDERR by default');
-}
-
-{
-    my $output;
-    open(my $fh, '>', \$output);
-    ddclient::logmsg(fh => $fh, 'to file handle');
-    close($fh);
-    is($output, "to file handle\n", 'logs to provided file handle');
-}
-
 my @test_cases = (
     {
         desc => 'adds a newline',
@@ -100,11 +83,30 @@ my @test_cases = (
                  "LBL:     [context one][context two]  bar\n"),
     },
     {
-        desc => 'ctx arg',
+        desc => 'string ctx arg',
         args => [label => 'LBL', ctx => 'three', "foo\nbar"],
         ctxs => ['one', 'two'],
         want => ("LBL:     [one][two][three]> foo\n" .
                  "LBL:     [one][two][three]  bar\n"),
+    },
+    {
+        desc => 'arrayref ctx arg',
+        args => [label => 'LBL', ctx => ['three', 'four'], "foo\nbar"],
+        ctxs => ['one', 'two'],
+        want => ("LBL:     [one][two][three][four]> foo\n" .
+                 "LBL:     [one][two][three][four]  bar\n"),
+    },
+    {
+        desc => 'undef ctx',
+        args => [label => 'LBL', "foo"],
+        ctxs => ['one', undef],
+        want => "LBL:     [one]> foo\n",
+    },
+    {
+        desc => 'arrayref ctx',
+        args => [label => 'LBL', "foo"],
+        ctxs => ['one', ['two', 'three']],
+        want => "LBL:     [one][two][three]> foo\n",
     },
 );
 
@@ -113,10 +115,13 @@ for my $tc (@test_cases) {
         $tc->{wantemail} //= '';
         my $output;
         open(my $fh, '>', \$output);
-        $ddclient::emailbody = $tc->{init_email} // '';
+        local $ddclient::emailbody = $tc->{init_email} // '';
         local $ddclient::_l = $ddclient::_l;
         $ddclient::_l = ddclient::pushlogctx($_) for @{$tc->{ctxs} // []};
-        ddclient::logmsg(fh => $fh, @{$tc->{args}});
+        {
+            local *STDERR = $fh;
+            ddclient::logmsg(@{$tc->{args}});
+        }
         close($fh);
         is($output, $tc->{want}, 'output text matches');
         is($ddclient::emailbody, $tc->{want_email} // '', 'email content matches');
@@ -149,10 +154,12 @@ my @logfmt_test_cases = (
 for my $tc (@logfmt_test_cases) {
     my $got;
     open(my $fh, '>', \$got);
-    local *STDERR = $fh;
     local $ddclient::globals{debug} = 1;
     %ddclient::globals if 0;
-    ddclient::debug(@{$tc->{args}});
+    {
+        local *STDERR = $fh;
+        ddclient::debug(@{$tc->{args}});
+    }
     close($fh);
     is($got, $tc->{want}, $tc->{desc});
 }

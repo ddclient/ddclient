@@ -2352,41 +2352,49 @@ sub ynu {
 
     sub new {
         my ($class, $ctx, $parent) = @_;
+        $ctx = [$ctx // ()] if ref($ctx) eq '';
         return bless({ctx => $ctx, parent => $parent, _in_logger => 0}, $class);
     }
 
-    sub _ctxs {
-        my ($self) = @_;
-        return ($self->{parent} ? $self->{parent}->_ctxs() : (),
-                defined($self->{ctx}) ? ($self->{ctx}) : ());
-    }
-
+    # Takes the following keyword arguments:
+    #   * `msg` (string): The message to log.
+    #   * `label` (string): Severity ('DEBUG', 'WARNING', etc.) to prefix each line with.
+    #   * `email` (boolean): Whether to include the message in the next email.
+    #   * `raw` (boolean): Whether to omit `label` and the contexts (output `msg` as-is).
+    #   * `ctx` (optional string or arrayref of strings): Context or contexts to temporarily push
+    #     onto the context stack (for this call only).
+    #
+    # The keyword arguments may optionally be followed by a single positional argument, which
+    # becomes the value for the `msg` keyword argument if the `msg` keyword argument is not
+    # provided (it is ignored if the `msg` keyword is present).
     sub log {
         my $self = shift;
-        my %args = (
-            msg => '',
-            label => '',
-            fh => *STDERR,
-            email => 0,  # If truthy, the message is also included in the next email.
-            raw => 0,  # If truthy, label and contexts are not included.
-            ctx => undef,  # If defined, temporarily push this onto the context stack.
-            (@_ % 2) ? (msg => pop) : (),
-            @_,
-        );
-        my $buffer = $args{msg};
+        my %args = (@_ % 2 ? (msg => pop) : (), @_);
+        $args{ctx} = [$args{ctx} // ()] if ref($args{ctx}) eq '';
+        return $self->_log(\%args);
+    }
+
+    sub _log {
+        my ($self, $args) = @_;
+        # A new arrayref is created instead of unshifting into @{$args->{ctx}} to avoid mutating
+        # the caller's arrayref (in case it is reused in a future call).
+        $args->{ctx} = [@{$self->{ctx}}, @{$args->{ctx}}];
+        return $self->{parent}->_log($args) if defined($self->{parent});
+        my $buffer = $args->{msg} // '';
         chomp($buffer);
-        if (!$args{raw}) {
-            my $prefix = $args{label} ? sprintf("%-8s ", $args{label} . ':') : '';
-            $prefix .= join('', map("[$_]", $self->_ctxs(), $args{ctx} // ()));
+        if (!$args->{raw}) {
+            $args->{label} //= '';
+            my $prefix = $args->{label} ne '' ? sprintf("%-8s ", $args->{label} . ':') : '';
+            $prefix .= "[$_]" for @{$args->{ctx}};
             $prefix .= '> ' if $prefix;
             $buffer = "$prefix$buffer";
             $prefix =~ s/> $/  /;
             $buffer =~ s/\n/\n$prefix/g;
         }
         $buffer .= "\n";
-        print({$args{fh}} $buffer);
+        print(STDERR $buffer);
 
-        if ($args{email}) {
+        if ($args->{email}) {
             $emailbody .= $buffer;
             if (!$self->{_in_logger}) {
                 ++$self->{_in_logger};  # Avoid infinite recursion if logger itself logs.
