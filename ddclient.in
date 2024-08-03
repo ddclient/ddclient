@@ -131,6 +131,7 @@ my $daemon_default = ($programd =~ /d$/) ? interval('5m') : undef;
 # Current Logger instance.  To push a context prefix onto the context stack:
 #    local _l = pushlogctx('additional context goes here');
 our $_l = ddclient::Logger->new();
+our @_test_headers;
 
 $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin:/usr/bin:/etc:/usr/lib:";
 
@@ -2728,7 +2729,7 @@ sub geturl {
         push(@curlopt, "user=\"".escape_curl_param("${login}:${password}").'"') if (defined($login) && defined($password));
         push(@curlopt, "proxy=\"".escape_curl_param("${protocol}://${proxy}").'"') if defined($proxy);
         push(@curlopt, "url=\"".escape_curl_param("${protocol}://${server}/${url}").'"');
-        push(@curlopt, map('header="' . escape_curl_param($_) . '"',
+        push(@curlopt, map('header="' . escape_curl_param($_) . '"', @_test_headers,
                            ref($headers) eq 'ARRAY' ? @$headers : split('\n', $headers)));
 
         # Add in the data if any was provided (for POST/PATCH)
