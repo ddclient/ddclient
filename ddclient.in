@@ -723,7 +723,6 @@ our %protocols = (
         'examples'   => \&nic_changeip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
             'server'       => setv(T_FQDNP, 0, 0, 'nic.changeip.com', undef),
         },
     },
