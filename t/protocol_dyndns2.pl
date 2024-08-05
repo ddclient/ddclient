@@ -267,7 +267,9 @@ for my $tc (@test_cases) {
         local $ddclient::_l = $l;
         ddclient::nic_dyndns2_update(sort(keys(%{$tc->{cfg}})));
     }
-    # These are the properties in %ddclient::config to check against $tc->{wantstatus}.
+    # These are the properties in %ddclient::config to check against $tc->{wantstatus}.  Keys are
+    # explicitly listed here rather than read from $tc->{wantstatus} to ensure that entries that
+    # should not exist (e.g., wantipv4 and friends) are deleted (or never set).
     my %statuskeys = map(($_ => undef), qw(atime ip ipv4 ipv6 mtime status status-ipv4 status-ipv6
                                            wantip wantipv4 wantipv6 wtime));
     my %gotstatus;
