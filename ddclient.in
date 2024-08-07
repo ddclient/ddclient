@@ -181,6 +181,7 @@ sub T_OFQDN  { 'optional fully qualified host name' }
 sub T_FILE   { 'file name' }
 sub T_FQDNP  { 'fully qualified host name and optional port number' }
 sub T_PROTO  { 'protocol' }
+sub T_URL    { 'url including fully qualified host name, optional port number, and path' }
 sub T_USE    { 'ip strategy' }
 sub T_USEV4  { 'ipv4 strategy' }
 sub T_USEV6  { 'ipv6 strategy' }
@@ -779,6 +780,17 @@ our %protocols = (
             'min-error-interval' => setv(T_DELAY,  0, 0, interval('8m'),     0),
             'script'             => setv(T_STRING, 0, 1, '/special/api.php', undef),
             'server'             => setv(T_FQDNP,  0, 0, 'dinahosting.com',  undef),
+        },
+    },
+    'directnic' => {
+        'update'     => \&nic_directnic_update,
+        'examples'   => \&nic_directnic_examples,
+        'variables'  => {
+            %{$variables{'protocol-common-defaults'}},
+            'login'    => undef,
+            'password' => undef,
+            'urlv4'    => setv(T_URL, 0, 0, undef, undef),
+            'urlv6'    => setv(T_URL, 0, 0, undef, undef),
         },
     },
     'dnsmadeeasy' => {
@@ -1995,7 +2007,7 @@ sub init_config {
     for my $h (keys %config) {
         my $proto = opt('protocol', $h);
         load_sha1_support($proto) if (grep($_ eq $proto, ("freedns", "nfsn")));
-        load_json_support($proto) if (grep($_ eq $proto, ("1984", "cloudflare", "digitalocean", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
+        load_json_support($proto) if (grep($_ eq $proto, ("1984", "cloudflare", "digitalocean", "directnic", "gandi", "godaddy", "hetzner", "yandex", "nfsn", "njalla", "porkbun", "dnsexit2")));
 
         if (!exists($protocols{$proto})) {
             warning("skipping host: %s: unrecognized protocol '%s'", $h, $proto);
@@ -2523,6 +2535,9 @@ sub check_value {
     } elsif ($type eq T_PROTO) {
         $value = lc $value;
         return undef if !exists $protocols{$value};
+
+    } elsif ($type eq T_URL) {
+        return undef if $value !~ qr{^(?i:https?://)?[^./]+(\.[^./]+)+(:\d+)?(/[^/]+)*/?$};
 
     } elsif ($type eq T_USE) {
         $value = lc $value;
@@ -6870,6 +6885,72 @@ sub nic_dinahosting_update {
         $config{$h}{'mtime'} = $now;
         $config{$h}{'status'} = 'good';
         success("IP address set to $ip");
+    }
+}
+
+######################################################################
+## nic_directnic_examples
+######################################################################
+sub nic_directnic_examples {
+    return <<"EoEXAMPLE";
+o 'directnic'
+
+The 'directnic' protocol is used by directnic (https://directnic.com).
+Details about the API can be found at https://directnic.com/knowledge#/knowledge/article/3726.
+
+You must specify at least one of the following variables:
+  * urlv4=https://directnic.com/dns/gateway/ad133743f001e318e455fdc05/ the URL to use to update the A record
+  * urlv6=https://directnic.com/dns/gateway/ad133743f001e318e455fdc06/ the URL to use to update the AAAA record
+
+urlv4 is required when updating an IPv4 record, and urlv6 is required when updating an IPv6 record.
+
+Example ${program}.conf file entry:
+  protocol=directnic,                                                \\
+  urlv4=https://directnic.com/dns/gateway/ad133743f001e318e455fdc05/ \\
+  urlv6=https://directnic.com/dns/gateway/ad133743f001e318e455fdc06/ \\
+  myhost.mydomain.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_directnic_update
+######################################################################
+sub nic_directnic_update {
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            info("setting IPv$ipv address to $ip");
+
+            my $url = $config{$h}{"urlv$ipv"};
+            if (!defined($url)) {
+                failed("missing urlv$ipv option");
+                next;
+            }
+
+            $url .= "?data=$ip";
+            my $reply = geturl(proxy => opt('proxy'), url => $url);
+            next if !header_ok($reply);
+
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my $response = eval {decode_json($body)};
+            if (ref($response) ne 'HASH') {
+                $config{$h}{"status-ipv$ipv"} = 'bad';
+                failed("response is not a JSON object:\n$body");
+                next;
+            }
+
+            if ($response->{'result'} ne 'success') {
+                $config{$h}{"status-ipv$ipv"} = 'failed';
+                failed("server said:\n$body");
+                next;
+            }
+
+            $config{$h}{"ipv$ipv"} = $ip;
+            $config{$h}{"status-ipv$ipv"} = 'good';
+            $config{$h}{'mtime'} = $now;
+            success("IPv$ipv address set to $ip");
+        }
     }
 }
 

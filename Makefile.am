@@ -63,6 +63,7 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-MDevel::Autoflush
 handwritten_tests = \
 	t/builtinfw_query.pl \
+	t/check_value.pl \
 	t/get_ip_from_if.pl \
 	t/geturl_connectivity.pl \
 	t/geturl_response.pl \
@@ -74,6 +75,7 @@ handwritten_tests = \
 	t/is-and-extract-ipv6-global.pl \
 	t/logmsg.pl \
 	t/parse_assignments.pl \
+	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
 	t/protocol_dyndns2.pl \
 	t/skip.pl \

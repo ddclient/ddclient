@@ -90,6 +90,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#719](https://github.com/ddclient/ddclient/pull/719)
   * `duckdns`: Multiple hosts with the same IP address are now updated together.
     [#719](https://github.com/ddclient/ddclient/pull/719)
+  * `directnic`: Added support for updatng Directnic records.
+    [#726](https://github.com/ddclient/ddclient/pull/726)
 
 ### Bug fixes
 
