@@ -181,6 +181,7 @@ sub T_OFQDN  { 'optional fully qualified host name' }
 sub T_FILE   { 'file name' }
 sub T_FQDNP  { 'fully qualified host name and optional port number' }
 sub T_PROTO  { 'protocol' }
+sub T_URL    { 'url including fully qualified host name, optional port number, and path' }
 sub T_USE    { 'ip strategy' }
 sub T_USEV4  { 'ipv4 strategy' }
 sub T_USEV6  { 'ipv6 strategy' }
@@ -2523,6 +2524,9 @@ sub check_value {
     } elsif ($type eq T_PROTO) {
         $value = lc $value;
         return undef if !exists $protocols{$value};
+
+    } elsif ($type eq T_URL) {
+        return undef if $value !~ qr{^(?i:https?://)?[^./]+(\.[^./]+)+(:\d+)?(/[^/]+)*/?$};
 
     } elsif ($type eq T_USE) {
         $value = lc $value;
