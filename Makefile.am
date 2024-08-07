@@ -75,6 +75,7 @@ handwritten_tests = \
 	t/is-and-extract-ipv6-global.pl \
 	t/logmsg.pl \
 	t/parse_assignments.pl \
+	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
 	t/protocol_dyndns2.pl \
 	t/skip.pl \

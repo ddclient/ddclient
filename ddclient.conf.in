@@ -366,6 +366,14 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # example.com,sub.example.com
 
 ##
+## Directnic (directnic.com)
+##
+# protocol=directnic,
+# urlv4=https://directnic.com/dns/gateway/ipv4_token/
+# urlv6=https://directnic.com/dns/gateway/ipv6_token/
+# my-domain.com
+
+##
 ## Infomaniak (www.infomaniak.com)
 ##
 # protocol=infomaniak,

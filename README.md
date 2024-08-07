@@ -20,6 +20,7 @@ Dynamic DNS services currently supported include:
   * [DDNS.fm](https://www.ddns.fm/)
   * [DigitalOcean](https://www.digitalocean.com/)
   * [dinahosting](https://dinahosting.com)
+  * [Directnic](https://directnic.com)
   * [DonDominio](https://www.dondominio.com)
   * [DNS Made Easy](https://dnsmadeeasy.com)
   * [DNSExit](https://dnsexit.com/dns/dns-api)
