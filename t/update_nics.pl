@@ -75,15 +75,15 @@ my @test_cases = (
             want_update => 1,
             want_recap_changes => {
                 'atime' => $ddclient::now,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             want_cfg_changes => {
                 'atime' => $ddclient::now,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             %$_,
         };
@@ -99,15 +99,15 @@ my @test_cases = (
         want_update => 1,
         want_recap_changes => {
             'atime' => $ddclient::now,
-            'ip' => '2001:db8::1',
+            'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
-            'status' => 'good',
+            'status-ipv6' => 'good',
         },
         want_cfg_changes => {
             'atime' => $ddclient::now,
-            'ip' => '2001:db8::1',
+            'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
-            'status' => 'good',
+            'status-ipv6' => 'good',
         },
     },
     {
@@ -120,15 +120,15 @@ my @test_cases = (
         want_update => 1,
         want_recap_changes => {
             'atime' => $ddclient::now,
-            'ip' => '2001:db8::1',
+            'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
-            'status' => 'good',
+            'status-ipv6' => 'good',
         },
         want_cfg_changes => {
             'atime' => $ddclient::now,
-            'ip' => '2001:db8::1',
+            'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
-            'status' => 'good',
+            'status-ipv6' => 'good',
         },
     },
     {
@@ -142,15 +142,15 @@ my @test_cases = (
         want_update => 1,
         want_recap_changes => {
             'atime' => $ddclient::now,
-            'ip' => '192.0.2.1',
+            'ipv4' => '192.0.2.1',
             'mtime' => $ddclient::now,
-            'status' => 'good',
+            'status-ipv4' => 'good',
         },
         want_cfg_changes => {
             'atime' => $ddclient::now,
-            'ip' => '192.0.2.1',
+            'ipv4' => '192.0.2.1',
             'mtime' => $ddclient::now,
-            'status' => 'good',
+            'status-ipv4' => 'good',
         },
     },
     map({
@@ -160,9 +160,9 @@ my @test_cases = (
             desc => "legacy, no change, not yet time, $desc",
             recap => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval'),
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval'),
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             cfg => {
                 'protocol' => 'legacy',
@@ -170,10 +170,7 @@ my @test_cases = (
             },
             %$_,
         };
-    }
-        {cfg => {use => 'web'}},
-        {cfg => {usev4 => 'webv4'},
-         want_recap_changes_TODO => 'usev4 and usev6 should check status from legacy protocols'}),
+    } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
     map({
         my %cfg = %{delete($_->{cfg})};
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
@@ -181,9 +178,9 @@ my @test_cases = (
             desc => "legacy, min-interval elapsed but no change, $desc",
             recap => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval') - 1,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval') - 1,
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             cfg => {
                 'protocol' => 'legacy',
@@ -191,10 +188,7 @@ my @test_cases = (
             },
             %$_,
         };
-    }
-        {cfg => {use => 'web'}},
-        {cfg => {usev4 => 'webv4'},
-         want_recap_changes_TODO => 'usev4 and usev6 should check status from legacy protocols'}),
+    } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
     map({
         my %cfg = %{delete($_->{cfg})};
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
@@ -202,9 +196,9 @@ my @test_cases = (
             desc => "legacy, needs update, not yet time, $desc",
             recap => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval'),
-                'ip' => '192.0.2.2',
+                'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval'),
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             cfg => {
                 'protocol' => 'legacy',
@@ -215,10 +209,7 @@ my @test_cases = (
             },
             %$_,
         };
-    }
-        {cfg => {use => 'web'}},
-        {cfg => {usev4 => 'webv4'},
-         want_recap_changes_TODO => 'usev4 and usev6 should check status from legacy protocols'}),
+    } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
     map({
         my %cfg = %{delete($_->{cfg})};
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
@@ -226,9 +217,9 @@ my @test_cases = (
             desc => "legacy, min-interval elapsed, needs update, $desc",
             recap => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval') - 1,
-                'ip' => '192.0.2.2',
+                'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval') - 1,
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             cfg => {
                 'protocol' => 'legacy',
@@ -237,22 +228,17 @@ my @test_cases = (
             want_update => 1,
             want_recap_changes => {
                 'atime' => $ddclient::now,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
             },
             want_cfg_changes => {
                 'atime' => $ddclient::now,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
             },
             %$_,
         };
-    }
-        {cfg => {use => 'web'}},
-        {cfg => {usev4 => 'webv4'},
-         want_update_TODO => 'usev4 and usev6 should check status from legacy protocols',
-         want_cfg_changes_TODO => 'usev4 and usev6 should check status from legacy protocols',
-         want_recap_changes_TODO => 'usev4 and usev6 should check status from legacy protocols'}),
+    } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
     map({
         my %cfg = %{delete($_->{cfg})};
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
@@ -260,10 +246,10 @@ my @test_cases = (
             desc => "legacy, previous failed update, not yet time to retry, $desc",
             recap => {
                 'atime' => $ddclient::now - ddclient::opt('min-error-interval'),
-                'ip' => '192.0.2.2',
+                'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - max(ddclient::opt('min-error-interval'),
                                                 ddclient::opt('min-interval')) - 1,
-                'status' => 'failed',
+                'status-ipv4' => 'failed',
             },
             cfg => {
                 'protocol' => 'legacy',
@@ -282,9 +268,9 @@ my @test_cases = (
             desc => "legacy, previous failed update, time to retry, $desc",
             recap => {
                 'atime' => $ddclient::now - ddclient::opt('min-error-interval') - 1,
-                'ip' => '192.0.2.2',
+                'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - ddclient::opt('min-error-interval') - 2,
-                'status' => 'failed',
+                'status-ipv4' => 'failed',
             },
             cfg => {
                 'protocol' => 'legacy',
@@ -293,15 +279,15 @@ my @test_cases = (
             want_update => 1,
             want_recap_changes => {
                 'atime' => $ddclient::now,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             want_cfg_changes => {
                 'atime' => $ddclient::now,
-                'ip' => '192.0.2.1',
+                'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
-                'status' => 'good',
+                'status-ipv4' => 'good',
             },
             %$_,
         };
