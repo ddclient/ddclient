@@ -3410,9 +3410,6 @@ sub nic_updateable {
     my $ip     = $config{$host}{'wantip'};
     my $ipv4   = $config{$host}{'wantipv4'};
     my $ipv6   = $config{$host}{'wantipv6'};
-    my $use    = opt('use',   $host);
-    my $usev4  = opt('usev4', $host);
-    my $usev6  = opt('usev6', $host);
     my $inv_ip_warn_count = opt('max-warn');
     my $previp = $recap{$host}{'ip'} || '<nothing>';
     my $previpv4 = $recap{$host}{'ipv4'} || '<nothing>';
@@ -3422,9 +3419,9 @@ sub nic_updateable {
     my %prettyi = map({ ($_ => prettyinterval(opt($_, $host))); }
                       qw(max-interval min-error-interval min-interval));
 
-    $warned_ip{$host} = 0 if $use ne 'disabled' && $ip;
-    $warned_ipv4{$host} = 0 if $usev4 ne 'disabled' && $ipv4;
-    $warned_ipv6{$host} = 0 if $usev6 ne 'disabled' && $ipv6;
+    $warned_ip{$host} = 0 if defined($ip);
+    $warned_ipv4{$host} = 0 if defined($ipv4);
+    $warned_ipv6{$host} = 0 if defined($ipv6);
 
     if (opt('force')) {
         info("update forced via 'force' option");
@@ -3441,7 +3438,7 @@ sub nic_updateable {
         info("update forced because it has been $prettyi{'max-interval'} since the previous update (on $prettyt{'mtime'})");
         $update = 1;
 
-    } elsif ($use ne 'disabled' && $previp ne $ip) {
+    } elsif (defined($ip) && $previp ne $ip) {
         ## Check whether to update IP address for the "--use" method"
         if (($recap{$host}{'status'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
@@ -3469,7 +3466,7 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif ($usev4 ne 'disabled' && $previpv4 ne $ipv4) {
+    } elsif (defined($ipv4) && $previpv4 ne $ipv4) {
         ## Check whether to update IPv4 address for the "--usev4" method"
         if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
@@ -3497,7 +3494,7 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif ($usev6 ne 'disabled' && $previpv6 ne $ipv6) {
+    } elsif (defined($ipv6) && $previpv6 ne $ipv6) {
         ## Check whether to update IPv6 address for the "--usev6" method"
         if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
@@ -3536,11 +3533,11 @@ sub nic_updateable {
     } else {
         if (opt('verbose')) {
             success("skipped update because IP address is already set to $ip")
-                if $use ne 'disabled';
+                if defined($ip);
             success("skipped update because IPv4 address is already set to $ipv4")
-                if $usev4 ne 'disabled';
+                if defined($ipv4);
             success("skipped update because IPv6 address is already set to $ipv6")
-                if $usev6 ne 'disabled';
+                if defined($ipv6);
         }
     }
 
