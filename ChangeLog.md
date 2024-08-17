@@ -48,6 +48,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     removed.  [#716](https://github.com/ddclient/ddclient/pull/716)
   * `googledomains`: Support was removed because the service shut down.
     [#716](https://github.com/ddclient/ddclient/pull/716)
+  * The `--retry` option was removed.
+    [#732](https://github.com/ddclient/ddclient/pull/732)
 
 ### New features
 

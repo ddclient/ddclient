@@ -599,7 +599,6 @@ our %variables = (
         'cmdv6'               => setv(T_PROG,  0, 0, undef,                undef),
 
         'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
-        'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'ssl'                 => setv(T_BOOL,  0, 0, 1,                    undef),
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -1221,7 +1220,6 @@ my @opt = (
     ["ssl_ca_file",       "=s", "--ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["fw-ssl-validate",   "!",  "--{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
     ["web-ssl-validate",  "!",  "--{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
-    ["retry",             "!",  "--{no}retry            : Initiate a one-time update attempt for hosts that have not been successfully updated (according to the cache).  Incompatible with '--daemon'"],
     ["force",             "!",  "--{no}force            : force an update even if the update may be unnecessary"],
     ["timeout",           "=i", "--timeout=<max>        : when fetching a URL, wait at most <max> seconds for a response"],
     ["syslog",            "!",  "--{no}syslog           : log messages to syslog"],
@@ -1937,22 +1935,10 @@ sub init_config {
         # if they are not associated with a host via `--host=` or `--options=host=`)?
     }
 
-    ## sanity check
-    if (defined(opt('host')) && opt('retry')) {
-        fatal("options --retry and --host (or --option host=..) are mutually exclusive");
-    }
-    fatal("options --retry and --daemon cannot be used together") if (opt('retry') && opt('daemon'));
-
     ## determine hosts to update (those on the cmd-line, config-file, or failed in recap)
     my @hosts = keys %config;
     if (opt('host')) {
         @hosts = split_by_comma($opt{'host'});
-    }
-    # TODO: The first two times init_config() is called the cache file has not been read yet, so
-    # this will not filter out any hosts and thus updates will not be limited to non-good hosts as
-    # intended.
-    if (opt('retry')) {
-        @hosts = grep(($recap{$_}{'status'} // '') ne 'good', keys(%recap));
     }
 
     ## remove any other hosts
