@@ -70,7 +70,6 @@ my @test_cases = (
             desc => "legacy, fresh, $desc",
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_update => 1,
@@ -136,7 +135,6 @@ my @test_cases = (
         ipv6 => 1,
         cfg => {
             'protocol' => 'legacy',
-            'use' => 'disabled',
             'usev6' => 'webv6',
         },
         want_update => 1,
@@ -168,7 +166,6 @@ my @test_cases = (
         ipv6 => 1,
         cfg => {
             'protocol' => 'legacy',
-            'use' => 'disabled',
             'usev4' => 'webv4',
             'usev6' => 'webv6',
         },
@@ -209,7 +206,6 @@ my @test_cases = (
             },
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_cfg_changes => {
@@ -238,7 +234,6 @@ my @test_cases = (
             },
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_cfg_changes => {
@@ -267,7 +262,6 @@ my @test_cases = (
             },
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_recap_changes => {
@@ -299,7 +293,6 @@ my @test_cases = (
             },
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_update => 1,
@@ -345,7 +338,6 @@ my @test_cases = (
             },
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_recap_changes => {
@@ -374,7 +366,6 @@ my @test_cases = (
             },
             cfg => {
                 'protocol' => 'legacy',
-                'use' => 'disabled',
                 %cfg,
             },
             want_update => 1,

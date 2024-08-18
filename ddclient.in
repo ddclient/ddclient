@@ -597,7 +597,13 @@ our %variables = (
         'password'            => setv(T_PASSWD,1, 0, undef,                undef),
         'host'                => setv(T_STRING,1, 1, undef,                undef),
 
-        'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
+        'use' => setv(T_USE, 0, 0, sub {
+            my ($h) = @_;
+            return "'disabled' if '--usev4' or '--usev6' is enabled, otherwise 'ip'"
+                if ($h // '') eq '<usage>';
+            return 'disabled' if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
+            return 'ip';
+        }, undef),
         'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
         'usev6'               => setv(T_USEV6, 0, 0, 'disabled',           undef),
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
@@ -1092,7 +1098,7 @@ $variables{'merged'} = {
 };
 
 # This will hold the processed args.
-my %opt = ();
+our %opt;
 my $deprecated_handler = sub { warning("'-$_[0]' is deprecated and does nothing"); };
 $opt{'fw-banlocal'} = $deprecated_handler;
 $opt{'if-skip'} = $deprecated_handler;
@@ -1937,7 +1943,7 @@ sub usage {
     for (@_) {
         if (ref $_) {
             my ($key, $specifier, $arg_usage) = @$_;
-            my $value = default($key);
+            my $value = default($key, '<usage>');
             next unless $arg_usage;
             $usage .= "  $arg_usage";
             if (defined($value) && $value ne '') {
@@ -2220,15 +2226,17 @@ sub split_by_comma {
 }
 sub default {
     my ($v, $h) = @_;
+    my $var;
     if (defined($h) && $config{$h}) {
         my $proto = $protocols{opt('protocol', $v eq 'protocol' ? undef : $h)};
-        my $var = $proto->{variables}{$v} if $proto;
-        return $var->{default} if $var;
+        $var = $proto->{variables}{$v} if $proto;
     }
-    return undef if !defined($variables{'merged'}{$v});
     # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
     # surprising behavior.
-    return $variables{'merged'}{$v}{'default'};
+    $var //= $variables{'merged'}{$v};
+    return undef if !defined($var);
+    return $var->{'default'}($h) if ref($var->{default}) eq 'CODE';
+    return $var->{'default'};
 }
 sub opt {
     my $v = shift;
