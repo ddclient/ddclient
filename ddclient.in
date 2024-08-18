@@ -1923,9 +1923,7 @@ sub init_config {
 
     ## override global options with those on the command-line.
     for my $o (keys %opt) {
-        # TODO: Why is this limited to $variables{'global-defaults'}?  Why not
-        # $variables{'merged'}?
-        if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
+        if (defined $opt{$o} && exists $variables{'merged'}{$o}) {
             # TODO: What's the point of this?  The opt() function will fall back to %globals if
             # %opt doesn't have a value, so this shouldn't be necessary.
             $globals{$o} = $opt{$o};
