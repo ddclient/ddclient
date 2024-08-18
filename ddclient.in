@@ -1143,7 +1143,7 @@ my @opt = (
     ["cache",             "=s", "--cache=<path>         : record address used in <path>"],
     ["pid",               "=s", "--pid=<path>           : record process id in <path> if daemonized"],
     "",
-    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6' (forced to 'disabled' if either '--usev4' or '--usev6' is enabled)"],
+    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6'"],
     &ip_strategies_usage(),
     ["usev4",             "=s", "--usev4=<which>        : how the IPv4 address should be obtained"],
     &ipv4_strategies_usage(),
@@ -1925,10 +1925,6 @@ sub init_config {
     # TODO: Why aren't the hosts specified by --host added to %config except when --options is also
     # given?
 
-    for my $h (keys %config) {
-        $config{$h}{use} = 'disabled'
-            if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
-    }
     my @protos = map(opt('protocol', $_), keys(%config));
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
