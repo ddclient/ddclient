@@ -1436,6 +1436,9 @@ sub update_nics {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
             &$update(@hosts);
+            for my $h (@hosts) {
+                delete($config{$h}{$_}) for qw(wantip wantipv4 wantipv6);
+            }
 
             # Backwards compatibility:
             # The legacy '--use' parameter sets 'wantip' and the legacy providers process this and
@@ -3541,21 +3544,18 @@ sub nic_updateable {
         }
     }
 
-    $config{$host}{'status'} = $recap{$host}{'status'};
-    $config{$host}{'status-ipv4'} = $recap{$host}{'status-ipv4'};
-    $config{$host}{'status-ipv6'} = $recap{$host}{'status-ipv6'};
-    $config{$host}{'update'} = $update;
+    delete($config{$host}{$_}) for qw(status status-ipv4 status-ipv6 update);
     if ($update) {
-        $config{$host}{'status'}                    = undef;
-        $config{$host}{'status-ipv4'}               = undef;
-        $config{$host}{'status-ipv6'}               = undef;
-        $config{$host}{'atime'}                     = $now;
-        $config{$host}{'wtime'}                     = 0;
-        $config{$host}{'warned-min-interval'}       = 0;
-        $config{$host}{'warned-min-error-interval'} = 0;
-
+        $config{$host}{'update'} = 1;
+        $config{$host}{'atime'} = $now;
+        delete($config{$host}{$_}) for qw(wtime warned-min-interval warned-min-error-interval);
         delete $recap{$host}{'warned-min-interval'};
         delete $recap{$host}{'warned-min-error-interval'};
+    } else {
+        for (qw(status status-ipv4 status-ipv6)) {
+            $config{$host}{$_} = $recap{$host}{$_} if defined($recap{$host}{$_});
+        }
+        delete($config{$host}{$_}) for qw(wantip wantipv4 wantipv6);
     }
 
     return $update;
