@@ -34,6 +34,8 @@ $httpd->run(sub {
 
 diag(sprintf("started IPv4 server running at %s", $httpd->endpoint()));
 
+local $ddclient::globals{verbose} = 1;
+
 my $ua = LWP::UserAgent->new;
 
 sub test_nic_dnsexit2_update {
@@ -66,7 +68,6 @@ sub get_requests {
 subtest 'Testing nic_dnsexit2_update' => sub {
     my %config = (
         'host.my.zone.com' => {
-            'verbose'  => 'yes',
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
             'usev6'    => 'ipv6',
@@ -110,7 +111,6 @@ subtest 'Testing nic_dnsexit2_update' => sub {
 subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
     my %config = (
         'myhost.zone.com' => {
-            'verbose'  => 'yes',
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
             'protocol' => 'dnsexit2',
@@ -141,7 +141,6 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
 subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one without' => sub {
     my %config = (
         'host1.zone.com' => {
-            'verbose'  => 'yes',
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
             'protocol' => 'dnsexit2',
@@ -151,7 +150,6 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
             'ttl'      => 5
         },
         'host2.zone.com' => {
-            'verbose'  => 'yes',
             'usev6'    => 'ipv6',
             'wantipv6' => '2001:4860:4860::8888',
             'protocol' => 'dnsexit2',
