@@ -3381,7 +3381,7 @@ sub group_hosts_by {
     my %groups;
     my %cfgs;
     for my $h (@$hosts) {
-        my %cfg = map({ ($_ => $config{$h}{$_}); } grep(exists($config{$h}{$_}), @attrs));
+        my %cfg = map({ ($_ => $config{$h}{$_}); } grep(defined($config{$h}{$_}), @attrs));
         my $sig = repr(\%cfg, Indent => 0);
         push(@{$groups{$sig}}, $h);
         $cfgs{$sig} = \%cfg;

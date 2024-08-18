@@ -72,7 +72,9 @@ my @test_cases = (
         want => [
             {cfg => {falsy => 0}, hosts => [$h1]},
             {cfg => {falsy => ''}, hosts => [$h2]},
-            {cfg => {falsy => undef}, hosts => [$h3]},
+            # undef intentionally becomes unset because undef always means "fall back to global or
+            # default".
+            {cfg => {}, hosts => [$h3]},
         ],
     },
     {
@@ -80,8 +82,9 @@ my @test_cases = (
         groupby => [qw(maybeunset)],
         want => [
             {cfg => {maybeunset => 'unique'}, hosts => [$h1]},
-            {cfg => {maybeunset => undef}, hosts => [$h2]},
-            {cfg => {}, hosts => [$h3]},
+            # undef intentionally becomes unset because undef always means "fall back to global or
+            # default".
+            {cfg => {}, hosts => [$h2, $h3]},
         ],
     },
     {
