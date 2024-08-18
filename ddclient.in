@@ -664,13 +664,13 @@ our %variables = (
         # made.  This is used as a boolean to suppress repeated warnings to the user that indicate
         # that `min-interval` has inhibited an update attempt.
         # TODO: Change to a boolean and rename to improve readability.
-        'warned-min-interval' => setv(T_ANY,   0, 1, 0,                    undef),
+        'warned-min-interval' => setv(T_ANY, 0, 1, undef, undef),
         # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
         # `min-error-interval` not inhibited the attempt.  This is reset to 0 once an attempt is
         # actually made.  This is used as a boolean to suppress repeated warnings to the user that
         # indicate that `min-error-interval` has inhibited an update attempt.
         # TODO: Change to a boolean and rename to improve readability.
-        'warned-min-error-interval' => setv(T_ANY, 0, 1, 0,                undef),
+        'warned-min-error-interval' => setv(T_ANY, 0, 1, undef, undef),
     },
     'dyndns-common-defaults' => {
         'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
