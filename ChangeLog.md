@@ -98,6 +98,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Bug fixes
 
+  * Fixed numerous bugs in command-line option and configuration file
+    processing.  [#TODO](https://github.com/ddclient/ddclient/pull/TODO)
   * `noip`: Fixed failure to honor IP discovery settings in some circumstances.
     [#591](https://github.com/ddclient/ddclient/pull/591)
   * Fixed `--usev6` with providers that have not yet been updated to use the new
