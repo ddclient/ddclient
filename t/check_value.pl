@@ -12,7 +12,7 @@ my @test_cases = (
     {
         type  => ddclient::T_FQDN(),
         input => 'example',
-        want  => undef,
+        want_invalid => 1,
     },
     {
         type  => ddclient::T_URL(),
@@ -32,16 +32,22 @@ my @test_cases = (
     {
         type  => ddclient::T_URL(),
         input => 'ftp://bad.protocol/',
-        want  => undef,
+        want_invalid => 1,
     },
     {
         type  => ddclient::T_URL(),
         input => 'bad-url',
-        want  => undef,
+        want_invalid => 1,
     },
 );
 for my $tc (@test_cases) {
-    my $got = ddclient::check_value($tc->{input}, ddclient::setv($tc->{type}, 0, 0, undef, undef));
-    is($got, $tc->{want}, "$tc->{type}: $tc->{input}");
+    my $got;
+    my $got_invalid = !(eval {
+        $got = ddclient::check_value($tc->{input},
+                                     ddclient::setv($tc->{type}, 0, 0, undef, undef));
+        1;
+    });
+    is($got_invalid, !!$tc->{want_invalid}, "$tc->{type}: $tc->{input}: validity");
+    is($got, $tc->{want}, "$tc->{type}: $tc->{input}: normalization") if !$tc->{want_invalid};
 }
 done_testing();

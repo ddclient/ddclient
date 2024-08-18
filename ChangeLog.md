@@ -15,6 +15,9 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
   * The default web service for `--webv4` and `--webv6` has changed from Google
     Domains (which has shut down) to ipify.
     [5b104ad1](https://github.com/ddclient/ddclient/commit/5b104ad116c023c3760129cab6e141f04f72b406)
+  * Invalid command-line options or values are now fatal errors (instead of
+    discarded with a warning).
+    [#TODO](https://github.com/ddclient/ddclient/pull/TODO)
   * All log messages are now written to STDERR, not a mix of STDOUT and STDERR.
     [#676](https://github.com/ddclient/ddclient/pull/676)
   * For `--protocol=freedns` and `--protocol=nfsn`, the core module
@@ -95,6 +98,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Bug fixes
 
+  * Fixed numerous bugs in command-line option and configuration file
+    processing.  [#TODO](https://github.com/ddclient/ddclient/pull/TODO)
   * `noip`: Fixed failure to honor IP discovery settings in some circumstances.
     [#591](https://github.com/ddclient/ddclient/pull/591)
   * Fixed `--usev6` with providers that have not yet been updated to use the new
