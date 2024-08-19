@@ -127,6 +127,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#664](https://github.com/ddclient/ddclient/pull/664)
   * Fixed "Scalar value better written as" Perl warning.
     [#667](https://github.com/ddclient/ddclient/pull/667)
+  * Fixed "Invalid Value for keyword 'wtime' = ''" warning.
+    [#734](https://github.com/ddclient/ddclient/pull/734)
   * Fixed unnecessary repeated updates for some services.
     [#670](https://github.com/ddclient/ddclient/pull/670)
   * Fixed DNSExit provider when configured with a zone and non-identical
