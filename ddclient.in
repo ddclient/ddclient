@@ -1535,11 +1535,16 @@ sub write_recap {
                 $recap{$h}{$v} = opt($v, $h);
             }
         }
+        # Clear out entries with `undef` values to avoid needing to figure out how to represent
+        # `undef` in the cache file and to simplify testing.
+        for my $v (keys(%{$recap{$h}})) {
+            delete($recap{$h}{$v}) if !defined($recap{$h}{$v});
+        }
     }
 
     my $recap = "";
     for my $h (sort keys %recap) {
-        my $opt = join(',', map { "$_=" . ($recap{$h}{$_} // '') } sort keys %{$recap{$h}});
+        my $opt = join(',', map("$_=$recap{$h}{$_}", sort(keys(%{$recap{$h}}))));
 
         $recap .= sprintf "%s%s%s\n", $opt, ($opt ? ' ' : ''), $h;
     }
