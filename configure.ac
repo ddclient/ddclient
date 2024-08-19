@@ -77,6 +77,7 @@ m4_foreach_w([_m], [
     B
     File::Spec::Functions
     File::Temp
+    List::Util
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_WARN([some tests will fail due to missing module _m])])])
 
