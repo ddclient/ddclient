@@ -23,10 +23,14 @@ for my $tc (@test_cases) {
     if ($tc->{def}{required}) {
         is($tc->{def}{default}, undef, "'$tc->{desc}' (required) has no default");
     } else {
+        local %ddclient::variables = (merged => {var => $tc->{def}});
         my $norm;
-        my $valid = eval { $norm = ddclient::check_value($tc->{def}{default}, $tc->{def}); 1; };
+        my $default = ddclient::default('var');
+        diag("'$tc->{desc}' default: " . ($default // '<undefined>'));
+        is($default, $tc->{def}{default}, "'$tc->{desc}' default() return value matches default");
+        my $valid = eval { $norm = ddclient::check_value($default, $tc->{def}); 1; } or diag($@);
         ok($valid, "'$tc->{desc}' (optional) has a valid default");
-        is($norm, $tc->{def}{default}, "'$tc->{desc}' default normalizes to itself") if $valid;
+        is($norm, $default, "'$tc->{desc}' default normalizes to itself") if $valid;
     }
 }
 done_testing();
