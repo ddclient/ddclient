@@ -137,7 +137,6 @@ my @test_cases = (
             'warned-min-error-interval' => $DOES_NOT_EXIST,
             # `var_a` should remain untouched.
         }},
-        want_config_changes_TODO => "longstanding bug",
     },
     {
         desc => "non-recap vars are not loaded to %recap or copied to %config",

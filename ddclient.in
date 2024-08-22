@@ -1633,6 +1633,7 @@ sub read_recap {
     %opt = ();
     $saved_recap = _read_config(\%recap, $globals, "##\\s*$program-$version\\s*", $file);
     %opt = %saved;
+    $recap{$_} //= {} for keys(%config);
     for my $h (keys(%recap)) {
         next if !exists($config{$h});
         # Only status variables are copied from `%recap` into `%config` because the recap should
@@ -1647,8 +1648,13 @@ sub read_recap {
         # `$recap{$h}{'status-ipv4'}` directly.
         for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                       warned-min-interval warned-min-error-interval)) {
-            $config{$h}{$v} = $recap{$h}{$v} if exists($recap{$h}{$v});
+            if (exists($recap{$h}{$v})) {
+                $config{$h}{$v} = $recap{$h}{$v};
+            } else {
+                delete($config{$h}{$v});
+            }
         }
+        delete($recap{$h}) if !%{$recap{$h}};
     }
 }
 ######################################################################
