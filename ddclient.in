@@ -138,11 +138,31 @@ $ENV{'PATH'} = (exists($ENV{PATH}) ? "$ENV{PATH}:" : "") . "/sbin:/usr/sbin:/bin
 our %globals;
 our %config;
 
-# %recap holds details about recent updates (and attempts) that are needed to implement various
+# `%recap` holds details about recent updates (and attempts) that are needed to implement various
 # service-specific and protocol-independent mechanisms such as `min-interval`.  This data is
 # persisted in the cache file (`--cache`) so that it survives ddclient restarts.  This hash maps a
-# hostname to a hashref containing those protocol variables that have their `recap` property set to
-# true.
+# hostname to a hashref with entries that map variable names to values.  Only entries for the
+# host's "recap variables" -- the host's protocol's variables with a truthy `recap` property -- are
+# included.
+#
+# `%config` is the source of truth for recap variable values.  The recap variable values in
+# `%config` are initialized with values from the cache file (via `%recap`).  After initialization,
+# any change to a recap variable's value is made to `%config` and later copied to `%recap` before
+# being written to the cache file.  Changes made directly to `%recap` are erroneous because they
+# will be overwritten by the value in `%config`.
+#
+# There are two classes of recap variables:
+#   * "Status" variables: These track update success/failure, the IP address of the last successful
+#     update, etc.  These do not hold configuration data.  These should always be kept in sync with
+#     `%config`.
+#   * "Configuration change detection" variables: These are used to force an update if the value in
+#     the same-named entry in `%config` has changed since the previous update attempt.  The value
+#     stored in `%config` is the desired setting; the value in `%recap` is the desired setting as
+#     it was just before the previous update attempt.  Values are synchronized from `%config` to
+#     `%recap` during each update attempt.
+#
+# The set of config change detection variables is currently hard-coded; all other recap variables
+# are assumed to be status variables.
 #
 # A note about terminology: This was previously named `%cache`, but "cache" implies that the
 # purpose is to reduce the cost or latency of data retrieval or computation, and that deletion only
@@ -642,9 +662,12 @@ our %variables = (
         'ip'                  => setv(T_IP,    0, 0, undef,                undef),
         # As a recap value, this is the IPv4 address most recently saved at the DDNS service.  As a
         # setting, this is the desired IPv4 address that should be saved at the DDNS service.
-        # Unfortunately, these two meanings are conflated, causing the bug "skipped: IP address was
-        # already set to a.b.c.d" when the IP was never set to a.b.c.d.
-        # TODO: Move the recap value elsewhere to fix the bug.
+        # TODO: The use of `ipv4` as a recap status variable is supposed to be independent of the
+        # use of `ipv4` as a configuration setting.  Unfortunately, because the `%config` value is
+        # synced to `%recap`, the two uses conflict which causes the bug "skipped: IP address was
+        # already set to a.b.c.d" when the IP was never set to a.b.c.d.  Rename the `%recap` status
+        # variable to something like `saved-ipv4` to avoid the collision (and confusion) with the
+        # `%config` setting variable.
         'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
         # As `ipv4`, but for an IPv6 address.
         'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
@@ -1539,8 +1562,17 @@ sub write_recap {
         # nic_updateable (called from update_nics for each host) sets `$config{$h}{update}`
         # according to whether an update was attempted.
         #
-        # TODO: Why are different variables saved to the recap depending on whether an update was
-        # attempted or not?  Shouldn't the same variables be saved every time?
+        # TODO: The "configuration change detection" variables are also syncronized if `$recap{$h}`
+        # doesn't exist.  Why is this done?  Perhaps the intention was to prevent the
+        # force-if-config-changed logic from triggering the very first cycle (when there is no
+        # previous update attempt).  However:
+        #   * There's a bug: This function isn't called until after `update_nics` has already
+        #     checked the force-if-config-changed condition, so syncing the values here is too late
+        #     to suppress the first cycle's force-if-config-changed logic.
+        #   * It's unnecessary: If there have not been any update attempts, an update attempt
+        #     should be made anyway, and already is.  (`update_nics` already forces an update if
+        #     `$recap{$h}` doesn't exist, and that check is done before the force-if-config-changed
+        #     check.)
         if (!exists $recap{$h} || $config{$h}{'update'}) {
             my $vars = $protocols{opt('protocol', $h)}{variables};
             for my $v (keys(%$vars)) {
@@ -1548,6 +1580,8 @@ sub write_recap {
                 $recap{$h}{$v} = opt($v, $h);
             }
         } else {
+            # TODO: Why aren't all "status" variables included in this update? (missing: mtime
+            # ipv4 ipv6 warned-min-interval warned-min-error-interval)
             for my $v (qw(atime wtime status-ipv4 status-ipv6)) {
                 $recap{$h}{$v} = opt($v, $h);
             }
@@ -1604,16 +1638,29 @@ sub read_recap {
     %opt = ();
     $saved_recap = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
     %opt = %saved;
+    # TODO: Why is this iterating over `keys(%recap)`?  Shouldn't it iterate over `keys(%config)`
+    # instead?
     for my $h (keys(%recap)) {
+        # TODO: `$config->{$h}` is guaranteed to exist because `$config` is `\%recap` and we're
+        # iterating over `keys(%recap)`.
         next if !exists($config->{$h});
-        # TODO: Why is this limited to this set of variables?  Why not copy every recap var defined
-        # for the host's protocol?
+        # Only status variables are copied from `%recap` into `%config` because the recap should
+        # not change the configuration.  See the documenting comments for `%recap`.
+        # TODO: Why aren't all status variables included in this update? (missing:
+        # warned-min-interval warned-min-error-interval)
+        # TODO: Hard-coding this list impairs readability and maintainability.  In particular,
+        # different pieces of code need to know the list of status variables, and keeping them all
+        # in sync is error-prone (DRY).  Also, different protocols might need different status
+        # variables.
         for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6)) {
-            # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
-            # original intention behind this?  To copy %recap values into %config?  If so, is it
-            # better to just delete this and live with the current behavior (which doesn't seem to
-            # be causing users any problems) or to "fix" it to match the original intention, which
-            # might introduce a bug?
+            # TODO: This is a no-op because `$config` is `\%recap`.  I believe the original intent
+            # was to copy values that convey update status from `%recap` into `%config` so that
+            # ddclient can be restarted and resume where it left off and not violate
+            # `min-interval`, `min-error-interval`, etc.  For the short term, this should copy the
+            # values into `%config`, not `%recap`.  In the long term, nothing should be copied from
+            # `%recap` into `%config` because `%config` is not the semantically appropriate place
+            # to record update status.  Code that currently reads/sets `$config{$h}{'status-ipv4'}`
+            # (and friends) should instead access `$recap{$h}{'status-ipv4'}` directly.
             $config->{$h}{$_} = $recap{$h}{$_} if exists $recap{$h}{$_};
         }
     }
@@ -1812,13 +1859,29 @@ sub _read_config {
         ## verify that keywords are valid...and check the value
         for my $k (keys %locals) {
             $locals{$k} = $passwords{$k} if defined $passwords{$k};
+            # TODO: The checks below are incorrect for a few reasons:
+            #
+            #   * It is not protocol-aware.  Different protocols can have different sets of
+            #     variables, with different normalization and validation behaviors.
+            #   * It does not check for missing required values.  Note that a later line or a
+            #     command-line argument might define a missing required value.
+            #   * A later line or command-line argument might override an invalid value, changing
+            #     it to valid.
+            #
+            # Fixing this is not simple.  Values should be checked and normalized after processing
+            # the entire file and command-line arguments, but then we lose line number context.
+            # The line number could be recorded along with each variable's value to provide context
+            # in case validation fails, but that adds considerable complexity.  Fortunately, a
+            # variable's type is unlikely to change even if the protocol changes
+            # (`$variables{merged}{$var}{type}` will likely equal
+            # `$protocols{$proto}{variables}{$var}{type}` for each variable `$var` for each
+            # protocol `$proto`), so normalizing and validating values on a line-by-line basis is
+            # likely to be safe.
             if (!exists $variables{'merged'}{$k}) {
                 warning("unrecognized keyword '%s' (ignored)", $k);
                 delete $locals{$k};
                 next;
             }
-            # TODO: This might grab an arbitrary protocol-specific variable definition, which could
-            # cause surprising behavior.
             my $def = $variables{'merged'}{$k};
             if (!eval { $locals{$k} = check_value($locals{$k}, $def); 1; }) {
                 warning("invalid variable value '$k=$locals{$k}': $@");
@@ -3549,6 +3612,8 @@ sub nic_updateable {
         $config{$host}{'update'} = 1;
         $config{$host}{'atime'} = $now;
         delete($config{$host}{$_}) for qw(wtime warned-min-interval warned-min-error-interval);
+        # TODO: Why aren't all of the above "status" variables (the ones deleted from `%config`)
+        # also removed from `%recap`?  (missing: wtime status status-ipv4 status-ipv6)
         delete $recap{$host}{'warned-min-interval'};
         delete $recap{$host}{'warned-min-error-interval'};
     } else {
