@@ -48,6 +48,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     removed.  [#716](https://github.com/ddclient/ddclient/pull/716)
   * `googledomains`: Support was removed because the service shut down.
     [#716](https://github.com/ddclient/ddclient/pull/716)
+  * The `--retry` option was removed.
+    [#732](https://github.com/ddclient/ddclient/pull/732)
 
 ### New features
 
@@ -131,6 +133,7 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#734](https://github.com/ddclient/ddclient/pull/734)
   * Fixed unnecessary repeated updates for some services.
     [#670](https://github.com/ddclient/ddclient/pull/670)
+    [#732](https://github.com/ddclient/ddclient/pull/732)
   * Fixed DNSExit provider when configured with a zone and non-identical
     hostname.  [#674](https://github.com/ddclient/ddclient/pull/674)
   * `infomaniak`: Fixed frequent forced updates after 25 days (`max-interval`).

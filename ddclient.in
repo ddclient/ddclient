@@ -158,7 +158,7 @@ my $saved_recap;
 my %saved_opt;
 my $daemon;
 # Control how many times warning message logged for invalid IP addresses
-my (%warned_ip, %warned_ipv4, %warned_ipv6);
+my (%warned_ipv4, %warned_ipv6);
 
 sub repr {
     my $vals = @_ % 2 ? [shift] : [];
@@ -570,36 +570,7 @@ our %variables = (
         'proxy'               => setv(T_FQDNP, 0, 0, undef,                undef),
         'protocol'            => setv(T_PROTO, 0, 0, 'dyndns2',            undef),
 
-        'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
-        'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
-        'usev6'               => setv(T_USEV6, 0, 0, 'disabled',           undef),
-        'ip'                  => setv(T_IP,    0, 0, undef,                undef),
-        'ipv4'                => setv(T_IPV4,  0, 0, undef,                undef),
-        'ipv6'                => setv(T_IPV6,  0, 0, undef,                undef),
-        'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
-        'ifv4'                => setv(T_IF,    0, 0, 'default',            undef),
-        'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
-        'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
-        'web-skip'            => setv(T_STRING,0, 0, undef,                undef),
-        'webv4'               => setv(T_STRING,0, 0, 'ipify-ipv4',         undef),
-        'webv4-skip'          => setv(T_STRING,0, 0, undef,                undef),
-        'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
-        'webv6-skip'          => setv(T_STRING,0, 0, undef,                undef),
-        'fw'                  => setv(T_ANY,   0, 0, undef,                undef),
-        'fw-skip'             => setv(T_STRING,0, 0, undef,                undef),
-        'fwv4'                => setv(T_ANY,   0, 0, undef,                undef),
-        'fwv4-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'fwv6'                => setv(T_ANY,   0, 0, undef,                undef),
-        'fwv6-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'fw-login'            => setv(T_LOGIN, 0, 0, undef,                undef),
-        'fw-password'         => setv(T_PASSWD,0, 0, undef,                undef),
-        'cmd'                 => setv(T_PROG,  0, 0, undef,                undef),
-        'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
-        'cmdv4'               => setv(T_PROG,  0, 0, undef,                undef),
-        'cmdv6'               => setv(T_PROG,  0, 0, undef,                undef),
-
         'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
-        'retry'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
         'ssl'                 => setv(T_BOOL,  0, 0, 1,                    undef),
         'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -626,7 +597,13 @@ our %variables = (
         'password'            => setv(T_PASSWD,1, 0, undef,                undef),
         'host'                => setv(T_STRING,1, 1, undef,                undef),
 
-        'use'                 => setv(T_USE,   0, 0, 'ip',                 undef),
+        'use' => setv(T_USE, 0, 0, sub {
+            my ($h) = @_;
+            return "'disabled' if '--usev4' or '--usev6' is enabled, otherwise 'ip'"
+                if ($h // '') eq '<usage>';
+            return 'disabled' if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
+            return 'ip';
+        }, undef),
         'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
         'usev6'               => setv(T_USEV6, 0, 0, 'disabled',           undef),
         'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
@@ -656,16 +633,20 @@ our %variables = (
         'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
 
-        # As a recap value, this is the IP address (IPv4 or IPv6, but almost always IPv4) most
-        # recently saved at the DDNS service.  As a setting, this is the desired IP address that
-        # should be saved at the DDNS service.  Unfortunately, these two meanings are conflated,
-        # causing the bug "skipped: IP address was already set to a.b.c.d" when the IP was never
-        # set to a.b.c.d.
-        # TODO:  Move the recap value elsewhere to fix the bug.
-        'ip'                  => setv(T_IP,    0, 1, undef,                undef),
-        # As `ip`, but only IPv4 addresses.
+        # The desired IP address (IPv4 or IPv6, but almost always IPv4) that should be saved at the
+        # DDNS service.
+        # TODO: Legacy protocol implementations write the IP address most recently saved at the
+        # DDNS service to this variable so that it can be saved in the recap (as `ipv4` or `ipv6`).
+        # Update the legacy implementations to use `ipv4` or `ipv6` instead, though see the TODO
+        # for those variables.
+        'ip'                  => setv(T_IP,    0, 0, undef,                undef),
+        # As a recap value, this is the IPv4 address most recently saved at the DDNS service.  As a
+        # setting, this is the desired IPv4 address that should be saved at the DDNS service.
+        # Unfortunately, these two meanings are conflated, causing the bug "skipped: IP address was
+        # already set to a.b.c.d" when the IP was never set to a.b.c.d.
+        # TODO: Move the recap value elsewhere to fix the bug.
         'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
-        # As `ip`, but only IPv6 addresses.
+        # As `ipv4`, but for an IPv6 address.
         'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
         # Timestamp (seconds since epoch) indicating the earliest time the next update is
         # permitted.
@@ -681,25 +662,23 @@ our %variables = (
         # TODO: Create a timestamp type and change this to that type.
         'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
         # Disposition of the most recent (or currently in progress) attempt to update the DDNS
-        # service with the IP address in `wantip`.  Anything other than `good`, including undef, is
-        # treated as a failure.
-        'status'              => setv(T_ANY,   0, 1, undef,                undef),
-        # As `status`, but with `wantipv4`.
+        # service with the IP address in `wantipv4` (or `wantip`, if an IPv4 address).  Anything
+        # other than `good`, including undef, is treated as a failure.
         'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
-        # As `status`, but with `wantipv6`.
+        # As `status-ipv4`, but with `wantipv6` (or `wantip`, if an IPv6 address).
         'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
         # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
         # `min-interval` not inhibited the attempt.  This is reset to 0 once an attempt is actually
         # made.  This is used as a boolean to suppress repeated warnings to the user that indicate
         # that `min-interval` has inhibited an update attempt.
         # TODO: Change to a boolean and rename to improve readability.
-        'warned-min-interval' => setv(T_ANY,   0, 1, 0,                    undef),
+        'warned-min-interval' => setv(T_ANY, 0, 1, undef, undef),
         # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
         # `min-error-interval` not inhibited the attempt.  This is reset to 0 once an attempt is
         # actually made.  This is used as a boolean to suppress repeated warnings to the user that
         # indicate that `min-error-interval` has inhibited an update attempt.
         # TODO: Change to a boolean and rename to improve readability.
-        'warned-min-error-interval' => setv(T_ANY, 0, 1, 0,                undef),
+        'warned-min-error-interval' => setv(T_ANY, 0, 1, undef, undef),
     },
     'dyndns-common-defaults' => {
         'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
@@ -1121,7 +1100,7 @@ $variables{'merged'} = {
 };
 
 # This will hold the processed args.
-my %opt = ();
+our %opt;
 my $deprecated_handler = sub { warning("'-$_[0]' is deprecated and does nothing"); };
 $opt{'fw-banlocal'} = $deprecated_handler;
 $opt{'if-skip'} = $deprecated_handler;
@@ -1166,7 +1145,7 @@ my @opt = (
     ["cache",             "=s", "--cache=<path>         : record address used in <path>"],
     ["pid",               "=s", "--pid=<path>           : record process id in <path> if daemonized"],
     "",
-    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6' (forced to 'disabled' if either '--usev4' or '--usev6' is enabled)"],
+    ["use",               "=s", "--use=<which>          : deprecated, see '--usev4' and '--usev6'"],
     &ip_strategies_usage(),
     ["usev4",             "=s", "--usev4=<which>        : how the IPv4 address should be obtained"],
     &ipv4_strategies_usage(),
@@ -1221,7 +1200,6 @@ my @opt = (
     ["ssl_ca_file",       "=s", "--ssl_ca_file=<file>   : look at <file> for certificates of trusted certificate authorities (default: auto-detect)"],
     ["fw-ssl-validate",   "!",  "--{no}fw-ssl-validate  : Validate SSL certificate when retrieving IP address from firewall"],
     ["web-ssl-validate",  "!",  "--{no}web-ssl-validate : Validate SSL certificate when retrieving IP address from web"],
-    ["retry",             "!",  "--{no}retry            : Initiate a one-time update attempt for hosts that have not been successfully updated (according to the cache).  Incompatible with '--daemon'"],
     ["force",             "!",  "--{no}force            : force an update even if the update may be unnecessary"],
     ["timeout",           "=i", "--timeout=<max>        : when fetching a URL, wait at most <max> seconds for a response"],
     ["syslog",            "!",  "--{no}syslog           : log messages to syslog"],
@@ -1460,16 +1438,55 @@ sub update_nics {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
             &$update(@hosts);
-
-            # Backwards compatibility:
-            # The legacy '--use' parameter sets 'wantip' and the legacy providers process this and
-            # set 'ip', 'status' accordingly.
-            # The new '--usev*' parameters set 'wantipv*' and the new providers set 'ipv*' and 'status-ipv*'.
-            # To allow gradual transition, we make sure both the old 'status' and 'ip' are being set
-            # accordingly to what new providers returned in the new 'status-ipv*' and 'ipv*' fields respectively.
             for my $h (@hosts) {
-                $config{$h}{'status'} //= $config{$h}{'status-ipv4'} // $config{$h}{'status-ipv6'};
-                $config{$h}{'ip'} //= $config{$h}{'ipv4'} // $config{$h}{'ipv6'};
+                delete($config{$h}{$_}) for qw(wantip wantipv4 wantipv6);
+            }
+
+            # Backwards compatibility: Legacy protocol implementations read `wantip` and set `ip`
+            # and `status`.  Modern protocol implementations read `wantipv4` and `wantipv6` and set
+            # `ipv4`, `ipv6`, `status-ipv4`, and `status-ipv6`.  Make legacy implementations look
+            # like modern implementations by moving `ip` and `status` to the modern
+            # version-specific equivalents.
+            for my $h (@hosts) {
+                local $_l = pushlogctx($h);
+                my $status = delete($config{$h}{'status'}) || next;
+                my $ip = $config{$h}{'ip'};
+                my $ipv = is_ipv4($ip) ? '4' : is_ipv6($ip) ? '6' : undef;
+                if (!defined($ipv)) {
+                    warning("ddclient bug: legacy protocol set 'status' but did not set 'ip' " .
+                            "to an IPv4 or IPv6 address: " . ($ip // '<undefined>'));
+                    next;
+                }
+                # TODO: Currently $config{$h}{'ip'} is used for two distinct purposes: it holds the
+                # value of the --ip option, and it is updated by legacy protocols to hold the new
+                # IP address after an update.  Fortunately, the --ip option is not used very often,
+                # and if it is, the values for the two use cases are usually (but not always) the
+                # same.  This boolean is an imperfect attempt to identify whether 'ip' is being
+                # used for the --ip option, to avoid breaking some user's configuration.  Protocols
+                # should be updated to not set $config{$h}{'ip'} because %config is for
+                # configuration, not update status (same goes for 'status', 'mtime', etc.).
+                my $ip_option = opt('use', $h) eq 'ip' || opt('usev6', $h) eq 'ip';
+                delete($config{$h}{'ip'}) if !$ip_option;
+                debug("legacy protocol; moving status to status-ipv$ipv and ip to ipv$ipv");
+                if (defined(my $vstatus = $config{$h}{"status-ipv$ipv"})) {
+                    warning("ddclient bug: legacy protocol set both 'status' (to '$status') " .
+                            "and 'status-ipv$ipv' (to '$vstatus')");
+                } else {
+                    $config{$h}{"status-ipv$ipv"} = $status;
+                }
+                # TODO: See above comment for $ip_option.  This is the same situation, but for
+                # 'ipv4' and 'ipv6'.
+                my $vip_option = opt("usev$ipv", $h) eq "ipv$ipv";
+                if (defined(my $vip = $config{$h}{"ipv$ipv"}) && $vip_option) {
+                    debug("unable to update 'ipv$ipv' to '$ip' " .
+                          "because it is already set to '$vip'") if $vip_option;
+                } else {
+                    # A previous update will have set "ipv$ipv" if !$vip_option, so it's safe to
+                    # overwrite it here because $vip_option was checked above.
+                    debug("updating 'ipv$ipv' from '$vip' to '$ip'")
+                        if defined($vip) && $vip ne $ip;
+                    $config{$h}{"ipv$ipv"} = $ip;
+                }
             }
 
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
@@ -1531,7 +1548,7 @@ sub write_recap {
                 $recap{$h}{$v} = opt($v, $h);
             }
         } else {
-            for my $v (qw(atime wtime status status-ipv4 status-ipv6)) {
+            for my $v (qw(atime wtime status-ipv4 status-ipv6)) {
                 $recap{$h}{$v} = opt($v, $h);
             }
         }
@@ -1593,7 +1610,7 @@ sub read_recap {
             next if !exists($config->{$h});
             # TODO: Why is this limited to this set of variables?  Why not copy every recap var
             # defined for the host's protocol?
-            for (qw(atime mtime wtime ip ipv4 ipv6 status status-ipv4 status-ipv6)) {
+            for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6)) {
                 # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
                 # original intention behind this?  To copy %recap values into %config?  If so, is
                 # it better to just delete this and live with the current behavior (which doesn't
@@ -1925,9 +1942,7 @@ sub init_config {
 
     ## override global options with those on the command-line.
     for my $o (keys %opt) {
-        # TODO: Why is this limited to $variables{'global-defaults'}?  Why not
-        # $variables{'merged'}?
-        if (defined $opt{$o} && exists $variables{'global-defaults'}{$o}) {
+        if (defined $opt{$o} && exists $variables{'merged'}{$o}) {
             # TODO: What's the point of this?  The opt() function will fall back to %globals if
             # %opt doesn't have a value, so this shouldn't be necessary.
             $globals{$o} = $opt{$o};
@@ -1937,22 +1952,10 @@ sub init_config {
         # if they are not associated with a host via `--host=` or `--options=host=`)?
     }
 
-    ## sanity check
-    if (defined(opt('host')) && opt('retry')) {
-        fatal("options --retry and --host (or --option host=..) are mutually exclusive");
-    }
-    fatal("options --retry and --daemon cannot be used together") if (opt('retry') && opt('daemon'));
-
     ## determine hosts to update (those on the cmd-line, config-file, or failed in recap)
     my @hosts = keys %config;
     if (opt('host')) {
         @hosts = split_by_comma($opt{'host'});
-    }
-    # TODO: The first two times init_config() is called the cache file has not been read yet, so
-    # this will not filter out any hosts and thus updates will not be limited to non-good hosts as
-    # intended.
-    if (opt('retry')) {
-        @hosts = grep(($recap{$_}{'status'} // '') ne 'good', keys(%recap));
     }
 
     ## remove any other hosts
@@ -1963,10 +1966,6 @@ sub init_config {
     # TODO: Why aren't the hosts specified by --host added to %config except when --options is also
     # given?
 
-    for my $h (keys %config) {
-        $config{$h}{use} = 'disabled'
-            if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
-    }
     my @protos = map(opt('protocol', $_), keys(%config));
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
@@ -1981,7 +1980,7 @@ sub usage {
     for (@_) {
         if (ref $_) {
             my ($key, $specifier, $arg_usage) = @$_;
-            my $value = default($key);
+            my $value = default($key, '<usage>');
             next unless $arg_usage;
             $usage .= "  $arg_usage";
             if (defined($value) && $value ne '') {
@@ -2264,15 +2263,17 @@ sub split_by_comma {
 }
 sub default {
     my ($v, $h) = @_;
+    my $var;
     if (defined($h) && $config{$h}) {
         my $proto = $protocols{opt('protocol', $v eq 'protocol' ? undef : $h)};
-        my $var = $proto->{variables}{$v} if $proto;
-        return $var->{default} if $var;
+        $var = $proto->{variables}{$v} if $proto;
     }
-    return undef if !defined($variables{'merged'}{$v});
     # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
     # surprising behavior.
-    return $variables{'merged'}{$v}{'default'};
+    $var //= $variables{'merged'}{$v};
+    return undef if !defined($var);
+    return $var->{'default'}($h) if ref($var->{default}) eq 'CODE';
+    return $var->{'default'};
 }
 sub opt {
     my $v = shift;
@@ -3444,12 +3445,8 @@ sub nic_updateable {
     my ($host) = @_;
     my $force_update = $protocols{opt('protocol', $host)}{force_update};
     my $update = 0;
-    my $ip     = $config{$host}{'wantip'};
     my $ipv4   = $config{$host}{'wantipv4'};
     my $ipv6   = $config{$host}{'wantipv6'};
-    my $use    = opt('use',   $host);
-    my $usev4  = opt('usev4', $host);
-    my $usev6  = opt('usev6', $host);
     my $inv_ip_warn_count = opt('max-warn');
     my $previp = $recap{$host}{'ip'} || '<nothing>';
     my $previpv4 = $recap{$host}{'ipv4'} || '<nothing>';
@@ -3459,9 +3456,8 @@ sub nic_updateable {
     my %prettyi = map({ ($_ => prettyinterval(opt($_, $host))); }
                       qw(max-interval min-error-interval min-interval));
 
-    $warned_ip{$host} = 0 if $use ne 'disabled' && $ip;
-    $warned_ipv4{$host} = 0 if $usev4 ne 'disabled' && $ipv4;
-    $warned_ipv6{$host} = 0 if $usev6 ne 'disabled' && $ipv6;
+    $warned_ipv4{$host} = 0 if defined($ipv4);
+    $warned_ipv6{$host} = 0 if defined($ipv6);
 
     if (opt('force')) {
         info("update forced via 'force' option");
@@ -3472,42 +3468,13 @@ sub nic_updateable {
         $update = 1;
 
     } elsif ($recap{$host}{'wtime'} && $recap{$host}{'wtime'} > $now) {
-        warning("cannot update IP from $previp to $ip until after $prettyt{'wtime'}");
+        warning("cannot update IP until after $prettyt{'wtime'}");
 
     } elsif ($recap{$host}{'mtime'} && interval_expired($host, 'mtime', 'max-interval')) {
         info("update forced because it has been $prettyi{'max-interval'} since the previous update (on $prettyt{'mtime'})");
         $update = 1;
 
-    } elsif ($use ne 'disabled' && $previp ne $ip) {
-        ## Check whether to update IP address for the "--use" method"
-        if (($recap{$host}{'status'} // '') eq 'good' &&
-            !interval_expired($host, 'mtime', 'min-interval')) {
-            warning("skipped update from $previp to $ip because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
-                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
-
-            $recap{$host}{'warned-min-interval'} = $now;
-
-        } elsif (($recap{$host}{'status'} // '') ne 'good' &&
-                 !interval_expired($host, 'atime', 'min-error-interval')) {
-
-            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
-                                   ($warned_ip{$host} // 0) < $inv_ip_warn_count)) {
-                warning("skipped update from $previp to $ip because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}), which failed");
-                if (!$ip && !opt('verbose')) {
-                    $warned_ip{$host} = ($warned_ip{$host} // 0) + 1;
-                    warning("IP address undefined. Warned $inv_ip_warn_count times, suppressing further warnings")
-                        if ($warned_ip{$host} >= $inv_ip_warn_count);
-                }
-            }
-
-            $recap{$host}{'warned-min-error-interval'} = $now;
-
-        } else {
-            $update = 1;
-        }
-
-    } elsif ($usev4 ne 'disabled' && $previpv4 ne $ipv4) {
-        ## Check whether to update IPv4 address for the "--usev4" method"
+    } elsif (defined($ipv4) && $previpv4 ne $ipv4) {
         if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
             warning("skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
@@ -3534,8 +3501,7 @@ sub nic_updateable {
             $update = 1;
         }
 
-    } elsif ($usev6 ne 'disabled' && $previpv6 ne $ipv6) {
-        ## Check whether to update IPv6 address for the "--usev6" method"
+    } elsif (defined($ipv6) && $previpv6 ne $ipv6) {
         if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
             warning("skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
@@ -3572,30 +3538,27 @@ sub nic_updateable {
 
     } else {
         if (opt('verbose')) {
-            success("skipped update because IP address is already set to $ip")
-                if $use ne 'disabled';
             success("skipped update because IPv4 address is already set to $ipv4")
-                if $usev4 ne 'disabled';
+                if defined($ipv4);
             success("skipped update because IPv6 address is already set to $ipv6")
-                if $usev6 ne 'disabled';
+                if defined($ipv6);
         }
     }
 
-    $config{$host}{'status'} = $recap{$host}{'status'};
-    $config{$host}{'status-ipv4'} = $recap{$host}{'status-ipv4'};
-    $config{$host}{'status-ipv6'} = $recap{$host}{'status-ipv6'};
-    $config{$host}{'update'} = $update;
+    # TODO: `status` is set by legacy protocol implementations.  Remove it from this list once all
+    # legacy protocol implementations have been upgraded.
+    delete($config{$host}{$_}) for qw(status status-ipv4 status-ipv6 update);
     if ($update) {
-        $config{$host}{'status'}                    = undef;
-        $config{$host}{'status-ipv4'}               = undef;
-        $config{$host}{'status-ipv6'}               = undef;
-        $config{$host}{'atime'}                     = $now;
-        $config{$host}{'wtime'}                     = 0;
-        $config{$host}{'warned-min-interval'}       = 0;
-        $config{$host}{'warned-min-error-interval'} = 0;
-
+        $config{$host}{'update'} = 1;
+        $config{$host}{'atime'} = $now;
+        delete($config{$host}{$_}) for qw(wtime warned-min-interval warned-min-error-interval);
         delete $recap{$host}{'warned-min-interval'};
         delete $recap{$host}{'warned-min-error-interval'};
+    } else {
+        for (qw(status-ipv4 status-ipv6)) {
+            $config{$host}{$_} = $recap{$host}{$_} if defined($recap{$host}{$_});
+        }
+        delete($config{$host}{$_}) for qw(wantip wantipv4 wantipv6);
     }
 
     return $update;

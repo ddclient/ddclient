@@ -80,6 +80,7 @@ handwritten_tests = \
 	t/protocol_dyndns2.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
+	t/update_nics.pl \
 	t/use_web.pl \
 	t/variable_defaults.pl \
 	t/write_recap.pl
