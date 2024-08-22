@@ -1595,17 +1595,15 @@ sub write_recap {
 ## read_recap($file) - called before reading the .conf
 ######################################################################
 sub read_recap {
-    my $file    = shift;
-    my $config  = shift;
+    my $file = shift;
+    my $config = shift;
     my $globals = {};
-
     %{$config} = ();
     if (-e $file) {
         my %saved = %opt;
-        %opt         = ();
+        %opt = ();
         $saved_recap = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
-        %opt         = %saved;
-
+        %opt = %saved;
         for my $h (keys(%recap)) {
             next if !exists($config->{$h});
             # TODO: Why is this limited to this set of variables?  Why not copy every recap var
@@ -1846,7 +1844,7 @@ sub _read_config {
         %locals = (%globals, %locals);
 
         ## override login and password if specified the old way.
-        $locals{'login'}    = $login    if defined $login;
+        $locals{'login'} = $login if defined $login;
         $locals{'password'} = $password if defined $password;
 
         ## allow {host} to be a comma separated list of hosts
