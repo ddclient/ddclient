@@ -179,7 +179,7 @@ for my $tc (@test_cases) {
     local %ddclient::config;
     $ddclient::config{$_} = {%{$want_config{$_}}} for keys(%want_config);
 
-    ddclient::read_recap($cachef->filename(), \%ddclient::recap);
+    ddclient::read_recap($cachef->filename());
 
     TODO: {
         local $TODO = $tc->{want_TODO};
