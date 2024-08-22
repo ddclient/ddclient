@@ -1648,7 +1648,7 @@ sub read_recap {
         # `$recap{$h}{'status-ipv4'}` directly.
         for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                       warned-min-interval warned-min-error-interval)) {
-            if (exists($recap{$h}{$v})) {
+            if (defined($recap{$h}{$v})) {
                 $config{$h}{$v} = $recap{$h}{$v};
             } else {
                 delete($config{$h}{$v});
