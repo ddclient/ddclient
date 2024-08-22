@@ -1641,17 +1641,13 @@ sub read_recap {
         # different pieces of code need to know the list of status variables, and keeping them all
         # in sync is error-prone (DRY).  Also, different protocols might need different status
         # variables.
+        # TODO: None of the recap variables should be copied into `%config` because `%config` is
+        # not the semantically appropriate place to record update status.  Code that currently
+        # reads/sets `$config{$h}{'status-ipv4'}` (and friends) should instead access
+        # `$recap{$h}{'status-ipv4'}` directly.
         for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                       warned-min-interval warned-min-error-interval)) {
-            # TODO: This is a no-op.  I believe the original intent was to copy values that convey
-            # update status from `%recap` into `%config` so that ddclient can be restarted and
-            # resume where it left off and not violate `min-interval`, `min-error-interval`, etc.
-            # For the short term, this should copy the values into `%config`, not `%recap`.  In the
-            # long term, nothing should be copied from `%recap` into `%config` because `%config` is
-            # not the semantically appropriate place to record update status.  Code that currently
-            # reads/sets `$config{$h}{'status-ipv4'}` (and friends) should instead access
-            # `$recap{$h}{'status-ipv4'}` directly.
-            $recap{$h}{$v} = $recap{$h}{$v} if exists($recap{$h}{$v});
+            $config{$h}{$v} = $recap{$h}{$v} if exists($recap{$h}{$v});
         }
     }
 }
