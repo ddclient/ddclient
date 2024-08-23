@@ -3442,7 +3442,8 @@ EoEXAMPLE
 ######################################################################
 sub nic_updateable {
     my ($host) = @_;
-    my $force_update = $protocols{opt('protocol', $host)}{force_update};
+    my $protocol = $protocols{opt('protocol', $host)};
+    my $force_update = $protocol->{force_update};
     my $update = 0;
     my $ipv4   = $config{$host}{'wantipv4'};
     my $ipv6   = $config{$host}{'wantipv6'};
@@ -3529,9 +3530,13 @@ sub nic_updateable {
 
     } elsif (defined($force_update) && $force_update->($host)) {
         $update = 1;
-    } elsif (my @changed = grep({ my $rv = $recap{$host}{$_}; my $cv = opt($_, $host);
-                                  defined($rv) && defined($cv) && $rv ne $cv; }
-                                @recap_config_change_detection_vars)) {
+    } elsif (my @changed = grep({
+                                    return 0 if (!$protocol->{variables}{$_} ||
+                                                 !$protocol->{variables}{$_}{recap});
+                                    my $rv = $recap{$host}{$_};
+                                    my $cv = opt($_, $host);
+                                    defined($rv) && defined($cv) && $rv ne $cv;
+                                } @recap_config_change_detection_vars)) {
         info("update forced because options changed: " . join(', ', @changed));
         $update = 1;
 
