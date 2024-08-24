@@ -1646,7 +1646,7 @@ sub read_recap {
         # different pieces of code need to know the list of status variables, and keeping them all
         # in sync is error-prone (DRY).  Also, different protocols might need different status
         # variables.
-        for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6
+        for (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                 warned-min-interval warned-min-error-interval)) {
             # TODO: This is a no-op because `$config` is `\%recap`.  I believe the original intent
             # was to copy values that convey update status from `%recap` into `%config` so that
