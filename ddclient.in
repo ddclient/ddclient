@@ -919,6 +919,17 @@ our %protocols = (
             'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
         },
     },
+    'ionos' => {
+        'updateable' => undef,
+        'update'     => \&nic_ionos_update,
+        'examples'   => \&nic_ionos_examples,
+        'variables' => {
+            %{$variables{'service-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, 0, interval('1m'),               0),
+            'server'       => setv(T_FQDNP, 1, 0, 'ipv4.api.hosting.ionos.com', undef),
+            'login'        => setv(T_LOGIN, 0, 0, 'unused',                     undef),
+        }
+    },
     'mythicdyn' => {
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
@@ -5428,6 +5439,88 @@ sub nic_henet_update {
             success("$status: IPv$ipv address set to $returnedip");
             $config{$h}{"ipv$ipv"} = $returnedip;
             $config{$h}{'mtime'} = $now;
+        }
+    }
+}
+
+######################################################################
+## nic_ionos_examples
+##
+## written by Lenard Heß
+##
+######################################################################
+sub nic_ionos_examples {
+    return <<"EoEXAMPLE";
+o 'ionos'
+
+The 'ionos' protocol is used by the Dynamic DNS service offered by
+https://www.ionos.com.
+
+Configuration variables applicable to the 'ionos' protocol are:
+  protocol=ionos               ##
+  password                     ## The secret query parameter (after "q=" in the update URL)
+  fully.qualified.host         ## the host registered with the service
+
+Notes:
+- This service tracks which domains to update through the generated secret
+  query parameter. In order for ddclient to behave correctly, make sure the
+  domain(s) configured for your secret query parameter match the domain(s)
+  configured in the ddclient config.
+
+
+Example ${program}.conf file entries:
+  ## Single host update.
+  protocol=ionos,                           \\
+  password=1234567890ABCDEF,                \\
+  host.example.com
+
+  ## Multiple host update.
+  protocol=ionos,                           \\
+  password=1234567890ABCDEF,                \\
+  hosta.example.com,hostb.sub.example.com
+EoEXAMPLE
+}
+######################################################################
+## nic_ionos_update
+######################################################################
+sub nic_ionos_update {
+    debug("\nnic_ionos_update --------------------");
+
+    # Update each set configured host.
+    # ToDo: Iterate per-password instead of per-host
+    foreach my $h (@_) {
+        info("%s -- Setting IP address.", $h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        my $ipversion = $config{$h}{'ipv6'} ? '6' : '4';
+        my $url = "https://$config{$h}{'server'}/dns/v1/dyndns?q=$config{$h}{'password'}";
+
+        $url .= "&ipv4=$ipv4" if $ipv4;
+        $url .= "&ipv6=$ipv6" if $ipv6;
+
+        my $reply = geturl(
+            proxy     => opt('proxy'),
+            url       => $url,
+            method    => 'POST',
+            login     => undef,
+            password  => undef,
+            ipversion => $ipversion,
+        );
+        unless ($reply) {
+            failed("Updating service %s failed: %s", $h, $config{$h}{'server'});
+            next;
+        }
+
+        my $ok = header_ok($h, $reply);
+        if ($ok) {
+            $config{$h}{'mtime'}  = $now;
+            $config{$h}{'status-ipv4'} = "good" if $ipv4;
+            $config{$h}{'status-ipv6'} = "good" if $ipv6;
+
+            success("%s -- Updated successfully.", $h);
+        } else {
+            failed("%s -- Failed to update.", $h);
         }
     }
 }
