@@ -1483,13 +1483,12 @@ sub update_nics {
             $ip //= $ipv4 // $ipv6;
             $ipv4 //= $ip if is_ipv4($ip);
             $ipv6 //= $ip if is_ipv6($ip);
-            $config{$h}{'wantipv4'} = $ipv4;
-            $config{$h}{'wantipv6'} = $ipv6;
-
             if (!$ipv4 && !$ipv6) {
                 warning('unable to determine IP address');
                 next;
             }
+            $config{$h}{'wantipv4'} = $ipv4;
+            $config{$h}{'wantipv6'} = $ipv6;
 
             next if !nic_updateable($h);
             push @hosts, $h;
