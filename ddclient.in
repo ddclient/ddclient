@@ -3607,15 +3607,12 @@ sub nic_updateable {
         }
     }
 
-    delete($config{$host}{$_}) for qw(status-ipv4 status-ipv6);
     if ($update) {
         $config{$host}{'update'} = 1;
         $config{$host}{'atime'} = $now;
-        delete($config{$host}{$_}) for qw(wtime warned-min-interval warned-min-error-interval);
+        delete($config{$host}{$_}) for qw(status-ipv4 status-ipv6 wtime
+                                          warned-min-interval warned-min-error-interval);
     } else {
-        for (qw(status-ipv4 status-ipv6)) {
-            $config{$host}{$_} = $recap{$host}{$_} if defined($recap{$host}{$_});
-        }
         delete($config{$host}{$_}) for qw(wantipv4 wantipv6);
     }
 
