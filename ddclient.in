@@ -1470,11 +1470,6 @@ sub update_nics {
                 my $status = delete($config{$h}{'status'}) || next;
                 my $ip = $config{$h}{'ip'};
                 my $ipv = is_ipv4($ip) ? '4' : is_ipv6($ip) ? '6' : undef;
-                if (!defined($ipv)) {
-                    warning("ddclient bug: legacy protocol set 'status' but did not set 'ip' " .
-                            "to an IPv4 or IPv6 address: " . ($ip // '<undefined>'));
-                    next;
-                }
                 # TODO: Currently $config{$h}{'ip'} is used for two distinct purposes: it holds the
                 # value of the --ip option, and it is updated by legacy protocols to hold the new
                 # IP address after an update.  Fortunately, the --ip option is not used very often,
@@ -1486,10 +1481,6 @@ sub update_nics {
                 my $ip_option = opt('use', $h) eq 'ip' || opt('usev6', $h) eq 'ip';
                 delete($config{$h}{'ip'}) if !$ip_option;
                 debug("legacy protocol; moving status to status-ipv$ipv and ip to ipv$ipv");
-                if (defined(my $vstatus = $config{$h}{"status-ipv$ipv"})) {
-                    warning("ddclient bug: legacy protocol set both 'status' (to '$status') " .
-                            "and 'status-ipv$ipv' (to '$vstatus')");
-                }
                 $config{$h}{"status-ipv$ipv"} = $status;
                 # TODO: See above comment for $ip_option.  This is the same situation, but for
                 # 'ipv4' and 'ipv6'.
