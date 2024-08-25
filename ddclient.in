@@ -145,15 +145,10 @@ our %config;
 # host's "recap variables" -- the host's protocol's variables with a truthy `recap` property -- are
 # included.
 #
-# `%config` is the source of truth for recap variable values.  The recap variable values in
-# `%config` are initialized with values from the cache file (via `%recap`).  After initialization,
-# any change to a recap variable's value is made to `%config` and later copied to `%recap` before
-# being written to the cache file.  Changes made directly to `%recap` are erroneous because they
-# will be overwritten by the value in `%config`.
-#
-# There are two classes of recap variables:
+# `%recap` is independent of `%config`, although they both share the same set of variable
+# declarations.  There are two classes of recap variables:
 #   * "Status" variables: These track update success/failure, the IP address of the last successful
-#     update, etc.  These do not hold configuration data.  These should always be kept in sync with
+#     update, etc.  These do not hold configuration data; they are unrelated to any entries in
 #     `%config`.
 #   * "Configuration change detection" variables: These are used to force an update if the value in
 #     the same-named entry in `%config` has changed since the previous update attempt.  The value
@@ -654,20 +649,13 @@ our %variables = (
         'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
 
         # The desired IP address (IPv4 or IPv6, but almost always IPv4) that should be saved at the
-        # DDNS service.
-        # TODO: Legacy protocol implementations write the IP address most recently saved at the
-        # DDNS service to this variable so that it can be saved in the recap (as `ipv4` or `ipv6`).
-        # Update the legacy implementations to use `ipv4` or `ipv6` instead, though see the TODO
-        # for those variables.
+        # DDNS service (when `use=ip`).
         'ip'                  => setv(T_IP,    0, 0, undef,                undef),
         # As a recap value, this is the IPv4 address most recently saved at the DDNS service.  As a
         # setting, this is the desired IPv4 address that should be saved at the DDNS service.
-        # TODO: The use of `ipv4` as a recap status variable is supposed to be independent of the
-        # use of `ipv4` as a configuration setting.  Unfortunately, because the `%config` value is
-        # synced to `%recap`, the two uses conflict which causes the bug "skipped: IP address was
-        # already set to a.b.c.d" when the IP was never set to a.b.c.d.  Rename the `%recap` status
-        # variable to something like `saved-ipv4` to avoid the collision (and confusion) with the
-        # `%config` setting variable.
+        # TODO: The use of `ipv4` as a recap status variable is independent of the use of `ipv4` as
+        # a configuration setting.  Rename the `%recap` status variable to something like
+        # `saved-ipv4` to avoid confusion with the `%config` setting variable.
         'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
         # As `ipv4`, but for an IPv6 address.
         'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
@@ -711,7 +699,7 @@ our %variables = (
 );
 
 # Converts a legacy protocol update method to behave like a modern implementation by moving
-# `$config{$h}{status}` and `$config{$h}{ip}` to the version-specific modern equivalents.
+# `$recap{$h}{status}` and `$recap{$h}{ip}` to the version-specific modern equivalents.
 sub adapt_legacy_update {
     my ($update) = @_;
     return sub {
@@ -720,7 +708,7 @@ sub adapt_legacy_update {
         for my $h (@hosts) {
             $ipv{$h} = defined($config{$h}{'wantipv4'}) ? '4' : '6';
             $config{$h}{'wantip'} = delete($config{$h}{"wantipv$ipv{$h}"});
-            delete($config{$h}{$_}) for qw(ip status);
+            delete($recap{$h}{$_}) for qw(ip status);
         }
         $update->(@hosts);
         for my $h (@hosts) {
@@ -728,29 +716,8 @@ sub adapt_legacy_update {
             delete($config{$h}{'wantip'});
             debug(
                 "legacy protocol; moving 'status' to 'status-ipv$ipv{$h}', 'ip' to 'ipv$ipv{$h}'");
-            $config{$h}{"status-ipv$ipv{$h}"} = delete($config{$h}{'status'});
-            # TODO: Currently $config{$h}{'ip'} is used for two distinct purposes: it holds the
-            # value of the --ip option, and it is updated by legacy protocols to hold the new IP
-            # address after an update.  Fortunately, the --ip option is not used very often, and if
-            # it is, the values for the two use cases are usually (but not always) the same.  This
-            # boolean is an imperfect attempt to identify whether 'ip' is being used for the --ip
-            # option, to avoid breaking some user's configuration.  Protocols should be updated to
-            # not set $config{$h}{'ip'} because %config is for configuration, not update status
-            # (same goes for 'status', 'mtime', etc.).
-            my $ip_option = opt('use', $h) eq 'ip' || opt('usev6', $h) eq 'ip';
-            my $ip = $config{$h}{'ip'};
-            delete($config{$h}{'ip'}) if !$ip_option;
-            # TODO: See above comment for $ip_option.  This is the same situation, but for 'ipv4'
-            # and 'ipv6'.
-            my $vip_option = opt("usev$ipv{$h}", $h) eq "ipv$ipv{$h}";
-            if ($vip_option && defined(my $vip = $config{$h}{"ipv$ipv{$h}"})) {
-                if (!defined($ip) || $ip ne $vip) {
-                    my $fip = defined($ip) ? "'$ip'" : '<undefined>';
-                    debug("unable to set 'ipv$ipv{$h}' to $fip; already set to '$vip'");
-                }
-                next;
-            }
-            $config{$h}{"ipv$ipv{$h}"} = $ip;
+            $recap{$h}{"status-ipv$ipv{$h}"} = delete($recap{$h}{'status'});
+            $recap{$h}{"ipv$ipv{$h}"} = delete($recap{$h}{'ip'});
         }
     };
 }
@@ -1502,28 +1469,38 @@ sub update_nics {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
             for my $h (@hosts) {
-                $config{$h}{'atime'} = $now;
-                delete($config{$h}{$_}) for qw(status-ipv4 status-ipv6 wtime
-                                               warned-min-interval warned-min-error-interval);
+                $recap{$h}{'atime'} = $now;
+                delete($recap{$h}{$_}) for qw(status-ipv4 status-ipv6 wtime
+                                              warned-min-interval warned-min-error-interval);
+                # Update configuration change detection variables in `%recap` with the latest
+                # values in `%config`.  Notes about why this is done here:
+                #   * The vars must not be updated if the host is not being updated because change
+                #     detection is defined relative to the previous update attempt.  In particular,
+                #     these can't be updated when the protocol's `force_update` method is called
+                #     because that method is not always called before an update is attempted.
+                #   * The vars must be updated after the `force_update` method would be called so
+                #     that `force_update` can check whether any settings have changed since the
+                #     last time an update was attempted.
+                #   * The vars are updated before the protocol's `update` method is called so that
+                #     `update` sees consistent values between `%recap` and `%config`.  This reduces
+                #     the impact of Hyrum's Law; if a protocol needs a variable to be updated after
+                #     the `update` method is called then that behavior should be made explicit.
+                my $vars = $protocols{opt('protocol', $h)}{variables};
+                for my $v (qw(static wildcard mx backupmx)) {
+                    next if !$vars->{$v} || !$vars->{$v}{recap};
+                    if (defined(my $val = opt($v, $h))) {
+                        $recap{$h}{$v} = $val;
+                    } else {
+                        # Entries in `%recap` with `undef` values are deleted to avoid needing to
+                        # figure out how to represent `undef` in the cache file and to simplify
+                        # testing.
+                        delete($recap{$h}{$v});
+                    }
+                }
             }
             &$update(@hosts);
             for my $h (@hosts) {
                 delete($config{$h}{$_}) for qw(wantipv4 wantipv6);
-            }
-            for my $h (@hosts) {
-                # Update `%recap` with the latest values in `%config`.  This is done after the
-                # protocol's update method returns in case that method mutates any of the `%config`
-                # values or needs access to the previous iteration's `%recap` values.  Entries in
-                # `%recap` with `undef` values are deleted to avoid needing to figure out how to
-                # represent `undef` in the cache file and to simplify testing.  Also, entries for
-                # non-recap variables (which can happen after changing a host's protocol or after
-                # switching to a different version of ddclient) are deleted.
-                my $vars = $protocols{$p}{variables};
-                $recap{$h} = {};
-                for my $v (keys(%$vars)) {
-                    next if !$vars->{$v}{recap} || !defined(opt($v, $h));
-                    $recap{$h}{$v} = opt($v, $h);
-                }
             }
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
         }
@@ -1614,7 +1591,6 @@ sub read_recap {
     %opt = ();
     $saved_recap = _read_config(\%recap, $globals, "##\\s*$program-$version\\s*", $file);
     %opt = %saved;
-    $recap{$_} //= {} for keys(%config);
     for my $h (keys(%recap)) {
         if (!exists($config{$h})) {
             delete($recap{$h});
@@ -1624,26 +1600,6 @@ sub read_recap {
         for my $v (keys(%{$recap{$h}})) {
             delete($recap{$h}{$v}) if !$vars->{$v} || !$vars->{$v}{recap};
         }
-        # Only status variables are copied from `%recap` into `%config` because the recap should
-        # not change the configuration.  See the documenting comments for `%recap`.
-        # TODO: Hard-coding this list impairs readability and maintainability.  In particular,
-        # different pieces of code need to know the list of status variables, and keeping them all
-        # in sync is error-prone (DRY).  Also, different protocols might need different status
-        # variables.
-        # TODO: None of the recap variables should be copied into `%config` because `%config` is
-        # not the semantically appropriate place to record update status.  Code that currently
-        # reads/sets `$config{$h}{'status-ipv4'}` (and friends) should instead access
-        # `$recap{$h}{'status-ipv4'}` directly.
-        for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
-                      warned-min-interval warned-min-error-interval)) {
-            next if !$vars->{$v} || !$vars->{$v}{recap};
-            if (defined($recap{$h}{$v})) {
-                $config{$h}{$v} = $recap{$h}{$v};
-            } else {
-                delete($config{$h}{$v});
-            }
-        }
-        delete($recap{$h}) if !%{$recap{$h}};
     }
 }
 ######################################################################
@@ -3519,15 +3475,14 @@ sub nic_updateable {
         if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
             warning("skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
-                if opt('verbose') || !($config{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $config{$host}{'warned-min-interval'} = $now;
             $recap{$host}{'warned-min-interval'} = $now;
 
         } elsif (($recap{$host}{'status-ipv4'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$config{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) {
                 warning("skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}), which failed");
                 if (!$ipv4 && !opt('verbose')) {
@@ -3537,7 +3492,6 @@ sub nic_updateable {
                 }
             }
 
-            $config{$host}{'warned-min-error-interval'} = $now;
             $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
@@ -3548,15 +3502,14 @@ sub nic_updateable {
         if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
             warning("skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
-                if opt('verbose') || !($config{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
 
-            $config{$host}{'warned-min-interval'} = $now;
             $recap{$host}{'warned-min-interval'} = $now;
 
         } elsif (($recap{$host}{'status-ipv6'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$config{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) {
                 warning("skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}, which failed");
                 if (!$ipv6 && !opt('verbose')) {
@@ -3566,7 +3519,6 @@ sub nic_updateable {
                 }
             }
 
-            $config{$host}{'warned-min-error-interval'} = $now;
             $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
@@ -3712,16 +3664,16 @@ sub nic_dyndns1_update {
         }
 
         if ($return_code ne 'NOERROR' || $error_code ne 'NOERROR' || !$title) {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             $title = 'incomplete response from ' . opt('server', $h) unless $title;
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed($title);
             next;
         }
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
+        $recap{$h}{'ip'} = $ip;
+        $recap{$h}{'mtime'} = $now;
+        $recap{$h}{'status'} = 'good';
         success("$return_code: IP address set to $ip ($title)");
     }
 }
@@ -3868,8 +3820,8 @@ sub nic_dyndns2_update {
                 warning("$status: $errors{$status}");
                 $status = 'good';
             }
-            $config{$h}{'status-ipv4'} = $status if $ipv4;
-            $config{$h}{'status-ipv6'} = $status if $ipv6;
+            $recap{$h}{'status-ipv4'} = $status if $ipv4;
+            $recap{$h}{'status-ipv6'} = $status if $ipv6;
             if ($status ne 'good') {
                 if (exists($errors{$status})) {
                     failed("$status: $errors{$status}");
@@ -3887,9 +3839,9 @@ sub nic_dyndns2_update {
             # some services do not return the IP; and (2) comparison is brittle (e.g.,
             # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
             # (an update attempt every min-error-interval instead of every max-interval).
-            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-            $config{$h}{'mtime'} = $now;
+            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
+            $recap{$h}{'mtime'} = $now;
             success("IPv4 address set to $ipv4") if $ipv4;
             success("IPv6 address set to $ipv6") if $ipv6;
         }
@@ -3970,7 +3922,7 @@ sub dnsexit2_update_host {
         my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
         $ips{$ipv} = $ip;
         info("updating IPv$ipv address to $ip");
-        $config{$h}{"status-ipv$ipv"} = 'failed';
+        $recap{$h}{"status-ipv$ipv"} = 'failed';
         push(@updates, {
             name => $name,
             type => ($ipv eq '6') ? 'AAAA' : 'A',
@@ -4036,11 +3988,11 @@ sub dnsexit2_update_host {
         return;
     }
     success($message);
-    $config{$h}{'mtime'} = $now;
+    $recap{$h}{'mtime'} = $now;
     keys(%ips);  # Reset internal iterator.
     while (my ($ipv, $ip) = each(%ips)) {
-        $config{$h}{"ipv$ipv"} = $ip;
-        $config{$h}{"status-ipv$ipv"} = 'good';
+        $recap{$h}{"ipv$ipv"} = $ip;
+        $recap{$h}{"status-ipv$ipv"} = 'good';
         success("updated IPv$ipv address to $ip");
     }
 }
@@ -4100,27 +4052,27 @@ sub nic_noip_update {
             for my $ip (split_by_comma($returnedips)) {
                 next if (!$ip);
                 my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                $config{$h}{"status-ipv$ipv"} = $status;
+                $recap{$h}{"status-ipv$ipv"} = $status;
             }
 
             if ($status eq 'good') {
-                $config{$h}{'mtime'} = $now;
+                $recap{$h}{'mtime'} = $now;
                 for my $ip (split_by_comma($returnedips)) {
                     next if (!$ip);
                     my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                    $config{$h}{"ipv$ipv"} = $ip;
+                    $recap{$h}{"ipv$ipv"} = $ip;
                     success("$status: IPv$ipv address set to $ip");
                 }
 
             } elsif (exists $errors{$status}) {
                 if ($status eq 'nochg') {
                     warning("$status: $errors{$status}");
-                    $config{$h}{'mtime'} = $now;
+                    $recap{$h}{'mtime'} = $now;
                     for my $ip (split_by_comma($returnedips)) {
                         next if (!$ip);
                         my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                        $config{$h}{"ipv$ipv"} = $ip;
-                        $config{$h}{"status-ipv$ipv"} = 'good';
+                        $recap{$h}{"ipv$ipv"} = $ip;
+                        $recap{$h}{"status-ipv$ipv"} = 'good';
                     }
                 } else {
                     failed("$status: $errors{$status}");
@@ -4135,7 +4087,7 @@ sub nic_noip_update {
                 ($scale, $units) = (60*60, 'hours') if $units eq 'h';
 
                 $sec = $wait * $scale;
-                $config{$h}{'wtime'} = $now + $sec;
+                $recap{$h}{'wtime'} = $now + $sec;
                 warning("$status: wait $wait $units before further updates");
 
             } else {
@@ -4236,13 +4188,13 @@ sub nic_dslreports1_update {
         }
 
         if ($return_code !~ /NOERROR/) {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             failed($reply);
             next;
         }
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
+        $recap{$h}{'ip'} = $ip;
+        $recap{$h}{'mtime'} = $now;
+        $recap{$h}{'status'} = 'good';
         success("$return_code: IP address set to $ip");
     }
 }
@@ -4291,9 +4243,9 @@ sub nic_domeneshop_update {
                 password => opt('password', $h),
             );
             next if !header_ok($reply);
-            $config{$h}{"ipv$ipv"} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{"status-ipv$ipv"} = 'good';
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
             success("IPv$ipv address set to $ip");
         }
     }
@@ -4381,14 +4333,14 @@ sub nic_zoneedit1_update {
                     $status_ip = $var{'IP'} if exists $var{'IP'};
 
                     if ($status eq 'SUCCESS' || ($status eq 'ERROR' && $var{'CODE'} eq '707')) {
-                        $config{$h}{'ip'} = $status_ip;
-                        $config{$h}{'mtime'} = $now;
-                        $config{$h}{'status'} = 'good';
+                        $recap{$h}{'ip'} = $status_ip;
+                        $recap{$h}{'mtime'} = $now;
+                        $recap{$h}{'status'} = 'good';
 
                         success("IP address set to $ip ($status_code: $status_text)");
 
                     } else {
-                        $config{$h}{'status'} = 'failed';
+                        $recap{$h}{'status'} = 'failed';
                         failed("$status_code: $status_text");
                     }
                     shift @hosts;
@@ -4491,7 +4443,7 @@ sub nic_easydns_update {
             # values are considered to be failures and will result in frequent retries (every
             # min-error-interval, which defaults to 5m).
             $status = 'good' if ($status // '') =~ qr/^NOERROR|OK$/;
-            $config{$h}{"status-ipv$ipv"} = $status;
+            $recap{$h}{"status-ipv$ipv"} = $status;
             if ($status ne 'good') {
                 if (exists $errors{$status}) {
                     failed("$status: $errors{$status}");
@@ -4500,8 +4452,8 @@ sub nic_easydns_update {
                 }
                 next;
             }
-            $config{$h}{"ipv$ipv"} = $ip;
-            $config{$h}{'mtime'} = $now;
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
             success("IPv$ipv address set to $ip");
         }
     }
@@ -4568,12 +4520,12 @@ sub nic_namecheap_update {
 
         my @reply = split /\n/, $reply;
         if (grep /<ErrCount>0/i, @reply) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             success("IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             failed("invalid reply: $reply");
         }
     }
@@ -4739,7 +4691,7 @@ sub nic_nfsn_update {
         if ($h eq $zone) {
             $name = '';
         } elsif ($h !~ /$zone$/) {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             failed("$h is outside zone $zone");
             next;
         } else {
@@ -4754,7 +4706,7 @@ sub nic_nfsn_update {
         my $list_body = encode_www_form_urlencoded({name => $name, type => 'A'});
         my $list_resp = nic_nfsn_make_request($h, $list_path, 'POST', $list_body);
         if (!header_ok($list_resp)) {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             nic_nfsn_handle_error($list_resp, $h);
             next;
         }
@@ -4762,7 +4714,7 @@ sub nic_nfsn_update {
         $list_resp =~ s/^.*?\n\n//s;  # Strip header
         my $list = eval { decode_json($list_resp) };
         if ($@) {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             failed("JSON decoding failure");
             next;
         }
@@ -4779,7 +4731,7 @@ sub nic_nfsn_update {
             my $rm_resp = nic_nfsn_make_request($h, $rm_path,
                                                 'POST', $rm_body);
             if (!header_ok($rm_resp)) {
-                $config{$h}{'status'} = 'failed';
+                $recap{$h}{'status'} = 'failed';
                 nic_nfsn_handle_error($rm_resp, $h);
                 next;
             }
@@ -4794,12 +4746,12 @@ sub nic_nfsn_update {
         my $add_resp = nic_nfsn_make_request($h, $add_path, 'POST',
                                              $add_body);
         if (header_ok($add_resp)) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             success("IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             nic_nfsn_handle_error($add_resp, $h);
         }
     }
@@ -4903,11 +4855,11 @@ sub nic_njalla_update {
             }
         }
         if ($status eq 'good') {
-            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
+            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
         }
-        $config{$h}{'status-ipv4'} = $status if $ipv4;
-        $config{$h}{'status-ipv6'} = $status if $ipv6;
+        $recap{$h}{'status-ipv4'} = $status if $ipv4;
+        $recap{$h}{'status-ipv6'} = $status if $ipv6;
     }
 }
 
@@ -4968,12 +4920,12 @@ sub nic_sitelutions_update {
 
         my @reply = split /\n/, $reply;
         if (grep /success/i, @reply) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             success("IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("invalid reply");
@@ -5075,8 +5027,8 @@ sub nic_freedns_update {
         my $ipv6 = delete $config{$h}{'wantipv6'};
 
         if ($record_list_error ne '') {
-            $config{$h}{'status-ipv4'} = 'failed' if ($ipv4);
-            $config{$h}{'status-ipv6'} = 'failed' if ($ipv6);
+            $recap{$h}{'status-ipv4'} = 'failed' if ($ipv4);
+            $recap{$h}{'status-ipv6'} = 'failed' if ($ipv6);
             failed($record_list_error);
             next;
         }
@@ -5094,12 +5046,12 @@ sub nic_freedns_update {
             }
 
             info("setting IP address to $ip");
-            $config{$h}{"status-ipv$ipv"} = 'failed';
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
 
             if ($ip eq $rec->[1]) {
-                $config{$h}{"ipv$ipv"} = $ip;
-                $config{$h}{'mtime'} = $now;
-                $config{$h}{"status-ipv$ipv"} = 'good';
+                $recap{$h}{"ipv$ipv"} = $ip;
+                $recap{$h}{'mtime'} = $now;
+                $recap{$h}{"status-ipv$ipv"} = 'good';
                 success("update not necessary, '$type' record already set to $ip")
                     if (!$daemon || opt('verbose'));
             } else {
@@ -5113,9 +5065,9 @@ sub nic_freedns_update {
                 if (header_ok($reply)) {
                     $reply =~ s/^.*?\n\n//s;  # Strip the headers.
                     if ($reply =~ /Updated.*$h.*to.*$ip/) {
-                        $config{$h}{"ipv$ipv"} = $ip;
-                        $config{$h}{'mtime'} = $now;
-                        $config{$h}{"status-ipv$ipv"} = 'good';
+                        $recap{$h}{"ipv$ipv"} = $ip;
+                        $recap{$h}{'mtime'} = $now;
+                        $recap{$h}{"status-ipv$ipv"} = 'good';
                         success("IPv$ipv address set to $ip");
                     } else {
                         warning("SENT: %s", $url_tmpl) unless opt('verbose');
@@ -5191,8 +5143,8 @@ sub nic_1984_update {
             next;
         }
 
-        $config{$host}{'status'} = 'good';
-        $config{$host}{'ip'} = $ip;
+        $recap{$host}{'status'} = 'good';
+        $recap{$host}{'ip'} = $ip;
         if ($response->{msg} =~ /unaltered/) {
             success("skipped: IP was already set to $response->{ip}");
         } else {
@@ -5259,12 +5211,12 @@ sub nic_changeip_update {
 
         my @reply = split /\n/, $reply;
         if (grep /success/i, @reply) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             success("IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("invalid reply");
@@ -5380,9 +5332,9 @@ sub nic_godaddy_update {
                 failed($msg);
                 next;
             }
-            $config{$h}{"ipv$ipv"} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{"status-ipv$ipv"} = 'good';
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
             success("updated successfully to $ip (status: $code)");
         }
     }
@@ -5444,7 +5396,7 @@ sub nic_henet_update {
             my ($line) = split(/\n/, $body, 2);
             my ($status, $returnedip) = split(/ /, lc($line));
             $status = 'good' if $status eq 'nochg';
-            $config{$h}{"status-ipv$ipv"} = $status;
+            $recap{$h}{"status-ipv$ipv"} = $status;
             if ($status ne 'good') {
                 if (exists($errors{$status})) {
                     failed("$status: $errors{$status}");
@@ -5454,8 +5406,8 @@ sub nic_henet_update {
                 next;
             }
             success("$status: IPv$ipv address set to $returnedip");
-            $config{$h}{"ipv$ipv"} = $returnedip;
-            $config{$h}{'mtime'} = $now;
+            $recap{$h}{"ipv$ipv"} = $returnedip;
+            $recap{$h}{'mtime'} = $now;
         }
     }
 }
@@ -5524,8 +5476,8 @@ sub nic_mythicdyn_update {
                 );
                 my $ok = header_ok($reply);
                 if ($ok) {
-                    $config{$h}{'mtime'} = $now;
-                    $config{$h}{"status-ipv$mythver"} = "good";
+                    $recap{$h}{'mtime'} = $now;
+                    $recap{$h}{"status-ipv$mythver"} = "good";
 
                     success("IPv$mythver updated successfully");
                 }
@@ -5634,12 +5586,12 @@ EoINSTR4
         my $status = pipecmd($command, $instructions);
         if ($status eq 1) {
             for (@hosts) {
-                $config{$_}{'mtime'} = $now;
+                $recap{$_}{'mtime'} = $now;
                 for my $ip ($ipv4, $ipv6) {
                     next if (!$ip);
                     my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-                    $config{$_}{"ipv$ipv"} = $ip;
-                    $config{$_}{"status-ipv$ipv"} = 'good';
+                    $recap{$_}{"ipv$ipv"} = $ip;
+                    $recap{$_}{"status-ipv$ipv"} = 'good';
                 }
             }
             success("IPv4 address set to $ipv4") if $ipv4;
@@ -5751,7 +5703,7 @@ sub nic_cloudflare_update {
                 my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
 
                 info("setting IPv$ipv address to $ip");
-                $config{$domain}{"status-ipv$ipv"} = 'failed';
+                $recap{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
                 $url = "https://" . opt('server', $domain) . "/zones/$zone_id/dns_records?";
@@ -5790,9 +5742,9 @@ sub nic_cloudflare_update {
                 $response = eval {decode_json(${^MATCH})};
                 if ($response && $response->{result}) {
                     success("IPv$ipv address set to $ip");
-                    $config{$domain}{"ipv$ipv"} = $ip;
-                    $config{$domain}{'mtime'} = $now;
-                    $config{$domain}{"status-ipv$ipv"} = 'good';
+                    $recap{$domain}{"ipv$ipv"} = $ip;
+                    $recap{$domain}{'mtime'} = $now;
+                    $recap{$domain}{"status-ipv$ipv"} = 'good';
                 } else {
                     failed("invalid json or result");
                 }
@@ -5874,7 +5826,7 @@ sub nic_hetzner_update {
             my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
 
             info("setting IPv$ipv address to $ip");
-            $config{$domain}{"status-ipv$ipv"} = 'failed';
+            $recap{$domain}{"status-ipv$ipv"} = 'failed';
 
             # Get DNS 'A' or 'AAAA' record ID
             $url = "https://" . opt('server', $domain) . "/records?zone_id=$zone_id";
@@ -5919,9 +5871,9 @@ sub nic_hetzner_update {
             $response = eval {decode_json(${^MATCH})};
             if ($response && $response->{record}) {
                 success("IPv$ipv address set to $ip");
-                $config{$domain}{"ipv$ipv"} = $ip;
-                $config{$domain}{'mtime'} = $now;
-                $config{$domain}{"status-ipv$ipv"} = 'good';
+                $recap{$domain}{"ipv$ipv"} = $ip;
+                $recap{$domain}{'mtime'} = $now;
+                $recap{$domain}{"status-ipv$ipv"} = 'good';
             } else {
                 failed("invalid json or result");
             }
@@ -6067,8 +6019,8 @@ sub nic_inwx_update {
                 $status = 'good';
             }
             for my $h (@hosts) {
-                $config{$h}{'status-ipv4'} = $status if $ipv4;
-                $config{$h}{'status-ipv6'} = $status if $ipv6;
+                $recap{$h}{'status-ipv4'} = $status if $ipv4;
+                $recap{$h}{'status-ipv6'} = $status if $ipv6;
             }
             if ($status ne 'good') {
                 if (exists($errors{$status})) {
@@ -6079,9 +6031,9 @@ sub nic_inwx_update {
                 next;
             }
             for my $h (@hosts) {
-                $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-                $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-                $config{$h}{'mtime'} = $now;
+                $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+                $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
+                $recap{$h}{'mtime'} = $now;
             }
             success("IPv4 address set to $ipv4") if $ipv4;
             success("IPv6 address set to $ipv6") if $ipv6;
@@ -6181,9 +6133,9 @@ sub nic_yandex_update {
             failed("%s", $response->{error});
             next;
         }
-        $config{$host}{'ip'} = $ip;
-        $config{$host}{'mtime'} = $now;
-        $config{$host}{'status'} = 'good';
+        $recap{$host}{'ip'} = $ip;
+        $recap{$host}{'mtime'} = $now;
+        $recap{$host}{'status'} = 'good';
         success("updated successfully to $ip");
     }
 }
@@ -6247,11 +6199,11 @@ sub nic_duckdns_update {
             next;
         }
         for my $h (@hosts) {
-            $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-            $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-            $config{$h}{'status-ipv6'} = 'good' if $ipv6;
+            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status-ipv4'} = 'good' if $ipv4;
+            $recap{$h}{'status-ipv6'} = 'good' if $ipv6;
         }
         success("IPv4 address set to $ipv4") if $ipv4;
         success("IPv6 address set to $ipv6") if $ipv6;
@@ -6302,9 +6254,9 @@ sub nic_freemyip_update {
             failed("server said: $body");
             next;
         }
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
+        $recap{$h}{'ip'} = $ip;
+        $recap{$h}{'mtime'} = $now;
+        $recap{$h}{'status'} = 'good';
         success("IP address set to $ip");
     }
 }
@@ -6352,9 +6304,9 @@ sub nic_ddnsfm_update {
                 url => opt('server', $h) . "/update?key=" . opt('password', $h) . "&domain=$h&myip=$ip",
             );
             next if !header_ok($reply);
-            $config{$h}{"ipv$ipv"} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{"status-ipv$ipv"} = 'good';
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
             success("IPv$ipv address set to $ip");
         }
     }
@@ -6401,9 +6353,9 @@ sub nic_dondominio_update {
             failed("server said: $returned");
             next;
         }
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
+        $recap{$h}{'ip'} = $ip;
+        $recap{$h}{'mtime'} = $now;
+        $recap{$h}{'status'} = 'good';
         success("IP address set to $ip");
     }
 }
@@ -6465,9 +6417,9 @@ sub nic_dnsmadeeasy_update {
             failed("server said: $err");
             next;
         }
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
+        $recap{$h}{'ip'} = $ip;
+        $recap{$h}{'mtime'} = $now;
+        $recap{$h}{'status'} = 'good';
         success("IP address set to $ip");
     }
 }
@@ -6533,16 +6485,16 @@ sub nic_ovh_update {
         my @reply = split /\n/, $reply;
         my $returned = List::Util::first { $_ =~ /good/ || $_ =~ /nochg/ } @reply;
         if ($returned) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             if ($returned =~ /good/) {
                 success("IP address set to $ip");
             } else {
                 success("skipped: IP address was already set to $ip");
             }
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             failed("server said: $reply");
         }
     }
@@ -6678,7 +6630,7 @@ sub nic_porkbun_update {
             warning("There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
                 if @$records > 1;
             if ($records->[0]{'content'} eq $ip) {
-                $config{$h}{"status-ipv$ipv"} = "good";
+                $recap{$h}{"status-ipv$ipv"} = "good";
                 success("skipped: IPv$ipv address was already set to $ip");
                 next;
             }
@@ -6700,7 +6652,7 @@ sub nic_porkbun_update {
                 }),
             );
             next if !header_ok($reply);
-            $config{$h}{"status-ipv$ipv"} = "good";
+            $recap{$h}{"status-ipv$ipv"} = "good";
             success("IPv$ipv address set to $ip");
         }
     }
@@ -6755,14 +6707,14 @@ sub nic_cloudns_update {
         $reply =~ s/^.*?\n\n//s;  # Strip the headers.
         chomp($reply);
         if ($reply eq "The record's key is wrong!" || $reply eq "Invalid request.") {
-            $config{$_}{'status'} = 'failed' for @hosts;
+            $recap{$_}{'status'} = 'failed' for @hosts;
             failed($reply);
             next;
         }
         # There's no documentation explaining possible return values, so we assume success.
-        $config{$_}{'ip'} = $ip for @hosts;
-        $config{$_}{'mtime'} = $now for @hosts;
-        $config{$_}{'status'} = 'good' for @hosts;
+        $recap{$_}{'ip'} = $ip for @hosts;
+        $recap{$_}{'mtime'} = $now for @hosts;
+        $recap{$_}{'status'} = 'good' for @hosts;
         success("IP address set to $ip");
     }
 }
@@ -6811,7 +6763,7 @@ sub nic_dinahosting_update {
             password => opt('password', $h),
             url => $url,
         );
-        $config{$h}{'status'} = 'failed';  # assume failure until otherwise determined
+        $recap{$h}{'status'} = 'failed';  # assume failure until otherwise determined
         next if !header_ok($reply);
         $reply =~ s/^.*?\n\n//s;  # Strip the headers.
         if ($reply !~ /Success/i) {
@@ -6822,9 +6774,9 @@ sub nic_dinahosting_update {
             failed("error $code: $message");
             next;
         }
-        $config{$h}{'ip'} = $ip;
-        $config{$h}{'mtime'} = $now;
-        $config{$h}{'status'} = 'good';
+        $recap{$h}{'ip'} = $ip;
+        $recap{$h}{'mtime'} = $now;
+        $recap{$h}{'status'} = 'good';
         success("IP address set to $ip");
     }
 }
@@ -6876,20 +6828,20 @@ sub nic_directnic_update {
             (my $body = $reply) =~ s/^.*?\n\n//s;
             my $response = eval {decode_json($body)};
             if (ref($response) ne 'HASH') {
-                $config{$h}{"status-ipv$ipv"} = 'bad';
+                $recap{$h}{"status-ipv$ipv"} = 'bad';
                 failed("response is not a JSON object:\n$body");
                 next;
             }
 
             if ($response->{'result'} ne 'success') {
-                $config{$h}{"status-ipv$ipv"} = 'failed';
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
                 failed("server said:\n$body");
                 next;
             }
 
-            $config{$h}{"ipv$ipv"} = $ip;
-            $config{$h}{"status-ipv$ipv"} = 'good';
-            $config{$h}{'mtime'} = $now;
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            $recap{$h}{'mtime'} = $now;
             success("IPv$ipv address set to $ip");
         }
     }
@@ -6972,15 +6924,15 @@ sub nic_gandi_update {
             $reply =~ s/^.*?\n\n//s;
             my $response = eval { decode_json($reply) };
             if (ref($response) ne 'HASH') {
-                $config{$h}{"status-$ipv"} = "bad";
+                $recap{$h}{"status-$ipv"} = "bad";
                 failed("response is not a JSON object: $reply");
                 next;
             }
             if ($response->{'rrset_values'}->[0] eq $ip && (!defined(opt('ttl', $h)) ||
                 $response->{'rrset_ttl'} eq opt('ttl', $h))) {
-                $config{$h}{'ip'} = $ip;
-                $config{$h}{'mtime'} = $now;
-                $config{$h}{"status-$ipv"} = "good";
+                $recap{$h}{'ip'} = $ip;
+                $recap{$h}{'mtime'} = $now;
+                $recap{$h}{"status-$ipv"} = "good";
                 success("skipped: address was already set to $ip");
                 next;
             }
@@ -6995,7 +6947,7 @@ sub nic_gandi_update {
                 }),
             );
             if (!header_ok($reply)) {
-                $config{$h}{"status-$ipv"} = "bad";
+                $recap{$h}{"status-$ipv"} = "bad";
                 $reply =~ s/^.*?\n\n//s;
                 my $response = eval { decode_json($reply) };
                 if (ref($response) eq 'HASH' && ($response->{message} // '') ne '') {
@@ -7005,9 +6957,9 @@ sub nic_gandi_update {
                 }
                 next;
             }
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{"status-$ipv"} = "good";
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-$ipv"} = "good";
             success("updated successfully to $ip");
         }
     }
@@ -7055,12 +7007,12 @@ sub nic_keysystems_update {
         last if !header_ok($reply);
 
         if ($reply =~ /code = 200/) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             success("IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             failed("server said: $reply");
         }
     }
@@ -7109,11 +7061,11 @@ sub nic_regfishde_update {
             failed("server said: $reply");
             next;
         }
-        $config{$h}{'ipv4'} = $ipv4 if $ipv4;
-        $config{$h}{'ipv6'} = $ipv6 if $ipv6;
-        $config{$h}{'status-ipv4'} = 'good' if $ipv4;
-        $config{$h}{'status-ipv6'} = 'good' if $ipv6;
-        $config{$h}{'mtime'} = $now;
+        $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+        $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
+        $recap{$h}{'status-ipv4'} = 'good' if $ipv4;
+        $recap{$h}{'status-ipv6'} = 'good' if $ipv6;
+        $recap{$h}{'mtime'} = $now;
         success("IPv4 address set to $ipv4") if $ipv4;
         success("IPv6 address set to $ipv6") if $ipv6;
     }
@@ -7183,12 +7135,12 @@ sub nic_enom_update {
         my @reply = split /\n/, $reply;
 
         if (grep /Done=true/i, @reply) {
-            $config{$h}{'ip'} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{'status'} = 'good';
+            $recap{$h}{'ip'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status'} = 'good';
             success("IP address set to $ip");
         } else {
-            $config{$h}{'status'} = 'failed';
+            $recap{$h}{'status'} = 'failed';
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("invalid reply");
@@ -7252,7 +7204,7 @@ sub nic_digitalocean_update_one {
 
     my $list = eval { decode_json($list_resp) };
     if ($@) {
-        $config{$h}{"status-$ipv"} = 'failed';
+        $recap{$h}{"status-$ipv"} = 'failed';
         failed("listing $ipv: JSON decoding failure");
         return;
     }
@@ -7261,7 +7213,7 @@ sub nic_digitalocean_update_one {
     unless ((ref($elem) eq 'HASH') &&
             (ref ($elem = $elem->{'domain_records'}) eq 'ARRAY') &&
             (@$elem == 1 && ref ($elem = $elem->[0]) eq 'HASH')) {
-        $config{$h}{"status-$ipv"} = 'failed';
+        $recap{$h}{"status-$ipv"} = 'failed';
         failed("listing $ipv: no record, multiple records, or malformed JSON");
         return;
     }
@@ -7283,9 +7235,9 @@ sub nic_digitalocean_update_one {
         return if !header_ok($update_resp);
     }
 
-    $config{$h}{"status-$ipv"} = 'good';
-    $config{$h}{"ip-$ipv"} = $ip;
-    $config{$h}{"mtime"} = $now;
+    $recap{$h}{"status-$ipv"} = 'good';
+    $recap{$h}{"ip-$ipv"} = $ip;
+    $recap{$h}{"mtime"} = $now;
 }
 
 sub nic_digitalocean_update {
@@ -7393,9 +7345,9 @@ sub nic_infomaniak_update {
                 next;
             }
             success($msg);
-            $config{$h}{"ipv$v"} = $ip;
-            $config{$h}{'mtime'} = $now;
-            $config{$h}{"status-ipv$v"} = 'good';
+            $recap{$h}{"ipv$v"} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$v"} = 'good';
         }
     }
 }
@@ -7417,11 +7369,11 @@ sub nic_emailonly_update {
     logmsg(email => 1, raw => 1, join("\n", 'Host IP addresses:', map({
         my $ipv4 = delete($config{$_}{'wantipv4'});
         my $ipv6 = delete($config{$_}{'wantipv6'});
-        $config{$_}{'status-ipv4'} = 'good' if $ipv4;
-        $config{$_}{'status-ipv6'} = 'good' if $ipv6;
-        $config{$_}{'ipv4'} = $ipv4 if $ipv4;
-        $config{$_}{'ipv6'} = $ipv6 if $ipv6;
-        $config{$_}{'mtime'} = $now;
+        $recap{$_}{'status-ipv4'} = 'good' if $ipv4;
+        $recap{$_}{'status-ipv6'} = 'good' if $ipv6;
+        $recap{$_}{'ipv4'} = $ipv4 if $ipv4;
+        $recap{$_}{'ipv6'} = $ipv6 if $ipv6;
+        $recap{$_}{'mtime'} = $now;
         sprintf('%30s  %s', $_, join('  ', grep(defined($_), $ipv4, $ipv6)));
     } @_)));
 }
