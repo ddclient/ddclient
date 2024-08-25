@@ -1480,7 +1480,7 @@ sub update_nics {
                 # configuration, not update status (same goes for 'status', 'mtime', etc.).
                 my $ip_option = opt('use', $h) eq 'ip' || opt('usev6', $h) eq 'ip';
                 delete($config{$h}{'ip'}) if !$ip_option;
-                debug("legacy protocol; moving status to status-ipv$ipv and ip to ipv$ipv");
+                debug("legacy protocol; moving 'status' to 'status-ipv$ipv', 'ip' to 'ipv$ipv'");
                 $config{$h}{"status-ipv$ipv"} = $status;
                 # TODO: See above comment for $ip_option.  This is the same situation, but for
                 # 'ipv4' and 'ipv6'.
