@@ -1489,8 +1489,9 @@ sub update_nics {
                     debug("unable to update 'ipv$ipv' to '$ip' " .
                           "because it is already set to '$vip'") if $vip_option;
                 } else {
-                    # A previous update will have set "ipv$ipv" if !$vip_option, so it's safe to
-                    # overwrite it here because $vip_option was checked above.
+                    # A previous update would have moved `$config{$h}{'ip'}` to
+                    # `$config{$h}{"ipv$ipv"}`, so it is OK to overwrite `$config{$h}{"ipv$ipv"}`
+                    # if it is already set.
                     debug("updating 'ipv$ipv' from '$vip' to '$ip'")
                         if defined($vip) && $vip ne $ip;
                     $config{$h}{"ipv$ipv"} = $ip;
