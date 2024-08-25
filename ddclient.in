@@ -1489,9 +1489,8 @@ sub update_nics {
                 if (defined(my $vstatus = $config{$h}{"status-ipv$ipv"})) {
                     warning("ddclient bug: legacy protocol set both 'status' (to '$status') " .
                             "and 'status-ipv$ipv' (to '$vstatus')");
-                } else {
-                    $config{$h}{"status-ipv$ipv"} = $status;
                 }
+                $config{$h}{"status-ipv$ipv"} = $status;
                 # TODO: See above comment for $ip_option.  This is the same situation, but for
                 # 'ipv4' and 'ipv6'.
                 my $vip_option = opt("usev$ipv", $h) eq "ipv$ipv";
