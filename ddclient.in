@@ -1575,9 +1575,7 @@ sub write_recap {
                 $recap{$h}{$v} = opt($v, $h);
             }
         } else {
-            # TODO: Why aren't all "status" variables included in this update? (missing: mtime
-            # ipv4 ipv6)
-            for my $v (qw(atime wtime status-ipv4 status-ipv6
+            for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                           warned-min-interval warned-min-error-interval)) {
                 $recap{$h}{$v} = opt($v, $h);
             }
