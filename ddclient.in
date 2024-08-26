@@ -1554,8 +1554,14 @@ sub write_recap {
     my ($file) = @_;
 
     for my $h (keys %config) {
+        my $vars = $protocols{opt('protocol', $h)}{variables};
         # nic_updateable (called from update_nics for each host) sets `$config{$h}{update}`
         # according to whether an update was attempted.
+        #
+        # Entries in `%recap` with `undef` values are deleted to avoid needing to figure out how to
+        # represent `undef` in the cache file and to simplify testing.  Also, entries for non-recap
+        # variables (which can happen after changing a host's protocol or after switching to a
+        # different version of ddclient) are deleted.
         #
         # TODO: The "configuration change detection" variables are also syncronized if `$recap{$h}`
         # doesn't exist.  Why is this done?  Perhaps the intention was to prevent the
@@ -1569,7 +1575,7 @@ sub write_recap {
         #     `$recap{$h}` doesn't exist, and that check is done before the force-if-config-changed
         #     check.)
         if (!exists $recap{$h} || $config{$h}{'update'}) {
-            my $vars = $protocols{opt('protocol', $h)}{variables};
+            $recap{$h} = {};
             for my $v (keys(%$vars)) {
                 next if !$vars->{$v}{recap} || !defined(opt($v, $h));
                 $recap{$h}{$v} = opt($v, $h);
@@ -1577,13 +1583,12 @@ sub write_recap {
         } else {
             for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                           warned-min-interval warned-min-error-interval)) {
-                $recap{$h}{$v} = opt($v, $h);
+                if ($vars->{$v} && $vars->{$v}{recap} && defined(my $val = opt($v, $h))) {
+                    $recap{$h}{$v} = $val;
+                } else {
+                    delete($recap{$h}{$v});
+                }
             }
-        }
-        # Clear out entries with `undef` values to avoid needing to figure out how to represent
-        # `undef` in the cache file and to simplify testing.
-        for my $v (keys(%{$recap{$h}})) {
-            delete($recap{$h}{$v}) if !defined($recap{$h}{$v});
         }
     }
 
@@ -3610,8 +3615,6 @@ sub nic_updateable {
         $config{$host}{'update'} = 1;
         $config{$host}{'atime'} = $now;
         delete($config{$host}{$_}) for qw(wtime warned-min-interval warned-min-error-interval);
-        # TODO: Why aren't all of the above "status" variables (the ones deleted from `%config`)
-        # also removed from `%recap`?
     } else {
         for (qw(status-ipv4 status-ipv6)) {
             $config{$host}{$_} = $recap{$host}{$_} if defined($recap{$host}{$_});
