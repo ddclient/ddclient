@@ -1573,6 +1573,7 @@ sub write_recap {
         #     `$recap{$h}` doesn't exist, and that check is done before the force-if-config-changed
         #     check.)
         if (!exists $recap{$h} || $config{$h}{'update'}) {
+            delete($config{$h}{'update'});
             $recap{$h} = {};
             for my $v (keys(%$vars)) {
                 next if !$vars->{$v}{recap} || !defined(opt($v, $h));
@@ -3606,7 +3607,7 @@ sub nic_updateable {
         }
     }
 
-    delete($config{$host}{$_}) for qw(status-ipv4 status-ipv6 update);
+    delete($config{$host}{$_}) for qw(status-ipv4 status-ipv6);
     if ($update) {
         $config{$host}{'update'} = 1;
         $config{$host}{'atime'} = $now;

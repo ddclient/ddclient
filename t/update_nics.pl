@@ -345,7 +345,6 @@ for my $tc (@test_cases) {
                                            Names => ['*got', '*want']));
             }
             my %want_cfg = (host => {
-                $tc->{want_update} ? (update => 1) : (),
                 %cfg,
                 %{$tc->{want_cfg_changes} // {}},
             });
