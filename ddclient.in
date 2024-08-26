@@ -1502,7 +1502,6 @@ sub update_nics {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
             for my $h (@hosts) {
-                $config{$h}{'update'} = 1;
                 $config{$h}{'atime'} = $now;
                 delete($config{$h}{$_}) for qw(status-ipv4 status-ipv6 wtime
                                                warned-min-interval warned-min-error-interval);
@@ -1511,7 +1510,21 @@ sub update_nics {
             for my $h (@hosts) {
                 delete($config{$h}{$_}) for qw(wantipv4 wantipv6);
             }
-
+            for my $h (@hosts) {
+                # Update `%recap` with the latest values in `%config`.  This is done after the
+                # protocol's update method returns in case that method mutates any of the `%config`
+                # values or needs access to the previous iteration's `%recap` values.  Entries in
+                # `%recap` with `undef` values are deleted to avoid needing to figure out how to
+                # represent `undef` in the cache file and to simplify testing.  Also, entries for
+                # non-recap variables (which can happen after changing a host's protocol or after
+                # switching to a different version of ddclient) are deleted.
+                my $vars = $protocols{$p}{variables};
+                $recap{$h} = {};
+                for my $v (keys(%$vars)) {
+                    next if !$vars->{$v}{recap} || !defined(opt($v, $h));
+                    $recap{$h}{$v} = opt($v, $h);
+                }
+            }
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
         }
     }
@@ -1557,24 +1570,6 @@ sub write_pid {
 ######################################################################
 sub write_recap {
     my ($file) = @_;
-
-    for my $h (keys %config) {
-        # nic_updateable (called from update_nics for each host) sets `$config{$h}{update}`
-        # according to whether an update was attempted.
-        next if !$config{$h}{'update'};
-        delete($config{$h}{'update'});
-        my $vars = $protocols{opt('protocol', $h)}{variables};
-        # Entries in `%recap` with `undef` values are deleted to avoid needing to figure out how to
-        # represent `undef` in the cache file and to simplify testing.  Also, entries for non-recap
-        # variables (which can happen after changing a host's protocol or after switching to a
-        # different version of ddclient) are deleted.
-        $recap{$h} = {};
-        for my $v (keys(%$vars)) {
-            next if !$vars->{$v}{recap} || !defined(opt($v, $h));
-            $recap{$h}{$v} = opt($v, $h);
-        }
-    }
-
     my $recap = "";
     for my $h (sort keys %recap) {
         my $opt = join(',', map("$_=$recap{$h}{$_}", sort(keys(%{$recap{$h}}))));
