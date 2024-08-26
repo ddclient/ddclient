@@ -1567,19 +1567,7 @@ sub write_recap {
         # represent `undef` in the cache file and to simplify testing.  Also, entries for non-recap
         # variables (which can happen after changing a host's protocol or after switching to a
         # different version of ddclient) are deleted.
-        #
-        # TODO: The "configuration change detection" variables are also syncronized if `$recap{$h}`
-        # doesn't exist.  Why is this done?  Perhaps the intention was to prevent the
-        # force-if-config-changed logic from triggering the very first cycle (when there is no
-        # previous update attempt).  However:
-        #   * There's a bug: This function isn't called until after `update_nics` has already
-        #     checked the force-if-config-changed condition, so syncing the values here is too late
-        #     to suppress the first cycle's force-if-config-changed logic.
-        #   * It's unnecessary: If there have not been any update attempts, an update attempt
-        #     should be made anyway, and already is.  (`update_nics` already forces an update if
-        #     `$recap{$h}` doesn't exist, and that check is done before the force-if-config-changed
-        #     check.)
-        if (!exists $recap{$h} || $config{$h}{'update'}) {
+        if ($config{$h}{'update'}) {
             delete($config{$h}{'update'});
             $recap{$h} = {};
             for my $v (keys(%$vars)) {
