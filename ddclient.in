@@ -1576,8 +1576,9 @@ sub write_recap {
             }
         } else {
             # TODO: Why aren't all "status" variables included in this update? (missing: mtime
-            # ipv4 ipv6 warned-min-interval warned-min-error-interval)
-            for my $v (qw(atime wtime status-ipv4 status-ipv6)) {
+            # ipv4 ipv6)
+            for my $v (qw(atime wtime status-ipv4 status-ipv6
+                          warned-min-interval warned-min-error-interval)) {
                 $recap{$h}{$v} = opt($v, $h);
             }
         }
@@ -1641,13 +1642,12 @@ sub read_recap {
         next if !exists($config->{$h});
         # Only status variables are copied from `%recap` into `%config` because the recap should
         # not change the configuration.  See the documenting comments for `%recap`.
-        # TODO: Why aren't all status variables included in this update? (missing:
-        # warned-min-interval warned-min-error-interval)
         # TODO: Hard-coding this list impairs readability and maintainability.  In particular,
         # different pieces of code need to know the list of status variables, and keeping them all
         # in sync is error-prone (DRY).  Also, different protocols might need different status
         # variables.
-        for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6)) {
+        for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6
+                warned-min-interval warned-min-error-interval)) {
             # TODO: This is a no-op because `$config` is `\%recap`.  I believe the original intent
             # was to copy values that convey update status from `%recap` into `%config` so that
             # ddclient can be restarted and resume where it left off and not violate
@@ -3533,14 +3533,14 @@ sub nic_updateable {
         if (($recap{$host}{'status-ipv4'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
             warning("skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
-                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($config{$host}{'warned-min-interval'} // 0);
 
-            $recap{$host}{'warned-min-interval'} = $now;
+            $config{$host}{'warned-min-interval'} = $now;
 
         } elsif (($recap{$host}{'status-ipv4'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$config{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv4{$host} // 0) < $inv_ip_warn_count)) {
                 warning("skipped update from $previpv4 to $ipv4 because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}), which failed");
                 if (!$ipv4 && !opt('verbose')) {
@@ -3550,7 +3550,7 @@ sub nic_updateable {
                 }
             }
 
-            $recap{$host}{'warned-min-error-interval'} = $now;
+            $config{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
@@ -3560,14 +3560,14 @@ sub nic_updateable {
         if (($recap{$host}{'status-ipv6'} // '') eq 'good' &&
             !interval_expired($host, 'mtime', 'min-interval')) {
             warning("skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-interval'} since the previous update (on $prettyt{'mtime'})")
-                if opt('verbose') || !($recap{$host}{'warned-min-interval'} // 0);
+                if opt('verbose') || !($config{$host}{'warned-min-interval'} // 0);
 
-            $recap{$host}{'warned-min-interval'} = $now;
+            $config{$host}{'warned-min-interval'} = $now;
 
         } elsif (($recap{$host}{'status-ipv6'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
 
-            if (opt('verbose') || (!$recap{$host}{'warned-min-error-interval'} &&
+            if (opt('verbose') || (!$config{$host}{'warned-min-error-interval'} &&
                                    ($warned_ipv6{$host} // 0) < $inv_ip_warn_count)) {
                 warning("skipped update from $previpv6 to $ipv6 because it has been less than $prettyi{'min-error-interval'} since the previous update attempt (on $prettyt{'atime'}, which failed");
                 if (!$ipv6 && !opt('verbose')) {
@@ -3577,7 +3577,7 @@ sub nic_updateable {
                 }
             }
 
-            $recap{$host}{'warned-min-error-interval'} = $now;
+            $config{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
@@ -3608,9 +3608,7 @@ sub nic_updateable {
         $config{$host}{'atime'} = $now;
         delete($config{$host}{$_}) for qw(wtime warned-min-interval warned-min-error-interval);
         # TODO: Why aren't all of the above "status" variables (the ones deleted from `%config`)
-        # also removed from `%recap`?  (missing: wtime status status-ipv4 status-ipv6)
-        delete $recap{$host}{'warned-min-interval'};
-        delete $recap{$host}{'warned-min-error-interval'};
+        # also removed from `%recap`?
     } else {
         for (qw(status-ipv4 status-ipv6)) {
             $config{$host}{$_} = $recap{$host}{$_} if defined($recap{$host}{$_});

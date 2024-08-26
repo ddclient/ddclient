@@ -211,6 +211,9 @@ my @test_cases = (
             want_recap_changes => {
                 'warned-min-interval' => $ddclient::now,
             },
+            want_cfg_changes => {
+                'warned-min-interval' => $ddclient::now,
+            },
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -260,6 +263,9 @@ my @test_cases = (
                 %cfg,
             },
             want_recap_changes => {
+                'warned-min-error-interval' => $ddclient::now,
+            },
+            want_cfg_changes => {
                 'warned-min-error-interval' => $ddclient::now,
             },
             %$_,
