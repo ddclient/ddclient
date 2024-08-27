@@ -1646,8 +1646,8 @@ sub read_recap {
         # different pieces of code need to know the list of status variables, and keeping them all
         # in sync is error-prone (DRY).  Also, different protocols might need different status
         # variables.
-        for (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
-                warned-min-interval warned-min-error-interval)) {
+        for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
+                      warned-min-interval warned-min-error-interval)) {
             # TODO: This is a no-op because `$config` is `\%recap`.  I believe the original intent
             # was to copy values that convey update status from `%recap` into `%config` so that
             # ddclient can be restarted and resume where it left off and not violate
@@ -1656,7 +1656,7 @@ sub read_recap {
             # `%recap` into `%config` because `%config` is not the semantically appropriate place
             # to record update status.  Code that currently reads/sets `$config{$h}{'status-ipv4'}`
             # (and friends) should instead access `$recap{$h}{'status-ipv4'}` directly.
-            $config->{$h}{$_} = $recap{$h}{$_} if exists $recap{$h}{$_};
+            $config->{$h}{$v} = $recap{$h}{$v} if exists($recap{$h}{$v});
         }
     }
 }
