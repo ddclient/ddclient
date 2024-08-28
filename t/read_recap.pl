@@ -143,7 +143,6 @@ my @test_cases = (
         cachefile_lines => ["mtime=1234567890 host_b"],
         want => {host_b => {host => 'host_b'}},
         want_TODO => "longstanding minor issue, doesn't affect functionality",
-        want_config_changes_TODO => "longstanding bug",
     },
     {
         desc => "non-recap vars are scrubbed from %recap",
@@ -151,7 +150,6 @@ my @test_cases = (
         recap => {host_b => {host => 'host_b', mtime => 1234567891}},
         want => {host_b => {host => 'host_b'}},
         want_TODO => "longstanding minor issue, doesn't affect functionality",
-        want_config_changes_TODO => "longstanding minor issue, doesn't affect functionality",
     },
     {
         desc => "unknown hosts are scrubbed from %recap",

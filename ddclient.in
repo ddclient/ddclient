@@ -1636,6 +1636,7 @@ sub read_recap {
     $recap{$_} //= {} for keys(%config);
     for my $h (keys(%recap)) {
         next if !exists($config{$h});
+        my $vars = $protocols{opt('protocol', $h)}{variables};
         # Only status variables are copied from `%recap` into `%config` because the recap should
         # not change the configuration.  See the documenting comments for `%recap`.
         # TODO: Hard-coding this list impairs readability and maintainability.  In particular,
@@ -1648,6 +1649,7 @@ sub read_recap {
         # `$recap{$h}{'status-ipv4'}` directly.
         for my $v (qw(atime mtime wtime ipv4 ipv6 status-ipv4 status-ipv6
                       warned-min-interval warned-min-error-interval)) {
+            next if !$vars->{$v} || !$vars->{$v}{recap};
             if (defined($recap{$h}{$v})) {
                 $config{$h}{$v} = $recap{$h}{$v};
             } else {
