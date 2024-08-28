@@ -1599,23 +1599,22 @@ sub read_recap {
     my $config = shift;
     my $globals = {};
     %{$config} = ();
-    if (-e $file) {
-        my %saved = %opt;
-        %opt = ();
-        $saved_recap = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
-        %opt = %saved;
-        for my $h (keys(%recap)) {
-            next if !exists($config->{$h});
-            # TODO: Why is this limited to this set of variables?  Why not copy every recap var
-            # defined for the host's protocol?
-            for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6)) {
-                # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
-                # original intention behind this?  To copy %recap values into %config?  If so, is
-                # it better to just delete this and live with the current behavior (which doesn't
-                # seem to be causing users any problems) or to "fix" it to match the original
-                # intention, which might introduce a bug?
-                $config->{$h}{$_} = $recap{$h}{$_} if exists $recap{$h}{$_};
-            }
+    return if !(-e $file);
+    my %saved = %opt;
+    %opt = ();
+    $saved_recap = _read_config($config, $globals, "##\\s*$program-$version\\s*", $file);
+    %opt = %saved;
+    for my $h (keys(%recap)) {
+        next if !exists($config->{$h});
+        # TODO: Why is this limited to this set of variables?  Why not copy every recap var defined
+        # for the host's protocol?
+        for (qw(atime mtime wtime ip ipv4 ipv6 status-ipv4 status-ipv6)) {
+            # TODO: Isn't $config equal to \%recap here?  If so, this is a no-op.  What was the
+            # original intention behind this?  To copy %recap values into %config?  If so, is it
+            # better to just delete this and live with the current behavior (which doesn't seem to
+            # be causing users any problems) or to "fix" it to match the original intention, which
+            # might introduce a bug?
+            $config->{$h}{$_} = $recap{$h}{$_} if exists $recap{$h}{$_};
         }
     }
 }
