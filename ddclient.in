@@ -1559,29 +1559,19 @@ sub write_recap {
     my ($file) = @_;
 
     for my $h (keys %config) {
-        my $vars = $protocols{opt('protocol', $h)}{variables};
         # nic_updateable (called from update_nics for each host) sets `$config{$h}{update}`
         # according to whether an update was attempted.
-        #
+        next if !$config{$h}{'update'};
+        delete($config{$h}{'update'});
+        my $vars = $protocols{opt('protocol', $h)}{variables};
         # Entries in `%recap` with `undef` values are deleted to avoid needing to figure out how to
         # represent `undef` in the cache file and to simplify testing.  Also, entries for non-recap
         # variables (which can happen after changing a host's protocol or after switching to a
         # different version of ddclient) are deleted.
-        if ($config{$h}{'update'}) {
-            delete($config{$h}{'update'});
-            $recap{$h} = {};
-            for my $v (keys(%$vars)) {
-                next if !$vars->{$v}{recap} || !defined(opt($v, $h));
-                $recap{$h}{$v} = opt($v, $h);
-            }
-        } else {
-            for my $v (qw(warned-min-interval warned-min-error-interval)) {
-                if ($vars->{$v} && $vars->{$v}{recap} && defined(my $val = opt($v, $h))) {
-                    $recap{$h}{$v} = $val;
-                } else {
-                    delete($recap{$h}{$v});
-                }
-            }
+        $recap{$h} = {};
+        for my $v (keys(%$vars)) {
+            next if !$vars->{$v}{recap} || !defined(opt($v, $h));
+            $recap{$h}{$v} = opt($v, $h);
         }
     }
 
@@ -3537,6 +3527,7 @@ sub nic_updateable {
                 if opt('verbose') || !($config{$host}{'warned-min-interval'} // 0);
 
             $config{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
         } elsif (($recap{$host}{'status-ipv4'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
@@ -3552,6 +3543,7 @@ sub nic_updateable {
             }
 
             $config{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
@@ -3564,6 +3556,7 @@ sub nic_updateable {
                 if opt('verbose') || !($config{$host}{'warned-min-interval'} // 0);
 
             $config{$host}{'warned-min-interval'} = $now;
+            $recap{$host}{'warned-min-interval'} = $now;
 
         } elsif (($recap{$host}{'status-ipv6'} // '') ne 'good' &&
                  !interval_expired($host, 'atime', 'min-error-interval')) {
@@ -3579,6 +3572,7 @@ sub nic_updateable {
             }
 
             $config{$host}{'warned-min-error-interval'} = $now;
+            $recap{$host}{'warned-min-error-interval'} = $now;
 
         } else {
             $update = 1;
