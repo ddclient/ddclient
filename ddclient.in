@@ -168,6 +168,8 @@ our %config;
 # compatibility concerns with the public `--cache` option.)
 our %recap;
 
+our @recap_config_change_detection_vars = qw(static wildcard mx backupmx);
+
 my $result;
 my $saved_recap;
 my %saved_opt;
@@ -1486,7 +1488,7 @@ sub update_nics {
                 #     the impact of Hyrum's Law; if a protocol needs a variable to be updated after
                 #     the `update` method is called then that behavior should be made explicit.
                 my $vars = $protocols{opt('protocol', $h)}{variables};
-                for my $v (qw(static wildcard mx backupmx)) {
+                for my $v (@recap_config_change_detection_vars) {
                     next if !$vars->{$v} || !$vars->{$v}{recap};
                     if (defined(my $val = opt($v, $h))) {
                         $recap{$h}{$v} = $val;
@@ -3529,7 +3531,7 @@ sub nic_updateable {
         $update = 1;
     } elsif (my @changed = grep({ my $rv = $recap{$host}{$_}; my $cv = opt($_, $host);
                                   defined($rv) && defined($cv) && $rv ne $cv; }
-                                qw(static wildcard mx backupmx))) {
+                                @recap_config_change_detection_vars)) {
         info("update forced because options changed: " . join(', ', @changed));
         $update = 1;
 
