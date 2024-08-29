@@ -685,10 +685,10 @@ our %variables = (
         # TODO: Create a timestamp type and change this to that type.
         'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
         # Disposition of the most recent (or currently in progress) attempt to update the DDNS
-        # service with the IP address in `wantipv4` (or `wantip`, if an IPv4 address).  Anything
-        # other than `good`, including undef, is treated as a failure.
+        # service with the IP address in `wantipv4`.  Anything other than `good`, including undef,
+        # is treated as a failure.
         'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
-        # As `status-ipv4`, but with `wantipv6` (or `wantip`, if an IPv6 address).
+        # As `status-ipv4`, but with `wantipv6`.
         'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
         # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
         # `min-interval` not inhibited the attempt.  This is reset to 0 once an attempt is actually
@@ -1437,11 +1437,10 @@ sub update_nics {
             $ip //= $ipv4 // $ipv6;
             $ipv4 //= $ip if is_ipv4($ip);
             $ipv6 //= $ip if is_ipv6($ip);
-            $config{$h}{'wantip'} = $ip;
             $config{$h}{'wantipv4'} = $ipv4;
             $config{$h}{'wantipv6'} = $ipv6;
 
-            if (!$ip && !$ipv4 && !$ipv6) {
+            if (!$ipv4 && !$ipv6) {
                 warning('unable to determine IP address');
                 next;
             }
@@ -1455,6 +1454,11 @@ sub update_nics {
         if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
+            for my $h (@hosts) {
+                # TODO: Remove this once all legacy protocol implementations have been upgraded to
+                # read `wantipv4` and `wantipv6` directly.
+                $config{$h}{'wantip'} = $config{$h}{'wantipv4'} // $config{$h}{'wantipv6'};
+            }
             &$update(@hosts);
             for my $h (@hosts) {
                 delete($config{$h}{$_}) for qw(wantip wantipv4 wantipv6);
