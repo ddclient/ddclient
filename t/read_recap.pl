@@ -7,21 +7,23 @@ local $ddclient::globals{debug} = 1;
 local $ddclient::globals{verbose} = 1;
 local %ddclient::protocols = (
     protocol_a => ddclient::Protocol->new(
-        variables => {
-            host => {type => ddclient::T_STRING(), recap => 1},
-            var_a => {type => ddclient::T_BOOL(), recap => 1},
+        recapvars => {
+            host => ddclient::T_STRING(),
+            var_a => ddclient::T_BOOL(),
         },
     ),
     protocol_b => ddclient::Protocol->new(
-        variables => {
-            host => {type => ddclient::T_STRING(), recap => 1},
-            var_b => {type => ddclient::T_NUMBER(), recap => 1},
+        recapvars => {
+            host => ddclient::T_STRING(),
+            var_b => ddclient::T_NUMBER(),
+        },
+        cfgvars => {
             var_b_non_recap => {type => ddclient::T_ANY()},
         },
     ),
 );
-local %ddclient::variables =
-    (merged => {map({ %{$ddclient::protocols{$_}{variables}}; } sort(keys(%ddclient::protocols)))});
+local %ddclient::cfgvars = (merged => {map({ %{$ddclient::protocols{$_}{cfgvars} // {}}; }
+                                           sort(keys(%ddclient::protocols)))});
 
 my @test_cases = (
     {

@@ -142,11 +142,10 @@ our %config;
 # service-specific and protocol-independent mechanisms such as `min-interval`.  This data is
 # persisted in the cache file (`--cache`) so that it survives ddclient restarts.  This hash maps a
 # hostname to a hashref with entries that map variable names to values.  Only entries for the
-# host's "recap variables" -- the host's protocol's variables with a truthy `recap` property -- are
+# host's "recap variables" -- those declared in the host's protocol's `recapvars` property -- are
 # included.
 #
-# `%recap` is independent of `%config`, although they both share the same set of variable
-# declarations.  There are two classes of recap variables:
+# There are two classes of recap variables:
 #   * "Status" variables: These track update success/failure, the IP address of the last successful
 #     update, etc.  These do not hold configuration data; they are unrelated to any entries in
 #     `%config`.
@@ -205,6 +204,58 @@ sub T_IP     { 'ip' }
 sub T_IPV4   { 'ipv4' }
 sub T_IPV6   { 'ipv6' }
 sub T_POSTS  { 'postscript' }
+
+# `%recapvars` contains common recap variable declarations that are used by multiple protocols (see
+# the protocol `recapvars` property).
+our %recapvars = (
+    'common' => {
+        'host' => T_STRING,
+        'protocol' => T_PROTO,
+        # The IPv4 address most recently saved at the DDNS service.
+        # TODO: This is independent of the `ipv4` configuration setting.  Rename the `%recap`
+        # status variable to something like `saved-ipv4` to avoid confusion with the `%config`
+        # setting variable.
+        'ipv4' => T_IPV4,
+        # As `ipv4`, but for an IPv6 address.
+        'ipv6' => T_IPV6,
+        # Timestamp (seconds since epoch) indicating the earliest time the next update is
+        # permitted.
+        # TODO: Create a timestamp type and change this to that type.
+        'wtime' => T_NUMBER,
+        # Timestamp (seconds since epoch) indicating when an IP address was last sent to the DDNS
+        # service, even if the IP address was not different from what was already stored.
+        # TODO: Create a timestamp type and change this to that type.
+        'mtime' => T_NUMBER,
+        # Timestamp (seconds since epoch) of the most recent attempt to update the DDNS service
+        # (including attempts to update with the same IP address).  This equals mtime if the most
+        # recent attempt was successful, otherwise it will be more recent than mtime.
+        # TODO: Create a timestamp type and change this to that type.
+        'atime' => T_NUMBER,
+        # Disposition of the most recent (or currently in progress) attempt to update the DDNS
+        # service with the IP address in `wantipv4`.  Anything other than `good`, including undef,
+        # is treated as a failure.
+        'status-ipv4' => T_ANY,
+        # As `status-ipv4`, but with `wantipv6`.
+        'status-ipv6' => T_ANY,
+        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
+        # `min-interval` not inhibited the attempt.  This is reset to 0 once an attempt is actually
+        # made.  This is used as a boolean to suppress repeated warnings to the user that indicate
+        # that `min-interval` has inhibited an update attempt.
+        # TODO: Change to a boolean and rename to improve readability.
+        'warned-min-interval' => T_ANY,
+        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
+        # `min-error-interval` not inhibited the attempt.  This is reset to 0 once an attempt is
+        # actually made.  This is used as a boolean to suppress repeated warnings to the user that
+        # indicate that `min-error-interval` has inhibited an update attempt.
+        # TODO: Change to a boolean and rename to improve readability.
+        'warned-min-error-interval' => T_ANY,
+    },
+    'dyndns-common' => {
+        'backupmx' => T_BOOL,
+        'mx' => T_FQDN,
+        'wildcard' => T_BOOL,
+    },
+);
 
 ## strategies for obtaining an ip address.
 our %builtinweb = (
@@ -570,131 +621,90 @@ sub setv {
     return {
         'type'     => shift,
         'required' => shift,
-        'recap'    => shift,
         'default'  => shift,
         'minimum'  => shift,
     };
 }
-our %variables = (
+our %cfgvars = (
     'global-defaults' => {
-        'daemon'              => setv(T_DELAY, 0, 0, $daemon_default,      interval('60s')),
-        'foreground'          => setv(T_BOOL,  0, 0, 0,                    undef),
-        'file'                => setv(T_FILE,  0, 0, "$etc/$program.conf", undef),
-        'cache'               => setv(T_FILE,  0, 0, "$cachedir/$program.cache", undef),
-        'pid'                 => setv(T_FILE,  0, 0, undef,                undef),
-        'proxy'               => setv(T_FQDNP, 0, 0, undef,                undef),
-        'protocol'            => setv(T_PROTO, 0, 1, 'dyndns2',            undef),
+        'daemon'              => setv(T_DELAY, 0, $daemon_default,      interval('60s')),
+        'foreground'          => setv(T_BOOL,  0, 0,                    undef),
+        'file'                => setv(T_FILE,  0, "$etc/$program.conf", undef),
+        'cache'               => setv(T_FILE,  0, "$cachedir/$program.cache", undef),
+        'pid'                 => setv(T_FILE,  0, undef,                undef),
+        'proxy'               => setv(T_FQDNP, 0, undef,                undef),
+        'protocol'            => setv(T_PROTO, 0, 'dyndns2',            undef),
 
-        'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
-        'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
-        'ssl'                 => setv(T_BOOL,  0, 0, 1,                    undef),
-        'syslog'              => setv(T_BOOL,  0, 0, 0,                    undef),
-        'facility'            => setv(T_STRING,0, 0, 'daemon',             undef),
-        'priority'            => setv(T_STRING,0, 0, 'notice',             undef),
-        'mail'                => setv(T_EMAIL, 0, 0, undef,                undef),
-        'mail-failure'        => setv(T_EMAIL, 0, 0, undef,                undef),
-        'max-warn'            => setv(T_NUMBER,0, 0, 1,                    undef),
+        'timeout'             => setv(T_DELAY, 0, interval('120s'),     interval('120s')),
+        'force'               => setv(T_BOOL,  0, 0,                    undef),
+        'ssl'                 => setv(T_BOOL,  0, 1,                    undef),
+        'syslog'              => setv(T_BOOL,  0, 0,                    undef),
+        'facility'            => setv(T_STRING,0, 'daemon',             undef),
+        'priority'            => setv(T_STRING,0, 'notice',             undef),
+        'mail'                => setv(T_EMAIL, 0, undef,                undef),
+        'mail-failure'        => setv(T_EMAIL, 0, undef,                undef),
+        'max-warn'            => setv(T_NUMBER,0, 1,                    undef),
 
-        'exec'                => setv(T_BOOL,  0, 0, 1,                    undef),
-        'debug'               => setv(T_BOOL,  0, 0, 0,                    undef),
-        'verbose'             => setv(T_BOOL,  0, 0, 0,                    undef),
-        'quiet'               => setv(T_BOOL,  0, 0, 0,                    undef),
-        'test'                => setv(T_BOOL,  0, 0, 0,                    undef),
+        'exec'                => setv(T_BOOL,  0, 1,                    undef),
+        'debug'               => setv(T_BOOL,  0, 0,                    undef),
+        'verbose'             => setv(T_BOOL,  0, 0,                    undef),
+        'quiet'               => setv(T_BOOL,  0, 0,                    undef),
+        'test'                => setv(T_BOOL,  0, 0,                    undef),
 
-        'postscript'          => setv(T_POSTS, 0, 0, undef,                undef),
-        'ssl_ca_dir'          => setv(T_FILE,  0, 0, undef,                undef),
-        'ssl_ca_file'         => setv(T_FILE,  0, 0, undef,                undef),
-        'redirect'            => setv(T_NUMBER,0, 0, 0,                    undef)
+        'postscript'          => setv(T_POSTS, 0, undef,                undef),
+        'ssl_ca_dir'          => setv(T_FILE,  0, undef,                undef),
+        'ssl_ca_file'         => setv(T_FILE,  0, undef,                undef),
+        'redirect'            => setv(T_NUMBER,0, 0,                    undef)
     },
     'protocol-common-defaults' => {
-        'server'              => setv(T_FQDNP, 0, 0, 'members.dyndns.org', undef),
-        'login'               => setv(T_LOGIN, 1, 0, undef,                undef),
-        'password'            => setv(T_PASSWD,1, 0, undef,                undef),
-        'host'                => setv(T_STRING,1, 1, undef,                undef),
+        'server'              => setv(T_FQDNP, 0, 'members.dyndns.org', undef),
+        'login'               => setv(T_LOGIN, 1, undef,                undef),
+        'password'            => setv(T_PASSWD,1, undef,                undef),
+        'host'                => setv(T_STRING,1, undef,                undef),
 
-        'use' => setv(T_USE, 0, 0, sub {
+        'use' => setv(T_USE, 0, sub {
             my ($h) = @_;
             return "'disabled' if '--usev4' or '--usev6' is enabled, otherwise 'ip'"
                 if ($h // '') eq '<usage>';
             return 'disabled' if opt('usev4', $h) ne 'disabled' || opt('usev6', $h) ne 'disabled';
             return 'ip';
         }, undef),
-        'usev4'               => setv(T_USEV4, 0, 0, 'disabled',           undef),
-        'usev6'               => setv(T_USEV6, 0, 0, 'disabled',           undef),
-        'if'                  => setv(T_IF,    0, 0, 'ppp0',               undef),
-        'ifv4'                => setv(T_IF,    0, 0, 'default',            undef),
-        'ifv6'                => setv(T_IF,    0, 0, 'default',            undef),
-        'web'                 => setv(T_STRING,0, 0, 'dyndns',             undef),
-        'web-skip'            => setv(T_STRING,0, 0, undef,                undef),
-        'web-ssl-validate'    => setv(T_BOOL,  0, 0, 1,                    undef),
-        'webv4'               => setv(T_STRING,0, 0, 'ipify-ipv4',         undef),
-        'webv4-skip'          => setv(T_STRING,0, 0, undef,                undef),
-        'webv6'               => setv(T_STRING,0, 0, 'ipify-ipv6',         undef),
-        'webv6-skip'          => setv(T_STRING,0, 0, undef,                undef),
-        'fw'                  => setv(T_ANY,   0, 0, undef,                undef),
-        'fw-skip'             => setv(T_STRING,0, 0, undef,                undef),
-        'fw-login'            => setv(T_LOGIN, 0, 0, undef,                undef),
-        'fw-password'         => setv(T_PASSWD,0, 0, undef,                undef),
-        'fw-ssl-validate'     => setv(T_BOOL,  0, 0, 1,                    undef),
-        'fwv4'                => setv(T_ANY,   0, 0, undef,                undef),
-        'fwv4-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'fwv6'                => setv(T_ANY,   0, 0, undef,                undef),
-        'fwv6-skip'           => setv(T_STRING,0, 0, undef,                undef),
-        'cmd'                 => setv(T_PROG,  0, 0, undef,                undef),
-        'cmd-skip'            => setv(T_STRING,0, 0, undef,                undef),
-        'cmdv4'               => setv(T_PROG,  0, 0, undef,                undef),
-        'cmdv6'               => setv(T_PROG,  0, 0, undef,                undef),
-        'min-interval'        => setv(T_DELAY, 0, 0, interval('30s'),      0),
-        'max-interval'        => setv(T_DELAY, 0, 0, interval('25d'),      0),
-        'min-error-interval'  => setv(T_DELAY, 0, 0, interval('5m'),       0),
-
-        # The desired IP address (IPv4 or IPv6, but almost always IPv4) that should be saved at the
-        # DDNS service (when `use=ip`).
-        'ip'                  => setv(T_IP,    0, 0, undef,                undef),
-        # As a recap value, this is the IPv4 address most recently saved at the DDNS service.  As a
-        # setting, this is the desired IPv4 address that should be saved at the DDNS service.
-        # TODO: The use of `ipv4` as a recap status variable is independent of the use of `ipv4` as
-        # a configuration setting.  Rename the `%recap` status variable to something like
-        # `saved-ipv4` to avoid confusion with the `%config` setting variable.
-        'ipv4'                => setv(T_IPV4,  0, 1, undef,                undef),
-        # As `ipv4`, but for an IPv6 address.
-        'ipv6'                => setv(T_IPV6,  0, 1, undef,                undef),
-        # Timestamp (seconds since epoch) indicating the earliest time the next update is
-        # permitted.
-        # TODO: Create a timestamp type and change this to that type.
-        'wtime'               => setv(T_NUMBER,0, 1, undef,                undef),
-        # Timestamp (seconds since epoch) indicating when an IP address was last sent to the DDNS
-        # service, even if the IP address was not different from what was already stored.
-        # TODO: Create a timestamp type and change this to that type.
-        'mtime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        # Timestamp (seconds since epoch) of the most recent attempt to update the DDNS service
-        # (including attempts to update with the same IP address).  This equals mtime if the most
-        # recent attempt was successful, otherwise it will be more recent than mtime.
-        # TODO: Create a timestamp type and change this to that type.
-        'atime'               => setv(T_NUMBER,0, 1, 0,                    undef),
-        # Disposition of the most recent (or currently in progress) attempt to update the DDNS
-        # service with the IP address in `wantipv4`.  Anything other than `good`, including undef,
-        # is treated as a failure.
-        'status-ipv4'         => setv(T_ANY,   0, 1, undef,                undef),
-        # As `status-ipv4`, but with `wantipv6`.
-        'status-ipv6'         => setv(T_ANY,   0, 1, undef,                undef),
-        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
-        # `min-interval` not inhibited the attempt.  This is reset to 0 once an attempt is actually
-        # made.  This is used as a boolean to suppress repeated warnings to the user that indicate
-        # that `min-interval` has inhibited an update attempt.
-        # TODO: Change to a boolean and rename to improve readability.
-        'warned-min-interval' => setv(T_ANY, 0, 1, undef, undef),
-        # Timestamp (seconds since epoch) of the most recent attempt that would have been made had
-        # `min-error-interval` not inhibited the attempt.  This is reset to 0 once an attempt is
-        # actually made.  This is used as a boolean to suppress repeated warnings to the user that
-        # indicate that `min-error-interval` has inhibited an update attempt.
-        # TODO: Change to a boolean and rename to improve readability.
-        'warned-min-error-interval' => setv(T_ANY, 0, 1, undef, undef),
+        'usev4'               => setv(T_USEV4, 0, 'disabled',           undef),
+        'usev6'               => setv(T_USEV6, 0, 'disabled',           undef),
+        'if'                  => setv(T_IF,    0, 'ppp0',               undef),
+        'ifv4'                => setv(T_IF,    0, 'default',            undef),
+        'ifv6'                => setv(T_IF,    0, 'default',            undef),
+        'web'                 => setv(T_STRING,0, 'dyndns',             undef),
+        'web-skip'            => setv(T_STRING,0, undef,                undef),
+        'web-ssl-validate'    => setv(T_BOOL,  0, 1,                    undef),
+        'webv4'               => setv(T_STRING,0, 'ipify-ipv4',         undef),
+        'webv4-skip'          => setv(T_STRING,0, undef,                undef),
+        'webv6'               => setv(T_STRING,0, 'ipify-ipv6',         undef),
+        'webv6-skip'          => setv(T_STRING,0, undef,                undef),
+        'fw'                  => setv(T_ANY,   0, undef,                undef),
+        'fw-skip'             => setv(T_STRING,0, undef,                undef),
+        'fw-login'            => setv(T_LOGIN, 0, undef,                undef),
+        'fw-password'         => setv(T_PASSWD,0, undef,                undef),
+        'fw-ssl-validate'     => setv(T_BOOL,  0, 1,                    undef),
+        'fwv4'                => setv(T_ANY,   0, undef,                undef),
+        'fwv4-skip'           => setv(T_STRING,0, undef,                undef),
+        'fwv6'                => setv(T_ANY,   0, undef,                undef),
+        'fwv6-skip'           => setv(T_STRING,0, undef,                undef),
+        'cmd'                 => setv(T_PROG,  0, undef,                undef),
+        'cmd-skip'            => setv(T_STRING,0, undef,                undef),
+        'cmdv4'               => setv(T_PROG,  0, undef,                undef),
+        'cmdv6'               => setv(T_PROG,  0, undef,                undef),
+        'min-interval'        => setv(T_DELAY, 0, interval('30s'),      0),
+        'max-interval'        => setv(T_DELAY, 0, interval('25d'),      0),
+        'min-error-interval'  => setv(T_DELAY, 0, interval('5m'),       0),
+        'ip'                  => setv(T_IP,    0, undef,                undef),
+        'ipv4'                => setv(T_IPV4,  0, undef,                undef),
+        'ipv6'                => setv(T_IPV6,  0, undef,                undef),
     },
     'dyndns-common-defaults' => {
-        'backupmx'            => setv(T_BOOL,  0, 1, 0,                    undef),
-        'mx'                  => setv(T_FQDN,  0, 1, undef,                undef),
-        'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
+        'backupmx'            => setv(T_BOOL,  0, 0,                    undef),
+        'mx'                  => setv(T_FQDN,  0, undef,                undef),
+        'wildcard'            => setv(T_BOOL,  0, 0,                    undef),
     },
 );
 
@@ -705,8 +715,10 @@ our %variables = (
     #   * `update`: Required coderef that takes `($self, @hosts)` and updates the given hosts.
     #   * `examples`: Required coderef that takes `($self)` and returns a string showing
     #     configuration examples for using the protocol.
-    #   * `variables`: Optional hashref of variable declarations.  If omitted or `undef`,
-    #     `$variables{'protocol-common-defaults'}` is used.
+    #   * `cfgvars`: Optional hashref of configuration variable declarations.  If omitted or
+    #     `undef`, `$cfgvars{'protocol-common-defaults'}` is used.
+    #   * `recapvars`: Optional hashref of recap variable declarations.  If omitted or `undef`,
+    #     `$recapvars{'common'}` is used.
     #   * `force_update`: Optional coderef that takes `($self, $h)` and returns truthy to force the
     #     given host to update.  Omitting or passing `undef` is equivalent to passing a subroutine
     #     that always returns falsy.
@@ -718,18 +730,21 @@ our %variables = (
         my ($class, %args) = @_;
         my $self = bless({%args}, $class);
         # Set defaults and normalize.
-        $self->{variables} //= $ddclient::variables{'protocol-common-defaults'};
-        $self->{variables} = {%{$self->{variables}}};  # Shallow clone.
-        # Delete `undef` variable declarations to make it easier to cancel previously declared
-        # variables.
-        delete($self->{variables}{$_}) for grep(!defined($self->{variables}{$_}),
-                                                keys(%{$self->{variables}}));
+        $self->{cfgvars} //= $ddclient::cfgvars{'protocol-common-defaults'};
+        $self->{recapvars} //= $ddclient::recapvars{'common'};
+        for my $varset (qw(cfgvars recapvars)) {
+            $self->{$varset} = {%{$self->{$varset}}};  # Shallow clone.
+            # Delete `undef` variable declarations to make it easier to cancel previously declared
+            # variables.
+            delete($self->{$varset}{$_}) for grep(!defined($self->{$varset}{$_}),
+                                                  keys(%{$self->{$varset}}));
+        }
         $self->{force_update} //= sub { return 0; };
         $self->{force_update_if_changed} //= [];
         # Eliminate duplicates and non-recap variables.
         my %fvs = map({ ($_ => undef); } @{$self->{force_update_if_changed}}, 'protocol');
         $self->{force_update_if_changed} =
-            [grep({ $self->{variables}{$_} && $self->{variables}{$_}{recap}; } sort(keys(%fvs)))];
+            [grep({ $self->{cfgvars}{$_} && $self->{recapvars}{$_}; } sort(keys(%fvs)))];
         return $self;
     }
 
@@ -826,406 +841,419 @@ our %protocols = (
     '1984' => ddclient::LegacyProtocol->new(
         'update' => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'api.1984.is', undef),
+            'server' => setv(T_FQDNP, 0, 'api.1984.is', undef),
         },
     ),
     'changeip' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server'       => setv(T_FQDNP, 0, 0, 'nic.changeip.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'nic.changeip.com', undef),
         },
     ),
     'cloudflare' => ddclient::Protocol->new(
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'login'        => setv(T_LOGIN,  0, 0, 'token',                        undef),
-            'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
-            'server'       => setv(T_FQDNP,  0, 0, 'api.cloudflare.com/client/v4', undef),
-            'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'        => setv(T_LOGIN,  0, 'token',                        undef),
+            'min-interval' => setv(T_DELAY,  0, interval('5m'),                 0),
+            'server'       => setv(T_FQDNP,  0, 'api.cloudflare.com/client/v4', undef),
+            'zone'         => setv(T_FQDN,   1, undef,                          undef),
         },
     ),
     'cloudns' => ddclient::LegacyProtocol->new(
         'update' => \&nic_cloudns_update,
         'examples' => \&nic_cloudns_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
-            'dynurl' => setv(T_STRING, 1, 0, undef, undef),
+            'dynurl' => setv(T_STRING, 1, undef, undef),
         },
     ),
     'ddns.fm' => ddclient::Protocol->new(
         'update' => \&nic_ddnsfm_update,
         'examples' => \&nic_ddnsfm_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'https://api.ddns.fm', undef),
+            'server' => setv(T_FQDNP, 0, 'https://api.ddns.fm', undef),
         },
     ),
     'digitalocean' => ddclient::Protocol->new(
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'api.digitalocean.com', undef),
-            'zone'   => setv(T_FQDN,  1, 0, undef,                  undef),
+            'server' => setv(T_FQDNP, 0, 'api.digitalocean.com', undef),
+            'zone'   => setv(T_FQDN,  1, undef,                  undef),
         },
     ),
     'dinahosting' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dinahosting_update,
         'examples'   => \&nic_dinahosting_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-error-interval' => setv(T_DELAY,  0, 0, interval('8m'),     0),
-            'script'             => setv(T_STRING, 0, 0, '/special/api.php', undef),
-            'server'             => setv(T_FQDNP,  0, 0, 'dinahosting.com',  undef),
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-error-interval' => setv(T_DELAY,  0, interval('8m'),     0),
+            'script'             => setv(T_STRING, 0, '/special/api.php', undef),
+            'server'             => setv(T_FQDNP,  0, 'dinahosting.com',  undef),
         },
     ),
     'directnic' => ddclient::Protocol->new(
         'update'     => \&nic_directnic_update,
         'examples'   => \&nic_directnic_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login'    => undef,
             'password' => undef,
-            'urlv4'    => setv(T_URL, 0, 0, undef, undef),
-            'urlv6'    => setv(T_URL, 0, 0, undef, undef),
+            'urlv4'    => setv(T_URL, 0, undef, undef),
+            'urlv6'    => setv(T_URL, 0, undef, undef),
         },
     ),
     'dnsmadeeasy' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dnsmadeeasy_update,
         'examples'   => \&nic_dnsmadeeasy_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'script' => setv(T_STRING, 0, 0, '/servlet/updateip',  undef),
-            'server' => setv(T_FQDNP,  0, 0, 'cp.dnsmadeeasy.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'script' => setv(T_STRING, 0, '/servlet/updateip',  undef),
+            'server' => setv(T_FQDNP,  0, 'cp.dnsmadeeasy.com', undef),
         },
     ),
     'dondominio' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 0, 'dondns.dondominio.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'dondns.dondominio.com', undef),
         },
     ),
     'dslreports1' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 0, 'www.dslreports.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'www.dslreports.com', undef),
         },
     ),
     'domeneshop' => ddclient::Protocol->new(
         'update'     => \&nic_domeneshop_update,
         'examples'   => \&nic_domeneshop_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 0, 'api.domeneshop.no', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'api.domeneshop.no', undef),
         },
     ),
     'duckdns' => ddclient::Protocol->new(
         'update'     => \&nic_duckdns_update,
         'examples'   => \&nic_duckdns_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'www.duckdns.org', undef),
+            'server' => setv(T_FQDNP, 0, 'www.duckdns.org', undef),
         },
     ),
     'dyndns1' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            %{$variables{'dyndns-common-defaults'}},
-            'static' => setv(T_BOOL, 0, 1, 0, undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            %{$cfgvars{'dyndns-common-defaults'}},
+            'static' => setv(T_BOOL, 0, 0, undef),
+        },
+        'recapvars' => {
+            %{$recapvars{'common'}},
+            %{$recapvars{'dyndns-common'}},
+            'static' => T_BOOL,
         },
         'force_update_if_changed' => [qw(static wildcard mx backupmx)],
     ),
     'dyndns2' => ddclient::Protocol->new(
         'update'     => \&nic_dyndns2_update,
         'examples'   => \&nic_dyndns2_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            %{$variables{'dyndns-common-defaults'}},
-            'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            %{$cfgvars{'dyndns-common-defaults'}},
+            'script' => setv(T_STRING, 0, '/nic/update', undef),
+        },
+        'recapvars' => {
+            %{$recapvars{'common'}},
+            %{$recapvars{'dyndns-common'}},
         },
         'force_update_if_changed' => [qw(wildcard mx backupmx)],
     ),
     'easydns' => ddclient::Protocol->new(
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'backupmx'     => setv(T_BOOL,   0, 1, 0,                    undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'backupmx'     => setv(T_BOOL,   0, 0,                    undef),
             # From <https://kb.easydns.com/knowledge/dynamic-dns/>: "You need to wait at least 10
             # minutes between updates."
-            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'), 0),
-            'mx'           => setv(T_FQDN,   0, 1, undef,                undef),
-            'server'       => setv(T_FQDNP,  0, 0, 'api.cp.easydns.com', undef),
-            'script'       => setv(T_STRING, 0, 0, '/dyn/generic.php',   undef),
-            'wildcard'     => setv(T_BOOL,   0, 1, 0,                    undef),
+            'min-interval' => setv(T_DELAY, 0, interval('10m'), 0),
+            'mx'           => setv(T_FQDN,   0, undef,                undef),
+            'server'       => setv(T_FQDNP,  0, 'api.cp.easydns.com', undef),
+            'script'       => setv(T_STRING, 0, '/dyn/generic.php',   undef),
+            'wildcard'     => setv(T_BOOL,   0, 0,                    undef),
+        },
+        'recapvars' => {
+            %{$recapvars{'common'}},
+            %{$recapvars{'dyndns-common'}},
         },
         'force_update_if_changed' => [qw(wildcard mx backupmx)],
     ),
     'freedns' => ddclient::Protocol->new(
         'update'     => \&nic_freedns_update,
         'examples'   => \&nic_freedns_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
-            'server'       => setv(T_FQDNP, 0, 0, 'freedns.afraid.org', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP, 0, 'freedns.afraid.org', undef),
         },
     ),
     'freemyip' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_freemyip_update,
         'examples'   => \&nic_freemyip_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'freemyip.com', undef),
+            'server' => setv(T_FQDNP, 0, 'freemyip.com', undef),
         },
     ),
     'gandi' => ddclient::Protocol->new(
         'update'     => \&nic_gandi_update,
         'examples'   => \&nic_gandi_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'min-interval'              => setv(T_DELAY,  0, 0, interval('5m'),  interval('5m')),
-            'server'                    => setv(T_FQDNP,  0, 0, 'api.gandi.net', undef),
-            'script'                    => setv(T_STRING, 0, 0, '/v5',           undef),
-            'use-personal-access-token' => setv(T_BOOL, 0, 0, 0, undef),
-            'ttl'                       => setv(T_DELAY,  0, 0, undef,           interval('5m')),
-            'zone'                      => setv(T_FQDN,   1, 0, undef,           undef),
+            'min-interval'              => setv(T_DELAY,  0, interval('5m'),  interval('5m')),
+            'server'                    => setv(T_FQDNP,  0, 'api.gandi.net', undef),
+            'script'                    => setv(T_STRING, 0, '/v5',           undef),
+            'use-personal-access-token' => setv(T_BOOL, 0, 0, undef),
+            'ttl'                       => setv(T_DELAY,  0, undef,           interval('5m')),
+            'zone'                      => setv(T_FQDN,   1, undef,           undef),
         }
     ),
     'godaddy' => ddclient::Protocol->new(
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY,  0, 0, interval('5m'),                 0),
-            'server'       => setv(T_FQDNP,  0, 0, 'api.godaddy.com/v1/domains',   undef),
-            'ttl'          => setv(T_NUMBER, 0, 0, 600,                            undef),
-            'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY,  0, interval('5m'),                 0),
+            'server'       => setv(T_FQDNP,  0, 'api.godaddy.com/v1/domains',   undef),
+            'ttl'          => setv(T_NUMBER, 0, 600,                            undef),
+            'zone'         => setv(T_FQDN,   1, undef,                          undef),
         },
     ),
     'he.net' => ddclient::Protocol->new(
         'update' => \&nic_henet_update,
         'examples' => \&nic_henet_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), 0),
-            'server' => setv(T_FQDNP, 0, 0, 'dyn.dns.he.net', undef),
+            'min-interval' => setv(T_DELAY, 0, interval('5m'), 0),
+            'server' => setv(T_FQDNP, 0, 'dyn.dns.he.net', undef),
         },
     ),
     'hetzner' => ddclient::Protocol->new(
         'update'     => \&nic_hetzner_update,
         'examples'   => \&nic_hetzner_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'min-interval' => setv(T_DELAY,  0, 0, interval('1m'),                 0),
-            'server'       => setv(T_FQDNP,  0, 0, 'dns.hetzner.com/api/v1',       undef),
-            'ttl'          => setv(T_NUMBER, 0, 0, 60,                             60),
-            'zone'         => setv(T_FQDN,   1, 0, undef,                          undef),
+            'min-interval' => setv(T_DELAY,  0, interval('1m'),                 0),
+            'server'       => setv(T_FQDNP,  0, 'dns.hetzner.com/api/v1',       undef),
+            'ttl'          => setv(T_NUMBER, 0, 60,                             60),
+            'zone'         => setv(T_FQDN,   1, undef,                          undef),
         },
     ),
     'inwx' => ddclient::Protocol->new(
         'update' => \&nic_inwx_update,
         'examples' => \&nic_inwx_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 0, 'dyndns.inwx.com', undef),
-            'script' => setv(T_STRING, 0, 0, '/nic/update', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'dyndns.inwx.com', undef),
+            'script' => setv(T_STRING, 0, '/nic/update', undef),
         },
     ),
     'mythicdyn' => ddclient::Protocol->new(
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),       0),
-            'server'       => setv(T_FQDNP, 0, 0, 'api.mythic-beasts.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, interval('5m'),       0),
+            'server'       => setv(T_FQDNP, 0, 'api.mythic-beasts.com', undef),
         },
     ),
     'namecheap' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_namecheap_update,
         'examples'   => \&nic_namecheap_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
-            'server'       => setv(T_FQDNP, 0, 0, 'dynamicdns.park-your-domain.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     ),
     'nfsn' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
-            'server'       => setv(T_FQDNP,  0, 0, 'api.nearlyfreespeech.net', undef),
-            'ttl'          => setv(T_NUMBER, 0, 0, 300,                        undef),
-            'zone'         => setv(T_FQDN,   1, 0, undef,                      undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP,  0, 'api.nearlyfreespeech.net', undef),
+            'ttl'          => setv(T_NUMBER, 0, 300,                        undef),
+            'zone'         => setv(T_FQDN,   1, undef,                      undef),
         },
     ),
     'njalla' => ddclient::Protocol->new(
         'update'     => \&nic_njalla_update,
         'examples'   => \&nic_njalla_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'njal.la', undef),
-            'quietreply' => setv(T_BOOL, 0, 0, 0, undef),
+            'server' => setv(T_FQDNP, 0, 'njal.la', undef),
+            'quietreply' => setv(T_BOOL, 0, 0, undef),
         },
     ),
     'noip' => ddclient::Protocol->new(
         'update'     => \&nic_noip_update,
         'examples'   => \&nic_noip_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 0, 'dynupdate.no-ip.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'dynupdate.no-ip.com', undef),
         },
     ),
     'nsupdate' => ddclient::Protocol->new(
         'update'     => \&nic_nsupdate_update,
         'examples'   => \&nic_nsupdate_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'login' => setv(T_LOGIN,  0, 0, '/usr/bin/nsupdate', undef),
-            'tcp'   => setv(T_BOOL,   0, 0, 0,                   undef),
-            'ttl'   => setv(T_NUMBER, 0, 0, 600,                 undef),
-            'zone'  => setv(T_STRING, 1, 0, undef,               undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login' => setv(T_LOGIN,  0, '/usr/bin/nsupdate', undef),
+            'tcp'   => setv(T_BOOL,   0, 0,                   undef),
+            'ttl'   => setv(T_NUMBER, 0, 600,                 undef),
+            'zone'  => setv(T_STRING, 1, undef,               undef),
         },
     ),
     'ovh' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_ovh_update,
         'examples'   => \&nic_ovh_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'script'   => setv(T_STRING, 0, 0, '/nic/update', undef),
-            'server'   => setv(T_FQDNP,  0, 0, 'www.ovh.com', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'script'   => setv(T_STRING, 0, '/nic/update', undef),
+            'server'   => setv(T_FQDNP,  0, 'www.ovh.com', undef),
         },
     ),
     'porkbun' => ddclient::Protocol->new(
         'update'     => \&nic_porkbun_update,
         'examples'   => \&nic_porkbun_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
-            'apikey'         => setv(T_PASSWD, 1, 0, undef,      undef),
-            'secretapikey'   => setv(T_PASSWD, 1, 0, undef,      undef),
-            'root-domain'    => setv(T_FQDN,   0, 0, undef,      undef),
-            'on-root-domain' => setv(T_BOOL,   0, 0, 0,          undef),
+            'apikey'         => setv(T_PASSWD, 1, undef,      undef),
+            'secretapikey'   => setv(T_PASSWD, 1, undef,      undef),
+            'root-domain'    => setv(T_FQDN,   0, undef,      undef),
+            'on-root-domain' => setv(T_BOOL,   0, 0,          undef),
         },
     ),
     'sitelutions' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'server'       => setv(T_FQDNP, 0, 0, 'www.sitelutions.com', undef),
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server'       => setv(T_FQDNP, 0, 'www.sitelutions.com', undef),
+            'min-interval' => setv(T_DELAY, 0, interval('5m'), interval('5m')),
         },
     ),
     'yandex' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_yandex_update,
         'examples'   => \&nic_yandex_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'),     0),
-            'server'       => setv(T_FQDNP, 0, 0, 'pddimp.yandex.ru', undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, interval('5m'),     0),
+            'server'       => setv(T_FQDNP, 0, 'pddimp.yandex.ru', undef),
         },
     ),
     'zoneedit1' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_zoneedit1_update,
         'examples'   => \&nic_zoneedit1_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
-            'min-interval' => setv(T_DELAY, 0, 0, interval('10m'),        0),
-            'server'       => setv(T_FQDNP, 0, 0, 'dynamic.zoneedit.com', undef),
-            'zone'         => setv(T_FQDN,  0, 0, undef,                  undef),
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'min-interval' => setv(T_DELAY, 0, interval('10m'),        0),
+            'server'       => setv(T_FQDNP, 0, 'dynamic.zoneedit.com', undef),
+            'zone'         => setv(T_FQDN,  0, undef,                  undef),
         },
     ),
     'keysystems' => ddclient::LegacyProtocol->new(
         'update' => \&nic_keysystems_update,
         'examples'  => \&nic_keysystems_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'dynamicdns.key-systems.net', undef),
+            'server' => setv(T_FQDNP, 0, 'dynamicdns.key-systems.net', undef),
         },
     ),
     'dnsexit2' => ddclient::Protocol->new(
         'update'     => \&nic_dnsexit2_update,
         'examples'   => \&nic_dnsexit2_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'ssl' => setv(T_BOOL, 0, 0, 1, undef),
-            'server' => setv(T_FQDNP, 0, 0, 'api.dnsexit.com', undef),
-            'path' => setv(T_STRING, 0, 0, '/dns/', undef),
-            'ttl' => setv(T_NUMBER, 0, 0, 5, 0),
-            'zone' => setv(T_STRING, 0, 0, undef, undef),
+            'ssl' => setv(T_BOOL, 0, 1, undef),
+            'server' => setv(T_FQDNP, 0, 'api.dnsexit.com', undef),
+            'path' => setv(T_STRING, 0, '/dns/', undef),
+            'ttl' => setv(T_NUMBER, 0, 5, 0),
+            'zone' => setv(T_STRING, 0, undef, undef),
         },
     ),
     'regfishde' => ddclient::Protocol->new(
         'update'     => \&nic_regfishde_update,
         'examples'   => \&nic_regfishde_examples,
-        'variables' => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
-            'server' => setv(T_FQDNP, 0, 0, 'dyndns.regfish.de', undef),
+            'server' => setv(T_FQDNP, 0, 'dyndns.regfish.de', undef),
         },
     ),
     'enom' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_enom_update,
         'examples'   => \&nic_enom_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
-            'server'       => setv(T_FQDNP,  0, 0, 'dynamic.name-services.com', undef),
-            'min-interval' => setv(T_DELAY, 0, 0, interval('5m'), interval('5m')),
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'dynamic.name-services.com', undef),
+            'min-interval' => setv(T_DELAY, 0, interval('5m'), interval('5m')),
          },
      ),
     'infomaniak' => ddclient::Protocol->new(
         'update'     => \&nic_infomaniak_update,
         'examples'   => \&nic_infomaniak_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'server' => undef,
         },
     ),
     'emailonly' => ddclient::Protocol->new(
         'update'     => \&nic_emailonly_update,
         'examples'   => \&nic_emailonly_examples,
-        'variables'  => {
-            %{$variables{'protocol-common-defaults'}},
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
             # Change default to never re-notify if IP address has not changed.
-            'max-interval' => setv(T_DELAY, 0, 0, 'inf', 0),
+            'max-interval' => setv(T_DELAY, 0, 'inf', 0),
         },
     ),
 );
-$variables{'merged'} = {
-    map({ %{$protocols{$_}{'variables'}} } keys(%protocols)),
-    %{$variables{'dyndns-common-defaults'}},
-    %{$variables{'protocol-common-defaults'}},
-    %{$variables{'global-defaults'}},
+$cfgvars{'merged'} = {
+    map({ %{$protocols{$_}{'cfgvars'}} } keys(%protocols)),
+    %{$cfgvars{'dyndns-common-defaults'}},
+    %{$cfgvars{'protocol-common-defaults'}},
+    %{$cfgvars{'global-defaults'}},
 };
 
 # This will hold the processed args.
@@ -1655,16 +1683,40 @@ sub read_recap {
     return if !(-e $file);
     my %saved = %opt;
     %opt = ();
-    $saved_recap = _read_config(\%recap, $globals, "##\\s*$program-$version\\s*", $file);
+    $saved_recap = _read_config(\%recap, $globals, "##\\s*$program-$version\\s*", $file, sub {
+        my ($h, $k, $v, $normout) = @_;
+        if (!defined($h) && $k eq 'host') {
+            return 0 if !defined($v);
+            $$normout = $v;
+            return 1;
+        }
+        if (!defined($h) || !$config{$h}) {
+            warning("ignoring '$k=$v' for unknown host: " . ($h // '<undefined>'));
+            return 0;
+        }
+        my $p = opt('protocol', $h);
+        my $type = $protocols{$p}{recapvars}{$k};
+        if (!$type) {
+            warning("ignoring unrecognized recap variable for host '$h' with protocol '$p': $k");
+            return 0;
+        }
+        my $norm;
+        if (!eval { $norm = check_value($v, {type => $type}); 1; }) {
+            warning("invalid value '$k=$v' for host '$h' with protocol '$p': $@");
+            return 0;
+        }
+        $$normout = $norm if defined($normout);
+        return 1;
+    });
     %opt = %saved;
     for my $h (keys(%recap)) {
         if (!exists($config{$h})) {
             delete($recap{$h});
             next;
         }
-        my $vars = $protocols{opt('protocol', $h)}{variables};
+        my $vars = $protocols{opt('protocol', $h)}{recapvars};
         for my $v (keys(%{$recap{$h}})) {
-            delete($recap{$h}{$v}) if !$vars->{$v} || !$vars->{$v}{recap};
+            delete($recap{$h}{$v}) if !$vars->{$v};
         }
     }
 }
@@ -1737,7 +1789,39 @@ sub parse_assignment {
 ######################################################################
 sub read_config {
     my ($file, $config, $globals) = @_;
-    _read_config($config, $globals, '', $file);
+    _read_config($config, $globals, '', $file, sub {
+        # TODO: The checks below are incorrect for a few reasons:
+        #
+        #   * It is not protocol-aware.  Different protocols can have different sets of variables,
+        #     with different normalization and validation behaviors.
+        #   * It does not check for missing required values.  Note that a later line or a
+        #     command-line argument might define a missing required value.
+        #   * A later line or command-line argument might override an invalid value, changing it to
+        #     valid.
+        #
+        # Fixing this is not simple.  Values should be checked and normalized after processing the
+        # entire file and command-line arguments, but then we lose line number context.  The line
+        # number could be recorded along with each variable's value to provide context in case
+        # validation fails, but that adds considerable complexity.  Fortunately, a variable's type
+        # is unlikely to change even if the protocol changes (`$cfgvars{merged}{$var}{type}` will
+        # likely equal `$protocols{$proto}{cfgvars}{$var}{type}` for each variable `$var` for each
+        # protocol `$proto`), so normalizing and validating values on a line-by-line basis is
+        # likely to be safe.
+        my ($h, $k, $v, $normout) = @_;
+        if (!exists($cfgvars{'merged'}{$k})) {
+            warning("unrecognized keyword");
+            return 0;
+        }
+        my $def = $cfgvars{'merged'}{$k};
+        my $norm;
+        if (!eval { $norm = check_value($v, $def); 1; }) {
+            my $vf = defined($v) ? "'$v'" : '<undefined>';
+            warning("invalid value $vf: $@");
+            return 0;
+        }
+        $$normout = $norm if defined($normout);
+        return 1;
+    });
 }
 sub _read_config {
     # Configuration line format after comment and continuation
@@ -1771,46 +1855,11 @@ sub _read_config {
     #     accumulated thus far and stored in $1->{$host} for each
     #     referenced host.
 
-    my ($config, $globals, $stamp, $file) = @_;
+    my ($config, $globals, $stamp, $file, $check) = @_;
     local $_l = pushlogctx("file $file");
     my %globals = ();
     my %config  = ();
     my $content = '';
-    # Checks a single key-value pair for a host and writes the normalized value output to an
-    # optional output ref.
-    my $check = sub {
-        # TODO: The checks below are incorrect for a few reasons:
-        #
-        #   * It is not protocol-aware.  Different protocols can have different sets of variables,
-        #     with different normalization and validation behaviors.
-        #   * It does not check for missing required values.  Note that a later line or a
-        #     command-line argument might define a missing required value.
-        #   * A later line or command-line argument might override an invalid value, changing it to
-        #     valid.
-        #
-        # Fixing this is not simple.  Values should be checked and normalized after processing the
-        # entire file and command-line arguments, but then we lose line number context.  The line
-        # number could be recorded along with each variable's value to provide context in case
-        # validation fails, but that adds considerable complexity.  Fortunately, a variable's type
-        # is unlikely to change even if the protocol changes (`$variables{merged}{$var}{type}` will
-        # likely equal `$protocols{$proto}{variables}{$var}{type}` for each variable `$var` for
-        # each protocol `$proto`), so normalizing and validating values on a line-by-line basis is
-        # likely to be safe.
-        my ($h, $k, $v, $normout) = @_;
-        if (!exists $variables{'merged'}{$k}) {
-            warning("unrecognized keyword");
-            return 0;
-        }
-        my $def = $variables{'merged'}{$k};
-        my $norm;
-        if (!eval { $norm = check_value($v, $def); 1; }) {
-            my $vf = defined($v) ? "'$v'" : '<undefined>';
-            warning("invalid value $vf: $@");
-            return 0;
-        }
-        $$normout = $norm if defined($normout);
-        return 1;
-    };
     # Calls $check on each entry in the given hashref, deleting any entries that don't pass.
     my $checkall = sub {
         my ($h, $l) = @_;
@@ -1949,10 +1998,10 @@ sub init_config {
     %opt = %saved_opt;
     # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
     # surprising behavior.
-    for my $var (keys(%{$variables{'merged'}})) {
+    for my $var (keys(%{$cfgvars{'merged'}})) {
         # TODO: Also validate $opt{'options'}.
         next if !defined($opt{$var}) || ref($opt{$var});
-        if (!eval { $opt{$var} = check_value($opt{$var}, $variables{'merged'}{$var}); 1; }) {
+        if (!eval { $opt{$var} = check_value($opt{$var}, $cfgvars{'merged'}{$var}); 1; }) {
             fatal("invalid argument '--$var=$opt{$var}': $@");
         }
     }
@@ -1989,7 +2038,7 @@ sub init_config {
                 my $proto = $options{'protocol'} // opt('protocol', $h);
                 my $protodef = $protocols{$proto} or fatal("host $h: invalid protocol: $proto");
                 for my $var (keys(%options)) {
-                    my $def = $protodef->{variables}{$var}
+                    my $def = $protodef->{cfgvars}{$var}
                         or fatal("host $h: unknown option '--options=$var=$options{$var}'");
                     eval { $config{$h}{$var} = check_value($options{$var}, $def); 1; }
                         or fatal("host $h: invalid option value '--options=$var=$options{$var}': $@");
@@ -2000,7 +2049,7 @@ sub init_config {
             for my $var (keys(%options)) {
                 # TODO: This might grab an arbitrary protocol-specific variable definition, which
                 # could cause surprising behavior.
-                my $def = $variables{'merged'}{$var}
+                my $def = $cfgvars{'merged'}{$var}
                     or fatal("unknown option '--options=$var=$options{$var}'");
                 # TODO: Why not merge the values into %opt?
                 eval { $globals{$var} = check_value($options{$var}, $def); 1; }
@@ -2011,7 +2060,7 @@ sub init_config {
 
     ## override global options with those on the command-line.
     for my $o (keys %opt) {
-        if (defined $opt{$o} && exists $variables{'merged'}{$o}) {
+        if (defined $opt{$o} && exists $cfgvars{'merged'}{$o}) {
             # TODO: What's the point of this?  The opt() function will fall back to %globals if
             # %opt doesn't have a value, so this shouldn't be necessary.
             $globals{$o} = $opt{$o};
@@ -2335,11 +2384,11 @@ sub default {
     my $var;
     if (defined($h) && $config{$h}) {
         my $proto = $protocols{opt('protocol', $v eq 'protocol' ? undef : $h)};
-        $var = $proto->{variables}{$v} if $proto;
+        $var = $proto->{cfgvars}{$v} if $proto;
     }
     # TODO: This might grab an arbitrary protocol-specific variable definition, which could cause
     # surprising behavior.
-    $var //= $variables{'merged'}{$v};
+    $var //= $cfgvars{'merged'}{$v};
     return undef if !defined($var);
     return $var->{'default'}($h) if ref($var->{default}) eq 'CODE';
     return $var->{'default'};
