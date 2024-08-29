@@ -49,12 +49,16 @@ local %ddclient::protocols = (
     # `ipv6`, `status-ipv4`, and `status-ipv6`.)  It always succeeds.
     legacy => {
         update => sub {
+            ddclient::debug('in update');
             for my $h (@_) {
+                local $ddclient::_l = ddclient::pushlogctx($h);
+                ddclient::debug('updating host');
                 push(@updates, [@_]);
                 $ddclient::config{$h}{status} = 'good';
                 $ddclient::config{$h}{ip} = delete($ddclient::config{$h}{wantip});
                 $ddclient::config{$h}{mtime} = $ddclient::now;
             }
+            ddclient::debug('returning from update');
         },
         variables => {
             %{$ddclient::variables{'protocol-common-defaults'}},
