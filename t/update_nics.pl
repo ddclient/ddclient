@@ -48,7 +48,7 @@ local %ddclient::protocols = (
     # properties.  (Modern protocol implementations read `wantipv4` and `wantipv6` and set `ipv4`,
     # `ipv6`, `status-ipv4`, and `status-ipv6`.)  It always succeeds.
     legacy => {
-        update => sub {
+        update => ddclient::adapt_legacy_update(sub {
             ddclient::debug('in update');
             for my $h (@_) {
                 local $ddclient::_l = ddclient::pushlogctx($h);
@@ -59,7 +59,7 @@ local %ddclient::protocols = (
                 $ddclient::config{$h}{mtime} = $ddclient::now;
             }
             ddclient::debug('returning from update');
-        },
+        }),
         variables => {
             %{$ddclient::variables{'protocol-common-defaults'}},
         },

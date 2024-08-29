@@ -709,9 +709,55 @@ our %variables = (
         'wildcard'            => setv(T_BOOL,  0, 1, 0,                    undef),
     },
 );
+
+# Converts a legacy protocol update method to behave like a modern implementation by moving
+# `$config{$h}{status}` and `$config{$h}{ip}` to the version-specific modern equivalents.
+sub adapt_legacy_update {
+    my ($update) = @_;
+    return sub {
+        my (@hosts) = @_;
+        my %ipv;
+        for my $h (@hosts) {
+            $ipv{$h} = defined($config{$h}{'wantipv4'}) ? '4' : '6';
+            $config{$h}{'wantip'} = delete($config{$h}{"wantipv$ipv{$h}"});
+            delete($config{$h}{$_}) for qw(ip status);
+        }
+        $update->(@hosts);
+        for my $h (@hosts) {
+            local $_l = pushlogctx($h);
+            delete($config{$h}{'wantip'});
+            debug(
+                "legacy protocol; moving 'status' to 'status-ipv$ipv{$h}', 'ip' to 'ipv$ipv{$h}'");
+            $config{$h}{"status-ipv$ipv{$h}"} = delete($config{$h}{'status'});
+            # TODO: Currently $config{$h}{'ip'} is used for two distinct purposes: it holds the
+            # value of the --ip option, and it is updated by legacy protocols to hold the new IP
+            # address after an update.  Fortunately, the --ip option is not used very often, and if
+            # it is, the values for the two use cases are usually (but not always) the same.  This
+            # boolean is an imperfect attempt to identify whether 'ip' is being used for the --ip
+            # option, to avoid breaking some user's configuration.  Protocols should be updated to
+            # not set $config{$h}{'ip'} because %config is for configuration, not update status
+            # (same goes for 'status', 'mtime', etc.).
+            my $ip_option = opt('use', $h) eq 'ip' || opt('usev6', $h) eq 'ip';
+            my $ip = $config{$h}{'ip'};
+            delete($config{$h}{'ip'}) if !$ip_option;
+            # TODO: See above comment for $ip_option.  This is the same situation, but for 'ipv4'
+            # and 'ipv6'.
+            my $vip_option = opt("usev$ipv{$h}", $h) eq "ipv$ipv{$h}";
+            if ($vip_option && defined(my $vip = $config{$h}{"ipv$ipv{$h}"})) {
+                if (!defined($ip) || $ip ne $vip) {
+                    my $fip = defined($ip) ? "'$ip'" : '<undefined>';
+                    debug("unable to set 'ipv$ipv{$h}' to $fip; already set to '$vip'");
+                }
+                next;
+            }
+            $config{$h}{"ipv$ipv{$h}"} = $ip;
+        }
+    };
+}
+
 our %protocols = (
     '1984' => {
-        'update' => \&nic_1984_update,
+        'update' => adapt_legacy_update(\&nic_1984_update),
         'examples' => \&nic_1984_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -720,7 +766,7 @@ our %protocols = (
         },
     },
     'changeip' => {
-        'update'     => \&nic_changeip_update,
+        'update'     => adapt_legacy_update(\&nic_changeip_update),
         'examples'   => \&nic_changeip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -739,7 +785,7 @@ our %protocols = (
         },
     },
     'cloudns' => {
-        'update' => \&nic_cloudns_update,
+        'update' => adapt_legacy_update(\&nic_cloudns_update),
         'examples' => \&nic_cloudns_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -768,7 +814,7 @@ our %protocols = (
         },
     },
     'dinahosting' => {
-        'update'     => \&nic_dinahosting_update,
+        'update'     => adapt_legacy_update(\&nic_dinahosting_update),
         'examples'   => \&nic_dinahosting_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
@@ -789,7 +835,7 @@ our %protocols = (
         },
     },
     'dnsmadeeasy' => {
-        'update'     => \&nic_dnsmadeeasy_update,
+        'update'     => adapt_legacy_update(\&nic_dnsmadeeasy_update),
         'examples'   => \&nic_dnsmadeeasy_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -798,7 +844,7 @@ our %protocols = (
         },
     },
     'dondominio' => {
-        'update'     => \&nic_dondominio_update,
+        'update'     => adapt_legacy_update(\&nic_dondominio_update),
         'examples'   => \&nic_dondominio_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -806,7 +852,7 @@ our %protocols = (
         },
     },
     'dslreports1' => {
-        'update'     => \&nic_dslreports1_update,
+        'update'     => adapt_legacy_update(\&nic_dslreports1_update),
         'examples'   => \&nic_dslreports1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -831,7 +877,7 @@ our %protocols = (
         },
     },
     'dyndns1' => {
-        'update'     => \&nic_dyndns1_update,
+        'update'     => adapt_legacy_update(\&nic_dyndns1_update),
         'examples'   => \&nic_dyndns1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -873,7 +919,7 @@ our %protocols = (
         },
     },
     'freemyip' => {
-        'update'     => \&nic_freemyip_update,
+        'update'     => adapt_legacy_update(\&nic_freemyip_update),
         'examples'   => \&nic_freemyip_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -947,7 +993,7 @@ our %protocols = (
         },
     },
     'namecheap' => {
-        'update'     => \&nic_namecheap_update,
+        'update'     => adapt_legacy_update(\&nic_namecheap_update),
         'examples'   => \&nic_namecheap_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -956,7 +1002,7 @@ our %protocols = (
         },
     },
     'nfsn' => {
-        'update'     => \&nic_nfsn_update,
+        'update'     => adapt_legacy_update(\&nic_nfsn_update),
         'examples'   => \&nic_nfsn_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -996,7 +1042,7 @@ our %protocols = (
         },
     },
     'ovh' => {
-        'update'     => \&nic_ovh_update,
+        'update'     => adapt_legacy_update(\&nic_ovh_update),
         'examples'   => \&nic_ovh_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -1018,7 +1064,7 @@ our %protocols = (
         },
     },
     'sitelutions' => {
-        'update'     => \&nic_sitelutions_update,
+        'update'     => adapt_legacy_update(\&nic_sitelutions_update),
         'examples'   => \&nic_sitelutions_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -1027,7 +1073,7 @@ our %protocols = (
         },
     },
     'yandex' => {
-        'update'     => \&nic_yandex_update,
+        'update'     => adapt_legacy_update(\&nic_yandex_update),
         'examples'   => \&nic_yandex_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -1036,7 +1082,7 @@ our %protocols = (
         },
     },
     'zoneedit1' => {
-        'update'     => \&nic_zoneedit1_update,
+        'update'     => adapt_legacy_update(\&nic_zoneedit1_update),
         'examples'   => \&nic_zoneedit1_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -1046,7 +1092,7 @@ our %protocols = (
         },
     },
     'keysystems' => {
-        'update' => \&nic_keysystems_update,
+        'update' => adapt_legacy_update(\&nic_keysystems_update),
         'examples'  => \&nic_keysystems_examples,
         'variables' => {
             %{$variables{'protocol-common-defaults'}},
@@ -1077,7 +1123,7 @@ our %protocols = (
         },
     },
     'enom' => {
-        'update'     => \&nic_enom_update,
+        'update'     => adapt_legacy_update(\&nic_enom_update),
         'examples'   => \&nic_enom_examples,
         'variables'  => {
             %{$variables{'protocol-common-defaults'}},
@@ -1454,49 +1500,9 @@ sub update_nics {
         if (@hosts) {
             $0 = sprintf("%s - updating %s", $program, join(',', @hosts));
             local $_l = pushlogctx($p);
-            for my $h (@hosts) {
-                # TODO: Remove this once all legacy protocol implementations have been upgraded to
-                # read `wantipv4` and `wantipv6` directly.
-                $config{$h}{'wantip'} = $config{$h}{'wantipv4'} // $config{$h}{'wantipv6'};
-            }
             &$update(@hosts);
             for my $h (@hosts) {
-                local $_l = pushlogctx($h);
-                delete($config{$h}{$_}) for qw(wantip wantipv4 wantipv6);
-                # Backwards compatibility: Legacy protocol implementations read `wantip` and set
-                # `ip` and `status`.  Modern protocol implementations read `wantipv4` and
-                # `wantipv6` and set `ipv4`, `ipv6`, `status-ipv4`, and `status-ipv6`.  Make legacy
-                # implementations look like modern implementations by moving `ip` and `status` to
-                # the modern version-specific equivalents.
-                my $status = delete($config{$h}{'status'}) or next;
-                my $ip = $config{$h}{'ip'};
-                my $ipv = is_ipv4($ip) ? '4' : is_ipv6($ip) ? '6' : undef;
-                # TODO: Currently $config{$h}{'ip'} is used for two distinct purposes: it holds the
-                # value of the --ip option, and it is updated by legacy protocols to hold the new
-                # IP address after an update.  Fortunately, the --ip option is not used very often,
-                # and if it is, the values for the two use cases are usually (but not always) the
-                # same.  This boolean is an imperfect attempt to identify whether 'ip' is being
-                # used for the --ip option, to avoid breaking some user's configuration.  Protocols
-                # should be updated to not set $config{$h}{'ip'} because %config is for
-                # configuration, not update status (same goes for 'status', 'mtime', etc.).
-                my $ip_option = opt('use', $h) eq 'ip' || opt('usev6', $h) eq 'ip';
-                delete($config{$h}{'ip'}) if !$ip_option;
-                debug("legacy protocol; moving 'status' to 'status-ipv$ipv', 'ip' to 'ipv$ipv'");
-                $config{$h}{"status-ipv$ipv"} = $status;
-                # TODO: See above comment for $ip_option.  This is the same situation, but for
-                # 'ipv4' and 'ipv6'.
-                my $vip_option = opt("usev$ipv", $h) eq "ipv$ipv";
-                if (defined(my $vip = $config{$h}{"ipv$ipv"}) && $vip_option) {
-                    debug("unable to update 'ipv$ipv' to '$ip' " .
-                          "because it is already set to '$vip'") if $vip_option;
-                } else {
-                    # A previous update would have moved `$config{$h}{'ip'}` to
-                    # `$config{$h}{"ipv$ipv"}`, so it is OK to overwrite `$config{$h}{"ipv$ipv"}`
-                    # if it is already set.
-                    debug("updating 'ipv$ipv' from '$vip' to '$ip'")
-                        if defined($vip) && $vip ne $ip;
-                    $config{$h}{"ipv$ipv"} = $ip;
-                }
+                delete($config{$h}{$_}) for qw(wantipv4 wantipv6);
             }
 
             runpostscript(join ' ', keys %ipsv4, keys %ipsv6);
@@ -3600,9 +3606,7 @@ sub nic_updateable {
         }
     }
 
-    # TODO: `status` is set by legacy protocol implementations.  Remove it from this list once all
-    # legacy protocol implementations have been upgraded.
-    delete($config{$host}{$_}) for qw(status status-ipv4 status-ipv6 update);
+    delete($config{$host}{$_}) for qw(status-ipv4 status-ipv6 update);
     if ($update) {
         $config{$host}{'update'} = 1;
         $config{$host}{'atime'} = $now;
@@ -3611,7 +3615,7 @@ sub nic_updateable {
         for (qw(status-ipv4 status-ipv6)) {
             $config{$host}{$_} = $recap{$host}{$_} if defined($recap{$host}{$_});
         }
-        delete($config{$host}{$_}) for qw(wantip wantipv4 wantipv6);
+        delete($config{$host}{$_}) for qw(wantipv4 wantipv6);
     }
 
     return $update;
