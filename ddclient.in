@@ -1461,16 +1461,13 @@ sub update_nics {
             }
             &$update(@hosts);
             for my $h (@hosts) {
-                delete($config{$h}{$_}) for qw(wantip wantipv4 wantipv6);
-            }
-
-            # Backwards compatibility: Legacy protocol implementations read `wantip` and set `ip`
-            # and `status`.  Modern protocol implementations read `wantipv4` and `wantipv6` and set
-            # `ipv4`, `ipv6`, `status-ipv4`, and `status-ipv6`.  Make legacy implementations look
-            # like modern implementations by moving `ip` and `status` to the modern
-            # version-specific equivalents.
-            for my $h (@hosts) {
                 local $_l = pushlogctx($h);
+                delete($config{$h}{$_}) for qw(wantip wantipv4 wantipv6);
+                # Backwards compatibility: Legacy protocol implementations read `wantip` and set
+                # `ip` and `status`.  Modern protocol implementations read `wantipv4` and
+                # `wantipv6` and set `ipv4`, `ipv6`, `status-ipv4`, and `status-ipv6`.  Make legacy
+                # implementations look like modern implementations by moving `ip` and `status` to
+                # the modern version-specific equivalents.
                 my $status = delete($config{$h}{'status'}) or next;
                 my $ip = $config{$h}{'ip'};
                 my $ipv = is_ipv4($ip) ? '4' : is_ipv6($ip) ? '6' : undef;
