@@ -1467,7 +1467,7 @@ sub update_nics {
             # version-specific equivalents.
             for my $h (@hosts) {
                 local $_l = pushlogctx($h);
-                my $status = delete($config{$h}{'status'}) || next;
+                my $status = delete($config{$h}{'status'}) or next;
                 my $ip = $config{$h}{'ip'};
                 my $ipv = is_ipv4($ip) ? '4' : is_ipv6($ip) ? '6' : undef;
                 # TODO: Currently $config{$h}{'ip'} is used for two distinct purposes: it holds the
