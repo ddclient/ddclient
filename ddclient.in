@@ -1896,32 +1896,20 @@ sub _read_config {
         if (defined($locals{'host'})) {
             $args[0] = (@args ? "$args[0]," : '') . $locals{host};
         }
-        ## accumulate globals
-        if (!@args) {
+        my ($host, $login, $password) = @args;
+        $locals{'login'} = $login if defined $login;
+        $locals{'password'} = $password if defined $password;
+        my @hosts = split_by_comma($host);
+        if (!@hosts) {
             %globals = (%globals, %locals);
             next;
         }
-
-        ## process this host definition
-        my ($host, $login, $password) = @args;
-
-        ## add in any globals..
-        %locals = (%globals, %locals);
-
-        ## override login and password if specified the old way.
-        $locals{'login'} = $login if defined $login;
-        $locals{'password'} = $password if defined $password;
-
-        ## allow {host} to be a comma separated list of hosts
-        for my $h (split_by_comma($host)) {
+        for my $h (@hosts) {
             # TODO: Shouldn't %locals go after $config{h}?  Later lines should override earlier
             # lines, no?  Otherwise, later assignments will have a mixed effect: assignments to new
             # variables will take effect but assignments to variables that already have a value
-            # will not.  One problem with swapping the order: due to the `%locals = (%globals,
-            # %locals)` line above, any values in %globals would override any locals in the
-            # previous host line.
-            $config{$h} = {%locals, %{$config{$h} // {}}};
-            $config{$h}{'host'} = $h;
+            # will not.
+            $config{$h} = {%globals, %locals, %{$config{$h} // {}}, 'host' => $h};
         }
     }
     close(FD);
