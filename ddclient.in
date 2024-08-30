@@ -1893,7 +1893,7 @@ sub _read_config {
             }
         }
         %passwords = ();
-        if (exists($locals{'host'})) {
+        if (defined($locals{'host'})) {
             $args[0] = (@args ? "$args[0]," : '') . $locals{host};
         }
         ## accumulate globals
