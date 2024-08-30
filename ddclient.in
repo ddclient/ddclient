@@ -1776,6 +1776,49 @@ sub _read_config {
     my %globals = ();
     my %config  = ();
     my $content = '';
+    # Checks a single key-value pair for a host and writes the normalized value output to an
+    # optional output ref.
+    my $check = sub {
+        # TODO: The checks below are incorrect for a few reasons:
+        #
+        #   * It is not protocol-aware.  Different protocols can have different sets of variables,
+        #     with different normalization and validation behaviors.
+        #   * It does not check for missing required values.  Note that a later line or a
+        #     command-line argument might define a missing required value.
+        #   * A later line or command-line argument might override an invalid value, changing it to
+        #     valid.
+        #
+        # Fixing this is not simple.  Values should be checked and normalized after processing the
+        # entire file and command-line arguments, but then we lose line number context.  The line
+        # number could be recorded along with each variable's value to provide context in case
+        # validation fails, but that adds considerable complexity.  Fortunately, a variable's type
+        # is unlikely to change even if the protocol changes (`$variables{merged}{$var}{type}` will
+        # likely equal `$protocols{$proto}{variables}{$var}{type}` for each variable `$var` for
+        # each protocol `$proto`), so normalizing and validating values on a line-by-line basis is
+        # likely to be safe.
+        my ($h, $k, $v, $normout) = @_;
+        if (!exists $variables{'merged'}{$k}) {
+            warning("unrecognized keyword");
+            return 0;
+        }
+        my $def = $variables{'merged'}{$k};
+        my $norm;
+        if (!eval { $norm = check_value($v, $def); 1; }) {
+            my $vf = defined($v) ? "'$v'" : '<undefined>';
+            warning("invalid value $vf: $@");
+            return 0;
+        }
+        $$normout = $norm if defined($normout);
+        return 1;
+    };
+    # Calls $check on each entry in the given hashref, deleting any entries that don't pass.
+    my $checkall = sub {
+        my ($h, $l) = @_;
+        for my $k (keys(%$l)) {
+            local $_l = pushlogctx($k);
+            delete($l->{$k}) if !$check->($h, $k, $l->{$k}, \$l->{$k});
+        }
+    };
 
     local *FD;
     if (!open(FD, "< $file")) {
@@ -1858,39 +1901,8 @@ sub _read_config {
         ($_, %locals) = parse_assignments($_);
         s/\s*,\s*/,/g;
         my @args = split;
-
-        ## verify that keywords are valid...and check the value
         for my $k (keys %locals) {
             $locals{$k} = $passwords{$k} if defined $passwords{$k};
-            # TODO: The checks below are incorrect for a few reasons:
-            #
-            #   * It is not protocol-aware.  Different protocols can have different sets of
-            #     variables, with different normalization and validation behaviors.
-            #   * It does not check for missing required values.  Note that a later line or a
-            #     command-line argument might define a missing required value.
-            #   * A later line or command-line argument might override an invalid value, changing
-            #     it to valid.
-            #
-            # Fixing this is not simple.  Values should be checked and normalized after processing
-            # the entire file and command-line arguments, but then we lose line number context.
-            # The line number could be recorded along with each variable's value to provide context
-            # in case validation fails, but that adds considerable complexity.  Fortunately, a
-            # variable's type is unlikely to change even if the protocol changes
-            # (`$variables{merged}{$var}{type}` will likely equal
-            # `$protocols{$proto}{variables}{$var}{type}` for each variable `$var` for each
-            # protocol `$proto`), so normalizing and validating values on a line-by-line basis is
-            # likely to be safe.
-            if (!exists $variables{'merged'}{$k}) {
-                warning("unrecognized keyword '%s' (ignored)", $k);
-                delete $locals{$k};
-                next;
-            }
-            my $def = $variables{'merged'}{$k};
-            if (!eval { $locals{$k} = check_value($locals{$k}, $def); 1; }) {
-                warning("invalid variable value '$k=$locals{$k}': $@");
-                delete $locals{$k};
-                next;
-            }
         }
         %passwords = ();
         if (defined($locals{'host'})) {
@@ -1901,15 +1913,21 @@ sub _read_config {
         $locals{'password'} = $password if defined $password;
         my @hosts = split_by_comma($host);
         if (!@hosts) {
+            local $_l = pushlogctx('globals');
+            $checkall->(undef, \%locals);
             %globals = (%globals, %locals);
             next;
         }
         for my $h (@hosts) {
-            # TODO: Shouldn't %locals go after $config{h}?  Later lines should override earlier
-            # lines, no?  Otherwise, later assignments will have a mixed effect: assignments to new
-            # variables will take effect but assignments to variables that already have a value
-            # will not.
-            $config{$h} = {%globals, %locals, %{$config{$h} // {}}, 'host' => $h};
+            local $_l = pushlogctx($h);
+            # Shallow clone of %locals for host-dependent validation and normalization.
+            my %hlocals = %locals;
+            $checkall->($h, \%hlocals);
+            # TODO: Shouldn't `%hlocals` go after `$config{h}`?  Later lines should override
+            # earlier lines, no?  Otherwise, later assignments will have a mixed effect:
+            # assignments to new variables will take effect but assignments to variables that
+            # already have a value will not.
+            $config{$h} = {%globals, %hlocals, %{$config{$h} // {}}, 'host' => $h};
         }
     }
     close(FD);
