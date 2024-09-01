@@ -583,7 +583,7 @@ our %variables = (
         'cache'               => setv(T_FILE,  0, 0, "$cachedir/$program.cache", undef),
         'pid'                 => setv(T_FILE,  0, 0, undef,                undef),
         'proxy'               => setv(T_FQDNP, 0, 0, undef,                undef),
-        'protocol'            => setv(T_PROTO, 0, 0, 'dyndns2',            undef),
+        'protocol'            => setv(T_PROTO, 0, 1, 'dyndns2',            undef),
 
         'timeout'             => setv(T_DELAY, 0, 0, interval('120s'),     interval('120s')),
         'force'               => setv(T_BOOL,  0, 0, 0,                    undef),
@@ -727,7 +727,7 @@ our %variables = (
         $self->{force_update} //= sub { return 0; };
         $self->{force_update_if_changed} //= [];
         # Eliminate duplicates and non-recap variables.
-        my %fvs = map({ ($_ => undef); } @{$self->{force_update_if_changed}});
+        my %fvs = map({ ($_ => undef); } @{$self->{force_update_if_changed}}, 'protocol');
         $self->{force_update_if_changed} =
             [grep({ $self->{variables}{$_} && $self->{variables}{$_}{recap}; } sort(keys(%fvs)))];
         return $self;
