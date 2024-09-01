@@ -50,13 +50,11 @@ my @test_cases = (
         desc => "unknown host",
         cachefile_lines => ["var_a=yes host_c"],
         want => {},
-        want_TODO => "longstanding minor issue, doesn't affect functionality",
     },
     {
         desc => "unknown var",
         cachefile_lines => ["var_b=123 host_a"],
         want => {host_a => {host => 'host_a'}},
-        want_TODO => "longstanding minor issue, doesn't affect functionality",
     },
     {
         desc => "invalid value",
@@ -142,21 +140,18 @@ my @test_cases = (
         desc => "non-recap vars are not loaded to %recap or copied to %config",
         cachefile_lines => ["mtime=1234567890 host_b"],
         want => {host_b => {host => 'host_b'}},
-        want_TODO => "longstanding minor issue, doesn't affect functionality",
     },
     {
         desc => "non-recap vars are scrubbed from %recap",
         cachefile_lines => ["mtime=1234567890 host_b"],
         recap => {host_b => {host => 'host_b', mtime => 1234567891}},
         want => {host_b => {host => 'host_b'}},
-        want_TODO => "longstanding minor issue, doesn't affect functionality",
     },
     {
         desc => "unknown hosts are scrubbed from %recap",
         cachefile_lines => ["host_a", "host_c"],
         recap => {host_a => {host => 'host_a'}, host_c => {host => 'host_c'}},
         want => {host_a => {host => 'host_a'}},
-        want_TODO => "longstanding minor issue, doesn't affect functionality",
     },
 );
 
