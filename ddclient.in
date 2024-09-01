@@ -103,7 +103,7 @@ our $version = humanize_version($VERSION);
 
 my $programd = $0;
 $programd =~ s%^.*/%%;
-my $program = $programd;
+our $program = $programd;
 $program =~ s/d$//;
 our $now = time;
 my $hostname = hostname();

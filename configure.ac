@@ -78,6 +78,7 @@ m4_foreach_w([_m], [
     File::Spec::Functions
     File::Temp
     List::Util
+    Scalar::Util
     re
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_WARN([some tests will fail due to missing module _m])])])
@@ -95,7 +96,6 @@ m4_foreach_w([_m], [
     HTTP::Response
     JSON::PP
     LWP::UserAgent
-    Scalar::Util
     Test::MockModule
     Test::TCP
     Test::Warnings
