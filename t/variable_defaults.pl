@@ -4,8 +4,8 @@ SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
 
 my %variable_collections = (
-    map({ ($_ => $ddclient::variables{$_}) } grep($_ ne 'merged', keys(%ddclient::variables))),
-    map({ ("protocol=$_" => $ddclient::protocols{$_}{variables}); } keys(%ddclient::protocols)),
+    map({ ($_ => $ddclient::cfgvars{$_}) } grep($_ ne 'merged', keys(%ddclient::cfgvars))),
+    map({ ("protocol=$_" => $ddclient::protocols{$_}{cfgvars}); } keys(%ddclient::protocols)),
 );
 my %seen;
 my @test_cases = (
@@ -24,10 +24,10 @@ for my $tc (@test_cases) {
     if ($tc->{def}{required}) {
         is($tc->{def}{default}, undef, "'$tc->{desc}' (required) has no default");
     } else {
-        # Preserve all existing variables in $variables{merged} so that variables with dynamic
+        # Preserve all existing variables in $cfgvars{merged} so that variables with dynamic
         # defaults can reference them.
-        local %ddclient::variables = (merged => {
-            %{$ddclient::variables{merged}},
+        local %ddclient::cfgvars = (merged => {
+            %{$ddclient::cfgvars{merged}},
             'var for test' => $tc->{def},
         });
         # Variables with dynamic defaults will need their own unit tests, but we can still check the
@@ -77,13 +77,12 @@ my @use_test_cases = (
 );
 for my $tc (@use_test_cases) {
     my $desc = "'use' dynamic default: $tc->{desc}";
-    local %ddclient::protocols =
-        (protocol => {variables => $ddclient::variables{'protocol-common-defaults'}});
-    local %ddclient::variables = (merged => {
-        'protocol' => $ddclient::variables{'merged'}{'protocol'},
-        'use' => $ddclient::variables{'protocol-common-defaults'}{'use'},
-        'usev4' => $ddclient::variables{'merged'}{'usev4'},
-        'usev6' => $ddclient::variables{'merged'}{'usev6'},
+    local %ddclient::protocols = (protocol => ddclient::Protocol->new());
+    local %ddclient::cfgvars = (merged => {
+        'protocol' => $ddclient::cfgvars{'merged'}{'protocol'},
+        'use' => $ddclient::cfgvars{'protocol-common-defaults'}{'use'},
+        'usev4' => $ddclient::cfgvars{'merged'}{'usev4'},
+        'usev6' => $ddclient::cfgvars{'merged'}{'usev6'},
     });
     local %ddclient::config = (host => {protocol => 'protocol', %{$tc->{cfg} // {}}});
     local %ddclient::opt;

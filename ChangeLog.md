@@ -100,6 +100,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
 
 ### Bug fixes
 
+  * Fixed numerous bugs in cache file (recap) handling.
+    [#740](https://github.com/ddclient/ddclient/pull/740)
   * Fixed numerous bugs in command-line option and configuration file
     processing.  [#733](https://github.com/ddclient/ddclient/pull/733)
   * `noip`: Fixed failure to honor IP discovery settings in some circumstances.

@@ -52,7 +52,7 @@ my @test_cases = (
     {
         desc => 'IPv4, good',
         cfg => {h1 => {urlv4 => "$hostname/dns/gateway/abc/", wantipv4 => '192.0.2.1'}},
-        wantstatus => {
+        wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
         },
         wantlogs => [
@@ -62,7 +62,7 @@ my @test_cases = (
     {
         desc => 'IPv4, failed',
         cfg => {h1 => {urlv4 => "$hostname/dns/gateway/bad_token/", wantipv4 => '192.0.2.1'}},
-        wantstatus => {
+        wantrecap => {
             h1 => {'status-ipv4' => 'failed'},
         },
         wantlogs => [
@@ -72,7 +72,7 @@ my @test_cases = (
     {
         desc => 'IPv4, bad',
         cfg => {h1 => {urlv4 => "$hostname/bad/path/", wantipv4 => '192.0.2.1'}},
-        wantstatus => {
+        wantrecap => {
             h1 => {'status-ipv4' => 'bad'},
         },
         wantlogs => [
@@ -82,7 +82,7 @@ my @test_cases = (
     {
         desc => 'IPv4, unexpected response',
         cfg => {h1 => {urlv4 => "$hostname/unexpected/path/", wantipv4 => '192.0.2.1'}},
-        wantstatus => {h1 => {}},
+        wantrecap => {},
         wantlogs => [
             {label => 'FAILED', ctx => ['h1'], msg => qr/400 Bad Request/},
         ],
@@ -90,7 +90,7 @@ my @test_cases = (
     {
         desc => 'IPv4, no urlv4',
         cfg => {h1 => {wantipv4 => '192.0.2.1'}},
-        wantstatus => {h1 => {}},
+        wantrecap => {},
         wantlogs => [
             {label => 'FAILED', ctx => ['h1'], msg => qr/missing urlv4 option/},
         ],
@@ -98,7 +98,7 @@ my @test_cases = (
     {
         desc => 'IPv6, good',
         cfg => {h1 => {urlv6 => "$hostname/dns/gateway/abc/", wantipv6 => '2001:db8::1'}},
-        wantstatus => {
+        wantrecap => {
             h1 => {'status-ipv6' => 'good', 'ipv6' => '2001:db8::1', 'mtime' => $ddclient::now},
         },
         wantlogs => [
@@ -113,7 +113,7 @@ my @test_cases = (
             wantipv4 => '192.0.2.1',
             wantipv6 => '2001:db8::1',
         }},
-        wantstatus => {
+        wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1',
                 'status-ipv6' => 'good', 'ipv6' => '2001:db8::1',
                 'mtime' => $ddclient::now},
@@ -132,7 +132,7 @@ my @test_cases = (
             wantipv6 => '2001:db8::1',
         }},
         wantips => {h1 => {wantipv4 => '192.0.2.1', wantipv6 => '2001:db8::1'}},
-        wantstatus => {
+        wantrecap => {
             h1 => {'status-ipv4' => 'failed',
                 'status-ipv6' => 'good', 'ipv6' => '2001:db8::1',
                 'mtime' => $ddclient::now},
@@ -152,20 +152,14 @@ for my $tc (@test_cases) {
     local $ddclient::globals{verbose} = 1;
     my $l = Logger->new($ddclient::_l);
     local %ddclient::config = %{$tc->{cfg}};
+    local %ddclient::recap;
     {
         local $ddclient::_l = $l;
-        ddclient::nic_directnic_update(sort(keys(%{$tc->{cfg}})));
+        ddclient::nic_directnic_update(undef, sort(keys(%{$tc->{cfg}})));
     }
-    # These are the properties in %ddclient::config to check against $tc->{wantstatus}.
-    my %statuskeys = map(($_ => undef), qw(atime ip ipv4 ipv6 mtime status status-ipv4 status-ipv6
-                                           wantip wantipv4 wantipv6 wtime));
-    my %gotstatus;
-    for my $h (keys(%ddclient::config)) {
-        $gotstatus{$h} = {map(($_ => $ddclient::config{$h}{$_}),
-                              grep(exists($statuskeys{$_}), keys(%{$ddclient::config{$h}})))};
-    }
-    is_deeply(\%gotstatus, $tc->{wantstatus}, "$tc->{desc}: status")
-        or diag(ddclient::repr(\%ddclient::config, Names => ['*ddclient::config']));
+    is_deeply(\%ddclient::recap, $tc->{wantrecap}, "$tc->{desc}: recap")
+        or diag(ddclient::repr(Values => [\%ddclient::recap, $tc->{wantrecap}],
+                               Names => ['*got', '*want']));
     $tc->{wantlogs} //= [];
     subtest("$tc->{desc}: logs" => sub {
         my @got = @{$l->{logs}};

@@ -41,7 +41,7 @@ my $ua = LWP::UserAgent->new;
 sub test_nic_dnsexit2_update {
     my ($config, @hostnames) = @_;
     %ddclient::config = %$config;
-    ddclient::nic_dnsexit2_update(@hostnames);
+    ddclient::nic_dnsexit2_update(undef, @hostnames);
 }
 
 sub decode_and_sort_array {

@@ -47,19 +47,21 @@ local %ddclient::protocols = (
     # The `legacy` protocol reads the legacy `wantip` property and sets the legacy `ip` and `status`
     # properties.  (Modern protocol implementations read `wantipv4` and `wantipv6` and set `ipv4`,
     # `ipv6`, `status-ipv4`, and `status-ipv6`.)  It always succeeds.
-    legacy => {
+    legacy => ddclient::LegacyProtocol->new(
         update => sub {
+            my $self = shift;
+            ddclient::debug('in update');
             for my $h (@_) {
+                local $ddclient::_l = ddclient::pushlogctx($h);
+                ddclient::debug('updating host');
                 push(@updates, [@_]);
-                $ddclient::config{$h}{status} = 'good';
-                $ddclient::config{$h}{ip} = delete($ddclient::config{$h}{wantip});
-                $ddclient::config{$h}{mtime} = $ddclient::now;
+                $ddclient::recap{$h}{status} = 'good';
+                $ddclient::recap{$h}{ip} = delete($ddclient::config{$h}{wantip});
+                $ddclient::recap{$h}{mtime} = $ddclient::now;
             }
+            ddclient::debug('returning from update');
         },
-        variables => {
-            %{$ddclient::variables{'protocol-common-defaults'}},
-        },
-    },
+    ),
 );
 
 my @test_cases = (
@@ -74,12 +76,6 @@ my @test_cases = (
             },
             want_update => 1,
             want_recap_changes => {
-                'atime' => $ddclient::now,
-                'ipv4' => '192.0.2.1',
-                'mtime' => $ddclient::now,
-                'status-ipv4' => 'good',
-            },
-            want_cfg_changes => {
                 'atime' => $ddclient::now,
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
@@ -103,12 +99,6 @@ my @test_cases = (
             'mtime' => $ddclient::now,
             'status-ipv6' => 'good',
         },
-        want_cfg_changes => {
-            'atime' => $ddclient::now,
-            'ipv6' => '2001:db8::1',
-            'mtime' => $ddclient::now,
-            'status-ipv6' => 'good',
-        },
     },
     {
         desc => 'legacy, fresh, usev6=webv6',
@@ -119,12 +109,6 @@ my @test_cases = (
         },
         want_update => 1,
         want_recap_changes => {
-            'atime' => $ddclient::now,
-            'ipv6' => '2001:db8::1',
-            'mtime' => $ddclient::now,
-            'status-ipv6' => 'good',
-        },
-        want_cfg_changes => {
             'atime' => $ddclient::now,
             'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
@@ -141,12 +125,6 @@ my @test_cases = (
         },
         want_update => 1,
         want_recap_changes => {
-            'atime' => $ddclient::now,
-            'ipv4' => '192.0.2.1',
-            'mtime' => $ddclient::now,
-            'status-ipv4' => 'good',
-        },
-        want_cfg_changes => {
             'atime' => $ddclient::now,
             'ipv4' => '192.0.2.1',
             'mtime' => $ddclient::now,
@@ -231,11 +209,6 @@ my @test_cases = (
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
             },
-            want_cfg_changes => {
-                'atime' => $ddclient::now,
-                'ipv4' => '192.0.2.1',
-                'mtime' => $ddclient::now,
-            },
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -283,12 +256,6 @@ my @test_cases = (
                 'mtime' => $ddclient::now,
                 'status-ipv4' => 'good',
             },
-            want_cfg_changes => {
-                'atime' => $ddclient::now,
-                'ipv4' => '192.0.2.1',
-                'mtime' => $ddclient::now,
-                'status-ipv4' => 'good',
-            },
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -307,7 +274,6 @@ for my $tc (@test_cases) {
             # $cachef is an object that stringifies to a filename.
             local $ddclient::globals{cache} = "$cachef";
             my %cfg = (
-                %{$tc->{recap} // {}},  # Simulate a previous update.
                 web => 'v4',
                 webv4 => 'v4',
                 webv6 => 'v6',
@@ -335,7 +301,6 @@ for my $tc (@test_cases) {
                                            Names => ['*got', '*want']));
             }
             my %want_cfg = (host => {
-                $tc->{want_update} ? (update => 1) : (),
                 %cfg,
                 %{$tc->{want_cfg_changes} // {}},
             });
