@@ -1,6 +1,7 @@
 use Test::More;
 use File::Temp;
 use List::Util qw(max);
+use Scalar::Util qw(refaddr);
 eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
@@ -39,6 +40,28 @@ local %ddclient::builtinweb = (
     defined($httpd{'6'}) ? (v6 => {url => "" . $httpd{'6'}->endpoint()}) : (),
 );
 
+# Sentinel value used by `mergecfg` that means "this hash entry should be deleted if it exists."
+my $DOES_NOT_EXIST = [];
+
+sub mergecfg {
+    my %ret;
+    for my $cfg (@_) {
+        next if !defined($cfg);
+        for my $h (keys(%$cfg)) {
+            if (refaddr($cfg->{$h}) == refaddr($DOES_NOT_EXIST)) {
+                delete($ret{$h});
+                next;
+            }
+            $ret{$h} = {%{$ret{$h} // {}}, %{$cfg->{$h}}};
+            for my $k (keys(%{$ret{$h}})) {
+                my $a = refaddr($ret{$h}{$k});
+                delete($ret{$h}{$k}) if defined($a) && $a == refaddr($DOES_NOT_EXIST);
+            }
+        }
+    }
+    return \%ret;
+}
+
 local $ddclient::globals{debug} = 1;
 local $ddclient::globals{verbose} = 1;
 local $ddclient::now = 1000;
@@ -70,82 +93,82 @@ my @test_cases = (
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, fresh, $desc",
-            cfg => {
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
-            want_update => 1,
-            want_recap_changes => {
+            }},
+            want_updates => [['host']],
+            want_recap_changes => {host => {
                 'atime' => $ddclient::now,
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
                 'status-ipv4' => 'good',
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
     {
         desc => 'legacy, fresh, use=web (IPv6)',
         ipv6 => 1,
-        cfg => {
+        cfg => {host => {
             'protocol' => 'legacy',
             'use' => 'web',
             'web' => 'v6',
-        },
-        want_update => 1,
-        want_recap_changes => {
+        }},
+        want_updates => [['host']],
+        want_recap_changes => {host => {
             'atime' => $ddclient::now,
             'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
             'status-ipv6' => 'good',
-        },
+        }},
     },
     {
         desc => 'legacy, fresh, usev6=webv6',
         ipv6 => 1,
-        cfg => {
+        cfg => {host => {
             'protocol' => 'legacy',
             'usev6' => 'webv6',
-        },
-        want_update => 1,
-        want_recap_changes => {
+        }},
+        want_updates => [['host']],
+        want_recap_changes => {host => {
             'atime' => $ddclient::now,
             'ipv6' => '2001:db8::1',
             'mtime' => $ddclient::now,
             'status-ipv6' => 'good',
-        },
+        }},
     },
     {
         desc => 'legacy, fresh, usev4=webv4 usev6=webv6',
         ipv6 => 1,
-        cfg => {
+        cfg => {host => {
             'protocol' => 'legacy',
             'usev4' => 'webv4',
             'usev6' => 'webv6',
-        },
-        want_update => 1,
-        want_recap_changes => {
+        }},
+        want_updates => [['host']],
+        want_recap_changes => {host => {
             'atime' => $ddclient::now,
             'ipv4' => '192.0.2.1',
             'mtime' => $ddclient::now,
             'status-ipv4' => 'good',
-        },
+        }},
     },
     map({
         my %cfg = %{delete($_->{cfg})};
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, no change, not yet time, $desc",
-            recap => {
+            recap => {host => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval'),
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval'),
                 'status-ipv4' => 'good',
-            },
-            cfg => {
+            }},
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -154,16 +177,16 @@ my @test_cases = (
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, min-interval elapsed but no change, $desc",
-            recap => {
+            recap => {host => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval') - 1,
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval') - 1,
                 'status-ipv4' => 'good',
-            },
-            cfg => {
+            }},
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -172,19 +195,19 @@ my @test_cases = (
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, needs update, not yet time, $desc",
-            recap => {
+            recap => {host => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval'),
                 'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval'),
                 'status-ipv4' => 'good',
-            },
-            cfg => {
+            }},
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
-            want_recap_changes => {
+            }},
+            want_recap_changes => {host => {
                 'warned-min-interval' => $ddclient::now,
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -193,22 +216,22 @@ my @test_cases = (
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, min-interval elapsed, needs update, $desc",
-            recap => {
+            recap => {host => {
                 'atime' => $ddclient::now - ddclient::opt('min-interval') - 1,
                 'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - ddclient::opt('min-interval') - 1,
                 'status-ipv4' => 'good',
-            },
-            cfg => {
+            }},
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
-            want_update => 1,
-            want_recap_changes => {
+            }},
+            want_updates => [['host']],
+            want_recap_changes => {host => {
                 'atime' => $ddclient::now,
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -217,20 +240,20 @@ my @test_cases = (
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, previous failed update, not yet time to retry, $desc",
-            recap => {
+            recap => {host => {
                 'atime' => $ddclient::now - ddclient::opt('min-error-interval'),
                 'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - max(ddclient::opt('min-error-interval'),
                                                 ddclient::opt('min-interval')) - 1,
                 'status-ipv4' => 'failed',
-            },
-            cfg => {
+            }},
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
-            want_recap_changes => {
+            }},
+            want_recap_changes => {host => {
                 'warned-min-error-interval' => $ddclient::now,
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -239,23 +262,23 @@ my @test_cases = (
         my $desc = join(' ', map("$_=$cfg{$_}", keys(%cfg)));
         {
             desc => "legacy, previous failed update, time to retry, $desc",
-            recap => {
+            recap => {host => {
                 'atime' => $ddclient::now - ddclient::opt('min-error-interval') - 1,
                 'ipv4' => '192.0.2.2',
                 'mtime' => $ddclient::now - ddclient::opt('min-error-interval') - 2,
                 'status-ipv4' => 'failed',
-            },
-            cfg => {
+            }},
+            cfg => {host => {
                 'protocol' => 'legacy',
                 %cfg,
-            },
-            want_update => 1,
-            want_recap_changes => {
+            }},
+            want_updates => [['host']],
+            want_recap_changes => {host => {
                 'atime' => $ddclient::now,
                 'ipv4' => '192.0.2.1',
                 'mtime' => $ddclient::now,
                 'status-ipv4' => 'good',
-            },
+            }},
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -268,42 +291,41 @@ for my $tc (@test_cases) {
             if $tc->{ipv6} && !$http_daemon_supports_ipv6;
         subtest($tc->{desc} => sub {
             local $ddclient::_l = ddclient::pushlogctx($tc->{desc});
-            # Copy %{$tc->{recap}} so that updates to $recap{$h} don't update %{$tc->{recap}}.
-            local %ddclient::recap = (host => {%{$tc->{recap} // {}}});
+            $tc->{recap}{$_}{host} //= $_ for keys(%{$tc->{recap} // {}});
+            # Deep copy `%{$tc->{recap}}` so that updates to `%ddclient::recap` don't mutate it.
+            local %ddclient::recap = %{mergecfg($tc->{recap})};
             my $cachef = File::Temp->new();
             # $cachef is an object that stringifies to a filename.
             local $ddclient::globals{cache} = "$cachef";
-            my %cfg = (
-                web => 'v4',
-                webv4 => 'v4',
-                webv6 => 'v6',
-                %{$tc->{cfg} // {}},
-            );
-            # Copy %cfg so that updates to $config{$h} don't update %cfg.
-            local %ddclient::config = (host => {%cfg});
+            $tc->{cfg} = {map({
+                ($_ => {
+                    host => $_,
+                    web => 'v4',
+                    webv4 => 'v4',
+                    webv6 => 'v6',
+                    %{$tc->{cfg}{$_}},
+                });
+            } keys(%{$tc->{cfg} // {}}))};
+            # Deep copy `%{$tc->{cfg}}` so that updates to `%ddclient::config` don't mutate it.
+            local %ddclient::config = %{mergecfg($tc->{cfg})};
             local @updates;
 
             ddclient::update_nics();
 
             TODO: {
-                local $TODO = $tc->{want_update_TODO};
-                is_deeply(\@updates, [(['host']) x ($tc->{want_update} ? 1 : 0)],
-                          'got expected update');
+                local $TODO = $tc->{want_updates_TODO};
+                is_deeply(\@updates, $tc->{want_updates} // [], 'got expected updates')
+                    or diag(ddclient::repr(Values => [\@updates, $tc->{want_updates}],
+                                           Names => ['*got', '*want']));
             }
-            my %want_recap = (host => {
-                %{$tc->{recap} // {}},
-                %{$tc->{want_recap_changes} // {}},
-            });
+            my %want_recap = %{mergecfg($tc->{recap}, $tc->{want_recap_changes})};
             TODO: {
                 local $TODO = $tc->{want_recap_changes_TODO};
                 is_deeply(\%ddclient::recap, \%want_recap, 'recap matches')
                     or diag(ddclient::repr(Values => [\%ddclient::recap, \%want_recap],
                                            Names => ['*got', '*want']));
             }
-            my %want_cfg = (host => {
-                %cfg,
-                %{$tc->{want_cfg_changes} // {}},
-            });
+            my %want_cfg = %{mergecfg($tc->{cfg}, $tc->{want_cfg_changes})};
             TODO: {
                 local $TODO = $tc->{want_cfg_changes_TODO};
                 is_deeply(\%ddclient::config, \%want_cfg, 'config matches')
