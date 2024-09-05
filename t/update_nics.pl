@@ -2,6 +2,8 @@ use Test::More;
 use File::Temp;
 use List::Util qw(max);
 use Scalar::Util qw(refaddr);
+eval { require JSON::PP; } or plan(skip_all => $@);
+JSON::PP->import(qw(decode_json encode_json));
 eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
@@ -19,6 +21,9 @@ my $http_daemon_supports_ipv6 = eval {
     HTTP::Daemon->VERSION(6.12);
 };
 
+my @httpd_requests;  # Log of received requests.
+my @httpd_responses;  # Script of responses to play back.
+my $textplain = ['content-type' => 'text/plain; charset=utf-8'];
 sub run_httpd {
     my ($ipv) = @_;
     return undef if $ipv eq '6' && (!$ipv6_supported || !$http_daemon_supports_ipv6);
@@ -27,7 +32,26 @@ sub run_httpd {
         daemon_args => {V6Only => 1},
     );
     my $ip = $ipv eq '4' ? '192.0.2.1' : '2001:db8::1';
-    $httpd->run(sub { return [200, ['content-type' => 'text/plain; charset=utf-8'], [$ip]]; });
+    $httpd->run(sub {
+        my ($req) = @_;
+        if ($req->uri()->path() eq '/control') {
+            if ($req->method() eq 'PUT') {
+                return [400, $textplain, ['content must be json']]
+                    if $req->headers()->content_type() ne 'application/json';
+                eval { @httpd_responses = @{decode_json($req->content())}; 1; }
+                    or return [400, $textplain, ['content is not valid json']];
+                @httpd_requests = ();
+                return [200, $textplain, []];
+            } elsif ($req->method() eq 'GET') {
+                my @reqs = map($_->as_string(), @httpd_requests);
+                return [200, ['content-type' => 'application/json'], [encode_json(\@reqs)]];
+            } else {
+                return [405, $textplain, ['unsupported method: ' . $req->method()]];
+            }
+        }
+        push(@httpd_requests, $req);
+        return shift(@httpd_responses) // [500, $textplain, ['ran out of scripted responses']];
+    });
     diag("started IPv$ipv HTTP server running at " . $httpd->endpoint());
     return $httpd;
 }
@@ -97,6 +121,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             want_updates => [['host']],
             want_recap_changes => {host => {
                 'atime' => $ddclient::now,
@@ -115,6 +140,7 @@ my @test_cases = (
             'use' => 'web',
             'web' => 'v6',
         }},
+        want_reqs_webv6 => 1,
         want_updates => [['host']],
         want_recap_changes => {host => {
             'atime' => $ddclient::now,
@@ -130,6 +156,7 @@ my @test_cases = (
             'protocol' => 'legacy',
             'usev6' => 'webv6',
         }},
+        want_reqs_webv6 => 1,
         want_updates => [['host']],
         want_recap_changes => {host => {
             'atime' => $ddclient::now,
@@ -146,6 +173,8 @@ my @test_cases = (
             'usev4' => 'webv4',
             'usev6' => 'webv6',
         }},
+        want_reqs_webv4 => 1,
+        want_reqs_webv6 => 1,
         want_updates => [['host']],
         want_recap_changes => {host => {
             'atime' => $ddclient::now,
@@ -169,6 +198,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -187,6 +217,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
@@ -205,6 +236,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             want_recap_changes => {host => {
                 'warned-min-interval' => $ddclient::now,
             }},
@@ -226,6 +258,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             want_updates => [['host']],
             want_recap_changes => {host => {
                 'atime' => $ddclient::now,
@@ -251,6 +284,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             want_recap_changes => {host => {
                 'warned-min-error-interval' => $ddclient::now,
             }},
@@ -272,6 +306,7 @@ my @test_cases = (
                 'protocol' => 'legacy',
                 %cfg,
             }},
+            want_reqs_webv4 => 1,
             want_updates => [['host']],
             want_recap_changes => {host => {
                 'atime' => $ddclient::now,
@@ -291,6 +326,19 @@ for my $tc (@test_cases) {
             if $tc->{ipv6} && !$http_daemon_supports_ipv6;
         subtest($tc->{desc} => sub {
             local $ddclient::_l = ddclient::pushlogctx($tc->{desc});
+            for my $ipv ('4', '6') {
+                $tc->{"want_reqs_webv$ipv"} //= 0;
+                my $want = $tc->{"want_reqs_webv$ipv"};
+                next if !defined($httpd{$ipv}) && $want == 0;
+                local $ddclient::_l = ddclient::pushlogctx("IPv$ipv");
+                my $ip = $ipv eq '4' ? '192.0.2.1' : '2001:db8::1';
+                ddclient::header_ok(ddclient::geturl(
+                                        url => $httpd{$ipv}->endpoint() . '/control',
+                                        method => 'PUT',
+                                        headers => ['content-type: application/json'],
+                                        data => encode_json([([200, $textplain, [$ip]]) x $want]),
+                                    )) or BAIL_OUT('failed to prepare the test http server');
+            }
             $tc->{recap}{$_}{host} //= $_ for keys(%{$tc->{recap} // {}});
             # Deep copy `%{$tc->{recap}}` so that updates to `%ddclient::recap` don't mutate it.
             local %ddclient::recap = %{mergecfg($tc->{recap})};
@@ -312,6 +360,18 @@ for my $tc (@test_cases) {
 
             ddclient::update_nics();
 
+            for my $ipv ('4', '6') {
+                next if !defined($httpd{$ipv});
+                local $ddclient::_l = ddclient::pushlogctx("IPv$ipv");
+                my $gotreqs = ddclient::geturl(url => $httpd{$ipv}->endpoint() . '/control');
+                ddclient::header_ok($gotreqs)
+                    or BAIL_OUT("failed to get log of IPv$ipv http requests");
+                $gotreqs =~ s/^.*?\n\n//s;
+                my @gotreqs = map(HTTP::Request->parse($_), @{decode_json($gotreqs)});
+                my $got = @gotreqs;
+                my $want = $tc->{"want_reqs_webv$ipv"};
+                is($got, $want, "number of requests to webv$ipv service");
+            }
             TODO: {
                 local $TODO = $tc->{want_updates_TODO};
                 is_deeply(\@updates, $tc->{want_updates} // [], 'got expected updates')
