@@ -51,10 +51,10 @@ local %ddclient::protocols = (
         update => sub {
             my $self = shift;
             ddclient::debug('in update');
+            push(@updates, [@_]);
             for my $h (@_) {
                 local $ddclient::_l = ddclient::pushlogctx($h);
                 ddclient::debug('updating host');
-                push(@updates, [@_]);
                 $ddclient::recap{$h}{status} = 'good';
                 $ddclient::recap{$h}{ip} = delete($ddclient::config{$h}{wantip});
                 $ddclient::recap{$h}{mtime} = $ddclient::now;
