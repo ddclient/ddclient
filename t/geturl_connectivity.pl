@@ -18,11 +18,6 @@ my $http_daemon_supports_ipv6 = eval {
     HTTP::Daemon->VERSION(6.12);
 };
 
-# To aid in debugging, uncomment the following lines. (They are normally left commented to avoid
-# accidentally interfering with the Test Anything Protocol messages written by Test::More.)
-#STDOUT->autoflush(1);
-#$ddclient::globals{'verbose'} = 1;
-
 my $certdir = "$ENV{abs_top_srcdir}/t/lib/ddclient/Test/Fake/HTTPD";
 $ddclient::globals{'ssl_ca_file'} = "$certdir/dummy-ca-cert.pem";
 
