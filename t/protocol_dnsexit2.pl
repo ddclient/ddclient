@@ -1,41 +1,24 @@
 use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
-BEGIN { eval { require LWP::UserAgent; 1; } or plan(skip_all => $@); }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
+}
 
 ddclient::load_json_support('dnsexit2');
 
-my @httpd_requests; # Declare variable specificly used for the httpd process (which cannot be shared with tests).
-my $httpd = ddclient::Test::Fake::HTTPD->new();
-
-$httpd->run(sub {
+httpd()->run(sub {
     my ($req) = @_;
-    if ($req->uri->as_string eq '/get_requests') {
-        return [200, ['Content-Type' => 'application/json'], [encode_json(\@httpd_requests)]];
-    } elsif ($req->uri->as_string eq '/reset_requests') {
-        @httpd_requests = ();
-        return [200, ['Content-Type' => 'application/json'], [encode_json({ message => 'OK' })]];
-    }
-    my $request_info = {
-        method => $req->method,
-        uri    => $req->uri->as_string,
-        content => $req->content,
-        headers => $req->headers->as_string
-    };
-    push @httpd_requests, $request_info;
+    return undef if $req->uri()->path() eq '/control';
     return [200, ['Content-Type' => 'application/json'], [encode_json({
         code => 0,
         message => 'Success'
     })]];
 });
 
-diag(sprintf("started IPv4 server running at %s", $httpd->endpoint()));
-
 local $ddclient::globals{verbose} = 1;
-
-my $ua = LWP::UserAgent->new;
 
 sub decode_and_sort_array {
     my ($data) = @_;
@@ -46,18 +29,8 @@ sub decode_and_sort_array {
     return $data;
 }
 
-sub reset_test_data {
-    my $response = $ua->get($httpd->endpoint . '/reset_requests');
-    die "Failed to reset requests" unless $response->is_success;
-}
-
-sub get_requests {
-    my $res = $ua->get($httpd->endpoint . '/get_requests');
-    die "Failed to get requests: " . $res->status_line unless $res->is_success;
-    return @{decode_json($res->decoded_content)};
-}
-
 subtest 'Testing nic_dnsexit2_update' => sub {
+    httpd()->reset();
     local %ddclient::config = (
         'host.my.example.com' => {
             'usev4'    => 'ipv4',
@@ -67,19 +40,19 @@ subtest 'Testing nic_dnsexit2_update' => sub {
             'protocol' => 'dnsexit2',
             'password' => 'mytestingpassword',
             'zone'     => 'my.example.com',
-            'server'   => $httpd->endpoint(),
+            'server'   => httpd()->endpoint(),
             'path'     => '/update',
             'ttl'      => 5
     });
     ddclient::nic_dnsexit2_update(undef, 'host.my.example.com');
-    my @requests = get_requests();
+    my @requests = httpd()->reset();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
-    is($req->{method}, 'POST', 'Method is correct');
-    is($req->{uri}, '/update', 'URI contains correct path');
-    like($req->{headers}, qr/Content-Type: application\/json/, 'Content-Type header is correct');
-    like($req->{headers}, qr/Accept: application\/json/, 'Accept header is correct');
-    my $got = decode_and_sort_array($req->{content});
+    is($req->method(), 'POST', 'Method is correct');
+    is($req->uri()->as_string(), '/update', 'URI contains correct path');
+    is($req->header('content-type'), 'application/json', 'Content-Type header is correct');
+    is($req->header('accept'), 'application/json', 'Accept header is correct');
+    my $got = decode_and_sort_array($req->content());
     my $want = decode_and_sort_array({
         'domain'     => 'my.example.com',
         'apikey'     => 'mytestingpassword',
@@ -99,25 +72,25 @@ subtest 'Testing nic_dnsexit2_update' => sub {
         ]
     });
     is_deeply($got, $want, 'Data is correct');
-    reset_test_data();
 };
 
 subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
+    httpd()->reset();
     local %ddclient::config = (
         'myhost.example.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '192.0.2.1',
             'protocol' => 'dnsexit2',
             'password' => 'anotherpassword',
-            'server'   => $httpd->endpoint(),
+            'server'   => httpd()->endpoint(),
             'path'     => '/update-alt',
             'ttl'      => 10
     });
     ddclient::nic_dnsexit2_update(undef, 'myhost.example.com');
-    my @requests = get_requests();
+    my @requests = httpd()->reset();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
-    my $got = decode_and_sort_array($req->{content});
+    my $got = decode_and_sort_array($req->content());
     my $want = decode_and_sort_array({
         'domain'     => 'myhost.example.com',
         'apikey'     => 'anotherpassword',
@@ -131,17 +104,17 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
         ]
     });
     is_deeply($got, $want, 'Data is correct');
-    reset_test_data($ua);
 };
 
 subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one without' => sub {
+    httpd()->reset();
     local %ddclient::config = (
         'host1.example.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '192.0.2.1',
             'protocol' => 'dnsexit2',
             'password' => 'testingpassword',
-            'server'   => $httpd->endpoint(),
+            'server'   => httpd()->endpoint(),
             'path'     => '/update',
             'ttl'      => 5
         },
@@ -150,15 +123,15 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
             'wantipv6' => '2001:db8::1',
             'protocol' => 'dnsexit2',
             'password' => 'testingpassword',
-            'server'   => $httpd->endpoint(),
+            'server'   => httpd()->endpoint(),
             'path'     => '/update',
             'ttl'      => 10,
             'zone'     => 'example.com'
         }
     );
     ddclient::nic_dnsexit2_update(undef, 'host1.example.com', 'host2.example.com');
-    my @requests = get_requests();
-    my @got = map(decode_and_sort_array($_->{content}), @requests);
+    my @requests = httpd()->reset();
+    my @got = map(decode_and_sort_array($_->content()), @requests);
     my @want = (
         decode_and_sort_array({
             'domain' => 'host1.example.com',
@@ -182,7 +155,6 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
         }),
     );
     is_deeply(\@got, \@want, 'data is correct');
-    reset_test_data();
 };
 
 done_testing();

@@ -2,42 +2,26 @@ use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use Scalar::Util qw(blessed);
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
+}
 use ddclient::t::ip;
-my $http_daemon_supports_ipv6 = eval {
-    require HTTP::Daemon;
-    HTTP::Daemon->VERSION(6.12);
-};
 
 my $builtinweb = 't/use_web.pl builtinweb';
 my $h = 't/use_web.pl hostname';
 
-sub run_httpd {
-    my ($ipv) = @_;
-    return undef if $ipv eq '6' && (!$ipv6_supported || !$http_daemon_supports_ipv6);
-    my $httpd = ddclient::Test::Fake::HTTPD->new(
-        host => $ipv eq '4' ? '127.0.0.1' : '::1',
-        daemon_args => {V6Only => 1},
-    );
-    my $headers = [
-        'content-type' => 'text/plain',
-        'this-ipv4-should-be-ignored' => 'skip skip2 192.0.2.255',
-        'this-ipv6-should-be-ignored' => 'skip skip2 2001:db8::ff',
-    ];
-    my $content = $ipv eq '4'
-        ? '192.0.2.1 skip 192.0.2.2 skip2 192.0.2.3'
-        : '2001:db8::1 skip 2001:db8::2 skip2 2001:db8::3';
-    $httpd->run(sub { return [200, $headers, [$content]]; });
-    diag("started IPv$ipv server running at ${\($httpd->endpoint())}");
-    return $httpd;
-}
-my %httpd = (
-    '4' => run_httpd('4'),
-    '6' => run_httpd('6'),
-);
+my $headers = [
+    @$textplain,
+    'this-ipv4-should-be-ignored' => 'skip skip2 192.0.2.255',
+    'this-ipv6-should-be-ignored' => 'skip skip2 2001:db8::ff',
+];
+httpd('4')->run(sub { return [200, $headers, ['192.0.2.1 skip 192.0.2.2 skip2 192.0.2.3']]; });
+httpd('6')->run(sub { return [200, $headers, ['2001:db8::1 skip 2001:db8::2 skip2 2001:db8::3']]; })
+    if httpd('6');
 my %ep = (
-    '4' => $httpd{'4'}->endpoint(),
-    '6' => $httpd{'6'} ? $httpd{'6'}->endpoint() : undef,
+    '4' => httpd('4')->endpoint(),
+    '6' => httpd('6') ? httpd('6')->endpoint() : undef,
 );
 
 my @test_cases;
@@ -102,8 +86,7 @@ for my $tc (@test_cases) {
     $ddclient::config if 0;
     SKIP: {
         skip("IPv6 not supported on this system", 1) if $tc->{ipv6} && !$ipv6_supported;
-        skip("HTTP::Daemon too old for IPv6 support", 1)
-            if $tc->{ipv6} && !$http_daemon_supports_ipv6;
+        skip("HTTP::Daemon too old for IPv6 support", 1) if $tc->{ipv6} && !$httpd_ipv6_supported;
         is(ddclient::get_ip($tc->{cfg}{use}, $h), $tc->{want}, $tc->{desc})
             if $tc->{cfg}{use};
         is(ddclient::get_ipv4($tc->{cfg}{usev4}, $h), $tc->{want}, $tc->{desc})

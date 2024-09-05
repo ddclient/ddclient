@@ -95,7 +95,6 @@ m4_foreach_w([_m], [
     HTTP::Request
     HTTP::Response
     JSON::PP
-    LWP::UserAgent
     Test::MockModule
     Test::TCP
     Test::Warnings

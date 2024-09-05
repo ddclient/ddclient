@@ -2,12 +2,14 @@ use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
+}
 
 ddclient::load_json_support('directnic');
 
-my $httpd = ddclient::Test::Fake::HTTPD->new();
-$httpd->run(sub {
+httpd()->run(sub {
     my ($req) = @_;
     diag('==============================================================================');
     diag("Test server received request:\n" . $req->as_string());
@@ -27,7 +29,6 @@ $httpd->run(sub {
     }
     return [400, $headers, ['unexpected request: ' . $req->uri()]]
 });
-diag("started IPv4 HTTP server running at " . $httpd->endpoint());
 
 {
     package Logger;
@@ -46,7 +47,7 @@ diag("started IPv4 HTTP server running at " . $httpd->endpoint());
     }
 }
 
-my $hostname = $httpd->endpoint();
+my $hostname = httpd()->endpoint();
 my @test_cases = (
     {
         desc => 'IPv4, good',

@@ -1,45 +1,23 @@
 use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
-BEGIN { eval { require HTTP::Daemon::SSL; 1; } or plan(skip_all => $@); }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
+}
 use ddclient::t::ip;
-my $http_daemon_supports_ipv6 = eval {
-    require HTTP::Daemon;
-    HTTP::Daemon->VERSION(6.12);
-};
+
+httpd_ssl_required();
 
 # Note: $ddclient::globals{'ssl_ca_file'} is intentionally NOT set to "$certdir/dummy-ca-cert.pem"
 # so that we can test what happens when certificate validation fails.
-my $certdir = "$ENV{abs_top_srcdir}/t/lib/ddclient/Test/Fake/HTTPD";
 
-sub run_httpd {
-    my ($ipv6) = @_;
-    return undef if $ipv6 && (!$ipv6_supported || !$http_daemon_supports_ipv6);
-    my $addr = $ipv6 ? '::1' : '127.0.0.1';
-    my $httpd = ddclient::Test::Fake::HTTPD->new(
-        host => $addr,
-        scheme => 'https',
-        daemon_args => {
-            SSL_cert_file => "$certdir/dummy-server-cert.pem",
-            SSL_key_file => "$certdir/dummy-server-key.pem",
-            V6Only => 1,
-        },
-    );
-    $httpd->run(sub {
-        return [200, ['Content-Type' => 'text/plain'], [$addr]];
-    });
-    diag(sprintf("started IPv%s SSL server running at %s", $ipv6 ? '6' : '4', $httpd->endpoint()));
-    return $httpd;
-}
+httpd('4', 1)->run(sub { return [200, $textplain, ['127.0.0.1']]; });
+httpd('6', 1)->run(sub { return [200, $textplain, ['::1']]; }) if httpd('6', 1);
 my $h = 't/ssl-validate.pl';
-my %httpd = (
-    '4' => run_httpd(0),
-    '6' => run_httpd(1),
-);
 my %ep = (
-    '4' => $httpd{'4'}->endpoint(),
-    '6' => $httpd{'6'} ? $httpd{'6'}->endpoint() : undef,
+    '4' => httpd('4', 1)->endpoint(),
+    '6' => httpd('6', 1) ? httpd('6', 1)->endpoint() : undef,
 );
 
 my @test_cases = (
@@ -94,8 +72,7 @@ my @test_cases = (
 for my $tc (@test_cases) {
     SKIP: {
         skip("IPv6 not supported on this system", 1) if $tc->{ipv6} && !$ipv6_supported;
-        skip("HTTP::Daemon too old for IPv6 support", 1)
-            if $tc->{ipv6} && !$http_daemon_supports_ipv6;
+        skip("HTTP::Daemon too old for IPv6 support", 1) if $tc->{ipv6} && !$httpd_ipv6_supported;
         $ddclient::config{$h} = $tc->{cfg};
         %ddclient::config if 0;  # suppress spurious warning "Name used only once: possible typo"
         is(ddclient::get_ipv4($tc->{cfg}{usev4}, $h), $tc->{want}, $tc->{desc})
