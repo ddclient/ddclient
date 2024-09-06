@@ -272,6 +272,58 @@ my @test_cases = (
             %$_,
         };
     } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
+    map({
+        my %cfg = %{delete($_->{cfg})};
+        my $desc = join(' ', map("$_=$cfg{$_}", sort(keys(%cfg))));
+        {
+            desc => "deduplicates identical IP discovery, $desc",
+            cfg => {
+                hosta => {protocol => 'legacy', %cfg},
+                hostb => {protocol => 'legacy', %cfg},
+            },
+            want_reqs_webv4 => 1,
+            want_updates => [['hosta', 'hostb']],
+            want_recap_changes => {
+                hosta => {
+                    'atime' => $ddclient::now,
+                    'ipv4' => '192.0.2.1',
+                    'mtime' => $ddclient::now,
+                    'status-ipv4' => 'good',
+                },
+                hostb => {
+                    'atime' => $ddclient::now,
+                    'ipv4' => '192.0.2.1',
+                    'mtime' => $ddclient::now,
+                    'status-ipv4' => 'good',
+                },
+            },
+            %$_,
+        };
+    } {cfg => {use => 'web'}}, {cfg => {usev4 => 'webv4'}}),
+    {
+        desc => "deduplicates identical IP discovery, usev6=webv6",
+        ipv6 => 1,
+        cfg => {
+            hosta => {protocol => 'legacy', usev6 => 'webv6'},
+            hostb => {protocol => 'legacy', usev6 => 'webv6'},
+        },
+        want_reqs_webv6 => 1,
+        want_updates => [['hosta', 'hostb']],
+        want_recap_changes => {
+            hosta => {
+                'atime' => $ddclient::now,
+                'ipv6' => '2001:db8::1',
+                'mtime' => $ddclient::now,
+                'status-ipv6' => 'good',
+            },
+            hostb => {
+                'atime' => $ddclient::now,
+                'ipv6' => '2001:db8::1',
+                'mtime' => $ddclient::now,
+                'status-ipv6' => 'good',
+            },
+        },
+    },
 );
 
 for my $tc (@test_cases) {
