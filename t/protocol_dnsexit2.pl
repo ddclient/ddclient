@@ -58,7 +58,7 @@ sub get_requests {
 }
 
 subtest 'Testing nic_dnsexit2_update' => sub {
-    %ddclient::config = (
+    local %ddclient::config = (
         'host.my.zone.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
@@ -103,7 +103,7 @@ subtest 'Testing nic_dnsexit2_update' => sub {
 };
 
 subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
-    %ddclient::config = (
+    local %ddclient::config = (
         'myhost.zone.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
@@ -135,7 +135,7 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
 };
 
 subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one without' => sub {
-    %ddclient::config = (
+    local %ddclient::config = (
         'host1.zone.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
