@@ -37,12 +37,6 @@ local $ddclient::globals{verbose} = 1;
 
 my $ua = LWP::UserAgent->new;
 
-sub test_nic_dnsexit2_update {
-    my ($config, @hostnames) = @_;
-    %ddclient::config = %$config;
-    ddclient::nic_dnsexit2_update(undef, @hostnames);
-}
-
 sub decode_and_sort_array {
     my ($data) = @_;
     if (!ref $data) {
@@ -64,7 +58,7 @@ sub get_requests {
 }
 
 subtest 'Testing nic_dnsexit2_update' => sub {
-    my %config = (
+    %ddclient::config = (
         'host.my.zone.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
@@ -77,7 +71,7 @@ subtest 'Testing nic_dnsexit2_update' => sub {
             'path'     => '/update',
             'ttl'      => 5
     });
-    test_nic_dnsexit2_update(\%config, 'host.my.zone.com');
+    ddclient::nic_dnsexit2_update(undef, 'host.my.zone.com');
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
@@ -109,7 +103,7 @@ subtest 'Testing nic_dnsexit2_update' => sub {
 };
 
 subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
-    my %config = (
+    %ddclient::config = (
         'myhost.zone.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
@@ -119,7 +113,7 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
             'path'     => '/update-alt',
             'ttl'      => 10
     });
-    test_nic_dnsexit2_update(\%config, 'myhost.zone.com');
+    ddclient::nic_dnsexit2_update(undef, 'myhost.zone.com');
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
@@ -141,7 +135,7 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
 };
 
 subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one without' => sub {
-    my %config = (
+    %ddclient::config = (
         'host1.zone.com' => {
             'usev4'    => 'ipv4',
             'wantipv4' => '8.8.4.4',
@@ -162,7 +156,7 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
             'zone'     => 'zone.com'
         }
     );
-    test_nic_dnsexit2_update(\%config, 'host1.zone.com', 'host2.zone.com');
+    ddclient::nic_dnsexit2_update(undef, 'host1.zone.com', 'host2.zone.com');
     my @requests = get_requests();
     my @got = map(decode_and_sort_array($_->{content}), @requests);
     my @want = (
