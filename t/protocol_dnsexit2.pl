@@ -79,8 +79,8 @@ subtest 'Testing nic_dnsexit2_update' => sub {
     is($req->{uri}, '/update', 'URI contains correct path');
     like($req->{headers}, qr/Content-Type: application\/json/, 'Content-Type header is correct');
     like($req->{headers}, qr/Accept: application\/json/, 'Accept header is correct');
-    my $data = decode_and_sort_array($req->{content});
-    my $expected_data = decode_and_sort_array({
+    my $got = decode_and_sort_array($req->{content});
+    my $want = decode_and_sort_array({
         'domain'     => 'my.zone.com',
         'apikey'     => 'mytestingpassword',
         'update' => [
@@ -98,7 +98,7 @@ subtest 'Testing nic_dnsexit2_update' => sub {
             }
         ]
     });
-    is_deeply($data, $expected_data, 'Data is correct');
+    is_deeply($got, $want, 'Data is correct');
     reset_test_data();
 };
 
@@ -117,8 +117,8 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
-    my $data = decode_and_sort_array($req->{content});
-    my $expected_data = decode_and_sort_array({
+    my $got = decode_and_sort_array($req->{content});
+    my $want = decode_and_sort_array({
         'domain'     => 'myhost.zone.com',
         'apikey'     => 'anotherpassword',
         'update' => [
@@ -130,7 +130,7 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
             }
         ]
     });
-    is_deeply($data, $expected_data, 'Data is correct');
+    is_deeply($got, $want, 'Data is correct');
     reset_test_data($ua);
 };
 
