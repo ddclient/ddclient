@@ -59,19 +59,19 @@ sub get_requests {
 
 subtest 'Testing nic_dnsexit2_update' => sub {
     local %ddclient::config = (
-        'host.my.zone.com' => {
+        'host.my.example.com' => {
             'usev4'    => 'ipv4',
-            'wantipv4' => '8.8.4.4',
+            'wantipv4' => '192.0.2.1',
             'usev6'    => 'ipv6',
-            'wantipv6' => '2001:4860:4860::8888',
+            'wantipv6' => '2001:db8::1',
             'protocol' => 'dnsexit2',
             'password' => 'mytestingpassword',
-            'zone'     => 'my.zone.com',
+            'zone'     => 'my.example.com',
             'server'   => $httpd->endpoint(),
             'path'     => '/update',
             'ttl'      => 5
     });
-    ddclient::nic_dnsexit2_update(undef, 'host.my.zone.com');
+    ddclient::nic_dnsexit2_update(undef, 'host.my.example.com');
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
@@ -81,19 +81,19 @@ subtest 'Testing nic_dnsexit2_update' => sub {
     like($req->{headers}, qr/Accept: application\/json/, 'Accept header is correct');
     my $got = decode_and_sort_array($req->{content});
     my $want = decode_and_sort_array({
-        'domain'     => 'my.zone.com',
+        'domain'     => 'my.example.com',
         'apikey'     => 'mytestingpassword',
         'update' => [
             {
                 'type' => 'A',
                 'name' => 'host',
-                'content' => '8.8.4.4',
+                'content' => '192.0.2.1',
                 'ttl' => 5,
             },
             {
                 'type' => 'AAAA',
                 'name' => 'host',
-                'content' => '2001:4860:4860::8888',
+                'content' => '2001:db8::1',
                 'ttl' => 5,
             }
         ]
@@ -104,28 +104,28 @@ subtest 'Testing nic_dnsexit2_update' => sub {
 
 subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
     local %ddclient::config = (
-        'myhost.zone.com' => {
+        'myhost.example.com' => {
             'usev4'    => 'ipv4',
-            'wantipv4' => '8.8.4.4',
+            'wantipv4' => '192.0.2.1',
             'protocol' => 'dnsexit2',
             'password' => 'anotherpassword',
             'server'   => $httpd->endpoint(),
             'path'     => '/update-alt',
             'ttl'      => 10
     });
-    ddclient::nic_dnsexit2_update(undef, 'myhost.zone.com');
+    ddclient::nic_dnsexit2_update(undef, 'myhost.example.com');
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
     my $req = shift(@requests);
     my $got = decode_and_sort_array($req->{content});
     my $want = decode_and_sort_array({
-        'domain'     => 'myhost.zone.com',
+        'domain'     => 'myhost.example.com',
         'apikey'     => 'anotherpassword',
         'update' => [
             {
                 'type' => 'A',
                 'name' => '',
-                'content' => '8.8.4.4',
+                'content' => '192.0.2.1',
                 'ttl' => 10,
             }
         ]
@@ -136,47 +136,47 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
 
 subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one without' => sub {
     local %ddclient::config = (
-        'host1.zone.com' => {
+        'host1.example.com' => {
             'usev4'    => 'ipv4',
-            'wantipv4' => '8.8.4.4',
+            'wantipv4' => '192.0.2.1',
             'protocol' => 'dnsexit2',
             'password' => 'testingpassword',
             'server'   => $httpd->endpoint(),
             'path'     => '/update',
             'ttl'      => 5
         },
-        'host2.zone.com' => {
+        'host2.example.com' => {
             'usev6'    => 'ipv6',
-            'wantipv6' => '2001:4860:4860::8888',
+            'wantipv6' => '2001:db8::1',
             'protocol' => 'dnsexit2',
             'password' => 'testingpassword',
             'server'   => $httpd->endpoint(),
             'path'     => '/update',
             'ttl'      => 10,
-            'zone'     => 'zone.com'
+            'zone'     => 'example.com'
         }
     );
-    ddclient::nic_dnsexit2_update(undef, 'host1.zone.com', 'host2.zone.com');
+    ddclient::nic_dnsexit2_update(undef, 'host1.example.com', 'host2.example.com');
     my @requests = get_requests();
     my @got = map(decode_and_sort_array($_->{content}), @requests);
     my @want = (
         decode_and_sort_array({
-            'domain' => 'host1.zone.com',
+            'domain' => 'host1.example.com',
             'apikey' => 'testingpassword',
             'update' => [{
                 'type' => 'A',
                 'name' => '',
-                'content' => '8.8.4.4',
+                'content' => '192.0.2.1',
                 'ttl' => 5,
             }],
         }),
         decode_and_sort_array({
-            'domain' => 'zone.com',
+            'domain' => 'example.com',
             'apikey' => 'testingpassword',
             'update' => [{
                 'type' => 'AAAA',
                 'name' => 'host2',
-                'content' => '2001:4860:4860::8888',
+                'content' => '2001:db8::1',
                 'ttl' => 10,
             }],
         }),
