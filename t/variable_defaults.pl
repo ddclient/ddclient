@@ -1,7 +1,7 @@
 use Test::More;
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 use re qw(is_regexp);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
 
 my %variable_collections = (
     map({ ($_ => $ddclient::cfgvars{$_}) } grep($_ ne 'merged', keys(%ddclient::cfgvars))),

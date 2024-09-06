@@ -1,12 +1,12 @@
 use Test::More;
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use File::Temp;
+BEGIN { eval { require HTTP::Request; 1; } or plan(skip_all => $@); }
+BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
 use List::Util qw(max);
 use Scalar::Util qw(refaddr);
-eval { require JSON::PP; } or plan(skip_all => $@);
-JSON::PP->import(qw(decode_json encode_json));
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
 my $ipv6_supported = eval {
     require IO::Socket::IP;
     my $ipv6_socket = IO::Socket::IP->new(

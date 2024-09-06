@@ -1,9 +1,9 @@
 use Test::More;
-eval { require JSON::PP; } or plan(skip_all => $@);
-JSON::PP->import(qw(encode_json decode_json));
-eval { require 'ddclient'; } or BAIL_OUT($@);
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-eval { require LWP::UserAgent; } or plan(skip_all => $@);
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
+BEGIN { eval { require LWP::UserAgent; 1; } or plan(skip_all => $@); }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
 
 ddclient::load_json_support('dnsexit2');
 

@@ -1,6 +1,6 @@
 use Test::More;
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 
 my $got_host;
 my $builtinfw = 't/builtinfw_query.pl';

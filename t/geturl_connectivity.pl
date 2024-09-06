@@ -1,8 +1,8 @@
 use Test::More;
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
-my $has_http_daemon_ssl = eval { require HTTP::Daemon::SSL; };
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
+my $has_http_daemon_ssl = eval { require HTTP::Daemon::SSL; 1; };
 my $ipv6_supported = eval {
     require IO::Socket::IP;
     my $ipv6_socket = IO::Socket::IP->new(

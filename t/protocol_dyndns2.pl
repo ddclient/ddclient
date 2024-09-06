@@ -1,9 +1,9 @@
 use Test::More;
-use Scalar::Util qw(blessed);
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use MIME::Base64;
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
+use Scalar::Util qw(blessed);
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
 
 my $httpd = ddclient::Test::Fake::HTTPD->new();
 $httpd->run(sub {
