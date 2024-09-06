@@ -7,7 +7,6 @@ eval { require LWP::UserAgent; } or plan(skip_all => $@);
 
 ddclient::load_json_support('dnsexit2');
 
-my @requests;  # Declare global variable to store requests, used for tests.
 my @httpd_requests; # Declare variable specificly used for the httpd process (which cannot be shared with tests).
 my $httpd = ddclient::Test::Fake::HTTPD->new();
 
@@ -56,7 +55,6 @@ sub decode_and_sort_array {
 sub reset_test_data {
     my $response = $ua->get($httpd->endpoint . '/reset_requests');
     die "Failed to reset requests" unless $response->is_success;
-    @requests = ();
 }
 
 sub get_requests {
@@ -80,7 +78,7 @@ subtest 'Testing nic_dnsexit2_update' => sub {
             'ttl'      => 5
     });
     test_nic_dnsexit2_update(\%config, 'host.my.zone.com');
-    @requests = get_requests();
+    my @requests = get_requests();
     is($requests[0]->{method}, 'POST', 'Method is correct');
     is($requests[0]->{uri}, '/update', 'URI contains correct path');
     like($requests[0]->{headers}, qr/Content-Type: application\/json/, 'Content-Type header is correct');
@@ -120,7 +118,7 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
             'ttl'      => 10
     });
     test_nic_dnsexit2_update(\%config, 'myhost.zone.com');
-    @requests = get_requests();
+    my @requests = get_requests();
     my $data = decode_and_sort_array($requests[0]->{content});
     my $expected_data = decode_and_sort_array({
         'domain'     => 'myhost.zone.com',
@@ -185,7 +183,7 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
             }
         ]
     });
-    @requests = get_requests();
+    my @requests = get_requests();
     for my $i (0..1) {
         my $data = decode_and_sort_array($requests[$i]->{content});
         is_deeply($data, $expected_data1, 'Data is correct for call host1') if $i == 0;
