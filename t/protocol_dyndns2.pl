@@ -1,30 +1,28 @@
 use Test::More;
-use Scalar::Util qw(blessed);
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use MIME::Base64;
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
+use Scalar::Util qw(blessed);
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
+}
 
-my $httpd = ddclient::Test::Fake::HTTPD->new();
-$httpd->run(sub {
+httpd()->run(sub {
     my ($req) = @_;
     diag('==============================================================================');
     diag("Test server received request:\n" . $req->as_string());
-    my $headers = ['content-type' => 'text/plain; charset=utf-8'];
+    return undef if $req->uri()->path() eq '/control';
     my $wantauthn = 'Basic ' . encode_base64('username:password', '');
-    return [401, [@$headers, 'www-authenticate' => 'Basic realm="realm", charset="UTF-8"'],
+    return [401, [@$textplain, 'www-authenticate' => 'Basic realm="realm", charset="UTF-8"'],
             ['authentication required']] if ($req->header('authorization') // '') ne $wantauthn;
-    return [400, $headers, ['invalid method: ' . $req->method()]] if $req->method() ne 'GET';
-    return [400, $headers, ['unexpected request: ' . $req->uri() . "\n",
-                            'want: ' . $req->header('want-req')]]
-        if $req->uri() ne $req->header('want-req');
-    return [200, $headers, [map("$_\n", $req->header('line'))]];
+    return [400, $textplain, ['invalid method: ' . $req->method()]] if $req->method() ne 'GET';
+    return undef;
 });
-diag("started IPv4 HTTP server running at " . $httpd->endpoint());
 
 {
     package Logger;
-    BEGIN { push(our @ISA, qw(ddclient::Logger)); }
+    use parent qw(-norequire ddclient::Logger);
     sub new {
         my ($class, $parent) = @_;
         my $self = $class->SUPER::new(undef, $parent);
@@ -256,18 +254,20 @@ for my $tc (@test_cases) {
     $ddclient::config{$_} = {
         login => 'username',
         password => 'password',
-        server => $httpd->endpoint(),
+        server => httpd()->endpoint(),
         script => '/nic/update',
         %{$tc->{cfg}{$_}},
     } for keys(%{$tc->{cfg}});
+    httpd()->reset([200, $textplain, [map("$_\n", @{$tc->{resp}})]]);
     {
-        local @ddclient::_test_headers = (
-            "want-req: /nic/update?$tc->{wantquery}",
-            map("line: $_", @{$tc->{resp}}),
-        );
         local $ddclient::_l = $l;
         ddclient::nic_dyndns2_update(undef, sort(keys(%{$tc->{cfg}})));
     }
+    my @requests = httpd()->reset();
+    is(scalar(@requests), 1, "$tc->{desc}: single update request");
+    my $req = shift(@requests);
+    is($req->uri()->path(), '/nic/update', "$tc->{desc}: request path");
+    is($req->uri()->query(), $tc->{wantquery}, "$tc->{desc}: request query");
     is_deeply(\%ddclient::recap, $tc->{wantrecap}, "$tc->{desc}: recap")
         or diag(ddclient::repr(Values => [\%ddclient::recap, $tc->{wantrecap}],
                                Names => ['*got', '*want']));

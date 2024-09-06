@@ -1,14 +1,15 @@
 use Test::More;
-eval { require JSON::PP; } or plan(skip_all => $@);
-JSON::PP->import(qw(encode_json));
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
+}
 
 ddclient::load_json_support('directnic');
 
-my $httpd = ddclient::Test::Fake::HTTPD->new();
-$httpd->run(sub {
+httpd()->run(sub {
     my ($req) = @_;
     diag('==============================================================================');
     diag("Test server received request:\n" . $req->as_string());
@@ -28,11 +29,10 @@ $httpd->run(sub {
     }
     return [400, $headers, ['unexpected request: ' . $req->uri()]]
 });
-diag("started IPv4 HTTP server running at " . $httpd->endpoint());
 
 {
     package Logger;
-    BEGIN { push(our @ISA, qw(ddclient::Logger)); }
+    use parent qw(-norequire ddclient::Logger);
     sub new {
         my ($class, $parent) = @_;
         my $self = $class->SUPER::new(undef, $parent);
@@ -47,7 +47,7 @@ diag("started IPv4 HTTP server running at " . $httpd->endpoint());
     }
 }
 
-my $hostname = $httpd->endpoint();
+my $hostname = httpd()->endpoint();
 my @test_cases = (
     {
         desc => 'IPv4, good',

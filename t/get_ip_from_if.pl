@@ -1,12 +1,7 @@
 use Test::More;
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 use ddclient::t;
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
-
-# To aid in debugging, uncomment the following lines. (They are normally left commented to avoid
-# accidentally interfering with the Test Anything Protocol messages written by Test::More.)
-#STDOUT->autoflush(1);
-#$ddclient::globals{'debug'} = 1;
 
 subtest "get_default_interface tests" => sub {
     for my $sample (@ddclient::t::routing_samples) {

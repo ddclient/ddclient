@@ -1,57 +1,22 @@
 use Test::More;
-eval { require ddclient::Test::Fake::HTTPD; } or plan(skip_all => $@);
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
-my $has_http_daemon_ssl = eval { require HTTP::Daemon::SSL; };
-my $ipv6_supported = eval {
-    require IO::Socket::IP;
-    my $ipv6_socket = IO::Socket::IP->new(
-        Domain => 'PF_INET6',
-        LocalHost => '::1',
-        Listen => 1,
-    );
-    defined($ipv6_socket);
-};
-
-my $http_daemon_supports_ipv6 = eval {
-    require HTTP::Daemon;
-    HTTP::Daemon->VERSION(6.12);
-};
-
-# To aid in debugging, uncomment the following lines. (They are normally left commented to avoid
-# accidentally interfering with the Test Anything Protocol messages written by Test::More.)
-#STDOUT->autoflush(1);
-#$ddclient::globals{'verbose'} = 1;
-
-my $certdir = "$ENV{abs_top_srcdir}/t/lib/ddclient/Test/Fake/HTTPD";
-$ddclient::globals{'ssl_ca_file'} = "$certdir/dummy-ca-cert.pem";
-
-sub run_httpd {
-    my ($ipv6, $ssl) = @_;
-    return undef if $ssl && !$has_http_daemon_ssl;
-    return undef if $ipv6 && (!$ipv6_supported || !$http_daemon_supports_ipv6);
-    my $httpd = ddclient::Test::Fake::HTTPD->new(
-        host => $ipv6 ? '::1' : '127.0.0.1',
-        scheme => $ssl ? 'https' : 'http',
-        daemon_args => {
-            SSL_cert_file => "$certdir/dummy-server-cert.pem",
-            SSL_key_file => "$certdir/dummy-server-key.pem",
-            V6Only => 1,
-        },
-    );
-    $httpd->run(sub {
-        # Echo back the full request.
-        return [200, ['Content-Type' => 'application/octet-stream'], [$_[0]->as_string()]];
-    });
-    diag(sprintf("started IPv%s%s server running at %s",
-                 $ipv6 ? '6' : '4', $ssl ? ' SSL' : '', $httpd->endpoint()));
-    return $httpd;
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
+BEGIN {
+    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
+    ddclient::t::HTTPD->import();
 }
+use ddclient::t::ip;
 
-my %httpd = (
-    '4' => {'http' => run_httpd(0, 0), 'https' => run_httpd(0, 1)},
-    '6' => {'http' => run_httpd(1, 0), 'https' => run_httpd(1, 1)},
-);
+$ddclient::globals{'ssl_ca_file'} = $ca_file;
+
+for my $ipv ('4', '6') {
+    for my $ssl (0, 1) {
+        my $httpd = httpd($ipv, $ssl) or next;
+        $httpd->run(sub {
+            return [200, ['Content-Type' => 'application/octet-stream'], [$_[0]->as_string()]];
+        });
+    }
+}
 
 my @test_cases = (
     {ipv6_opt => 0, server_ipv => '4', client_ipv => ''},
@@ -79,9 +44,9 @@ for my $tc (@test_cases) {
         skip("IPv6 not supported on this system", 1)
             if $tc->{server_ipv} eq '6' && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1)
-            if $tc->{server_ipv} eq '6' && !$http_daemon_supports_ipv6;
-        skip("HTTP::Daemon::SSL not available", 1) if $tc->{ssl} && !$has_http_daemon_ssl;
-        my $uri = $httpd{$tc->{server_ipv}}{$tc->{ssl} ? 'https' : 'http'}->endpoint();
+            if $tc->{server_ipv} eq '6' && !$httpd_ipv6_supported;
+        skip("HTTP::Daemon::SSL not available", 1) if $tc->{ssl} && !$httpd_ssl_supported;
+        my $uri = httpd($tc->{server_ipv}, $tc->{ssl})->endpoint();
         my $name = sprintf("IPv%s client to %s%s",
                            $tc->{client_ipv} || '*', $uri, $tc->{ipv6_opt} ? ' (-ipv6)' : '');
         $ddclient::globals{'ipv6'} = $tc->{ipv6_opt};

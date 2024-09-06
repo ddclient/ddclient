@@ -1,7 +1,7 @@
 use Test::More;
+BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use File::Temp;
-SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
-eval { require 'ddclient'; } or BAIL_OUT($@);
+BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 
 local $ddclient::globals{debug} = 1;
 local $ddclient::globals{verbose} = 1;
