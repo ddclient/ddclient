@@ -80,11 +80,12 @@ subtest 'Testing nic_dnsexit2_update' => sub {
     test_nic_dnsexit2_update(\%config, 'host.my.zone.com');
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
-    is($requests[0]->{method}, 'POST', 'Method is correct');
-    is($requests[0]->{uri}, '/update', 'URI contains correct path');
-    like($requests[0]->{headers}, qr/Content-Type: application\/json/, 'Content-Type header is correct');
-    like($requests[0]->{headers}, qr/Accept: application\/json/, 'Accept header is correct');
-    my $data = decode_and_sort_array($requests[0]->{content});
+    my $req = shift(@requests);
+    is($req->{method}, 'POST', 'Method is correct');
+    is($req->{uri}, '/update', 'URI contains correct path');
+    like($req->{headers}, qr/Content-Type: application\/json/, 'Content-Type header is correct');
+    like($req->{headers}, qr/Accept: application\/json/, 'Accept header is correct');
+    my $data = decode_and_sort_array($req->{content});
     my $expected_data = decode_and_sort_array({
         'domain'     => 'my.zone.com',
         'apikey'     => 'mytestingpassword',
@@ -121,7 +122,8 @@ subtest 'Testing nic_dnsexit2_update without a zone set' => sub {
     test_nic_dnsexit2_update(\%config, 'myhost.zone.com');
     my @requests = get_requests();
     is(scalar(@requests), 1, 'expected number of update requests');
-    my $data = decode_and_sort_array($requests[0]->{content});
+    my $req = shift(@requests);
+    my $data = decode_and_sort_array($req->{content});
     my $expected_data = decode_and_sort_array({
         'domain'     => 'myhost.zone.com',
         'apikey'     => 'anotherpassword',
