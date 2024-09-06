@@ -159,36 +159,31 @@ subtest 'Testing nic_dnsexit2_update with two hostnames, one with a zone and one
         }
     );
     test_nic_dnsexit2_update(\%config, 'host1.zone.com', 'host2.zone.com');
-    my $expected_data1 = decode_and_sort_array({
-        'domain'     => 'host1.zone.com',
-        'apikey'     => 'testingpassword',
-        'update' => [
-            {
+    my @requests = get_requests();
+    my @got = map(decode_and_sort_array($_->{content}), @requests);
+    my @want = (
+        decode_and_sort_array({
+            'domain' => 'host1.zone.com',
+            'apikey' => 'testingpassword',
+            'update' => [{
                 'type' => 'A',
                 'name' => '',
                 'content' => '8.8.4.4',
                 'ttl' => 5,
-            }
-        ]
-    });
-    my $expected_data2 = decode_and_sort_array({
-        'domain'     => 'zone.com',
-        'apikey'     => 'testingpassword',
-        'update' => [
-            {
+            }],
+        }),
+        decode_and_sort_array({
+            'domain' => 'zone.com',
+            'apikey' => 'testingpassword',
+            'update' => [{
                 'type' => 'AAAA',
                 'name' => 'host2',
                 'content' => '2001:4860:4860::8888',
                 'ttl' => 10,
-            }
-        ]
-    });
-    my @requests = get_requests();
-    for my $i (0..1) {
-        my $data = decode_and_sort_array($requests[$i]->{content});
-        is_deeply($data, $expected_data1, 'Data is correct for call host1') if $i == 0;
-        is_deeply($data, $expected_data2, 'Data is correct for call host2') if $i == 1;
-    }
+            }],
+        }),
+    );
+    is_deeply(\@got, \@want, 'data is correct');
     reset_test_data();
 };
 
