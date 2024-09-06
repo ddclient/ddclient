@@ -3,15 +3,7 @@ BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use Scalar::Util qw(blessed);
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 BEGIN { eval { require ddclient::Test::Fake::HTTPD; 1; } or plan(skip_all => $@); }
-my $ipv6_supported = eval {
-    require IO::Socket::IP;
-    my $ipv6_socket = IO::Socket::IP->new(
-        Domain => 'PF_INET6',
-        LocalHost => '::1',
-        Listen => 1,
-    );
-    defined($ipv6_socket);
-};
+use ddclient::t::ip;
 my $http_daemon_supports_ipv6 = eval {
     require HTTP::Daemon;
     HTTP::Daemon->VERSION(6.12);
