@@ -32,7 +32,7 @@ diag("started IPv4 HTTP server running at " . $httpd->endpoint());
 
 {
     package Logger;
-    BEGIN { push(our @ISA, qw(ddclient::Logger)); }
+    use parent qw(-norequire ddclient::Logger);
     sub new {
         my ($class, $parent) = @_;
         my $self = $class->SUPER::new(undef, $parent);
