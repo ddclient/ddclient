@@ -1295,6 +1295,15 @@ our %protocols = (
             'max-interval' => setv(T_DELAY, 0, 'inf', 0),
         },
     ),
+    'ionos' => ddclient::Protocol->new(
+        'update'     => \&nic_ionos_update,
+        'examples'   => \&nic_ionos_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'ipv4.api.hosting.ionos.com', undef),
+            'login' => undef,
+        },
+    ),
 );
 $cfgvars{'merged'} = {
     map({ %{$protocols{$_}{'cfgvars'}} } keys(%protocols)),
@@ -7642,6 +7651,69 @@ Example ${program}.conf file entries:
   protocol=emailonly
   host.example.com
 EoEXAMPLE
+}
+
+######################################################################
+## nic_ionos_examples
+######################################################################
+sub nic_ionos_examples {
+    my $self = shift;
+    return <<EoEXAMPLE;
+o 'ionos'
+
+The 'ionos' protocol is used by DNS service offered by ionos.com.
+
+Configuration variables applicable to the 'ionos' protocol are:
+  protocol=ionos                ##
+  password=dyndns-update-key    ## the key created to update the host below
+  fully.qualified.host          ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=ionos,
+  password=dyndns-update-key
+  myhost.com
+
+Getting the DynDNS key (only available via Ionos API):
+
+  1. Create an API key
+  2. Enable DynDNS for your host using the /dns/v1/dyndns API
+     (documentation @ https://developer.hosting.ionos.es/docs/dns)
+  3. In the API response, get the key value. The key is a long string
+     from the "q=" parameter. The URL looks like this:
+     https://ipv4.api.hosting.ionos.com/dns/v1/dyndns?q=XXXXXXXXXXXXXXX
+     (in the example above the key is "XXXXXXXXXXXXXXX").
+
+Note: Because the key is individual for each host, you cannot update
+multiple hosts with the same key.
+EoEXAMPLE
+}
+
+######################################################################
+## nic_ionos_update
+## response contains "code 200" on succesfull completion
+######################################################################
+sub nic_ionos_update {
+    my $self = shift;
+    ## update each configured host
+    ## should improve to update in one pass
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $ip = delete $config{$h}{'wantipv4'};
+        info("setting IP address to $ip");
+        my $url = opt('server', $h) . "/dns/v1/dyndns?q=" . opt('password', $h);
+        my $reply = geturl(proxy => opt('proxy'), url => $url);
+
+        if (header_ok($reply)) {
+            $recap{$h}{'ipv4'} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{'status-ipv4'} = 'good';
+            success("IP address set to $ip");
+        } else {
+            $recap{$h}{'status'} = 'failed';
+            failed("server said: $reply");
+        }
+    }
 }
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
