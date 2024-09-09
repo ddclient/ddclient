@@ -136,6 +136,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     option.  [#752](https://github.com/ddclient/ddclient/pull/752)
   * `dnsexit2`: Multiple hosts are updated in a single API call when possible.
     [#684](https://github.com/ddclient/ddclient/pull/684)
+  * `ionos`: Added support for updating Ionos records.
+    [#743](https://github.com/ddclient/ddclient/pull/743)
 
 ### Bug fixes
 
