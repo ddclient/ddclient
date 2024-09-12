@@ -20,7 +20,7 @@ AC_REQUIRE_AUX_FILE([tap-driver.sh])
 # tap-driver.sh, so build-aux/tap-driver.sh is checked in to keep the
 # above AC_REQUIRE_AUX_FILE line from causing configure to complain
 # about a mising file if the user has Automake 1.11.)
-AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign subdir-objects parallel-tests])
+AM_INIT_AUTOMAKE([1.11 -Wall foreign subdir-objects parallel-tests])
 AM_SILENT_RULES
 
 AC_PROG_MKDIR_P
