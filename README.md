@@ -36,6 +36,7 @@ Dynamic DNS services currently supported include:
   * [Gandi](https://gandi.net)
   * [GoDaddy](https://www.godaddy.com)
   * [Hurricane Electric](https://dns.he.net)
+  * [Ionos](https://ionos.com)
   * [Infomaniak](https://faq.infomaniak.com/2376)
   * [INWX](https://www.inwx.com/)
   * [Loopia](https://www.loopia.se)

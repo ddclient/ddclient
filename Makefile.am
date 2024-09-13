@@ -78,6 +78,7 @@ handwritten_tests = \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
 	t/protocol_dyndns2.pl \
+	t/protocol_ionos.pl \
 	t/read_recap.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
