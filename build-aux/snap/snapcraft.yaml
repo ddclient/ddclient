@@ -1,0 +1,92 @@
+name: ddclient
+summary: Ddclient updates dynamic DNS entries on a wide range of dynamic DNS services
+description: |
+  ddclient is a Perl client used to update dynamic DNS entries
+  for accounts on many dynamic DNS services. It uses curl for internet access.
+  Full list of the supported services can be found at the project page:
+  https://github.com/ddclient/ddclient?tab=readme-ov-file
+
+  Once installed, configure config file and enable service with
+  `$ snap start --enable ddclient.daemon`
+  For more information run `$ ddclient`
+
+type: app
+base: core24
+adopt-info: ddclient
+license: GPL-2.0
+
+platforms:
+  amd64:
+  armhf:
+  arm64:
+
+confinement: strict
+grade: stable
+
+environment:
+  LD_LIBRARY_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}
+  PATH: ${SNAP}/usr/bin:/usr/bin
+  PERL5LIB: ${SNAP}/usr/share/perl:${SNAP}/usr/share/perl5:${SNAP}/usr/share/perl-openssl-defaults:${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/perl
+
+apps:
+  ddclient:
+    command: usr/bin/ddclient-wrapper --help
+
+  daemon:
+    command: usr/bin/ddclient-wrapper
+    install-mode: disable
+    daemon: simple
+    plugs:
+      - network
+
+parts:
+  ddclient:
+    plugin: autotools
+    source: https://github.com/ddclient/ddclient.git
+    autotools-configure-parameters:
+      - --prefix=/usr
+      - --sysconfdir=/etc/ddclient
+      - --localstatedir=/var
+    override-pull: |
+      craftctl default
+      stable_tag=$(git tag --list | sort --version-sort | tail -1 | cut -c 2-)
+      # collect versions in the store
+      stable_version="$(snap info ${CRAFT_PROJECT_NAME} | awk '$1 == "latest/stable:" {gsub(/--/,"",$2); print $2 }' || true)" 2>/dev/null
+      beta_version="$(snap info ${CRAFT_PROJECT_NAME} | awk '$1 == "latest/beta:" {gsub(/--/,"",$2); print $2 }' || true)" 2>/dev/null
+      # If there is no stable version, build latest stable_tag
+      # If stable_tag is newer than stable_version, build stable_tag
+      # If beta channel is closed (string '^'), build stable_tag
+      # if we have no version defined, we are building tip from master
+      if [ -z "${stable_version}" ] \
+         || [ "^" = "${beta_version}" ] \
+         || $(dpkg --compare-versions "${beta_version}" "lt" "${stable_tag}" ); then
+        version="${stable_tag}"
+        echo "building tagged version ${version}"
+      else
+        echo "building from the tip..."
+      fi
+      if [ -n "${version-}" ]; then
+        git checkout v${version}
+      else
+        version="$(git describe --tags | cut -c 2-)"
+      fi
+      craftctl set version="${version}"
+    override-build: |
+      craftctl default
+      # disable mail operations
+      sed -i \
+          -e 's/mail=\(.*\)/# mail=\1/g' \
+          -e 's/mail-failure=\(.*\)/# mail-failure=\1/g' \
+          ${CRAFT_PART_INSTALL}/etc/ddclient/ddclient.conf
+      sed -i \
+          -e 's|'"${CRAFT_PART_INSTALL}"'|/snap/'"${CRAFT_PROJECT_NAME}"'/current|g' \
+          ${CRAFT_PART_INSTALL}/usr/bin/ddclient
+      install -m 755 ${CRAFT_PROJECT_DIR}/ddclient-snap-wrapper \
+                     ${CRAFT_PART_INSTALL}/usr/bin/ddclient-wrapper
+    stage-packages:
+      - curl
+      - libio-socket-ssl-perl
+      - perl
+
+build-packages:
+  - curl
