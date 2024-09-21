@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# copy default config to editable location
+mkdir -p ${SNAP_COMMON}/etc/ddclient
+cp ${SNAP}/etc/ddclient/ddclient.conf ${SNAP_COMMON}/etc/ddclient/ddclient.conf
+chmod 600 ${SNAP_COMMON}/etc/ddclient/ddclient.conf
