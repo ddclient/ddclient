@@ -42,7 +42,7 @@ apps:
 parts:
   ddclient:
     plugin: autotools
-    source: https://github.com/ddclient/ddclient.git
+    source: .
     autotools-configure-parameters:
       - --prefix=/usr
       - --sysconfdir=/etc/ddclient
