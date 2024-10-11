@@ -6823,7 +6823,7 @@ sub nic_porkbun_update {
             info("setting IPv$ipv address to $ip");
             my $reply = geturl(
                 proxy => opt('proxy'),
-                url => "https://porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain",
+                url => "https://api.porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain",
                 headers => ['Content-Type: application/json'],
                 method => 'POST',
                 data => encode_json({
@@ -6861,7 +6861,7 @@ sub nic_porkbun_update {
             debug("notes = %s", $notes);
             $reply = geturl(
                 proxy => opt('proxy'),
-                url => "https://porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
+                url => "https://api.porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
                 headers => ['Content-Type: application/json'],
                 method => 'POST',
                 data => encode_json({
