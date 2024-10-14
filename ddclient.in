@@ -1201,10 +1201,11 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
-            'apikey'         => setv(T_PASSWD, 1, undef,      undef),
-            'secretapikey'   => setv(T_PASSWD, 1, undef,      undef),
-            'root-domain'    => setv(T_FQDN,   0, undef,      undef),
-            'on-root-domain' => setv(T_BOOL,   0, 0,          undef),
+            'apikey'         => setv(T_PASSWD, 1, undef,             undef),
+            'secretapikey'   => setv(T_PASSWD, 1, undef,             undef),
+            'root-domain'    => setv(T_FQDN,   0, undef,             undef),
+            'on-root-domain' => setv(T_BOOL,   0, 0,                 undef),
+            'server'         => setv(T_FQDNP,  0, 'api.porkbun.com', undef),
         },
     ),
     'sitelutions' => ddclient::LegacyProtocol->new(
@@ -6742,6 +6743,7 @@ Available configuration variables:
     an unnamed record (Zone APEX) in a zone.
     It is useful to specify it as a local variable as shown in the example.
     This configuration value is deprecated, use root-domain instead!
+  * server: API endpoint to use, defaults to api.porkbun.com
   * usev4, usev6 : These configuration variables can be specified as local variables to override
     the global settings. It is useful to finely control IPv4 or IPv6 as shown in the example.
   * use (deprecated) : This parameter is deprecated but can be overridden like the above parameters.
@@ -6799,6 +6801,7 @@ EoEXAMPLE
 sub nic_porkbun_update {
     my $self = shift;
     for my $h (@_) {
+        my $server = opt('server', $h);
         local $_l = pushlogctx($h);
         my ($sub_domain, $domain);
         if (opt('root-domain', $h)) {
@@ -6823,7 +6826,7 @@ sub nic_porkbun_update {
             info("setting IPv$ipv address to $ip");
             my $reply = geturl(
                 proxy => opt('proxy'),
-                url => "https://api.porkbun.com/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain",
+                url => "https://$server/api/json/v3/dns/retrieveByNameType/$domain/$rrset_type/$sub_domain",
                 headers => ['Content-Type: application/json'],
                 method => 'POST',
                 data => encode_json({
@@ -6861,7 +6864,7 @@ sub nic_porkbun_update {
             debug("notes = %s", $notes);
             $reply = geturl(
                 proxy => opt('proxy'),
-                url => "https://api.porkbun.com/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
+                url => "https://$server/api/json/v3/dns/editByNameType/$domain/$rrset_type/$sub_domain",
                 headers => ['Content-Type: application/json'],
                 method => 'POST',
                 data => encode_json({
