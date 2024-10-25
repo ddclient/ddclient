@@ -130,9 +130,9 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ##
 ## NearlyFreeSpeech.NET (nearlyfreespeech.net)
 ##
-# protocol = nfsn,                      \
+# protocol=nfsn,                        \
 # login=member-login,                   \
-# password=api-key,                     \
+# password=api-key                      \
 # zone=example.com                      \
 # example.com,subdomain.example.com
 
