@@ -1033,6 +1033,21 @@ our %protocols = (
         },
         'force_update_if_changed' => [qw(wildcard mx backupmx)],
     ),
+    'selfhost_de' => ddclient::Protocol->new(
+        'update'     => \&nic_selfhost_de_update,
+        'examples'   => \&nic_selfhost_de_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP,  0, 'carol.selfhost.de', undef),
+            'script' => setv(T_STRING, 0, '/update', undef),
+            'delay46' => setv(T_NUMBER, 1, 5, 0),
+        },
+        'recapvars' => {
+            %{$recapvars{'common'}},
+            %{$recapvars{'dyndns-common'}},
+        },
+        'force_update_if_changed' => [qw(wildcard mx backupmx)],
+    ),
     'easydns' => ddclient::Protocol->new(
         'update'     => \&nic_easydns_update,
         'examples'   => \&nic_easydns_examples,
@@ -4016,6 +4031,236 @@ sub nic_dyndns2_update {
     }
 }
 
+######################################################################
+## nic_selfhost_de_examples
+######################################################################
+sub nic_selfhost_de_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'selfhost_de'
+
+The 'selfhost_de' protocol is a used by a
+free dynamic DNS service offered by www.selfhost.de.
+For only ipv4 or only ipv6 it works with the dyndns2 protocol, too, but
+for setting both ipv4+ipv6, there are quirks that need to be observed.
+
+This protocol uses their native API, not the dyndns2 compatible api.
+
+Configuration variables applicable to the 'selfhost_de' protocol are:
+  protocol=selfhost_de         ##
+  server=fqdn.of.service       ## defaults to carol.selfhost.de
+  script=/path/to/script       ## defaults to /update
+  backupmx=no|yes              ## indicates that this host is the primary MX for the domain.
+  mx=any.host.domain           ## a host MX'ing for this host definition.
+  wildcard=no|yes              ## add a DNS wildcard CNAME record that points to <host>
+  login=service-login          ## login name and password  registered with the service
+  password=service-password    ##
+  delay46=10                   ## the delay between calls for ipv4 and ipv6
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=selfhost_de,                                     \\
+  login=my-selfhost.de-update-login,                        \\
+  password=my-selfhost.de-update-password                   \\
+  myhost.selfhost.bz
+
+  ## multiple host update with wildcard'ing mx, and backupmx
+  protocol=selfhost_de,                                     \\
+  login=my-selfhost.de-update-login,                        \\
+  password=my-selfhost.de-update-password,                  \\
+  mx=a.host.willing.to.mx.for.me,backupmx=yes,wildcard=yes  \\
+  myhost.selfhost.bz,my2ndhost.selfhost.bz
+
+  ## multiple host update to the custom DNS service
+  protocol=selfhost_de,                                     \\
+  login=my-selfhost.de-update-login,                        \\
+  password=my-selfhost.de-update-password                   \\
+  my-toplevel-domain.com,my-other-domain.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_selfhost_de_update
+######################################################################
+sub unhift2(\@) {
+    return splice(@{$_[0]}, 0, 2);
+}
+sub mkurl($@) {
+    my $url = shift;
+    my $sep = '?';
+    my ($k, $v);
+    do {
+        ($k, $v) = unhift2(@_);
+        if (defined $v) {
+            # TODO: URL-escaping
+            $url .= "$sep$k=$v";
+            $sep = '&';
+        }
+    } while defined $k;
+    return $url;
+}
+
+sub nic_selfhost_de_process_reply(\@$$$\%) {
+    my ($hosts, $reply, $ipv4, $ipv6,$errors) = @_;
+    my @hosts = @$hosts;
+
+        # Some services can return 200 OK even if there is an error (e.g., bad authentication,
+        # updates too frequent) so the body of the response must also be checked.
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my @reply = split(qr/\n/, $body);
+        # From <https://help.dyn.com/remote-access-api/return-codes/>:
+        #
+        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
+        #   in the same order as the hostnames were specified.  Return codes indicating a failure
+        #   with the account or the system are given only once.
+        #
+        # If there is only one result for multiple hosts, this function assumes the one result
+        # applies to all hosts.  According to the documentation quoted above this should only
+        # happen if the result is a failure.  In case there is a single successful result, this
+        # code applies the success to all hosts (with a warning) to maximize potential
+        # compatibility with all DynDNS-like services.  If there are zero results, or two or more
+        # results, any host without a corresponding result line is treated as a failure.
+        #
+        # TODO: The DynDNS documentation does not mention what happens if multiple IP addresses are
+        # supplied (e.g., IPv4 and IPv6) for a host.  If one address fails to update and the other
+        # doesn't, is that one error status line?  An error status line and a success status line?
+        # Or is an update considered to be all-or-nothing and the status applies to the collection
+        # of addresses as a whole?  If the IPv4 address changes but not the IPv6 address does that
+        # result in a status of "good" because the set of addresses for a host changed even if a
+        # subset did not?
+        my @statuses = map({ (my $l = $_) =~ s/ .*$//; $l; } @reply);
+        if (@statuses < @hosts && @statuses == 1) {
+            warning("service returned one successful result for " . 1*@hosts . " hosts; " .
+                    "assuming the one success is intended to apply to all hosts")
+                if $statuses[0] =~ qr/^(?:good|nochg)$/;
+            @statuses = ($statuses[0]) x @hosts;
+        }
+        for (my $i = 0; $i < @hosts; ++$i) {
+            my $h = $hosts[$i];
+            local $_l = $_l->{parent}; $_l = pushlogctx($h);
+            my $status = $statuses[$i] // 'unknown';
+            if ($status eq 'nochg') {
+                warning("$status: $errors->{$status}");
+                $status = 'good';
+            }
+            $recap{$h}{'status-ipv4'} = $status if $ipv4;
+            $recap{$h}{'status-ipv6'} = $status if $ipv6;
+            if ($status ne 'good') {
+                if (exists($errors->{$status})) {
+                    failed("$status: $errors->{$status}");
+                } elsif ($status eq 'unknown') {
+                    failed('server did not return a success/fail result; assuming failure');
+                } else {
+                    # This case can only happen if there is a corresponding status line for this
+                    # host or there was only one status line for all hosts.
+                    failed("unexpected status: " . ($reply[$i] // $reply[0]));
+                }
+                next;
+            }
+            # The IP address normally comes after the status, but we ignore it.  We could compare
+            # it with the expected address and mark the update as failed if it differs, but (1)
+            # some services do not return the IP; and (2) comparison is brittle (e.g.,
+            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
+            # (an update attempt every min-error-interval instead of every max-interval).
+            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
+            $recap{$h}{'mtime'} = $now;
+            success("IPv4 address set to $ipv4") if $ipv4;
+            success("IPv6 address set to $ipv6") if $ipv6;
+        }
+        warning("unexpected extra lines after per-host update status lines:\n" .
+                join("\n", @reply[@hosts..$#reply]))
+            if (@reply > @hosts);
+}
+
+sub nic_selfhost_de_update {
+    my $self = shift;
+    my %errors = (
+        'badauth' => 'Bad authorization (username or password)',
+        'badsys' => 'The system parameter given was not valid',
+        'notfqdn' => 'A Fully-Qualified Domain Name was not provided',
+        'nohost' => 'The hostname specified does not exist in the database',
+        '!yours' => 'The hostname specified exists, but not under the username currently being used',
+        '!donator' => 'The offline setting was set, when the user is not a donator',
+        '!active' => 'The hostname specified is in a Custom DNS domain which has not yet been activated.',
+        'abuse' => 'The hostname specified is blocked for abuse',
+        'numhost' => 'System error: Too many or too few hosts found.',
+        'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
+        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+    );
+    my @group_by_attrs = qw(
+        backupmx
+        login
+        mx
+        password
+        script
+        server
+        wantipv4
+        wantipv6
+        wildcard
+        delay46
+    );
+    for my $group (group_hosts_by(\@_, @group_by_attrs)) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
+        my $hosts = join(',', @hosts);
+        my $h     = $hosts[0];
+        local $_l = pushlogctx($hosts);
+        my $ipv4  = $groupcfg{'wantipv4'};
+        my $ipv6  = $groupcfg{'wantipv6'};
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
+        info("setting IPv4 address to $ipv4") if $ipv4;
+        info("setting IPv6 address to $ipv6") if $ipv6;
+
+        my ($reply_v4, $reply_v6);
+        if (defined $ipv4) {
+            my $url = mkurl("$groupcfg{'server'}$groupcfg{'script'}",
+                'username',$config{$h}{'login'},
+                'password',$config{$h}{'password'},
+                'hostname', $hosts,
+                'myip', $ipv4,
+                'wildcard', ynu($groupcfg{'wildcard'}, 'ON'),
+                'mx', $groupcfg{'mx'},
+                'backmx', ynu($groupcfg{'mx'} && $groupcfg{'backupmx'}, 'YES', 'NO'));
+            ## some args are not valid for a custom domain.
+            $reply_v4 = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                login => $groupcfg{'login'},
+                password => $groupcfg{'password'},
+            );
+            if (defined $ipv6) {
+                debug("waiting " . $groupcfg{'delay46'} . "seconds to satisfy server");
+                sleep($groupcfg{'delay46'});
+            }
+        }
+        if (defined $ipv6) {
+            my $url = mkurl("$groupcfg{'server'}$groupcfg{'script'}",
+                'username',$config{$h}{'login'},
+                'password',$config{$h}{'password'},
+                'hostname', $hosts,
+                'myip', $ipv6,
+                'wildcard', ynu($groupcfg{'wildcard'}, 'ON'),
+                'mx', $groupcfg{'mx'},
+                'backmx', ynu($groupcfg{'mx'} && $groupcfg{'backupmx'}, 'YES', 'NO'));
+            ## some args are not valid for a custom domain.
+            sleep(10) if (defined $ipv6); # work around a bug on the selfhost.de's servers
+            $reply_v6 = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                login => $groupcfg{'login'},
+                password => $groupcfg{'password'},
+            );
+        }
+        my $ok4 = ($reply_v4 && header_ok($reply_v4));
+        my $ok6 = ($reply_v6 && header_ok($reply_v6));
+        next if !$ok4 && !$ok6;
+        nic_selfhost_de_process_reply(@hosts, $reply_v4, $ipv4, undef, %errors) if $ipv4;
+        nic_selfhost_de_process_reply(@hosts, $reply_v6, undef, $ipv6, %errors) if $ipv6;
+    }
+}
 ######################################################################
 ## nic_dnsexit2_examples
 ######################################################################
