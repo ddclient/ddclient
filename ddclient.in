@@ -3905,6 +3905,81 @@ EoEXAMPLE
 ######################################################################
 ## nic_dyndns2_update
 ######################################################################
+sub nic_dyndns2_selfhost_de_process_reply(\@$$$\%) {
+    # Since both dyndns2 and selfhost_de use the same processing,
+    # it can be factored out. While dyndns2 uses one call for two machines,
+    # selfhost_de uses two separate ones. We call this for reach reply.
+    my ($hosts, $reply, $ipv4, $ipv6,$errors) = @_;
+    my @hosts = @$hosts;
+        # Some services can return 200 OK even if there is an error (e.g., bad authentication,
+        # updates too frequent) so the body of the response must also be checked.
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my @reply = split(qr/\n/, $body);
+        # From <https://help.dyn.com/remote-access-api/return-codes/>:
+        #
+        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
+        #   in the same order as the hostnames were specified.  Return codes indicating a failure
+        #   with the account or the system are given only once.
+        #
+        # If there is only one result for multiple hosts, this function assumes the one result
+        # applies to all hosts.  According to the documentation quoted above this should only
+        # happen if the result is a failure.  In case there is a single successful result, this
+        # code applies the success to all hosts (with a warning) to maximize potential
+        # compatibility with all DynDNS-like services.  If there are zero results, or two or more
+        # results, any host without a corresponding result line is treated as a failure.
+        #
+        # TODO: The DynDNS documentation does not mention what happens if multiple IP addresses are
+        # supplied (e.g., IPv4 and IPv6) for a host.  If one address fails to update and the other
+        # doesn't, is that one error status line?  An error status line and a success status line?
+        # Or is an update considered to be all-or-nothing and the status applies to the collection
+        # of addresses as a whole?  If the IPv4 address changes but not the IPv6 address does that
+        # result in a status of "good" because the set of addresses for a host changed even if a
+        # subset did not?
+        my @statuses = map({ (my $l = $_) =~ s/ .*$//; $l; } @reply);
+        if (@statuses < @hosts && @statuses == 1) {
+            warning("service returned one successful result for " . 1*@hosts . " hosts; " .
+                    "assuming the one success is intended to apply to all hosts")
+                if $statuses[0] =~ qr/^(?:good|nochg)$/;
+            @statuses = ($statuses[0]) x @hosts;
+        }
+        for (my $i = 0; $i < @hosts; ++$i) {
+            my $h = $hosts[$i];
+            local $_l = $_l->{parent}; $_l = pushlogctx($h);
+            my $status = $statuses[$i] // 'unknown';
+            if ($status eq 'nochg') {
+                warning("$status: $errors->{$status}");
+                $status = 'good';
+            }
+            $recap{$h}{'status-ipv4'} = $status if $ipv4;
+            $recap{$h}{'status-ipv6'} = $status if $ipv6;
+            if ($status ne 'good') {
+                if (exists($errors->{$status})) {
+                    failed("$status: $errors->{$status}");
+                } elsif ($status eq 'unknown') {
+                    failed('server did not return a success/fail result; assuming failure');
+                } else {
+                    # This case can only happen if there is a corresponding status line for this
+                    # host or there was only one status line for all hosts.
+                    failed("unexpected status: " . ($reply[$i] // $reply[0]));
+                }
+                next;
+            }
+            # The IP address normally comes after the status, but we ignore it.  We could compare
+            # it with the expected address and mark the update as failed if it differs, but (1)
+            # some services do not return the IP; and (2) comparison is brittle (e.g.,
+            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
+            # (an update attempt every min-error-interval instead of every max-interval).
+            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
+            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
+            $recap{$h}{'mtime'} = $now;
+            success("IPv4 address set to $ipv4") if $ipv4;
+            success("IPv6 address set to $ipv6") if $ipv6;
+        }
+        warning("unexpected extra lines after per-host update status lines:\n" .
+                join("\n", @reply[@hosts..$#reply]))
+            if (@reply > @hosts);
+}
+
 sub nic_dyndns2_update {
     my $self = shift;
     my %errors = (
@@ -3961,73 +4036,7 @@ sub nic_dyndns2_update {
             password => $groupcfg{'password'},
         );
         next if !header_ok($reply);
-        # Some services can return 200 OK even if there is an error (e.g., bad authentication,
-        # updates too frequent) so the body of the response must also be checked.
-        (my $body = $reply) =~ s/^.*?\n\n//s;
-        my @reply = split(qr/\n/, $body);
-        # From <https://help.dyn.com/remote-access-api/return-codes/>:
-        #
-        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
-        #   in the same order as the hostnames were specified.  Return codes indicating a failure
-        #   with the account or the system are given only once.
-        #
-        # If there is only one result for multiple hosts, this function assumes the one result
-        # applies to all hosts.  According to the documentation quoted above this should only
-        # happen if the result is a failure.  In case there is a single successful result, this
-        # code applies the success to all hosts (with a warning) to maximize potential
-        # compatibility with all DynDNS-like services.  If there are zero results, or two or more
-        # results, any host without a corresponding result line is treated as a failure.
-        #
-        # TODO: The DynDNS documentation does not mention what happens if multiple IP addresses are
-        # supplied (e.g., IPv4 and IPv6) for a host.  If one address fails to update and the other
-        # doesn't, is that one error status line?  An error status line and a success status line?
-        # Or is an update considered to be all-or-nothing and the status applies to the collection
-        # of addresses as a whole?  If the IPv4 address changes but not the IPv6 address does that
-        # result in a status of "good" because the set of addresses for a host changed even if a
-        # subset did not?
-        my @statuses = map({ (my $l = $_) =~ s/ .*$//; $l; } @reply);
-        if (@statuses < @hosts && @statuses == 1) {
-            warning("service returned one successful result for multiple hosts; " .
-                    "assuming the one success is intended to apply to all hosts")
-                if $statuses[0] =~ qr/^(?:good|nochg)$/;
-            @statuses = ($statuses[0]) x @hosts;
-        }
-        for (my $i = 0; $i < @hosts; ++$i) {
-            my $h = $hosts[$i];
-            local $_l = $_l->{parent}; $_l = pushlogctx($h);
-            my $status = $statuses[$i] // 'unknown';
-            if ($status eq 'nochg') {
-                warning("$status: $errors{$status}");
-                $status = 'good';
-            }
-            $recap{$h}{'status-ipv4'} = $status if $ipv4;
-            $recap{$h}{'status-ipv6'} = $status if $ipv6;
-            if ($status ne 'good') {
-                if (exists($errors{$status})) {
-                    failed("$status: $errors{$status}");
-                } elsif ($status eq 'unknown') {
-                    failed('server did not return a success/fail result; assuming failure');
-                } else {
-                    # This case can only happen if there is a corresponding status line for this
-                    # host or there was only one status line for all hosts.
-                    failed("unexpected status: " . ($reply[$i] // $reply[0]));
-                }
-                next;
-            }
-            # The IP address normally comes after the status, but we ignore it.  We could compare
-            # it with the expected address and mark the update as failed if it differs, but (1)
-            # some services do not return the IP; and (2) comparison is brittle (e.g.,
-            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
-            # (an update attempt every min-error-interval instead of every max-interval).
-            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
-            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
-            $recap{$h}{'mtime'} = $now;
-            success("IPv4 address set to $ipv4") if $ipv4;
-            success("IPv6 address set to $ipv6") if $ipv6;
-        }
-        warning("unexpected extra lines after per-host update status lines:\n" .
-                join("\n", @reply[@hosts..$#reply]))
-            if (@reply > @hosts);
+        nic_dyndns2_selfhost_de_process_reply(@hosts, $reply, $ipv4, $ipv6, %errors);
     }
 }
 
@@ -4099,79 +4108,6 @@ sub mkurl($@) {
         }
     } while defined $k;
     return $url;
-}
-
-sub nic_selfhost_de_process_reply(\@$$$\%) {
-    my ($hosts, $reply, $ipv4, $ipv6,$errors) = @_;
-    my @hosts = @$hosts;
-
-        # Some services can return 200 OK even if there is an error (e.g., bad authentication,
-        # updates too frequent) so the body of the response must also be checked.
-        (my $body = $reply) =~ s/^.*?\n\n//s;
-        my @reply = split(qr/\n/, $body);
-        # From <https://help.dyn.com/remote-access-api/return-codes/>:
-        #
-        #   If updating multiple hostnames, hostname-specific return codes are given one per line,
-        #   in the same order as the hostnames were specified.  Return codes indicating a failure
-        #   with the account or the system are given only once.
-        #
-        # If there is only one result for multiple hosts, this function assumes the one result
-        # applies to all hosts.  According to the documentation quoted above this should only
-        # happen if the result is a failure.  In case there is a single successful result, this
-        # code applies the success to all hosts (with a warning) to maximize potential
-        # compatibility with all DynDNS-like services.  If there are zero results, or two or more
-        # results, any host without a corresponding result line is treated as a failure.
-        #
-        # TODO: The DynDNS documentation does not mention what happens if multiple IP addresses are
-        # supplied (e.g., IPv4 and IPv6) for a host.  If one address fails to update and the other
-        # doesn't, is that one error status line?  An error status line and a success status line?
-        # Or is an update considered to be all-or-nothing and the status applies to the collection
-        # of addresses as a whole?  If the IPv4 address changes but not the IPv6 address does that
-        # result in a status of "good" because the set of addresses for a host changed even if a
-        # subset did not?
-        my @statuses = map({ (my $l = $_) =~ s/ .*$//; $l; } @reply);
-        if (@statuses < @hosts && @statuses == 1) {
-            warning("service returned one successful result for " . 1*@hosts . " hosts; " .
-                    "assuming the one success is intended to apply to all hosts")
-                if $statuses[0] =~ qr/^(?:good|nochg)$/;
-            @statuses = ($statuses[0]) x @hosts;
-        }
-        for (my $i = 0; $i < @hosts; ++$i) {
-            my $h = $hosts[$i];
-            local $_l = $_l->{parent}; $_l = pushlogctx($h);
-            my $status = $statuses[$i] // 'unknown';
-            if ($status eq 'nochg') {
-                warning("$status: $errors->{$status}");
-                $status = 'good';
-            }
-            $recap{$h}{'status-ipv4'} = $status if $ipv4;
-            $recap{$h}{'status-ipv6'} = $status if $ipv6;
-            if ($status ne 'good') {
-                if (exists($errors->{$status})) {
-                    failed("$status: $errors->{$status}");
-                } elsif ($status eq 'unknown') {
-                    failed('server did not return a success/fail result; assuming failure');
-                } else {
-                    # This case can only happen if there is a corresponding status line for this
-                    # host or there was only one status line for all hosts.
-                    failed("unexpected status: " . ($reply[$i] // $reply[0]));
-                }
-                next;
-            }
-            # The IP address normally comes after the status, but we ignore it.  We could compare
-            # it with the expected address and mark the update as failed if it differs, but (1)
-            # some services do not return the IP; and (2) comparison is brittle (e.g.,
-            # 192.000.002.001 vs. 192.0.2.1) and false errors could cause high load on the service
-            # (an update attempt every min-error-interval instead of every max-interval).
-            $recap{$h}{'ipv4'} = $ipv4 if $ipv4;
-            $recap{$h}{'ipv6'} = $ipv6 if $ipv6;
-            $recap{$h}{'mtime'} = $now;
-            success("IPv4 address set to $ipv4") if $ipv4;
-            success("IPv6 address set to $ipv6") if $ipv6;
-        }
-        warning("unexpected extra lines after per-host update status lines:\n" .
-                join("\n", @reply[@hosts..$#reply]))
-            if (@reply > @hosts);
 }
 
 sub nic_selfhost_de_update {
@@ -4257,8 +4193,8 @@ sub nic_selfhost_de_update {
         my $ok4 = ($reply_v4 && header_ok($reply_v4));
         my $ok6 = ($reply_v6 && header_ok($reply_v6));
         next if !$ok4 && !$ok6;
-        nic_selfhost_de_process_reply(@hosts, $reply_v4, $ipv4, undef, %errors) if $ipv4;
-        nic_selfhost_de_process_reply(@hosts, $reply_v6, undef, $ipv6, %errors) if $ipv6;
+        nic_dyndns2_selfhost_de_process_reply(@hosts, $reply_v4, $ipv4, undef, %errors) if $ipv4;
+        nic_dyndns2_selfhost_de_process_reply(@hosts, $reply_v6, undef, $ipv6, %errors) if $ipv6;
     }
 }
 ######################################################################
