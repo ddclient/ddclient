@@ -3454,7 +3454,7 @@ sub get_ipv6 {
         $ipv6 = get_ip_from_interface($arg, 6);
     }  elsif ($p{'usev6'} eq 'cmdv6' || $p{'usev6'} eq 'cmd') {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
-        warning("'--cmd-skip' ignored") if opt('verbose') && p{'cmd-skip'};
+        warning("'--cmd-skip' ignored") if opt('verbose') && $p{'cmd-skip'};
         if ($arg) {
             my $sys_cmd = quotemeta($arg);
             $reply = qx{$sys_cmd};
