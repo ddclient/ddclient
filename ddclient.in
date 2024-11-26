@@ -3323,7 +3323,7 @@ sub get_ipv4 {
         warning("'--cmd-skip' ignored for '--usev4=$p{'usev4'}'")
             if (opt('verbose') && $p{'cmd-skip'});
         if ($arg) {
-            my $sys_cmd = quotemeta($arg);
+            my $sys_cmd = $arg;
             $reply = qx{$sys_cmd};
             $reply = '' if $?;
         }
@@ -3436,7 +3436,7 @@ sub get_ipv6 {
         ## Obtain IPv6 address by executing the command in "cmdv6=<command>"
         warning("'--cmd-skip' ignored") if opt('verbose') && p{'cmd-skip'};
         if ($arg) {
-            my $sys_cmd = quotemeta($arg);
+            my $sys_cmd = $arg;
             $reply = qx{$sys_cmd};
             $reply = '' if $?;
         }
