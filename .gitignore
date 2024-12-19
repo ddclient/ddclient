@@ -9,6 +9,7 @@ release
 /autom4te.cache/
 /build-aux/install-sh
 /build-aux/missing
+/build-aux/tap-driver.sh
 /config.log
 /config.status
 /configure
