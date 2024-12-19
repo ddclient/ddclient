@@ -7,6 +7,7 @@ fatal() { error "$@"; exit 1; }
 try() { "$@" || fatal "'$@' failed"; }
 
 try cd "${0%/*}"
+# aclocal complains if a directory passed to AC_CONFIG_MACRO_DIR doesn't exist.
 try mkdir -p build-aux/m4
 try autoreconf -fviW all
 
