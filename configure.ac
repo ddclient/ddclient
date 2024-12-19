@@ -11,7 +11,7 @@ AC_INIT([ddclient], m4_dquote(m4_esyscmd([printf '[%s]' "$(./ddclient.in --versi
 AC_SUBST([CONFIGURE_DEPENDENCIES], ['$(top_srcdir)/ddclient.in'])
 AC_CONFIG_SRCDIR([ddclient.in])
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 # If the automake dependency is bumped to v1.12 or newer, remove
 # build-aux/tap-driver.sh from the repository.  Automake 1.12+ comes

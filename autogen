@@ -7,7 +7,7 @@ fatal() { error "$@"; exit 1; }
 try() { "$@" || fatal "'$@' failed"; }
 
 try cd "${0%/*}"
-try mkdir -p m4 build-aux
+try mkdir -p build-aux/m4
 try autoreconf -fviW all
 
 # Ignore changes to build-aux/tap-driver, but only if we're in a clone
