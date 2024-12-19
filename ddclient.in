@@ -1296,9 +1296,9 @@ our %protocols = (
         },
     ),
     'ionos' => ddclient::Protocol->new(
-        'update'     => \&nic_ionos_update,
-        'examples'   => \&nic_ionos_examples,
-        'cfgvars'  => {
+        'update' => \&nic_ionos_update,
+        'examples' => \&nic_ionos_examples,
+        'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
             'server' => setv(T_FQDNP, 0, 'ipv4.api.hosting.ionos.com', undef),
             'login' => undef,
