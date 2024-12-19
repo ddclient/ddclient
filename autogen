@@ -9,6 +9,13 @@ try() { "$@" || fatal "'$@' failed"; }
 try cd "${0%/*}"
 # aclocal complains if a directory passed to AC_CONFIG_MACRO_DIR doesn't exist.
 try mkdir -p build-aux/m4
+# autoreconf's '--force' option doesn't affect any of the files installed by the '--install' option.
+# Remove the files to truly force them to be updated.
+try rm -f \
+    aclocal.m4 \
+    build-aux/install-sh \
+    build-aux/missing \
+    ;
 try autoreconf -fviW all
 
 # Ignore changes to build-aux/tap-driver, but only if we're in a clone
