@@ -13,6 +13,8 @@ try mkdir -p build-aux/m4
 # Remove the files to truly force them to be updated.
 try rm -f \
     aclocal.m4 \
+    build-aux/config.guess \
+    build-aux/config.sub \
     build-aux/install-sh \
     build-aux/missing \
     build-aux/tap-driver.sh \
