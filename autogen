@@ -7,18 +7,16 @@ fatal() { error "$@"; exit 1; }
 try() { "$@" || fatal "'$@' failed"; }
 
 try cd "${0%/*}"
-try mkdir -p m4 build-aux
+# aclocal complains if a directory passed to AC_CONFIG_MACRO_DIR doesn't exist.
+try mkdir -p build-aux/m4
+# autoreconf's '--force' option doesn't affect any of the files installed by the '--install' option.
+# Remove the files to truly force them to be updated.
+try rm -f \
+    aclocal.m4 \
+    build-aux/config.guess \
+    build-aux/config.sub \
+    build-aux/install-sh \
+    build-aux/missing \
+    build-aux/tap-driver.sh \
+    ;
 try autoreconf -fviW all
-
-# Ignore changes to build-aux/tap-driver, but only if we're in a clone
-# of the ddclient Git repository. Once CentOS 6 and RHEL 6 reach
-# end-of-life we can delete build-aux/tap-driver.sh and this block of
-# code. (tap-driver.sh is checked in to this Git repository only
-# because we want to support all currently maintained CentOS and RHEL
-# releases, and CentoOS 6 and RHEL 6 ship with Automake 1.11 which
-# does not come with tap-driver.sh.)
-command -v git >/dev/null || exit 0
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
-cdup=$(try git rev-parse --show-cdup) || exit 1
-[ -z "${cdup}" ] || exit 0
-try git update-index --assume-unchanged -- build-aux/tap-driver.sh
