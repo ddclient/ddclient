@@ -97,6 +97,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#719](https://github.com/ddclient/ddclient/pull/719)
   * `directnic`: Added support for updatng Directnic records.
     [#726](https://github.com/ddclient/ddclient/pull/726)
+  * `porkbun`: The update URL hostname is now configurable via the `server`
+    option.  [#752](https://github.com/ddclient/ddclient/pull/752)
 
 ### Bug fixes
 
@@ -164,6 +166,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#721](https://github.com/ddclient/ddclient/pull/721)
   * `dyndns2`: Fixed handling of responses for multi-host updates.
     [#728](https://github.com/ddclient/ddclient/pull/728)
+  * `porkbun`: The default update URL was updated from `porkbun.com` to
+    `api.porkbun.com`.  [#752](https://github.com/ddclient/ddclient/pull/752)
 
 ## 2023-11-23 v3.11.2
 
