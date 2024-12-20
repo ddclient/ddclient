@@ -1301,12 +1301,8 @@ our %protocols = (
         'cfgvars'  => {
             # Pretty all of these are ignored, but to ensure compatbility placing this here
             %{$cfgvars{'protocol-common-defaults'}},
-            # nic_updateable() assumes that every service uses a username and password but that is
-            # not true for Route53. Silence warnings by redefining the username and password
-            # variables as non-required with a non-empty default. In addition, using AWS_SECRET_ACCESS_KEY
-            # and AWS_ACCESS_KEY_ID arbitraily mapped to login and password seem to create hidden complexity
-            'login' => setv(T_STRING, 0, 'unused', undef),
-            'password' => setv(T_STRING, 0, 'unused', undef),
+            'login' => undef,
+            'password' => undef,
             # Hosted Zone Id (Required) found on the Hosted Zone you which to UPSERT onto within Route53 on AWS
             'hosted-zone-id' => setv(T_STRING, 1, undef, undef),
             # AWS Credentials (Required) (In the future may add STS support for more secure way to access)
