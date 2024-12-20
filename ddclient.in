@@ -1499,6 +1499,7 @@ sub main {
         read_recap(opt('cache'));
         print_info() if opt('debug') && opt('verbose');
         $daemon = opt('daemon');
+
         update_nics();
 
         if ($daemon) {
