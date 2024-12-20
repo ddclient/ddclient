@@ -2123,8 +2123,8 @@ sub init_config {
     # given?
 
     my @protos = map(opt('protocol', $_), keys(%config));
-    my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn route53));
-    load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
+    my @needs_sha = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn route53));
+    load_sha_support(join(', ', @needs_sha)) if @needs_sha;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
                              nfsn njalla porkbun yandex));
@@ -2706,10 +2706,7 @@ sub check_value {
     return $value;
 }
 
-######################################################################
-## load_sha1_support
-######################################################################
-sub load_sha1_support {
+sub load_sha_support {
     my ($protocol) = @_;
     eval { require Digest::SHA; } or fatal(<<"EOM");
 Error loading the Perl module Digest::SHA needed for $protocol update.

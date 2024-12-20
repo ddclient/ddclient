@@ -2,7 +2,7 @@ use Test::More;
 use ddclient::t;
 SKIP: { eval { require Test::Warnings; } or skip($@, 1); }
 eval { require 'ddclient'; } or BAIL_OUT($@);
-ddclient::load_sha1_support("route53");
+ddclient::load_sha_support("route53");
 
 my $TARGET_REQUEST_HASH = "18edc7204269d65bfa6a075381b0496cdb38166dfc3654207e929c6178d1a1ba";
 
