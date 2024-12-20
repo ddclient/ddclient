@@ -57,6 +57,7 @@ AM_PL_LOG_FLAGS = -Mstrict -w \
 	-I'$(abs_top_srcdir)'/t/lib \
 	-MDevel::Autoflush
 handwritten_tests = \
+	t/aws_signed_request.pl \
 	t/builtinfw_query.pl \
 	t/check_value.pl \
 	t/get_ip_from_if.pl \
@@ -79,8 +80,7 @@ handwritten_tests = \
 	t/update_nics.pl \
 	t/use_web.pl \
 	t/variable_defaults.pl \
-	t/write_recap.pl \
-	t/aws_signed_request.pl
+	t/write_recap.pl
 generated_tests = \
 	t/version.pl
 TESTS = $(handwritten_tests) $(generated_tests)
