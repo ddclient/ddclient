@@ -2407,28 +2407,16 @@ sub sendmail {
         $recipients = opt('mail-failure');
     }
     if ($emailbody && $recipients && $emailbody ne $last_emailbody) {
-        if ($sender) {
-            pipecmd("sendmail -oi $recipients",
-                    "To: $recipients",
-                    "From: $sender",
-                    "Subject: status report from $program\@$hostname",
-                    "\r\n",
-                    $emailbody,
-                    "",
-                    "-- ",  # https://en.wikipedia.org/wiki/Signature_block#Standard_delimiter
-                    "   $program\@$hostname (version $version)"
-            );
-        } else {
-            pipecmd("sendmail -oi $recipients",
-                    "To: $recipients",
-                    "Subject: status report from $program\@$hostname",
-                    "\r\n",
-                    $emailbody,
-                    "",
-                    "-- ",  # https://en.wikipedia.org/wiki/Signature_block#Standard_delimiter
-                    "   $program\@$hostname (version $version)"
-            );
-        }
+        pipecmd("sendmail -oi $recipients",
+                "To: $recipients",
+                $sender ne '' ? ("From: $sender") : (),
+                "Subject: status report from $program\@$hostname",
+                "\r\n",
+                $emailbody,
+                "",
+                "-- ",  # https://en.wikipedia.org/wiki/Signature_block#Standard_delimiter
+                "   $program\@$hostname (version $version)"
+        );
     }
     $last_emailbody = $emailbody;
     $emailbody      = '';
