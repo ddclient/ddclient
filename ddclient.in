@@ -1299,20 +1299,13 @@ our %protocols = (
         'update' => \&nic_route53_update,
         'examples' => \&nic_route53_examples,
         'cfgvars' => {
-            # Pretty all of these are ignored, but to ensure compatbility placing this here
             %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
-            # Hosted Zone Id (Required) found on the Hosted Zone you which to UPSERT onto within
-            # Route53 on AWS
             'hosted-zone-id' => setv(T_STRING, 1, undef, undef),
-            # AWS Credentials (Required) (In the future may add STS support for more secure way to
-            # access) If these values are not within the config we will attempt to fetch them from
-            # the environment
+            # TODO: Add AWS Security Token Service (STS) support for more secure way to access.
             'aws-secret-access-key' => setv(T_STRING, 1, undef, undef),
             'aws-access-key-id' => setv(T_STRING, 1, undef, undef),
-            # Typically the 'global' region in AWS is interpreted as 'us-east-1' however it could
-            # change so please override if required AWS_REGION (Optional)
             'aws-region' => setv(T_STRING, 0, 'us-east-1', undef),
         },
     ),
@@ -7668,29 +7661,31 @@ EoEXAMPLE
 sub nic_route53_examples {
     return <<"EoEXAMPLE";
 
-o 'AWS Route53'
+o 'route53'
 
-The 'AWS Route53' protocol is used by Route53 service that AWS offers.
-
-The required variables AWS Credentials:
-    - AWS_SECRET_ACCESS_KEY
-    - AWS_ACCESS_KEY_ID
-
-These will default to your environment variables but can be passed as
-variables as well.
+The 'route53' protocol is used for the Amazon AWS Route 53 service.
 
 Configuration variables applicable to the 'route53' protocol are:
   protocol=route53
-  hosted-zone-id=[hosted_zone_id]                 ## (Required) The id of the Hosted Zone (Can pull from environment please reference below)
-  ttl=[number]                                    ## TTL for record (Defaults to 300)
-  region=[aws region]                             ## AWS Region (Defaults to us-east-1)
-  aws-secret-access-key_env=AWS_SECRET_ACCESS_KEY ## (Required) You can pass directly in your config via _env as shown here
-  aws-access-key-id_env=AWS_ACCESS_KEY_ID         ## (Required) You can pass directly in your config via _env as show here
-  example.com                                     ## Domain name to update
+  hosted-zone-id=[string]         ## (Required) The ID of the Hosted Zone.
+  ttl=[number]                    ## TTL for record (Defaults to 300).
+  region=[string]                 ## AWS Region (Defaults to us-east-1)
+  aws-access-key-id=[string]      ## (Required) AWS access key ID.
+  aws-secret-access-key=[string]  ## (Required) AWS secret access key.
+  example.com                     ## Domain name to update.
 
 Example ${program}.conf file entries:
-  protocol=route53,       \\
-  hosted_zone_id=ZXXXXXXXXXXX
+  protocol=route53                                                  \\
+  hosted-zone-id=ZXXXXXXXXXXX                                       \\
+  aws-access-key-id=AKIAIOSFODNN7EXAMPLE                            \\
+  aws-secret-access-key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"  \\
+  my.address.com
+
+  # Obtaining the access key ID and secret from environment variables:
+  protocol=route53                                                  \\
+  hosted-zone-id=ZXXXXXXXXXXX                                       \\
+  aws-access-key-id_env=AWS_ACCESS_KEY_ID                           \\
+  aws-secret-access-key_env=AWS_SECRET_ACCESS_KEY                   \\
   my.address.com
 
 EoEXAMPLE
