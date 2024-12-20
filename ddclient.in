@@ -1303,15 +1303,16 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'password' => undef,
-            # Hosted Zone Id (Required) found on the Hosted Zone you which to UPSERT onto within Route53 on AWS
+            # Hosted Zone Id (Required) found on the Hosted Zone you which to UPSERT onto within
+            # Route53 on AWS
             'hosted-zone-id' => setv(T_STRING, 1, undef, undef),
-            # AWS Credentials (Required) (In the future may add STS support for more secure way to access)
-            # If these values are not within the config we will attempt to fetch them from the environment
+            # AWS Credentials (Required) (In the future may add STS support for more secure way to
+            # access) If these values are not within the config we will attempt to fetch them from
+            # the environment
             'aws-secret-access-key' => setv(T_STRING, 1, undef, undef),
             'aws-access-key-id' => setv(T_STRING, 1, undef, undef),
-            # Typically the 'global' region in AWS is interpreted as 'us-east-1' however it could change so
-            # please override if required
-            # AWS_REGION (Optional)
+            # Typically the 'global' region in AWS is interpreted as 'us-east-1' however it could
+            # change so please override if required AWS_REGION (Optional)
             'aws-region' => setv(T_STRING, 0, 'us-east-1', undef),
         },
     ),
