@@ -704,7 +704,7 @@ our %cfgvars = (
         'priority'            => setv(T_STRING,0, 'notice',             undef),
         'mail'                => setv(T_EMAIL, 0, undef,                undef),
         'mail-failure'        => setv(T_EMAIL, 0, undef,                undef),
-        'mail-from'           => setv(T_EMAIL, 0, '',                   undef),
+        'mail-from'           => setv(T_EMAIL, 0, undef,                undef),
         'max-warn'            => setv(T_NUMBER,0, 1,                    undef),
 
         'exec'                => setv(T_BOOL,  0, 1,                    undef),
@@ -2401,7 +2401,7 @@ sub logger {
 }
 sub sendmail {
     my $recipients = opt('mail');
-    my $sender = opt('mail-from');
+    my $sender = opt('mail-from') // '';
 
     if (opt('mail-failure') && ($result ne 'OK' && $result ne '0')) {
         $recipients = opt('mail-failure');
