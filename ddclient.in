@@ -7678,7 +7678,7 @@ Getting the DynDNS key (only available via Ionos API):
 
   1. Create an API key
   2. Enable DynDNS for your host using the /dns/v1/dyndns API
-     (documentation @ https://developer.hosting.ionos.es/docs/dns)
+     (documentation @ https://developer.hosting.ionos.com/docs/dns)
   3. In the API response, get the key value. The key is a long string
      from the "q=" parameter. The URL looks like this:
      https://ipv4.api.hosting.ionos.com/dns/v1/dyndns?q=XXXXXXXXXXXXXXX
