@@ -1296,9 +1296,9 @@ our %protocols = (
         },
     ),
     'route53' => ddclient::Protocol->new(
-        'update'     => \&nic_route53_update,
-        'examples'   => \&nic_route53_examples,
-        'cfgvars'  => {
+        'update' => \&nic_route53_update,
+        'examples' => \&nic_route53_examples,
+        'cfgvars' => {
             # Pretty all of these are ignored, but to ensure compatbility placing this here
             %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
