@@ -2401,12 +2401,12 @@ sub logger {
 }
 sub sendmail {
     my $recipients = opt('mail');
-    my $sender = opt('mail-from') // '';
 
     if (opt('mail-failure') && ($result ne 'OK' && $result ne '0')) {
         $recipients = opt('mail-failure');
     }
     if ($emailbody && $recipients && $emailbody ne $last_emailbody) {
+        my $sender = opt('mail-from') // '';
         pipecmd("sendmail -oi $recipients",
                 "To: $recipients",
                 $sender ne '' ? ("From: $sender") : (),
