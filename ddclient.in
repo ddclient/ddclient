@@ -1428,7 +1428,7 @@ my @opt = (
     ["max-warn",          "=i", "--max-warn=<max>       : log at most <max> warning messages for undefined IP address"],
     ["mail",              "=s", "--mail=<address>       : e-mail messages to <address>"],
     ["mail-failure",      "=s", "--mail-failure=<addr>  : e-mail messages for failed updates to <addr>"],
-    ["mail-from",         "=s", "--mail-from=<addr>     : send status e-mail messages from <addr>"],
+    ["mail-from",         "=s", '--mail-from=<addr>     : set the "From:" header in e-mail messages to <addr> if non-empty'],
     ["exec",              "!",  "--{no}exec             : do {not} execute; just show what would be done"],
     ["debug",             "!",  "--{no}debug            : print {no} debugging information"],
     ["verbose",           "!",  "--{no}verbose          : print {no} verbose information"],
