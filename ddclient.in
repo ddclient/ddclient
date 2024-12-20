@@ -7681,7 +7681,7 @@ The required variables AWS Credentials:
     - AWS_SECRET_ACCESS_KEY
     - AWS_ACCESS_KEY_ID
 
-These will default to your environment variables but can be passed as 
+These will default to your environment variables but can be passed as
 variables as well.
 
 Configuration variables applicable to the 'route53' protocol are:
@@ -7807,7 +7807,7 @@ sub create_canonical_request_hash {
             $signed_headers = $signed_headers.';';
         }
 
-        $formatted_finalized_headers{lc $header_key} = $value;        
+        $formatted_finalized_headers{lc $header_key} = $value;
     }
     debug("\n");
 
@@ -7835,7 +7835,7 @@ sub create_string_to_sign {
         $region,
         $date
     ) = @_;
-    
+
     my $scope = to_short_date($date)."/$region/$service/aws4_request";
     my %result = (
         string => $ALGORITHM."\n".(to_iso_string($date))."\n$scope\n$hash",
@@ -7846,7 +7846,7 @@ sub create_string_to_sign {
 
     return \%result;
 }
-    
+
 sub create_signature {
     my (
         $string_to_sign,
@@ -7989,7 +7989,7 @@ Route53Payload
             request_url_protocol => "https",
             request_url_host => "route53.amazonaws.com",
             request_url_path => "/2013-04-01/hostedzone/".$hosted_zone_id."/rrset/",
-            request_url_query_string => "", 
+            request_url_query_string => "",
             request_method => "POST",
             request_headers => {
                 "content-type" => "application/xml",
@@ -8061,7 +8061,7 @@ sub nic_route53_update {
                 $ipv,
                 $type,
                 300,
-                $config{$h}{'aws-access-key-id'},   
+                $config{$h}{'aws-access-key-id'},
                 $config{$h}{'aws-secret-access-key'},
                 $config{$h}{'aws-region'}
             )
