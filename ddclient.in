@@ -7681,7 +7681,7 @@ Getting the DynDNS key (only available via Ionos API):
      (documentation @ https://developer.hosting.ionos.com/docs/dns)
   3. In the API response, get the key value. The key is a long string
      from the "q=" parameter. The URL looks like this:
-     https://ipv4.api.hosting.ionos.com/dns/v1/dyndns?q=XXXXXXXXXXXXXXX
+     https://api.hosting.ionos.com/dns/v1/dyndns?q=XXXXXXXXXXXXXXX
      (in the example above the key is "XXXXXXXXXXXXXXX").
 
 Note: Because the key is individual for each host, you cannot update
