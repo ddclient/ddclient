@@ -99,6 +99,8 @@ repository history](https://github.com/ddclient/ddclient/commits/master).
     [#726](https://github.com/ddclient/ddclient/pull/726)
   * `porkbun`: The update URL hostname is now configurable via the `server`
     option.  [#752](https://github.com/ddclient/ddclient/pull/752)
+  * `ionos`: Added support for updating Ionos records.
+    [#743](https://github.com/ddclient/ddclient/pull/743)
 
 ### Bug fixes
 
