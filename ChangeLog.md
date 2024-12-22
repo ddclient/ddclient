@@ -1,7 +1,7 @@
 # ChangeLog
 
 This document describes notable changes. For details, see the [source code
-repository history](https://github.com/ddclient/ddclient/commits/master).
+repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.0~alpha (unreleased work-in-progress)
 

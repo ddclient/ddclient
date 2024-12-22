@@ -80,7 +80,7 @@ perltidy -l=99 -conv -ci=4 -ola -ce -nbbc -kis -pt=2 -b ddclient
 
 ## Git Hygiene
 
-  * Please keep your pull request commits rebased on top of master.
+  * Please keep your pull request commits rebased on top of `main`.
   * Please use `git rebase -i` to make your commits easy to review:
     - Put unrelated changes in separate commits
     - Squash your fixup commits
@@ -190,11 +190,11 @@ better to revert the original change then redo it:
 
 ### Merging Pull Requests
 
-To facilitate reviews and code archaeology, `master` should have a
+To facilitate reviews and code archaeology, `main` should have a
 semi-linear commit history like this:
 
 ```
-*   f4e6e90 sandro.jaeckel@gmail.com 2020-05-31 07:29:51 +0200 (master)
+*   f4e6e90 sandro.jaeckel@gmail.com 2020-05-31 07:29:51 +0200 (main)
 |\          Merge pull request #142 from rhansen/config-line-format
 | * 30180ed rhansen@rhansen.org 2020-05-30 13:09:38 -0400
 |/          Expand comment documenting config line format
@@ -231,7 +231,7 @@ has value:
     change was made) and the merge timestamp (when it went live).
 
 To achieve a history like the above, the pull request must be rebased
-onto `master` before merging. Unfortunately, GitHub does not have a
+onto `main` before merging. Unfortunately, GitHub does not have a
 one-click way to do this (the "Rebase and merge" option does a
 fast-forward merge, which is not what we want). See
 [isaacs/github#1143](https://github.com/isaacs/github/issues/1143) and
@@ -254,15 +254,15 @@ git remote set-url origin git@github.com:ddclient/ddclient.git
 # Add a remote for the fork used in the PR
 git remote add "${PR_USER:?}" git@github.com:"${PR_USER:?}"/ddclient
 
-# Fetch the latest commits for the PR and ddclient master
+# Fetch the latest commits for the PR and ddclient main
 git remote update -p
 
 # Switch to the pull request branch
 git checkout -b "${PR_USER:?}-${PR_BRANCH:?}" "${PR_USER:?}/${PR_BRANCH:?}"
 
 # Rebase the commits (optionally using -i to clean up history) onto
-# the current ddclient master branch
-git rebase origin/master
+# the current ddclient main branch
+git rebase origin/main
 
 # Force update the contributor's fork. This will only work if the
 # contributor has checked the "Allow edits by maintainers" box in the
@@ -276,19 +276,19 @@ git push -f
 # "Allow edits by maintainers", or if you prefer to merge manually,
 # continue with the next steps.
 
-# Switch to the local master branch
-git checkout master
+# Switch to the local main branch
+git checkout main
 
-# Make sure the local master branch is up to date
-git merge --ff-only origin/master
+# Make sure the local main branch is up to date
+git merge --ff-only origin/main
 
 # Merge in the rebased pull request branch **WITHOUT DOING A
 # FAST-FORWARD MERGE**
 git merge --no-ff "${PR_USER:?}-${PR_BRANCH:?}"
 
 # Review the commits before pushing
-git log --graph --oneline --decorate origin/master..
+git log --graph --oneline --decorate origin/main..
 
-# Push to ddclient master
-git push origin master
+# Push to ddclient main
+git push origin main
 ```
