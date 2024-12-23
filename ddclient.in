@@ -48,9 +48,17 @@ use Sys::Hostname;
 #     1.2.3rN           v1.2.3.999.N    1 <= N < 1000; for re-releases, if necessary (rare)
 #
 # A tilde is used to separate "alpha", "beta", and "rc" from the version numbers because it has
-# special meaning for the version comparison algorithms in RPM and Debian:
-# https://docs.fedoraproject.org/en-US/packaging-guidelines/Versioning/#_handling_non_sorting_versions_with_tilde_dot_and_caret
-# https://manpages.debian.org/bookworm/dpkg-dev/deb-version.7.en.html
+# special meaning for the version comparison algorithms in Debian and RPM; see
+# <https://manpages.debian.org/bookworm/dpkg-dev/deb-version.7.en.html> and
+# <https://docs.fedoraproject.org/en-US/packaging-guidelines/Versioning/#_handling_non_sorting_versions_with_tilde_dot_and_caret>.
+# Unfortunately, tilde is not allowed in Git tags.  When tagging a beta or release candidate, the
+# tilde is replaced with a hyphen-minus (dash).  Percent-encoding the tilde ("%7E") was considered
+# but rejected because (1) it's less readable; (2) tilde is not usually percent-encoded; (3) tag
+# names can appear in URLs, which would require encoding the percent character ("%257E") which
+# would break copy/paste to/from URLs and make them even less readable; (4) Debian's
+# git-buildpackage tool (0.9.35) only supports single-character replacements for the 'gbp
+# import-orig --upstream-vcs-tag' option; and (5) hyphen-minus is not expected to conflict with
+# other potential characters in version tags.
 #
 # No period separator is required between "beta", "rc", or "r" and its adjacent number(s); both RPM
 # and Debian will compare the adjacent number numerically, not lexicographically ("~beta2" sorts
