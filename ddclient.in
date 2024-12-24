@@ -36,25 +36,40 @@ use Sys::Hostname;
 # Note that version::normal and version::numify lose information because the underscore is
 # effectively removed.
 #
-# To work around Perl's limitations, human-readable versions are translated to/from Perl versions
-# as follows:
+# To work around Perl's limitations, Perl versions are translated to/from human-readable Semantic
+# Versioning 2.0.0 <https://semver.org/spec/v2.0.0.html> version strings as follows:
 #
 #     Human-readable    Perl version    Notes
 #     -------------------------------------------------------------------------------------------
-#     1.2.3~alpha       v1.2.3.0_0      compares equal to Perl version v1.2.3 (unfortunately)
-#     1.2.3~betaN       v1.2.3.0_N      1 <= N < 900; compares equal to Perl v1.2.3.N
-#     1.2.3~rcN         v1.2.3.0_M      1 <= N < 99; M = N + 900; compares equal to Perl v1.2.3.M
+#     1.2.3-alpha       v1.2.3.0_0      compares equal to Perl version v1.2.3 (unfortunately)
+#     1.2.3-beta.N      v1.2.3.0_N      1 <= N < 900; compares equal to Perl v1.2.3.N
+#     1.2.3-rc.N        v1.2.3.0_M      1 <= N < 99; M = N + 900; compares equal to Perl v1.2.3.M
 #     1.2.3             v1.2.3.999      for releases; no underscore in Perl version string
-#     1.2.3rN           v1.2.3.999.N    1 <= N < 1000; for re-releases, if necessary (rare)
+#     1.2.3+r.N         v1.2.3.999.N    1 <= N < 1000; for re-releases, if necessary (rare)
 #
-# A tilde is used to separate "alpha", "beta", and "rc" from the version numbers because it has
-# special meaning for the version comparison algorithms in RPM and Debian:
-# https://docs.fedoraproject.org/en-US/packaging-guidelines/Versioning/#_handling_non_sorting_versions_with_tilde_dot_and_caret
-# https://manpages.debian.org/bookworm/dpkg-dev/deb-version.7.en.html
+# A hyphen-minus ('-', a.k.a. dash) is used to separate "alpha", "beta", and "rc" from the version
+# numbers because that is what <https://semver.org/spec/v2.0.0.html> requires.  Tilde ('~') was
+# considered instead of '-' because it has desirable semantics in the version comparison algorithms
+# in Debian and RPM; see <https://manpages.debian.org/bookworm/dpkg-dev/deb-version.7.en.html> and
+# <https://docs.fedoraproject.org/en-US/packaging-guidelines/Versioning/#_handling_non_sorting_versions_with_tilde_dot_and_caret>
+# However, tilde is not permitted in Git tags, so the human-readable version string would have to
+# be transformed for release tags, and then transformed back by downstream package maintainers to
+# reconstruct the original version string.  As long as downstream package maintainers have to
+# transform the tag name anyway, the human-readable version string might as well have the same
+# format as the tag name.  Version strings conforming to <https://semver.org/spec/v2.0.0.html> have
+# this property.
 #
-# No period separator is required between "beta", "rc", or "r" and its adjacent number(s); both RPM
-# and Debian will compare the adjacent number numerically, not lexicographically ("~beta2" sorts
-# before "~beta10" as expected).
+# A period is required between "beta" or "rc" and its adjacent number(s) because
+# <https://semver.org/spec/v2.0.0.html> says that parts containing non-number characters are
+# compared lexicographically.  For example, '-beta9' unfortunately sorts after '-beta10' but
+# '-beta.9' sorts before '-beta.10', as desired.  (Both the Debian and the RPM version comparison
+# algorithms do not have this problem; they compare number parts numerically, not
+# lexicographically, even if there is no period between the number and non-number characters.)
+#
+# A period is also required after the "r" for a re-release, but this is only for consistency with
+# "beta" and "rc".  <https://semver.org/spec/v2.0.0.html> says that build metadata (the stuff after
+# the plus ('+') character) does not affect ordering at all so the lack of a period would not
+# affect ordering.
 #
 # The Perl version is declared first then converted to a human-readable form.  It would be nicer to
 # declare a human-readable version string and convert that to a Perl version string, but various
@@ -88,13 +103,13 @@ sub humanize_version {
     return $v if !defined($r);
     $v = $r;
     if (!defined($pr)) {
-        $v .= "r$rr" if defined($rr);
+        $v .= "+r.$rr" if defined($rr);
     } elsif ($pr eq '0') {
-        $v .= '~alpha';
+        $v .= '-alpha';
     } elsif ($pr < 900) {
-        $v .= "~beta$pr";
+        $v .= "-beta.$pr";
     } elsif ($pr < 999) {
-        $v .= '~rc' . ($pr - 900);
+        $v .= '-rc.' . ($pr - 900);
     }
     return $v;
 }
