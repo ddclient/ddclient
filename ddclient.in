@@ -3919,7 +3919,7 @@ sub nic_dyndns2_update {
         'abuse' => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.  More info can be found on https://www.dyndns.com/support/abuse.html',
         'numhost' => 'System error: Too many or too few hosts found. Contact support@dyndns.org',
         'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
-        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+        'nochg' => 'No update required; unnecessary attempts to change the current address are considered abusive',
     );
     my @group_by_attrs = qw(
         backupmx
@@ -4194,7 +4194,7 @@ sub nic_noip_update {
         'abuse', => 'The hostname specified is blocked for abuse; open a trouble ticket at https://www.no-ip.com',
         'numhost' => 'System error: Too many or too few hosts found. open a trouble ticket at https://www.no-ip.com',
         'dnserr' => 'System error: DNS error encountered. Contact support@dyndns.org',
-        'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+        'nochg' => 'No update required; unnecessary attempts to change the current address are considered abusive',
     );
     for my $group (group_hosts_by(\@_, qw(login password server wantipv4 wantipv6))) {
         my @hosts = @{$group->{hosts}};
@@ -5585,7 +5585,7 @@ sub nic_henet_update {
        'badsys' => 'The system parameter given was not valid',
        'nohost' => 'The hostname specified does not exist in the database',
        'abuse' => 'The hostname specified is blocked for abuse',
-       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+       'nochg' => 'No update required; unnecessary attempts to change the current address are considered abusive',
     );
 
     for my $h (@_) {
@@ -6164,7 +6164,7 @@ sub nic_inwx_update {
        'abuse' => 'The hostname specified is blocked for abuse; you should receive an email notification which provides an unblock request link.',
        'numhost' => 'System error: Too many or too few hosts found.',
        'dnserr' => 'System error: DNS error encountered.',
-       'nochg' => 'No update required; unnecessary attempts to change to the current address are considered abusive',
+       'nochg' => 'No update required; unnecessary attempts to change the current address are considered abusive',
     );
     my @group_by_attrs = qw(
         login
