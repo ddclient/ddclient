@@ -23,3 +23,8 @@ release
 /t/geturl_connectivity.pl
 /t/version.pl
 /test-suite.log
+# snap build
+parts/
+prime/
+stage/
+*.snap
