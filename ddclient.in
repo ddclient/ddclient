@@ -704,6 +704,7 @@ our %cfgvars = (
         'priority'            => setv(T_STRING,0, 'notice',             undef),
         'mail'                => setv(T_EMAIL, 0, undef,                undef),
         'mail-failure'        => setv(T_EMAIL, 0, undef,                undef),
+        'mail-from'           => setv(T_EMAIL, 0, undef,                undef),
         'max-warn'            => setv(T_NUMBER,0, 1,                    undef),
 
         'exec'                => setv(T_BOOL,  0, 1,                    undef),
@@ -1427,6 +1428,7 @@ my @opt = (
     ["max-warn",          "=i", "--max-warn=<max>       : log at most <max> warning messages for undefined IP address"],
     ["mail",              "=s", "--mail=<address>       : e-mail messages to <address>"],
     ["mail-failure",      "=s", "--mail-failure=<addr>  : e-mail messages for failed updates to <addr>"],
+    ["mail-from",         "=s", '--mail-from=<addr>     : set the "From:" header in e-mail messages to <addr> if non-empty'],
     ["exec",              "!",  "--{no}exec             : do {not} execute; just show what would be done"],
     ["debug",             "!",  "--{no}debug            : print {no} debugging information"],
     ["verbose",           "!",  "--{no}verbose          : print {no} verbose information"],
@@ -2404,8 +2406,10 @@ sub sendmail {
         $recipients = opt('mail-failure');
     }
     if ($emailbody && $recipients && $emailbody ne $last_emailbody) {
+        my $sender = opt('mail-from') // '';
         pipecmd("sendmail -oi $recipients",
                 "To: $recipients",
+                $sender ne '' ? ("From: $sender") : (),
                 "Subject: status report from $program\@$hostname",
                 "\r\n",
                 $emailbody,
