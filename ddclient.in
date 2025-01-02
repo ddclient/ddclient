@@ -1142,6 +1142,15 @@ our %protocols = (
             'script' => setv(T_STRING, 0, '/nic/update', undef),
         },
     ),
+    'myaddr' => ddclient::Protocol->new(
+        'update'   => \&nic_myaddr_update,
+        'examples' => \&nic_myaddr_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'  => undef,
+            'server' => setv(T_FQDNP, 0, 'myaddr.tools', undef),
+        },
+    ),
     'mythicdyn' => ddclient::Protocol->new(
         'update'     => \&nic_mythicdyn_update,
         'examples'   => \&nic_mythicdyn_examples,
@@ -5619,6 +5628,61 @@ sub nic_henet_update {
             success("$status: IPv$ipv address set to $returnedip");
             $recap{$h}{"ipv$ipv"} = $returnedip;
             $recap{$h}{'mtime'} = $now;
+        }
+    }
+}
+
+######################################################################
+## nic_myaddr_examples
+######################################################################
+sub nic_myaddr_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'myaddr'
+
+The 'myaddr' protocol is used by the DNS service offered by myaddr.tools.
+
+Configuration variables applicable to the 'myaddr' protocol are:
+  protocol=myaddr
+  password=key                 ## the private key corresponding to the domain to
+                               ## update
+  name-used-for-logging-only   ## a name (not used by the service; the above key
+                               ## uniquely identifies the domain to update)
+
+Example ${program}.conf file entries:
+  protocol=myaddr, \\
+  password=6bcf18a592bbc85bcee439e1e42def483ff3ef632a84df7ece5ff072f72887c1, \\
+  myname.myaddr.tools
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_myaddr_update
+######################################################################
+sub nic_myaddr_update {
+    my $self = shift;
+    for my $group (group_hosts_by(\@_, qw(password server wantipv4 wantipv6))) {
+        local $_l = pushlogctx(join(',', @{$group->{hosts}}));
+        my $key = $group->{cfg}{password};
+        my $server = $group->{cfg}{server};
+        for my $v (4, 6) {
+            delete $config{$_}{"wantipv$v"} for @{$group->{hosts}};
+            my $ip = $group->{cfg}{"wantipv$v"};
+            next if !$ip;
+            info("setting IPv$v address to $ip");
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => "https://$server/update?key=$key&ip=$ip",
+            );
+            next if !header_ok($reply);
+            # a 200 response indicates success
+            for my $h (@{$group->{hosts}}) {
+                $recap{$h}{mtime} = $now;
+                $recap{$h}{"ipv$v"} = $ip;
+                $recap{$h}{"status-ipv$v"} = 'good';
+            }
+            success("IPv$v address set to $ip");
         }
     }
 }
