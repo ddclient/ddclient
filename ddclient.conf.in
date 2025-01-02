@@ -229,6 +229,13 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## Myaddr (myaddr.tools)
+##
+# protocol=myaddr
+# password=key
+# name-used-for-logging-only
+
+##
 ## MyOnlinePortal (http://myonlineportal.net)
 ##
 # # ipv6=yes # optional
