@@ -105,7 +105,7 @@ operating system. See the image to the right for a list of distributions with a 
      ```shell
      ./configure \
          --prefix=/usr \
-         --sysconfdir=/etc/ddclient \
+         --sysconfdir=/etc \
          --localstatedir=/var
      make
      make VERBOSE=1 check
