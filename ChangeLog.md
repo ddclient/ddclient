@@ -5,6 +5,11 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.0-rc.2 (unreleased work-in-progress)
 
+### New features
+
+  * New `--mail-from` option to control the "From:" header of email messages.
+    [#565](https://github.com/ddclient/ddclient/pull/565)
+
 ## 2024-12-25 v4.0.0-rc.1
 
 ### Breaking changes
@@ -55,8 +60,6 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### New features
 
-  * New `--mail-from` option to control the "From:" header of email messages.
-    [#565](https://github.com/ddclient/ddclient/pull/565)
   * Simultaneous/separate updating of IPv4 (A) records and IPv6 (AAAA) records
     is now supported in the following services: `gandi`
     ([#558](https://github.com/ddclient/ddclient/pull/558)), `nsupdate`
