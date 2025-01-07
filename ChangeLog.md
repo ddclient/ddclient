@@ -5,6 +5,31 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.0-rc.2 (unreleased work-in-progress)
 
+### Breaking changes
+
+  * ddclient now looks for `ddclient.conf` in `${sysconfdir}/ddclient` by
+    default instead of `${sysconfdir}`.
+    [#789](https://github.com/ddclient/ddclient/pull/789)
+
+    To retain the previous behavior, pass `'--with-confdir=${sysconfdir}'` to
+    `configure`.  For example:
+
+    ```shell
+    # Before v4.0.0:
+    ./configure --sysconfdir=/etc
+    # Equivalent with v4.0.0 and later (the single quotes are intentional):
+    ./configure --sysconfdir=/etc --with-confdir='${sysconfdir}'
+    ```
+
+    or:
+
+    ```shell
+    # Before v4.0.0:
+    ./configure --sysconfdir=/etc/ddclient
+    # Equivalent with v4.0.0 and later:
+    ./configure --sysconfdir=/etc
+    ```
+
 ### New features
 
   * New `--mail-from` option to control the "From:" header of email messages.

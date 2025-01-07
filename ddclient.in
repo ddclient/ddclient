@@ -132,7 +132,7 @@ sub subst_var {
     return $subst;
 }
 
-my $etc = subst_var('@sysconfdir@', '/etc/ddclient');
+my $etc = subst_var('@confdir@', '/etc/ddclient');
 my $cachedir = subst_var('@localstatedir@', '/var') . '/cache/ddclient';
 our @curl = (subst_var('@CURL@', 'curl'));
 

@@ -23,6 +23,18 @@ AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign subdir-objects parallel-tests])
 AM_SILENT_RULES
 
+m4_define([CONFDIR_DEFAULT], [${sysconfdir}/AC_PACKAGE_NAME])
+AC_ARG_WITH(
+  [confdir],
+  [AS_HELP_STRING(
+    [--with-confdir=DIR],
+    m4_expand([[look for ddclient.conf in DIR @<:@default: ]CONFDIR_DEFAULT[@:>@]]))],
+  [],
+  # The single quotes are intentional; see:
+  # https://www.gnu.org/software/automake/manual/html_node/Uniform.html
+  [with_confdir='CONFDIR_DEFAULT'])
+AC_SUBST([confdir], [${with_confdir}])
+
 AC_PROG_MKDIR_P
 
 # The Fedora Docker image doesn't come with the 'findutils' package.

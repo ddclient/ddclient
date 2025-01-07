@@ -28,8 +28,8 @@ $(subst_files): Makefile
 			-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
 			-e '1 s|^#\!.*perl$$|#\!$(PERL)|g' \
 			-e 's|@localstatedir[@]|$(localstatedir)|g' \
+			-e 's|@confdir[@]|$(confdir)|g' \
 			-e 's|@runstatedir[@]|$(runstatedir)|g' \
-			-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
 			-e 's|@CURL[@]|$(CURL)|g' \
 			"$${in}" >'$@'.tmp && \
 		{ ! test -x "$${in}" || chmod +x '$@'.tmp; }
@@ -40,7 +40,7 @@ ddclient.conf: $(srcdir)/ddclient.conf.in
 
 bin_SCRIPTS = ddclient
 
-sysconf_DATA = ddclient.conf
+conf_DATA = ddclient.conf
 
 install-data-local:
 	$(MKDIR_P) '$(DESTDIR)$(localstatedir)'/cache/ddclient
