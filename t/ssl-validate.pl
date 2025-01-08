@@ -73,7 +73,7 @@ for my $tc (@test_cases) {
     SKIP: {
         skip("IPv6 not supported on this system", 1) if $tc->{ipv6} && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1) if $tc->{ipv6} && !$httpd_ipv6_supported;
-        $ddclient::config{$h} = $tc->{cfg};
+        local $ddclient::config{$h} = $tc->{cfg};
         %ddclient::config if 0;  # suppress spurious warning "Name used only once: possible typo"
         is(ddclient::get_ipv4(ddclient::strategy_inputs('usev4', $h)), $tc->{want}, $tc->{desc})
             if ($tc->{cfg}{usev4});
