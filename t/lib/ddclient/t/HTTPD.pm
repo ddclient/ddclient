@@ -104,7 +104,7 @@ sub reset {
 
 our $certdir = "$ENV{abs_top_srcdir}/t/lib/ddclient/Test/Fake/HTTPD";
 our $ca_file = "$certdir/dummy-ca-cert.pem";
-our $other_ca_file = "$certdir/other-ca-cert.pem"
+our $other_ca_file = "$certdir/other-ca-cert.pem";
 
 my %daemons;
 
