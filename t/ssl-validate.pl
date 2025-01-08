@@ -7,6 +7,9 @@ BEGIN {
 }
 use ddclient::t::ip;
 
+local $ddclient::globals{debug} = 1;
+local $ddclient::globals{verbose} = 1;
+
 httpd_ssl_required();
 
 # Note: $ddclient::globals{'ssl_ca_file'} is intentionally NOT set to "$certdir/dummy-ca-cert.pem"
@@ -70,6 +73,7 @@ my @test_cases = (
 );
 
 for my $tc (@test_cases) {
+    local $ddclient::_l = ddclient::pushlogctx($tc->{desc});
     SKIP: {
         skip("IPv6 not supported on this system", 1) if $tc->{ipv6} && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1) if $tc->{ipv6} && !$httpd_ipv6_supported;
