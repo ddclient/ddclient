@@ -16,7 +16,7 @@ our @EXPORT = qw(
     httpd
     httpd_ipv6_ok httpd_ipv6_required $httpd_ipv6_supported $httpd_ipv6_support_error
     httpd_ssl_ok httpd_ssl_required $httpd_ssl_supported $httpd_ssl_support_error
-    $ca_file $certdir
+    $ca_file $certdir $other_ca_file
     $textplain
 );
 
@@ -104,6 +104,7 @@ sub reset {
 
 our $certdir = "$ENV{abs_top_srcdir}/t/lib/ddclient/Test/Fake/HTTPD";
 our $ca_file = "$certdir/dummy-ca-cert.pem";
+our $other_ca_file = "$certdir/other-ca-cert.pem"
 
 my %daemons;
 
