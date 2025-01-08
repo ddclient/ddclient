@@ -1,7 +1,6 @@
 use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use MIME::Base64;
-use Scalar::Util qw(blessed);
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 BEGIN {
     eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
