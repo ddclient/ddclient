@@ -87,6 +87,7 @@ m4_foreach_w([_m], [
 # then some tests will fail. Only prints a warning if not installed.
 m4_foreach_w([_m], [
     B
+    Exporter
     File::Spec::Functions
     File::Temp
     List::Util
@@ -100,7 +101,6 @@ m4_foreach_w([_m], [
 # prints a warning if not installed.
 m4_foreach_w([_m], [
     Carp
-    Exporter
     HTTP::Daemon=6.12
     HTTP::Daemon::SSL
     HTTP::Message::PSGI
@@ -112,6 +112,7 @@ m4_foreach_w([_m], [
     Test::Warnings
     Time::HiRes
     URI
+    parent
   ], [AX_PROG_PERL_MODULES([_m], [],
          [AC_MSG_WARN([some tests may be skipped due to missing module _m])])])
 

@@ -6,11 +6,10 @@ BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(
 use List::Util qw(max);
 use Scalar::Util qw(refaddr);
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN {
-    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
-    ddclient::t::HTTPD->import();
-}
+use ddclient::t::HTTPD;
 use ddclient::t::ip;
+
+httpd_required();
 
 httpd('4')->run();
 httpd('6')->run() if httpd('6');
