@@ -5,6 +5,17 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.0-rc.3 (unreleased work-in-progress)
 
+### Breaking changes
+
+  * The string argument to `--cmdv4` or `--cmdv6` is now executed as-is by the
+    system's shell, matching the behavior of the deprecated `--cmd` option.
+    This makes it possible to pass command-line arguments, which reduces the
+    need for a custom wrapper script.  Beware that the string is also subject to
+    the shell's command substitution, quote handling, variable expansion, field
+    splitting, etc., so you may need to add extra escaping to ensure that any
+    special characters are preserved literally.
+    [#766](https://github.com/ddclient/ddclient/pull/766)
+
 ## 2025-01-07 v4.0.0-rc.2
 
 ### Breaking changes
