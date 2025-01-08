@@ -1,11 +1,10 @@
 use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN {
-    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
-    ddclient::t::HTTPD->import();
-}
+use ddclient::t::HTTPD;
 use ddclient::t::ip;
+
+httpd_required();
 
 $ddclient::globals{'ssl_ca_file'} = $ca_file;
 
