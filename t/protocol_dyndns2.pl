@@ -230,7 +230,7 @@ for my $tc (@test_cases) {
     diag('==============================================================================');
     local $ddclient::globals{debug} = 1;
     local $ddclient::globals{verbose} = 1;
-    my $l = ddclient::t::Logger->new($ddclient::_l);
+    my $l = ddclient::t::Logger->new($ddclient::_l, qr/^(?:WARNING|FATAL|SUCCESS|FAILED)$/);
     local %ddclient::config;
     local %ddclient::recap;
     $ddclient::config{$_} = {
