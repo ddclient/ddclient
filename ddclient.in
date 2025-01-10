@@ -3343,8 +3343,7 @@ sub get_ipv4 {
         warning("'--cmd-skip' ignored for '--usev4=$p{'usev4'}'")
             if opt('verbose') && defined($p{'cmd-skip'});
         if ($arg) {
-            my $sys_cmd = quotemeta($arg);
-            $reply = qx{$sys_cmd};
+            $reply = qx{$arg};
             $reply = '' if $?;
         }
     } elsif ($p{'usev4'} eq 'webv4') {
@@ -3457,8 +3456,7 @@ sub get_ipv6 {
         warning("'--cmd-skip' ignored for '--usev6=$p{'usev6'}'")
             if opt('verbose') && defined($p{'cmd-skip'});
         if ($arg) {
-            my $sys_cmd = quotemeta($arg);
-            $reply = qx{$sys_cmd};
+            $reply = qx{$arg};
             $reply = '' if $?;
         }
     } elsif ($p{'usev6'} eq 'webv6' || $p{'usev6'} eq 'web') {
