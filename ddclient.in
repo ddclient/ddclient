@@ -5647,15 +5647,15 @@ The 'myaddr' protocol is used by the DNS service offered by myaddr.tools.
 
 Configuration variables applicable to the 'myaddr' protocol are:
   protocol=myaddr
-  password=key                 ## the private key corresponding to the domain to
+  password=private-key         ## the private key corresponding to the domain to
                                ## update
-  name-used-for-logging-only   ## a name (not used by the service; the above key
+  myname.myaddr.tools          ## a name (not used by the service; the above key
                                ## uniquely identifies the domain to update)
 
 Example ${program}.conf file entries:
   protocol=myaddr, \\
   password=6bcf18a592bbc85bcee439e1e42def483ff3ef632a84df7ece5ff072f72887c1, \\
-  myname.myaddr.tools
+  example.myaddr.tools
 
 EoEXAMPLE
 }

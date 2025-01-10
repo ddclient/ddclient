@@ -235,8 +235,8 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ## Myaddr (myaddr.tools)
 ##
 # protocol=myaddr
-# password=key
-# name-used-for-logging-only
+# password=private-key
+# myname.myaddr.tools
 
 ##
 ## MyOnlinePortal (http://myonlineportal.net)
