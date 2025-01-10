@@ -3,6 +3,7 @@ BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 use ddclient::t::HTTPD;
+use ddclient::t::Logger;
 
 httpd_required();
 
@@ -28,23 +29,6 @@ httpd()->run(sub {
     }
     return [400, $headers, ['unexpected request: ' . $req->uri()]]
 });
-
-{
-    package Logger;
-    use parent qw(-norequire ddclient::Logger);
-    sub new {
-        my ($class, $parent) = @_;
-        my $self = $class->SUPER::new(undef, $parent);
-        $self->{logs} = [];
-        return $self;
-    }
-    sub _log {
-        my ($self, $args) = @_;
-        push(@{$self->{logs}}, $args)
-            if ($args->{label} // '') =~ qr/^(?:WARNING|FATAL|SUCCESS|FAILED)$/;
-        return $self->SUPER::_log($args);
-    }
-}
 
 my $hostname = httpd()->endpoint();
 my @test_cases = (
@@ -149,7 +133,7 @@ for my $tc (@test_cases) {
     diag('==============================================================================');
     local $ddclient::globals{debug} = 1;
     local $ddclient::globals{verbose} = 1;
-    my $l = Logger->new($ddclient::_l);
+    my $l = ddclient::t::Logger->new($ddclient::_l);
     local %ddclient::config = %{$tc->{cfg}};
     local %ddclient::recap;
     {

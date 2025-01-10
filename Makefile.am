@@ -160,5 +160,6 @@ EXTRA_DIST += $(handwritten_tests) \
 	t/lib/ddclient/Test/Fake/HTTPD/other-ca-cert.pem \
 	t/lib/ddclient/t.pm \
 	t/lib/ddclient/t/HTTPD.pm \
+	t/lib/ddclient/t/Logger.pm \
 	t/lib/ddclient/t/ip.pm \
 	t/lib/ok.pm
