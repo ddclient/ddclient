@@ -16,6 +16,11 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     special characters are preserved literally.
     [#766](https://github.com/ddclient/ddclient/pull/766)
 
+### New features
+
+  * `myaddr`: New `protocol` option for updating [myaddr](https://myaddr.tools/)
+    records.  [#785](https://github.com/ddclient/ddclient/pull/785)
+
 ## 2025-01-07 v4.0.0-rc.2
 
 ### Breaking changes
