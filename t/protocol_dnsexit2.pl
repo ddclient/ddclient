@@ -139,6 +139,47 @@ my @test_cases = (
             },
         ],
     },
+    {
+        desc => 'two hosts, same zone',
+        cfg => {
+            'host1.example.com' => {
+                ttl => 5,
+                wantipv4 => '192.0.2.1',
+                zone => 'example.com',
+            },
+            'host2.example.com' => {
+                ttl => 10,
+                wantipv6 => '2001:db8::1',
+                zone => 'example.com',
+            },
+        },
+        want => [
+            {
+                apikey => 'key',
+                domain => 'example.com',
+                update => [
+                    {
+                        content => '192.0.2.1',
+                        name => 'host1',
+                        ttl => 5,
+                        type => 'A',
+                    },
+                ],
+            },
+            {
+                apikey => 'key',
+                domain => 'example.com',
+                update => [
+                    {
+                        content => '2001:db8::1',
+                        name => 'host2',
+                        ttl => 10,
+                        type => 'AAAA',
+                    },
+                ],
+            },
+        ],
+    },
 );
 
 for my $tc (@test_cases) {
