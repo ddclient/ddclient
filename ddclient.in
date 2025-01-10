@@ -2857,7 +2857,7 @@ sub geturl {
     if (!opt('exec')) {
         info("would request: ${protocol}://${server}/${url}");
     } else {
-        push(@curlopt, "silent");
+        push(@curlopt, "no-progress-meter");
         push(@curlopt, "include"); ## Include HTTP response for compatibility
         push(@curlopt, "insecure") if ($use_ssl && !($params{ssl_validate} // 1));
         push(@curlopt, "cacert=\"".escape_curl_param(opt('ssl_ca_file')).'"') if defined(opt('ssl_ca_file'));
