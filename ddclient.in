@@ -2510,9 +2510,11 @@ sub ynu {
     # provided (it is ignored if the `msg` keyword is present).
     sub log {
         my $self = shift;
-        my %args = (@_ % 2 ? (msg => pop) : (), @_);
+        my %args = (label => '', @_ % 2 ? (msg => pop) : (), @_);
         $args{ctx} = [$args{ctx} // ()] if ref($args{ctx}) eq '';
-        return $self->_log(\%args);
+        $self->_log(\%args);
+        $self->_failed() if $args{label} eq 'FAILED';
+        $self->_abort() if $args{label} eq 'FATAL';
     }
 
     sub _log {
@@ -2521,10 +2523,11 @@ sub ynu {
         # the caller's arrayref (in case it is reused in a future call).
         $args->{ctx} = [@{$self->{ctx}}, @{$args->{ctx}}];
         return $self->{parent}->_log($args) if defined($self->{parent});
+        return if $args->{label} eq 'DEBUG' && !ddclient::opt('debug');
+        return if $args->{label} eq 'INFO' && !ddclient::opt('verbose');
         my $buffer = $args->{msg} // '';
         chomp($buffer);
         if (!$args->{raw}) {
-            $args->{label} //= '';
             my $prefix = $args->{label} ne '' ? sprintf("%-8s ", $args->{label} . ':') : '';
             $prefix .= "[$_]" for @{$args->{ctx}};
             $prefix .= '> ' if $prefix;
@@ -2544,6 +2547,20 @@ sub ynu {
             }
         }
     }
+
+    sub _failed {
+        my ($self) = @_;
+        return $self->{parent}->_failed() if defined($self->{parent});
+        $ddclient::result = 'FAILED';
+        $ddclient::result if 0;  # Suppress spurious "used only once: possible typo" warning.
+    }
+
+    sub _abort {
+        my ($self) = @_;
+        return $self->{parent}->_abort() if defined($self->{parent});
+        ddclient::sendmail();
+        exit(1);
+    }
 }
 
 # Intended use:
@@ -2552,12 +2569,12 @@ sub pushlogctx { my ($ctx) = @_; return ddclient::Logger->new($ctx, $_l); }
 
 sub logmsg { $_l->log(@_); }
 sub _logmsg_fmt { $_[0] eq 'ctx' ? (shift, shift) : (), (@_ > 1) ? sprintf(shift, @_) : shift; }
-sub info    { logmsg(email => 1, label => 'INFO',    _logmsg_fmt(@_)) if opt('verbose'); }
-sub debug   { logmsg(            label => 'DEBUG',   _logmsg_fmt(@_)) if opt('debug'); }
+sub info    { logmsg(email => 1, label => 'INFO',    _logmsg_fmt(@_)); }
+sub debug   { logmsg(            label => 'DEBUG',   _logmsg_fmt(@_)); }
 sub warning { logmsg(email => 1, label => 'WARNING', _logmsg_fmt(@_)); }
-sub fatal   { logmsg(email => 1, label => 'FATAL',   _logmsg_fmt(@_)); sendmail(); exit(1); }
+sub fatal   { logmsg(email => 1, label => 'FATAL',   _logmsg_fmt(@_)); }
 sub success { logmsg(email => 1, label => 'SUCCESS', _logmsg_fmt(@_)); }
-sub failed  { logmsg(email => 1, label => 'FAILED',  _logmsg_fmt(@_)); $result = 'FAILED'; }
+sub failed  { logmsg(email => 1, label => 'FAILED',  _logmsg_fmt(@_)); }
 
 sub prettytime { return scalar(localtime(shift)); }
 
