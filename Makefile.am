@@ -28,8 +28,8 @@ $(subst_files): Makefile
 			-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g' \
 			-e '1 s|^#\!.*perl$$|#\!$(PERL)|g' \
 			-e 's|@localstatedir[@]|$(localstatedir)|g' \
+			-e 's|@confdir[@]|$(confdir)|g' \
 			-e 's|@runstatedir[@]|$(runstatedir)|g' \
-			-e 's|@sysconfdir[@]|$(sysconfdir)|g' \
 			-e 's|@CURL[@]|$(CURL)|g' \
 			"$${in}" >'$@'.tmp && \
 		{ ! test -x "$${in}" || chmod +x '$@'.tmp; }
@@ -40,7 +40,7 @@ ddclient.conf: $(srcdir)/ddclient.conf.in
 
 bin_SCRIPTS = ddclient
 
-sysconf_DATA = ddclient.conf
+conf_DATA = ddclient.conf
 
 install-data-local:
 	$(MKDIR_P) '$(DESTDIR)$(localstatedir)'/cache/ddclient
@@ -77,6 +77,7 @@ handwritten_tests = \
 	t/skip.pl \
 	t/ssl-validate.pl \
 	t/update_nics.pl \
+	t/use_cmd.pl \
 	t/use_web.pl \
 	t/variable_defaults.pl \
 	t/write_recap.pl
@@ -156,6 +157,7 @@ EXTRA_DIST += $(handwritten_tests) \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-ca-cert.pem \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-cert.pem \
 	t/lib/ddclient/Test/Fake/HTTPD/dummy-server-key.pem \
+	t/lib/ddclient/Test/Fake/HTTPD/other-ca-cert.pem \
 	t/lib/ddclient/t.pm \
 	t/lib/ddclient/t/HTTPD.pm \
 	t/lib/ddclient/t/ip.pm \

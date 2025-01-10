@@ -3,6 +3,51 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/main).
 
+## v4.0.0-rc.3 (unreleased work-in-progress)
+
+### Breaking changes
+
+  * The string argument to `--cmdv4` or `--cmdv6` is now executed as-is by the
+    system's shell, matching the behavior of the deprecated `--cmd` option.
+    This makes it possible to pass command-line arguments, which reduces the
+    need for a custom wrapper script.  Beware that the string is also subject to
+    the shell's command substitution, quote handling, variable expansion, field
+    splitting, etc., so you may need to add extra escaping to ensure that any
+    special characters are preserved literally.
+    [#766](https://github.com/ddclient/ddclient/pull/766)
+
+## 2025-01-07 v4.0.0-rc.2
+
+### Breaking changes
+
+  * ddclient now looks for `ddclient.conf` in `${sysconfdir}/ddclient` by
+    default instead of `${sysconfdir}`.
+    [#789](https://github.com/ddclient/ddclient/pull/789)
+
+    To retain the previous behavior, pass `'--with-confdir=${sysconfdir}'` to
+    `configure`.  For example:
+
+    ```shell
+    # Before v4.0.0:
+    ./configure --sysconfdir=/etc
+    # Equivalent with v4.0.0 and later (the single quotes are intentional):
+    ./configure --sysconfdir=/etc --with-confdir='${sysconfdir}'
+    ```
+
+    or:
+
+    ```shell
+    # Before v4.0.0:
+    ./configure --sysconfdir=/etc/ddclient
+    # Equivalent with v4.0.0 and later:
+    ./configure --sysconfdir=/etc
+    ```
+
+### New features
+
+  * New `--mail-from` option to control the "From:" header of email messages.
+    [#565](https://github.com/ddclient/ddclient/pull/565)
+
 ## 2024-12-25 v4.0.0-rc.1
 
 ### Breaking changes

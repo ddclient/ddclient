@@ -25,6 +25,9 @@ daemon=300                      # check every 300 seconds
 syslog=yes                      # log update msgs to syslog
 mail=root                       # mail all msgs to root
 mail-failure=root               # mail failed update msgs to root
+# mail-from=root                # set the email "From:" header to "root".  If
+                                # unset (the default) or empty, the from address
+                                # depends on your system's default behavior.
 pid=@runstatedir@/ddclient.pid  # record PID in file.
 # postscript=script             # run script after updating.  The new IP is
                                 # added as argument.
@@ -130,10 +133,10 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ##
 ## NearlyFreeSpeech.NET (nearlyfreespeech.net)
 ##
-# protocol = nfsn,                      \
+# protocol=nfsn,                        \
+# zone=example.com,                     \
 # login=member-login,                   \
-# password=api-key,                     \
-# zone=example.com                      \
+# password=api-key                      \
 # example.com,subdomain.example.com
 
 ##

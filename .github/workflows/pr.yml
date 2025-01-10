@@ -29,3 +29,21 @@ jobs:
               git show "${out}" >&2
               exit 1
           }
+  no-autosquash:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'pr-permit-autosquash') }}
+    name: No --autosquash commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 'No commits with messages starting with "fixup!", "squash!", or "amend!"'
+        run: |
+          log() { printf %s\\n "$*" >&2; }
+          error() { log "ERROR: $@"; }
+          fatal() { error "$@"; exit 1; }
+          try() { log "Running command $@"; "$@" || fatal "'$@' failed"; }
+          out=$(try git log --oneline '${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}') || exit 1
+          ! grep -E '^[^ ]* (fixup|squash|amend)!' <<EOF || fatal "--autosquash commits not allowed without the 'pr-permit-autosquash' label"
+          ${out}
+          EOF

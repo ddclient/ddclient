@@ -1,12 +1,10 @@
 use Test::More;
 BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
-use Scalar::Util qw(blessed);
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
-BEGIN {
-    eval { require ddclient::t::HTTPD; 1; } or plan(skip_all => $@);
-    ddclient::t::HTTPD->import();
-}
+use ddclient::t::HTTPD;
 use ddclient::t::ip;
+
+httpd_required();
 
 my $builtinweb = 't/use_web.pl builtinweb';
 my $h = 't/use_web.pl hostname';
@@ -70,16 +68,6 @@ for my $ipv ('4', '6') {
 }
 
 for my $tc (@test_cases) {
-    my $subst = sub {
-        return map({
-            my $class = blessed($_);
-            (defined($class) && $class->isa('EndpointPlaceholder')) ? do {
-                my $uri = ${$_}->clone();
-                $uri->query_param(tc => $tc->{desc});
-                $uri;
-            } : $_;
-        } @_);
-    };
     local $ddclient::builtinweb{$builtinweb} = $tc->{biw};
     $ddclient::builtinweb if 0;
     local $ddclient::config{$h} = $tc->{cfg};

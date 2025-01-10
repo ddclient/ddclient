@@ -7,21 +7,42 @@ use warnings;
 use parent qw(ddclient::Test::Fake::HTTPD);
 
 use Exporter qw(import);
-use JSON::PP;
 use Test::More;
 BEGIN { require 'ddclient'; }
 use ddclient::t::ip;
 
 our @EXPORT = qw(
     httpd
+    httpd_ok httpd_required $httpd_supported $httpd_support_error
     httpd_ipv6_ok httpd_ipv6_required $httpd_ipv6_supported $httpd_ipv6_support_error
     httpd_ssl_ok httpd_ssl_required $httpd_ssl_supported $httpd_ssl_support_error
-    $ca_file $certdir
+    $ca_file $certdir $other_ca_file
     $textplain
 );
 
-our $httpd_ssl_support_error;
-our $httpd_ssl_supported = eval { require HTTP::Daemon::SSL; 1; } or $httpd_ssl_support_error = $@;
+our $httpd_supported;
+our $httpd_support_error;
+BEGIN {
+    $httpd_supported = eval {
+        require parent; parent->import(qw(ddclient::Test::Fake::HTTPD));
+        require JSON::PP; JSON::PP->import();
+        1;
+    } or $httpd_support_error = $@;
+}
+
+sub httpd_ok {
+    ok($httpd_supported, "HTTPD is supported") or diag($httpd_support_error);
+}
+
+sub httpd_required {
+    plan(skip_all => $httpd_support_error) if !$httpd_supported;
+}
+
+our $httpd_ssl_supported = $httpd_supported;
+our $httpd_ssl_support_error = $httpd_support_error;
+$httpd_ssl_supported = eval { require HTTP::Daemon::SSL; 1; }
+    or $httpd_ssl_support_error = $@
+    if $httpd_ssl_supported;
 
 sub httpd_ssl_ok {
     ok($httpd_ssl_supported, "SSL is supported") or diag($httpd_ssl_support_error);
@@ -31,8 +52,11 @@ sub httpd_ssl_required {
     plan(skip_all => $httpd_ssl_support_error) if !$httpd_ssl_supported;
 }
 
-our $httpd_ipv6_support_error;
-our $httpd_ipv6_supported = $ipv6_supported or $httpd_ipv6_support_error = $ipv6_support_error;
+our $httpd_ipv6_supported = $httpd_supported;
+our $httpd_ipv6_support_error = $httpd_support_error;
+$httpd_ipv6_supported = $ipv6_supported
+    or $httpd_ipv6_support_error = $ipv6_support_error
+    if $httpd_ipv6_supported;
 $httpd_ipv6_supported = eval { require HTTP::Daemon; HTTP::Daemon->VERSION(6.12); }
     or $httpd_ipv6_support_error = $@
     if $httpd_ipv6_supported;
@@ -104,6 +128,7 @@ sub reset {
 
 our $certdir = "$ENV{abs_top_srcdir}/t/lib/ddclient/Test/Fake/HTTPD";
 our $ca_file = "$certdir/dummy-ca-cert.pem";
+our $other_ca_file = "$certdir/other-ca-cert.pem";
 
 my %daemons;
 
@@ -111,6 +136,7 @@ sub httpd {
     my ($ipv, $ssl) = @_;
     $ipv //= '';
     $ssl = !!$ssl;
+    return undef if !$httpd_supported;
     return undef if $ipv eq '6' && !$httpd_ipv6_supported;
     return undef if $ssl && !$httpd_ssl_supported;
     if (!defined($daemons{$ipv}{$ssl})) {
