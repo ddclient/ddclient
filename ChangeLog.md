@@ -3,7 +3,7 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/main).
 
-## v4.0.0-rc.3 (unreleased work-in-progress)
+## 2025-01-11 v4.0.0-rc.3
 
 ### Breaking changes
 
