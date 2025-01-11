@@ -78,7 +78,7 @@ use Sys::Hostname;
 #
 # For consistency and to match user expectations, the release part of the version is always three
 # components: MAJOR.MINOR.PATCH.
-use version 0.77; our $VERSION = version->declare('v4.0.0.0_903');
+use version 0.77; our $VERSION = version->declare('v4.0.0.0_904');
 
 sub parse_version {
     my ($v) = @_;
