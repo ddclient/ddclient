@@ -2510,9 +2510,11 @@ sub ynu {
     # provided (it is ignored if the `msg` keyword is present).
     sub log {
         my $self = shift;
-        my %args = (@_ % 2 ? (msg => pop) : (), @_);
+        my %args = (label => '', @_ % 2 ? (msg => pop) : (), @_);
         $args{ctx} = [$args{ctx} // ()] if ref($args{ctx}) eq '';
-        return $self->_log(\%args);
+        $self->_log(\%args);
+        $self->_failed() if $args{label} eq 'FAILED';
+        $self->_abort() if $args{label} eq 'FATAL';
     }
 
     sub _log {
@@ -2521,10 +2523,11 @@ sub ynu {
         # the caller's arrayref (in case it is reused in a future call).
         $args->{ctx} = [@{$self->{ctx}}, @{$args->{ctx}}];
         return $self->{parent}->_log($args) if defined($self->{parent});
+        return if $args->{label} eq 'DEBUG' && !ddclient::opt('debug');
+        return if $args->{label} eq 'INFO' && !ddclient::opt('verbose');
         my $buffer = $args->{msg} // '';
         chomp($buffer);
         if (!$args->{raw}) {
-            $args->{label} //= '';
             my $prefix = $args->{label} ne '' ? sprintf("%-8s ", $args->{label} . ':') : '';
             $prefix .= "[$_]" for @{$args->{ctx}};
             $prefix .= '> ' if $prefix;
@@ -2544,6 +2547,20 @@ sub ynu {
             }
         }
     }
+
+    sub _failed {
+        my ($self) = @_;
+        return $self->{parent}->_failed() if defined($self->{parent});
+        $ddclient::result = 'FAILED';
+        $ddclient::result if 0;  # Suppress spurious "used only once: possible typo" warning.
+    }
+
+    sub _abort {
+        my ($self) = @_;
+        return $self->{parent}->_abort() if defined($self->{parent});
+        ddclient::sendmail();
+        exit(1);
+    }
 }
 
 # Intended use:
@@ -2552,12 +2569,12 @@ sub pushlogctx { my ($ctx) = @_; return ddclient::Logger->new($ctx, $_l); }
 
 sub logmsg { $_l->log(@_); }
 sub _logmsg_fmt { $_[0] eq 'ctx' ? (shift, shift) : (), (@_ > 1) ? sprintf(shift, @_) : shift; }
-sub info    { logmsg(email => 1, label => 'INFO',    _logmsg_fmt(@_)) if opt('verbose'); }
-sub debug   { logmsg(            label => 'DEBUG',   _logmsg_fmt(@_)) if opt('debug'); }
+sub info    { logmsg(email => 1, label => 'INFO',    _logmsg_fmt(@_)); }
+sub debug   { logmsg(            label => 'DEBUG',   _logmsg_fmt(@_)); }
 sub warning { logmsg(email => 1, label => 'WARNING', _logmsg_fmt(@_)); }
-sub fatal   { logmsg(email => 1, label => 'FATAL',   _logmsg_fmt(@_)); sendmail(); exit(1); }
+sub fatal   { logmsg(email => 1, label => 'FATAL',   _logmsg_fmt(@_)); }
 sub success { logmsg(email => 1, label => 'SUCCESS', _logmsg_fmt(@_)); }
-sub failed  { logmsg(email => 1, label => 'FAILED',  _logmsg_fmt(@_)); $result = 'FAILED'; }
+sub failed  { logmsg(email => 1, label => 'FAILED',  _logmsg_fmt(@_)); }
 
 sub prettytime { return scalar(localtime(shift)); }
 
@@ -4080,54 +4097,55 @@ EoEXAMPLE
 ######################################################################
 sub nic_dnsexit2_update {
     my $self = shift;
-    # The DNSExit API does not support updating hosts with different zones at the same time,
-    # handling update per host.
     for my $h (@_) {
         $config{$h}{'zone'} = $h if !defined(opt('zone', $h));
-        dnsexit2_update_host($h);
     }
+    dnsexit2_update_hostgroup($_) for group_hosts_by(\@_, qw(password path server ssl zone));
 }
 
-sub dnsexit2_update_host {
-    my ($h) = @_;
-    local $_l = pushlogctx($h);
-    my $name = $h;
-    # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
-    # set to the empty string; both have identical semantics.  For consistency, always
-    # remove the zone even if it means $name becomes the empty string.
-    my $zone = opt('zone', $h);
-    if ($name =~ s/(?:^|\.)\Q$zone\E$//) {
-        # The zone was successfully trimmed from $name.
-    } else {
-        fatal("hostname does not end with the zone: " . opt('zone', $h));
-    }
-    # The IPv4 and IPv6 addresses must be updated together in a single API call.
-    my %ips;
+sub dnsexit2_update_hostgroup {
+    my ($group) = @_;
+    return unless @{$group->{hosts}} > 0;
+    local $_l = pushlogctx(join(', ', @{$group->{hosts}}));
+    my %hostips;
     my @updates;
-    for my $ipv ('4', '6') {
-        my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
-        $ips{$ipv} = $ip;
-        info("updating IPv$ipv address to $ip");
-        $recap{$h}{"status-ipv$ipv"} = 'failed';
-        push(@updates, {
-            name => $name,
-            type => ($ipv eq '6') ? 'AAAA' : 'A',
-            content => $ip,
-            ttl => opt('ttl', $h),
-        });
-    };
-    my $url = opt('server', $h) . opt('path', $h);
+    for my $h (@{$group->{hosts}}) {
+        local $_l = pushlogctx($h) if @{$group->{hosts}} > 1;
+        my $name = $h;
+        # Remove the zone suffix from $name.  If the zone eq $name, $name can be left alone or
+        # set to the empty string; both have identical semantics.  For consistency, always
+        # remove the zone even if it means $name becomes the empty string.
+        if ($name =~ s/(?:^|\.)\Q$group->{cfg}{'zone'}\E$//) {
+            # The zone was successfully trimmed from $name.
+        } else {
+            fatal("hostname does not end with the zone: $group->{cfg}{'zone'}");
+        }
+        # The IPv4 and IPv6 addresses must be updated together in a single API call.
+        for my $ipv ('4', '6') {
+            my $ip = delete($config{$h}{"wantipv$ipv"}) or next;
+            $hostips{$h}{$ipv} = $ip;
+            info("updating IPv$ipv address to $ip");
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+            push(@updates, {
+                name => $name,
+                type => ($ipv eq '6') ? 'AAAA' : 'A',
+                content => $ip,
+                ttl => opt('ttl', $h),
+            });
+        }
+    }
+    return unless @updates > 0;
     my $reply = geturl(
         proxy => opt('proxy'),
-        url => $url,
+        url => $group->{cfg}{'server'} . $group->{cfg}{'path'},
         headers => [
             'Content-Type: application/json',
             'Accept: application/json',
         ],
         method => 'POST',
         data => encode_json({
-            apikey => opt('password', $h),
-            domain => $zone,
+            apikey => $group->{cfg}{'password'},
+            domain => $group->{cfg}{'zone'},
             update => \@updates,
         }),
     );
@@ -4174,12 +4192,15 @@ sub dnsexit2_update_host {
         return;
     }
     success($message);
-    $recap{$h}{'mtime'} = $now;
-    keys(%ips);  # Reset internal iterator.
-    while (my ($ipv, $ip) = each(%ips)) {
-        $recap{$h}{"ipv$ipv"} = $ip;
-        $recap{$h}{"status-ipv$ipv"} = 'good';
-        success("updated IPv$ipv address to $ip");
+    keys(%hostips);  # Reset internal iterator.
+    while (my ($h, $ips) = each(%hostips)) {
+        $recap{$h}{'mtime'} = $now;
+        keys(%$ips);  # Reset internal iterator.
+        while (my ($ipv, $ip) = each(%$ips)) {
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("updated IPv$ipv address to $ip");
+        }
     }
 }
 

@@ -3,6 +3,7 @@ BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 use MIME::Base64;
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 use ddclient::t::HTTPD;
+use ddclient::t::Logger;
 
 httpd_required();
 
@@ -17,23 +18,6 @@ httpd()->run(sub {
     return [400, $textplain, ['invalid method: ' . $req->method()]] if $req->method() ne 'GET';
     return undef;
 });
-
-{
-    package Logger;
-    use parent qw(-norequire ddclient::Logger);
-    sub new {
-        my ($class, $parent) = @_;
-        my $self = $class->SUPER::new(undef, $parent);
-        $self->{logs} = [];
-        return $self;
-    }
-    sub _log {
-        my ($self, $args) = @_;
-        push(@{$self->{logs}}, $args)
-            if ($args->{label} // '') =~ qr/^(?:WARNING|FATAL|SUCCESS|FAILED)$/;
-        return $self->SUPER::_log($args);
-    }
-}
 
 my @test_cases = (
     {
@@ -246,7 +230,7 @@ for my $tc (@test_cases) {
     diag('==============================================================================');
     local $ddclient::globals{debug} = 1;
     local $ddclient::globals{verbose} = 1;
-    my $l = Logger->new($ddclient::_l);
+    my $l = ddclient::t::Logger->new($ddclient::_l, qr/^(?:WARNING|FATAL|SUCCESS|FAILED)$/);
     local %ddclient::config;
     local %ddclient::recap;
     $ddclient::config{$_} = {
