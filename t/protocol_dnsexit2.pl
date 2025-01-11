@@ -3,6 +3,7 @@ BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 BEGIN { eval { require JSON::PP; 1; } or plan(skip_all => $@); JSON::PP->import(); }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 use ddclient::t::HTTPD;
+use ddclient::t::Logger;
 
 httpd_required();
 
@@ -180,6 +181,16 @@ my @test_cases = (
             },
         ],
     },
+    {
+        desc => 'host outside of zone',
+        cfg => {
+            'host.example' => {
+                wantipv4 => '192.0.2.1',
+                zone => 'example.com',
+            },
+        },
+        want_fatal => qr{hostname does not end with the zone: example.com},
+    },
 );
 
 for my $tc (@test_cases) {
@@ -195,7 +206,13 @@ for my $tc (@test_cases) {
                 %{$tc->{cfg}{$h}},
             };
         }
-        ddclient::nic_dnsexit2_update(undef, @hosts);
+        my $l = ddclient::t::Logger->new($ddclient::_l, qr/^FATAL$/);
+        my $err = do {
+            local $ddclient::_l = $l;
+            local $@;
+            (eval { ddclient::nic_dnsexit2_update(undef, @hosts); 1; })
+                ? undef : ($@ // 'unknown error');
+        };
         my @requests = httpd()->reset();
         my @got;
         for (my $i = 0; $i < @requests; $i++) {
@@ -212,8 +229,19 @@ for my $tc (@test_cases) {
             });
         }
         @got = sort_reqs(@got);
-        my @want = sort_reqs(@{$tc->{want}});
+        my @want = sort_reqs(@{$tc->{want} // []});
         is_deeply(\@got, \@want, 'request objects match');
+        subtest('expected (or lack of) error' => sub {
+            if (is(defined($err), defined($tc->{want_fatal}), 'error existence') && defined($err)) {
+                my @got = @{$l->{logs}};
+                if (is(scalar(@got), 2, 'logged two events')) {
+                    is($got[0]->{label}, 'FATAL', 'first logged event is a FATAL message');
+                    like($got[0]->{msg}, $tc->{want_fatal}, 'first logged event message matches');
+                    is($got[1], 'aborted', 'second logged event is an "aborted" event');
+                    isa_ok($err, qw(ddclient::t::LoggerAbort));
+                }
+            }
+        });
     });
 }
 
