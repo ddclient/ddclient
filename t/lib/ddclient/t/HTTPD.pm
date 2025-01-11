@@ -133,9 +133,8 @@ our $other_ca_file = "$certdir/other-ca-cert.pem";
 my %daemons;
 
 sub httpd {
-    my ($ipv, $ssl) = @_;
-    $ipv //= '';
-    $ssl = !!$ssl;
+    my $ipv = shift // '';
+    my $ssl = !!shift;
     return undef if !$httpd_supported;
     return undef if $ipv eq '6' && !$httpd_ipv6_supported;
     return undef if $ssl && !$httpd_ssl_supported;
@@ -153,6 +152,7 @@ sub httpd {
                 (SSL_cert_file => "$certdir/dummy-server-cert.pem",
                  SSL_key_file => "$certdir/dummy-server-key.pem") x $ssl,
             },
+            @_,
         );
     }
     return $daemons{$ipv}{$ssl};
