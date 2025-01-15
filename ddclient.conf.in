@@ -285,6 +285,7 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ## OVH DynHost (https://ovh.com)
 ##
 # protocol=ovh,
+# use=web
 # login=example.com-dynhostuser,
 # password=your_password
 # test.example.com
