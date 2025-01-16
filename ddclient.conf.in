@@ -53,6 +53,10 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ## To obtain an IP address from FW status page (using fw-login, fw-password)
 #use=fw, fw=192.168.1.254/status.htm, fw-skip='IP Address' # found after IP Address
 #
+## To obtain an IP address via UPnP from router
+## Requires miniupnpc to be installed on the system.
+#use=cmd, cmd=external-ip
+#
 ## To obtain an IP address from Web status page (using the proxy if defined)
 ## by default, checkip.dyndns.org is used if you use the dyndns protocol.
 ## Using use=web is enough to get it working.
