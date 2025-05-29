@@ -5860,7 +5860,7 @@ Configuration variables applicable to the 'cloudflare' protocol are:
   protocol=cloudflare          ##
   server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
   login=service-login          ## login email when using a global API key
-  password=service-password    ## Global API key, or an API token. If using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
+  password=service-password    ## Global API key, or an API token. If using an API token, it must have the permissions "Zone - DNS - Edit".
   fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
