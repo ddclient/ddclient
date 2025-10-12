@@ -21,6 +21,7 @@ use File::Path qw(make_path);
 use File::Temp;
 use Getopt::Long;
 use Sys::Hostname;
+use JSON;
 
 # Declare the ddclient version number.
 #
@@ -1130,6 +1131,18 @@ our %protocols = (
             'login' => undef,
             'min-interval' => setv(T_DELAY,  0, interval('1m'),                 0),
             'server'       => setv(T_FQDNP,  0, 'dns.hetzner.com/api/v1',       undef),
+            'ttl'          => setv(T_NUMBER, 0, 60,                             60),
+            'zone'         => setv(T_FQDN,   1, undef,                          undef),
+        },
+    ),
+    'hetznercloud' => ddclient::Protocol->new(
+        'update'     => \&nic_hetznercloud_update,
+        'examples'   => \&nic_hetznercloud_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login' => undef,
+            'min-interval' => setv(T_DELAY,  0, interval('1m'),                 0),
+            'server'       => setv(T_FQDNP,  0, 'api.hetzner.cloud/v1',         undef),
             'ttl'          => setv(T_NUMBER, 0, 60,                             60),
             'zone'         => setv(T_FQDN,   1, undef,                          undef),
         },
@@ -6119,6 +6132,155 @@ sub nic_hetzner_update {
                 $recap{$domain}{"status-ipv$ipv"} = 'good';
             } else {
                 failed("invalid json or result");
+            }
+        }
+    }
+}
+
+######################################################################
+## nic_hetznercloud_examples
+##
+## written by Marcel Leismann
+##
+######################################################################
+sub nic_hetznercloud_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'hetznercloud'
+
+The 'hetznercloud' protocol is used by the Cloud offered by www.hetzner.com.
+
+Configuration variables applicable to the 'hetznercloud' protocol are:
+  protocol=hetznercloud        ##
+  server=fqdn.of.service       ## can be omitted, defaults to api.hetzner.cloud/v1
+  zone=dns.zone                ## the DNS zone to update
+  password=service-password    ## API token
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  protocol=hetznercloud                                        \\
+  zone=dns.zone                                                \\
+  password=my-hetzner-api-token                                \\
+  my-toplevel-domain.com,my-other-domain.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_hetznercloud_update
+######################################################################
+sub nic_hetznercloud_update {
+    my $self = shift;
+    for my $domain (@_) {
+        local $_l = pushlogctx($domain);
+
+        my $headers = "Authorization: Bearer " . opt('password', $domain) . "\n";
+        $headers .= "Content-Type: application/json";
+
+        my $zone = opt('zone', $domain);
+        (my $hostname = $domain) =~ s/\Q.$zone\E$//;
+        my $ipv4 = delete $config{$domain}{'wantipv4'};
+        my $ipv6 = delete $config{$domain}{'wantipv6'};
+
+        # IPv4 and IPv6 handling are similar enough to do in a loop...
+        for my $ip ($ipv4, $ipv6) {
+            next if (!$ip);
+            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+
+            info("Updating record $hostname/$type for zone $zone");
+            # info("setting IPv$ipv address to $ip");
+            $recap{$domain}{"status-ipv$ipv"} = 'failed';
+
+            # Get DNS 'A' or 'AAAA' record ID
+            my $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets/$hostname/$type";
+            my $reply = geturl(proxy => opt('proxy'),
+                            url => $url,
+                            headers => $headers
+                           );
+            next if !header_ok($reply);
+            # Strip header
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval {decode_json(${^MATCH})};
+            unless ($response && $response->{rrset}) {
+                failed("invalid json or result");
+                next;
+            }
+            
+            # Set domain
+            my $http_method="POST";
+            my $data="";
+
+            if ($response)
+            {
+                debug("DNS '$type' record ID: $response->{rrset}->{id}");
+                $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets/$hostname/$type/actions/set_records";
+                $http_method = "POST";
+                $data = "{\"records\": [ { \"value\": \"$ip\", \"comment\": \"Updated by ddclient\" } ] }";
+            } else {
+                debug("creating DNS '$type'");
+                $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets";
+                $http_method = "POST";
+                $data = "{\"name\":\"$hostname\",\"type\":\"$type\",\"ttl\":" . opt('ttl', $domain) . ",\"records\":[{\"value\":\"$ip\",\"comment\":\"Created by ddclient\"}],\"labels\":{\"environment\":\"prod\",\"example.com/my\":\"label\"}}";
+            }
+
+            $reply = geturl(proxy => opt('proxy'),
+                            url => $url,
+                            headers => $headers,
+                            method => $http_method,
+                            data => $data
+                           );
+            next if !header_ok($reply);
+            # Strip header
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            $response = eval {decode_json(${^MATCH})};
+            unless ($response && $response->{action}) {
+                failed("invalid json or result");
+                next;
+            }
+
+            my $action_id = $response->{action}->{id};
+
+            # Get action status
+            $url = "https://" . opt('server', $domain) . "/actions/$action_id";
+            my $max_tries = 5;
+
+            for (my $try_number = 1; $try_number <= $max_tries; $try_number++) {
+                info("Checking update status (try: $try_number/$max_tries)");
+                
+                $reply = geturl(proxy => opt('proxy'),
+                                url => $url,
+                                headers => $headers,
+                               );
+                next if !header_ok($reply);
+
+                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+                $response = eval {decode_json(${^MATCH})};
+
+                if ($response && $response->{action}) {
+                    my $action_status = $response->{action}->{status};
+
+                    if($action_status eq "success") {
+                        success("IPv$ipv address set to $ip");
+                        $recap{$domain}{"ipv$ipv"} = $ip;
+                        $recap{$domain}{'mtime'} = $now;
+                        $recap{$domain}{"status-ipv$ipv"} = 'good';
+                        last;
+                    }
+                    elsif($action_status eq "error") {
+                        failed("Action has status 'error': %s", $response->{error}->{message});
+                        next;
+                    }
+                } else {
+                    failed("invalid json or result");
+                    next;
+                }
+
+                if($try_number == $max_tries) {
+                    failed("Timeout while checking status action %s", $action_id);
+                    next;
+                }
+
+                sleep 10;
             }
         }
     }
