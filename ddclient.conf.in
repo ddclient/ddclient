@@ -419,3 +419,11 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # login=my-inwx-DynDNS-account-username     \
 # password=my-inwx-DynDNS-account-password  \
 # myhost.example.org
+
+##
+## Hetzner Cloud
+##
+# protocol=hetznercloud                     \
+# zone=dns.zone                             \
+# password=hetzner-cloud-api-key            \
+# myhost.example.org
