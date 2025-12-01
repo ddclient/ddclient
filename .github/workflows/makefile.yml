@@ -16,6 +16,8 @@ jobs:
 
     - name: Run autogen
       run: ./autogen
+    - name: Run autogen
+      run: ./autogen
     - name: Install build dependencies
       run: sudo apt-get update && sudo apt-get install -y automake make
     - name: configure
