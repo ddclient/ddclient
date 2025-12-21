@@ -924,7 +924,7 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'login'        => setv(T_LOGIN,  0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, interval('5m'),                 0),
-            'server'       => setv(T_FQDNP,  0, 'api.cloudflare.com/client/v4', undef),
+            'server'       => setv(T_FQDNP,  0, 'https://api.cloudflare.com/client/v4', undef),
             'zone'         => setv(T_FQDN,   1, undef,                          undef),
         },
     ),
