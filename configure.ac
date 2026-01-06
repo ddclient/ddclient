@@ -59,7 +59,7 @@ AS_CASE([${with_curl}],
     AC_MSG_CHECKING([for curl])
     CURL=${with_curl}
     AC_MSG_RESULT([${CURL}])
-  ]);
+  ])
 AS_IF([test -z "${CURL}"], [AC_MSG_ERROR([curl not found])])
 
 AX_WITH_PROG([PERL], perl)
