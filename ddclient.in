@@ -7514,7 +7514,7 @@ sub nic_digitalocean_update_one {
     }
 
     $recap{$h}{"status-$ipv"} = 'good';
-    $recap{$h}{"ip-$ipv"} = $ip;
+    $recap{$h}{$ipv} = $ip;
     $recap{$h}{"mtime"} = $now;
 }
 
