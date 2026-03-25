@@ -6215,12 +6215,12 @@ sub nic_hetznercloud_update {
                 debug("DNS '$type' record ID: $response->{rrset}->{id}");
                 $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets/$hostname/$type/actions/set_records";
                 $http_method = "POST";
-                $data = "{\"records\": [ { \"value\": \"$ip\", \"comment\": \"Updated by ddclient\" } ] }";
+                $data = "{\"records\": [{\"value\": \"$ip\"}]}";
             } else {
                 debug("creating DNS '$type'");
                 $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets";
                 $http_method = "POST";
-                $data = "{\"name\":\"$hostname\",\"type\":\"$type\",\"ttl\":" . opt('ttl', $domain) . ",\"records\":[{\"value\":\"$ip\",\"comment\":\"Created by ddclient\"}]}";
+                $data = "{\"name\":\"$hostname\",\"type\":\"$type\",\"ttl\":" . opt('ttl', $domain) . ",\"records\":[{\"value\":\"$ip\"}]}";
             }
 
             $reply = geturl(proxy => opt('proxy'),
