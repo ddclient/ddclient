@@ -6220,7 +6220,7 @@ sub nic_hetznercloud_update {
                 debug("creating DNS '$type'");
                 $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets";
                 $http_method = "POST";
-                $data = "{\"name\":\"$hostname\",\"type\":\"$type\",\"ttl\":" . opt('ttl', $domain) . ",\"records\":[{\"value\":\"$ip\",\"comment\":\"Created by ddclient\"}],\"labels\":{\"environment\":\"prod\",\"example.com/my\":\"label\"}}";
+                $data = "{\"name\":\"$hostname\",\"type\":\"$type\",\"ttl\":" . opt('ttl', $domain) . ",\"records\":[{\"value\":\"$ip\",\"comment\":\"Created by ddclient\"}]}";
             }
 
             $reply = geturl(proxy => opt('proxy'),
