@@ -21,7 +21,6 @@ use File::Path qw(make_path);
 use File::Temp;
 use Getopt::Long;
 use Sys::Hostname;
-use JSON;
 
 # Declare the ddclient version number.
 #
@@ -2136,7 +2135,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             nfsn njalla porkbun yandex));
+                             hetznercloud nfsn njalla porkbun yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
