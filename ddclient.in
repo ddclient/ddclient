@@ -6276,7 +6276,19 @@ sub nic_hetznercloud_update {
                         last;
                     }
                     elsif($action_status eq "error") {
-                        failed("Action has status 'error': %s", $response->{error}->{message});
+                        my $error_message = 'unknown error';
+
+                        if (ref $response->{action} eq 'HASH' && defined $response->{action}->{message}) {
+                            $error_message = $response->{action}->{message};
+                        }
+                        elsif (ref $response->{action}->{error} eq 'HASH' && defined $response->{action}->{error}->{message}) {
+                            $error_message = $response->{action}->{error}->{message};
+                        }
+                        elsif (ref $response->{error} eq 'HASH' && defined $response->{error}->{message}) {
+                            $error_message = $response->{error}->{message};
+                        }
+
+                        failed("Action has status 'error': %s", $error_message);
                         next;
                     }
                 } else {
