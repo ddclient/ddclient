@@ -6196,13 +6196,23 @@ sub nic_hetznercloud_update {
                             url => $url,
                             headers => $headers
                            );
-            next if !header_ok($reply);
-            # Strip header
-            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-            my $response = eval {decode_json(${^MATCH})};
-            unless ($response && $response->{rrset}) {
-                failed("invalid json or result");
-                next;
+            my $response;
+            my $status;
+            if ($reply =~ m{^HTTP/\S+\s+(\d+)}m) {
+                $status = $1;
+            }
+            if (defined $status && $status == 404) {
+                debug("RRset $hostname/$type not found (HTTP 404); will create it");
+                $response = undef;
+            } else {
+                next if !header_ok($reply);
+                # Strip header
+                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+                $response = eval {decode_json(${^MATCH})};
+                if (!$response || !$response->{rrset}) {
+                    debug("No existing rrset found in response; will create it");
+                    $response = undef;
+                }
             }
             
             # Set domain
