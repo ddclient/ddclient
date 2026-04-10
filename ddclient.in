@@ -1493,6 +1493,14 @@ sub main {
         print_info() if opt('debug') && opt('verbose');
         $daemon = opt('daemon');
 
+        # Add proportional jitter to spread API calls across clients and reduce
+        # synchronized traffic spikes at DNS providers. Jitter is [0, 20%) of
+        # the daemon interval, applied once per cycle before the update check.
+        if ($daemon) {
+            my $jitter = int(rand($daemon * 0.2));
+            sleep($jitter) if $jitter > 0;
+        }
+
         update_nics();
 
         if ($daemon) {
