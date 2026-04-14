@@ -72,6 +72,9 @@ for my $tc (@test_cases) {
     SKIP: {
         skip("IPv6 not supported on this system", 1) if $tc->{ipv6} && !$ipv6_supported;
         skip("HTTP::Daemon too old for IPv6 support", 1) if $tc->{ipv6} && !$httpd_ipv6_supported;
+        skip("Test::Fake::HTTPD cannot handle some systems", 1)
+            if ($tc->{cfg}{usev4} && !$tc->{cfg}{'fw-ssl-validate'})
+                && ($tc->{cfg}{usev4} eq 'cisco-asa' || $tc->{cfg}{usev4} eq 'fwv4');
         # $ddclient::globals{'ssl_ca_file'} is intentionally NOT set to $ca_file so that we can
         # test what happens when certificate validation fails.  However, if curl can't find any CA
         # certificates (which may be the case in some minimal test environments, such as Docker
