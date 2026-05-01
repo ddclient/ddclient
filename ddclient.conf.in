@@ -421,9 +421,9 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.org
 
 ##
-## Hetzner Cloud
+## Hetzner
 ##
-# protocol=hetznercloud                     \
+# protocol=hetzner                          \
 # zone=dns.zone                             \
 # password=hetzner-cloud-api-key            \
 # myhost.example.org

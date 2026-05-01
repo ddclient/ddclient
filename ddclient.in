@@ -1129,18 +1129,6 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'min-interval' => setv(T_DELAY,  0, interval('1m'),                 0),
-            'server'       => setv(T_FQDNP,  0, 'dns.hetzner.com/api/v1',       undef),
-            'ttl'          => setv(T_NUMBER, 0, 60,                             60),
-            'zone'         => setv(T_FQDN,   1, undef,                          undef),
-        },
-    ),
-    'hetznercloud' => ddclient::Protocol->new(
-        'update'     => \&nic_hetznercloud_update,
-        'examples'   => \&nic_hetznercloud_examples,
-        'cfgvars' => {
-            %{$cfgvars{'protocol-common-defaults'}},
-            'login' => undef,
-            'min-interval' => setv(T_DELAY,  0, interval('1m'),                 0),
             'server'       => setv(T_FQDNP,  0, 'api.hetzner.cloud/v1',         undef),
             'ttl'          => setv(T_NUMBER, 0, 60,                             60),
             'zone'         => setv(T_FQDN,   1, undef,                          undef),
@@ -2135,7 +2123,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             hetznercloud nfsn njalla porkbun yandex));
+                             nfsn njalla porkbun yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -6009,7 +5997,7 @@ sub nic_cloudflare_update {
 ######################################################################
 ## nic_hetzner_examples
 ##
-## written by Joerg Werner
+## written by Marcel Leismann
 ##
 ######################################################################
 sub nic_hetzner_examples {
@@ -6017,18 +6005,19 @@ sub nic_hetzner_examples {
     return <<"EoEXAMPLE";
 o 'hetzner'
 
-The 'hetzner' protocol is used by DNS service offered by www.hetzner.com.
+The 'hetzner' protocol is used by the Cloud offered by www.hetzner.com.
 
 Configuration variables applicable to the 'hetzner' protocol are:
   protocol=hetzner             ##
-  server=fqdn.of.service       ## can be omitted, defaults to dns.hetzner.com/api/v1
+  server=fqdn.of.service       ## can be omitted, defaults to api.hetzner.cloud/v1
+  zone=dns.zone                ## the DNS zone to update
   password=service-password    ## API token
   fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
-  protocol=hetzner,                                            \\
-  zone=dns.zone,                                               \\
-  password=my-hetzner-api-token                                \\
+  protocol=hetzner                                             \\
+  zone=dns.zone                                                \\
+  password=my-hetzner-cloud-api-token                          \\
   my-toplevel-domain.com,my-other-domain.com
 EoEXAMPLE
 }
@@ -6037,137 +6026,6 @@ EoEXAMPLE
 ## nic_hetzner_update
 ######################################################################
 sub nic_hetzner_update {
-    my $self = shift;
-    for my $domain (@_) {
-        local $_l = pushlogctx($domain);
-        my $headers = "Auth-API-Token: " . opt('password', $domain) . "\n";
-        $headers .= "Content-Type: application/json";
-
-        my $zone = opt('zone', $domain);
-        (my $hostname = $domain) =~ s/\Q.$zone\E$//;
-        my $ipv4 = delete $config{$domain}{'wantipv4'};
-        my $ipv6 = delete $config{$domain}{'wantipv6'};
-
-        info("getting Hetzner Zone ID");
-
-        # Get zone ID
-        my $url = "https://" . opt('server', $domain) . "/zones?name=$zone";
-
-        my $reply = geturl(proxy => opt('proxy'),
-                           url => $url,
-                           headers => $headers
-                          );
-        next if !header_ok($reply);
-        # Strip header
-        $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-        my $response = eval {decode_json(${^MATCH})};
-        unless ($response && $response->{zones}) {
-            failed("invalid json or result");
-            next;
-        }
-
-        # Pull the ID out of the json, messy
-        my ($zone_id) = map {$_->{name} eq $zone ? $_->{id} : ()} @{$response->{zones}};
-        unless ($zone_id) {
-            failed("no zone ID found for zone " . opt('zone', $domain));
-            next;
-        }
-        info("Zone ID is %s", $zone_id);
-
-        # IPv4 and IPv6 handling are similar enough to do in a loop...
-        for my $ip ($ipv4, $ipv6) {
-            next if (!$ip);
-            my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
-            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
-
-            info("setting IPv$ipv address to $ip");
-            $recap{$domain}{"status-ipv$ipv"} = 'failed';
-
-            # Get DNS 'A' or 'AAAA' record ID
-            $url = "https://" . opt('server', $domain) . "/records?zone_id=$zone_id";
-            $reply = geturl(proxy => opt('proxy'),
-                            url => $url,
-                            headers => $headers
-                           );
-            next if !header_ok($reply);
-            # Strip header
-            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-            $response = eval {decode_json(${^MATCH})};
-            unless ($response && $response->{records}) {
-                failed("invalid json or result");
-                next;
-            }
-            # Pull the ID out of the json, messy
-            my ($dns_rec_id) = map { ($_->{name} eq $hostname && $_->{type} eq $type) ? $_->{id} : ()} @{$response->{records}};
-
-            # Set domain
-            my $http_method="";
-            if ($dns_rec_id)
-            {
-                debug("DNS '$type' record ID: $dns_rec_id");
-                $url = "https://" . opt('server', $domain) . "/records/$dns_rec_id";
-                $http_method = "PUT";
-            } else {
-                debug("creating DNS '$type'");
-                $url = "https://" . opt('server', $domain) . "/records";
-                $http_method = "POST";
-            }
-            my $data = "{\"zone_id\":\"$zone_id\", \"name\": \"$hostname\", \"value\": \"$ip\", \"type\": \"$type\", \"ttl\": " . opt('ttl', $domain) . "}";
-
-            $reply = geturl(proxy => opt('proxy'),
-                            url => $url,
-                            headers => $headers,
-                            method => $http_method,
-                            data => $data
-                           );
-            next if !header_ok($reply);
-            # Strip header
-            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-            $response = eval {decode_json(${^MATCH})};
-            if ($response && $response->{record}) {
-                success("IPv$ipv address set to $ip");
-                $recap{$domain}{"ipv$ipv"} = $ip;
-                $recap{$domain}{'mtime'} = $now;
-                $recap{$domain}{"status-ipv$ipv"} = 'good';
-            } else {
-                failed("invalid json or result");
-            }
-        }
-    }
-}
-
-######################################################################
-## nic_hetznercloud_examples
-##
-## written by Marcel Leismann
-##
-######################################################################
-sub nic_hetznercloud_examples {
-    my $self = shift;
-    return <<"EoEXAMPLE";
-o 'hetznercloud'
-
-The 'hetznercloud' protocol is used by the Cloud offered by www.hetzner.com.
-
-Configuration variables applicable to the 'hetznercloud' protocol are:
-  protocol=hetznercloud        ##
-  server=fqdn.of.service       ## can be omitted, defaults to api.hetzner.cloud/v1
-  zone=dns.zone                ## the DNS zone to update
-  password=service-password    ## API token
-  fully.qualified.host         ## the host registered with the service.
-
-Example ${program}.conf file entries:
-  protocol=hetznercloud                                        \\
-  zone=dns.zone                                                \\
-  password=my-hetzner-api-token                                \\
-  my-toplevel-domain.com,my-other-domain.com
-EoEXAMPLE
-}
-
-######################################################################
-## nic_hetznercloud_update
-######################################################################
-sub nic_hetznercloud_update {
     my $self = shift;
     for my $domain (@_) {
         local $_l = pushlogctx($domain);
