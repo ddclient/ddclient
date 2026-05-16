@@ -7,8 +7,10 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### Bug fixes
 
-  * `gandi`: Fix %recap tag for ip
+  * `gandi`: Fix %recap tag for ip.
     [#841](https://github.com/ddclient/ddclient/pull/841)
+  * `digitalocean`: Save IPs to correct variables.
+    [#870](https://github.com/ddclient/ddclient/pull/870)
 
 ## 2025-01-19 v4.0.0
 
