@@ -7201,7 +7201,7 @@ sub nic_gandi_update {
             }
             if ($response->{'rrset_values'}->[0] eq $ip && (!defined(opt('ttl', $h)) ||
                 $response->{'rrset_ttl'} eq opt('ttl', $h))) {
-                $recap{$h}{'ip'} = $ip;
+                $recap{$h}{$ipv} = $ip;
                 $recap{$h}{'mtime'} = $now;
                 $recap{$h}{"status-$ipv"} = "good";
                 success("skipped: address was already set to $ip");
