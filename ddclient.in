@@ -1248,8 +1248,8 @@ our %protocols = (
         'examples'   => \&nic_simplycom_examples,
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 'dyndns.simply.com', undef),
-            'zone'   => setv(T_FQDN,  0, undef,              undef),
+            'server' => setv(T_FQDNP, 0, 'https://dyndns.simply.com', undef),
+            'zone'   => setv(T_FQDN,  0, undef,                       undef),
         },
     ),
     'sitelutions' => ddclient::LegacyProtocol->new(
@@ -6819,7 +6819,7 @@ sub nic_simplycom_update {
             next if !$ip;
             info("setting IPv$v address to $ip");
 
-            my $url = 'https://' . opt('server', $h) . '/nic/update'
+            my $url = opt('server', $h) . '/nic/update'
                 . '?hostname=' . $h
                 . '&myip=' . $ip;
             $url .= '&domain=' . opt('zone', $h) if opt('zone', $h);
@@ -6830,25 +6830,26 @@ sub nic_simplycom_update {
                 login => opt('login', $h),
                 password => opt('password', $h),
             );
-            if (!defined($reply) || !$reply) {
-                failed("could not connect to " . opt('server', $h));
+            if (!header_ok($reply)) {
                 $recap{$h}{"status-ipv$v"} = 'failed';
                 next;
             }
 
-            my ($returned) = grep { /good/ || /nochg/ } split(/\n/, $reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my ($returned) = grep { /^(?:good|nochg)\b/ } split(/\n/, $body);
             if ($returned) {
                 $recap{$h}{"ipv$v"} = $ip;
                 $recap{$h}{'mtime'} = $now;
                 $recap{$h}{"status-ipv$v"} = 'good';
-                if ($returned =~ /good/) {
+                if ($returned =~ /^good\b/) {
                     success("IPv$v address set to $ip");
                 } else {
                     success("skipped: IPv$v address was already set to $ip");
                 }
             } else {
                 $recap{$h}{"status-ipv$v"} = 'failed';
-                failed("server said: $reply");
+                $body =~ s/\s+\z//;
+                failed("server said: $body");
             }
         }
     }
