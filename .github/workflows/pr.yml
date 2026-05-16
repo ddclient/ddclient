@@ -14,7 +14,7 @@ jobs:
     name: Linear History
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: No new merge commits
@@ -34,7 +34,7 @@ jobs:
     name: No --autosquash commits
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: 'No commits with messages starting with "fixup!", "squash!", or "amend!"'
