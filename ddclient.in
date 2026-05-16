@@ -6836,8 +6836,7 @@ sub nic_simplycom_update {
                 next;
             }
 
-            my @reply = split /\n/, $reply;
-            my $returned = List::Util::first { /good/ || /nochg/ } @reply;
+            my ($returned) = grep { /good/ || /nochg/ } split(/\n/, $reply);
             if ($returned) {
                 $recap{$h}{"ipv$v"} = $ip;
                 $recap{$h}{'mtime'} = $now;
