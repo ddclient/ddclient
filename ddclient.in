@@ -6893,6 +6893,8 @@ sub nic_porkbun_update {
             warning("There are multiple applicable records. Only first record is used. Overwrite all with the same content.")
                 if @$records > 1;
             if ($records->[0]{'content'} eq $ip) {
+                $recap{$h}{"ipv$ipv"} = $ip;
+                $recap{$h}{'mtime'} = $now;
                 $recap{$h}{"status-ipv$ipv"} = "good";
                 success("skipped: IPv$ipv address was already set to $ip");
                 next;
@@ -6915,6 +6917,8 @@ sub nic_porkbun_update {
                 }),
             );
             next if !header_ok($reply);
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
             $recap{$h}{"status-ipv$ipv"} = "good";
             success("IPv$ipv address set to $ip");
         }

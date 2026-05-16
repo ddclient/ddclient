@@ -11,6 +11,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#841](https://github.com/ddclient/ddclient/pull/841)
   * `digitalocean`: Save IPs to correct variables.
     [#870](https://github.com/ddclient/ddclient/pull/870)
+  * `porkbun`: Add missing recap for 'ipv4/ipv6' and 'mtime'.
+    [#885](https://github.com/ddclient/ddclient/pull/885)
 
 ## 2025-01-19 v4.0.0
 
