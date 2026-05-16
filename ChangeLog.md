@@ -5,6 +5,11 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-alpha (unreleased work-in-progress)
 
+### Bug fixes
+
+  * `gandi`: Fix %recap tag for ip
+    [#841](https://github.com/ddclient/ddclient/pull/841)
+
 ## 2025-01-19 v4.0.0
 
 ### Breaking changes
