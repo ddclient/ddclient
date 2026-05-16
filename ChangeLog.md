@@ -15,6 +15,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### Provider updates
 
+  * Added `simply.com` (https://www.simply.com).
+    [#850](https://github.com/ddclient/ddclient/pull/850)
   * `hetzner`: Update API endpoint and implementation to align with provider recommendation.
     [852](https://github.com/ddclient/ddclient/pull/852)
     [876](https://github.com/ddclient/ddclient/pull/876)

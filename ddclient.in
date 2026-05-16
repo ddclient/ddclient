@@ -1243,6 +1243,15 @@ our %protocols = (
             'server'         => setv(T_FQDNP,  0, 'api.porkbun.com', undef),
         },
     ),
+    'simply.com' => ddclient::Protocol->new(
+        'update'     => \&nic_simplycom_update,
+        'examples'   => \&nic_simplycom_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'dyndns.simply.com', undef),
+            'zone'   => setv(T_FQDN,  0, undef,              undef),
+        },
+    ),
     'sitelutions' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
@@ -6765,6 +6774,84 @@ sub nic_dnsmadeeasy_update {
         $recap{$h}{'mtime'} = $now;
         $recap{$h}{'status'} = 'good';
         success("IP address set to $ip");
+    }
+}
+
+######################################################################
+## nic_simplycom_examples
+######################################################################
+sub nic_simplycom_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+
+o 'simply.com'
+
+The 'simply.com' protocol is used by DNS services offered by www.simply.com.
+
+API information and user instructions available at: https://www.simply.com/docs/api/
+
+Configuration variables applicable to the 'simply.com' protocol are:
+  protocol=simply.com
+  login=S124543                ## The Simply.com account that the domain belongs to
+  password=apikey              ## The API key for your Simply.com account
+  zone=example.com             ## The domain you want to update the record on, optional
+  fully.qualified.host         ## the hostname you want to update
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=simply.com,      \\
+  login=S123456,            \\
+  password=APIKEY,          \\
+  zone=example.com,         \\
+  test.example.com
+
+EoEXAMPLE
+}
+
+sub nic_simplycom_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        for my $entry ([$ipv4, '4'], [$ipv6, '6']) {
+            my ($ip, $v) = @$entry;
+            next if !$ip;
+            info("setting IPv$v address to $ip");
+
+            my $url = 'https://' . opt('server', $h) . '/nic/update'
+                . '?hostname=' . $h
+                . '&myip=' . $ip;
+            $url .= '&domain=' . opt('zone', $h) if opt('zone', $h);
+
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                login => opt('login', $h),
+                password => opt('password', $h),
+            );
+            if (!defined($reply) || !$reply) {
+                failed("could not connect to " . opt('server', $h));
+                $recap{$h}{"status-ipv$v"} = 'failed';
+                next;
+            }
+
+            my @reply = split /\n/, $reply;
+            my $returned = List::Util::first { /good/ || /nochg/ } @reply;
+            if ($returned) {
+                $recap{$h}{"ipv$v"} = $ip;
+                $recap{$h}{'mtime'} = $now;
+                $recap{$h}{"status-ipv$v"} = 'good';
+                if ($returned =~ /good/) {
+                    success("IPv$v address set to $ip");
+                } else {
+                    success("skipped: IPv$v address was already set to $ip");
+                }
+            } else {
+                $recap{$h}{"status-ipv$v"} = 'failed';
+                failed("server said: $reply");
+            }
+        }
     }
 }
 

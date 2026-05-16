@@ -303,6 +303,15 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # test.example.com
 
 ##
+## Simply.com (https://simply.com)
+##
+# protocol=simply.com,
+# login=<simplyaccount>,
+# password=<apikey>,
+# zone=example.com,
+# test.example.com
+
+##
 ## Porkbun (https://porkbun.com/)
 ##
 # protocol=porkbun
