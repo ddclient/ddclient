@@ -1,0 +1,212 @@
+name: Package DEB
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-debian:
+    name: Build DEB (Debian ${{ matrix.debian_version }})
+    runs-on: ubuntu-latest
+    container:
+      image: debian:${{ matrix.debian_version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        debian_version:
+          - "12"
+          - "13"
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+              automake \
+              build-essential \
+              curl \
+              debhelper \
+              dpkg-dev \
+              libhttp-daemon-perl \
+              libhttp-daemon-ssl-perl \
+              libhttp-message-perl \
+              libplack-perl \
+              libtest-mockmodule-perl \
+              libtest-tcp-perl \
+              libtest-warnings-perl \
+              liburi-perl \
+              make \
+              perl \
+              ;
+
+      - name: Build distribution tarball from source
+        run: |
+          ./autogen
+          ./configure
+          make dist
+
+      - name: Build DEBs
+        id: build
+        run: |
+          TARBALL=$(ls ddclient-*.tar.gz)
+          UPSTREAM="${TARBALL#ddclient-}"
+          UPSTREAM="${UPSTREAM%.tar.gz}"
+
+          # Translate semver suffix to Debian version.
+          # '-' suffix (pre-release): replace '-' with '~' (tilde sorts before in Debian)
+          # '+' suffix (post-release): keep '+' as-is (sorts after in Debian)
+          # No suffix is a final release
+          # Get the distro codename from the container (e.g. bookworm, jammy)
+          CODENAME=$(. /etc/os-release && echo "${VERSION_CODENAME}")
+
+          # Translate semver suffix to Debian version and append ~CODENAMEn
+          # so each distro produces a unique filename that sorts correctly.
+          case "$UPSTREAM" in
+            *-*)
+              BASE="${UPSTREAM%%-*}"
+              LABEL="${UPSTREAM#*-}"
+              DEB_VERSION="${BASE}~${LABEL}-1+${CODENAME}1" ;;
+            *)
+              DEB_VERSION="${UPSTREAM}-1+${CODENAME}1" ;;
+          esac
+
+          SRCDIR="ddclient-${UPSTREAM}"
+          tar xzf "$TARBALL"
+          cp -r packaging/debian "${SRCDIR}/debian"
+
+          # Generate debian/changelog with the correct version and codename
+          printf 'ddclient (%s) %s; urgency=low\n\n  * Automated build of upstream version %s.\n\n -- ddclient packaging <ddclient@ddclient.net>  %s\n' \
+              "${DEB_VERSION}" "${CODENAME}" "${UPSTREAM}" "$(date -R)" \
+              > "${SRCDIR}/debian/changelog"
+
+          cd "${SRCDIR}"
+          dpkg-buildpackage -b --no-sign
+
+          echo "upstream=${UPSTREAM}" >> "$GITHUB_OUTPUT"
+
+      - name: Collect DEBs
+        run: |
+          mkdir -p artifacts
+          find . -maxdepth 1 -name '*.deb' -exec cp {} artifacts/ \;
+          ls -lh artifacts/
+
+      - name: Upload DEB artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ddclient-deb-${{ steps.build.outputs.upstream }}-debian${{ matrix.debian_version }}
+          path: artifacts/*.deb
+
+      - name: Attach DEBs to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*.deb
+
+  build-ubuntu:
+    name: Build DEB (Ubuntu ${{ matrix.ubuntu_version }})
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:${{ matrix.ubuntu_version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu_version:
+          - "22.04"
+          - "24.04"
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+              automake \
+              build-essential \
+              curl \
+              debhelper \
+              dpkg-dev \
+              libhttp-daemon-perl \
+              libhttp-daemon-ssl-perl \
+              libhttp-message-perl \
+              libplack-perl \
+              libtest-mockmodule-perl \
+              libtest-tcp-perl \
+              libtest-warnings-perl \
+              liburi-perl \
+              make \
+              perl \
+              ;
+
+      - name: Build distribution tarball from source
+        run: |
+          ./autogen
+          ./configure
+          make dist
+
+      - name: Build DEBs
+        id: build
+        run: |
+          TARBALL=$(ls ddclient-*.tar.gz)
+          UPSTREAM="${TARBALL#ddclient-}"
+          UPSTREAM="${UPSTREAM%.tar.gz}"
+
+          # Get the distro codename from the container (e.g. bookworm, jammy)
+          CODENAME=$(. /etc/os-release && echo "${VERSION_CODENAME}")
+
+          # Translate semver suffix to Debian version and append ~CODENAMEn
+          # so each distro produces a unique filename that sorts correctly.
+          case "$UPSTREAM" in
+            *-*)
+              BASE="${UPSTREAM%%-*}"
+              LABEL="${UPSTREAM#*-}"
+              DEB_VERSION="${BASE}~${LABEL}-1+${CODENAME}1" ;;
+            *)
+              DEB_VERSION="${UPSTREAM}-1+${CODENAME}1" ;;
+          esac
+
+          SRCDIR="ddclient-${UPSTREAM}"
+          tar xzf "$TARBALL"
+          cp -r packaging/debian "${SRCDIR}/debian"
+
+          # Generate debian/changelog with the correct version and codename
+          printf 'ddclient (%s) %s; urgency=low\n\n  * Automated build of upstream version %s.\n\n -- ddclient packaging <ddclient@ddclient.net>  %s\n' \
+              "${DEB_VERSION}" "${CODENAME}" "${UPSTREAM}" "$(date -R)" \
+              > "${SRCDIR}/debian/changelog"
+
+          cd "${SRCDIR}"
+          dpkg-buildpackage -b --no-sign
+
+          echo "upstream=${UPSTREAM}" >> "$GITHUB_OUTPUT"
+
+      - name: Collect DEBs
+        run: |
+          mkdir -p artifacts
+          find . -maxdepth 1 -name '*.deb' -exec cp {} artifacts/ \;
+          ls -lh artifacts/
+
+      - name: Upload DEB artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ddclient-deb-${{ steps.build.outputs.upstream }}-ubuntu${{ matrix.ubuntu_version }}
+          path: artifacts/*.deb
+
+      - name: Attach DEBs to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*.deb
