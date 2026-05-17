@@ -5,6 +5,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-alpha (unreleased work-in-progress)
 
+## 2026-05-16 v4.0.1-rc.1
+
 ### Provider updates
 
   * `hetzner`: Update API endpoint and implementation to align with provider recommendation.

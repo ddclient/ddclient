@@ -78,7 +78,7 @@ use Sys::Hostname;
 #
 # For consistency and to match user expectations, the release part of the version is always three
 # components: MAJOR.MINOR.PATCH.
-use version 0.77; our $VERSION = version->declare('v4.0.1.0_0');
+use version 0.77; our $VERSION = version->declare('v4.0.1.0_901');
 
 sub parse_version {
     my ($v) = @_;
@@ -6072,7 +6072,7 @@ sub nic_hetzner_update {
                     $response = undef;
                 }
             }
-            
+
             # Set domain
             my $http_method="POST";
             my $data="";
