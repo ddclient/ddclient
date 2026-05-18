@@ -200,6 +200,7 @@ my $result;
 my $saved_recap;
 my %saved_opt;
 my $daemon;
+my $jitter;
 # Control how many times warning message logged for invalid IP addresses
 my (%warned_ipv4, %warned_ipv6);
 
@@ -704,6 +705,9 @@ sub setv {
 our %cfgvars = (
     'global-defaults' => {
         'daemon'              => setv(T_DELAY, 0, $daemon_default,      interval('60s')),
+        'jitter'              => setv(T_DELAY, 0, sub {
+            opt('daemon') ? int(opt('daemon') * 0.2) : undef
+        }, undef),
         'foreground'          => setv(T_BOOL,  0, 0,                    undef),
         'file'                => setv(T_FILE,  0, "$etc/$program.conf", undef),
         'cache'               => setv(T_FILE,  0, "$cachedir/$program.cache", undef),
@@ -1371,6 +1375,7 @@ my @opt = (
     "usage: ${program} [options]",
     "options are:",
     ["daemon",            "=s", "--daemon=<delay>       : run as a daemon, specify <delay> as an interval"],
+    ["jitter",            "=s", "--jitter=<jitter>      : add random jitter up to <jitter> to the daemon interval, specify <jitter> as an interval"],
     ["foreground",        "!",  "--foreground           : do not fork"],
     ["proxy",             "=s", "--proxy=<host>         : use <host> as the HTTP proxy"],
     ["server",            "=s", "--server=<host>        : update DNS information on <host>"],
@@ -1508,17 +1513,18 @@ sub main {
         print_info() if opt('debug') && opt('verbose');
         $daemon = opt('daemon');
 
-        # Add proportional jitter to spread API calls across clients and reduce
-        # synchronized traffic spikes at DNS providers. Jitter is [0, 20%) of
-        # the daemon interval, applied once per cycle before the update check.
-        if ($daemon) {
-            my $jitter = int(rand($daemon * 0.2));
-            sleep($jitter) if $jitter > 0;
-        }
-
         update_nics();
 
         if ($daemon) {
+            # Jitter spreads the API calls across clients and reduces overloading
+            # the upstream DNS provider when many clients are running with the same
+            # daemon interval.
+            # For example, for a jitter of 60 seconds and a daemon interval of 5
+            # minutes, a jitter of [0, 60s) would be applied to the daemon interval
+            # and the next update would occur in [300s, 360s).
+            $daemon += int(rand($jitter))
+                if ($jitter = opt('jitter')) && ($jitter // 0) != 'inf';
+
             debug("sleep %s", $daemon);
             sendmail();
 

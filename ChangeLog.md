@@ -5,6 +5,12 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-rc.2 (unreleased work-in-progress)
 
+### New feature
+
+* Add a jitter to the daemon interval when in daemon mode to spread the web service
+  API calls across clients and reduce load on upstream DNS providers when many
+  clients are running with the same daemon interval.
+
 ## 2026-05-16 v4.0.1-rc.1
 
 ### Provider updates

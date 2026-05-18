@@ -22,6 +22,7 @@
 #ssl=yes
 
 daemon=300                      # check every 300 seconds
+jitter=60                       # apply up to 60 seconds of delay to the daemon interval
 syslog=yes                      # log update msgs to syslog
 mail=root                       # mail all msgs to root
 mail-failure=root               # mail failed update msgs to root
