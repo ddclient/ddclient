@@ -1252,6 +1252,18 @@ our %protocols = (
             'zone'   => setv(T_FQDN,  0, undef,                       undef),
         },
     ),
+    'spaceship' => ddclient::Protocol->new(
+        'update'   => \&nic_spaceship_update,
+        'examples' => \&nic_spaceship_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'    => undef,
+            'password' => undef,
+            'zone'     => setv(T_FQDN,   0, undef,          undef),
+            'ttl'      => setv(T_NUMBER, 0, 1800,            undef),
+            'server'   => setv(T_FQDNP,  0, 'spaceship.dev', undef),
+        },
+    ),
     'sitelutions' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
@@ -7169,6 +7181,207 @@ sub nic_cloudns_update {
         $recap{$_}{'status'} = 'good' for @hosts;
         success("IP address set to $ip");
     }
+}
+
+######################################################################
+## nic_spaceship_examples
+######################################################################
+sub nic_spaceship_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'spaceship'
+
+The 'spaceship' protocol updates DNS records hosted at Spaceship
+(https://www.spaceship.com/).
+
+The API is documented at https://docs.spaceship.dev/#tag/DNS-records.
+
+Before configuring, create an API key in the Spaceship account settings with
+only the 'DNS Records' read and write permissions enabled.  Leave all other
+permission categories (such as 'Async' and 'Contacts') disabled to follow the
+principle of least privilege.  Set 'login' to the API key and 'password' to
+the API secret.
+
+Available configuration variables:
+  * login (required): Spaceship API key.
+  * password (required): Spaceship API secret.  Wrap the value in single
+    quotes (e.g. password='mysecret') to prevent a trailing comma from
+    being parsed as part of the secret.
+  * server (required): API endpoint.  Must be set to 'spaceship.dev'.
+    (This must be specified explicitly because a global 'server=' setting
+    from another protocol section in your config file would otherwise
+    take precedence over the built-in default.)
+  * zone (optional): The root domain of the hostname.  If omitted, the root
+    domain is inferred by splitting the hostname on the first dot (e.g.
+    'host.example.com' becomes subdomain 'host', zone 'example.com').
+  * ttl (optional): TTL for the DNS record in seconds.  Defaults to 1800.
+
+Example \${program}.conf file entry:
+  protocol=spaceship,                  \\
+  server=spaceship.dev,                \\
+  login=myapikey,                      \\
+  password='myapisecret',              \\
+  zone=example.com,                    \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_spaceship_update
+######################################################################
+sub nic_spaceship_update {
+    my $self = shift;
+    load_json_support('spaceship');
+
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my ($subdomain, $domain);
+        if (opt('zone', $h)) {
+            $domain    = opt('zone', $h);
+            $subdomain = $h;
+            if ($subdomain !~ s/(?:^|\.)\Q$domain\E$//) {
+                failed("hostname '$h' does not end with zone '$domain'");
+                next;
+            }
+            $subdomain ||= '@';
+        } else {
+            ($subdomain, $domain) = split(/\./, $h, 2);
+        }
+
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            my $rrtype = $ipv eq '4' ? 'A' : 'AAAA';
+            info("setting IPv$ipv address to $ip");
+
+            my $list_resp = _spaceship_call(
+                server     => opt('server', $h),
+                method     => 'GET',
+                path       => "/api/v1/dns/records/$domain",
+                query      => 'take=500&skip=0',
+                api_key    => opt('login', $h),
+                api_secret => opt('password', $h),
+            );
+            if (!defined $list_resp) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                next;
+            }
+
+            my @existing = grep {
+                $_->{type} eq $rrtype && $_->{name} eq $subdomain
+            } @{$list_resp->{items} // []};
+
+            my $ok = 1;
+            for my $rec (@existing) {
+                my $del_resp = _spaceship_call(
+                    server     => opt('server', $h),
+                    method     => 'DELETE',
+                    path       => "/api/v1/dns/records/$domain",
+                    api_key    => opt('login', $h),
+                    api_secret => opt('password', $h),
+                    body       => encode_json([{
+                        type    => $rrtype,
+                        name    => $subdomain,
+                        address => $rec->{address},
+                    }]),
+                );
+                if (!defined $del_resp) {
+                    $recap{$h}{"status-ipv$ipv"} = 'failed';
+                    $ok = 0;
+                    last;
+                }
+            }
+            next unless $ok;
+
+            my $ttl = opt('ttl', $h);
+            my $put_resp = _spaceship_call(
+                server     => opt('server', $h),
+                method     => 'PUT',
+                path       => "/api/v1/dns/records/$domain",
+                api_key    => opt('login', $h),
+                api_secret => opt('password', $h),
+                body       => encode_json({
+                    force => JSON::PP::true(),
+                    items => [{
+                        type    => $rrtype,
+                        name    => $subdomain,
+                        address => $ip,
+                        ttl     => $ttl + 0,
+                    }],
+                }),
+            );
+            if (!defined $put_resp) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                next;
+            }
+
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
+    }
+}
+
+######################################################################
+## _spaceship_call: make an authenticated Spaceship API call
+######################################################################
+sub _spaceship_call {
+    my (%args) = @_;
+    my $server     = delete $args{server};
+    my $method     = delete $args{method};
+    my $path       = delete $args{path};
+    my $query      = delete $args{query} // '';
+    my $api_key    = delete $args{api_key};
+    my $api_secret = delete $args{api_secret};
+    my $body       = delete $args{body} // '';
+
+    my $url = "$server$path" . ($query ? "?$query" : '');
+    my $reply = geturl(
+        proxy   => opt('proxy'),
+        url     => $url,
+        method  => $method,
+        headers => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            "X-Api-Key: $api_key",
+            "X-Api-Secret: $api_secret",
+        ],
+        ($body ? (data => $body) : ()),
+    );
+
+    if (!$reply) {
+        failed("could not connect to $server");
+        return undef;
+    }
+
+    my ($status) = ($reply =~ m{^HTTP/\S+\s+(\d+)}i);
+    if (!defined $status) {
+        failed("unexpected HTTP response from $server");
+        return undef;
+    }
+    (my $resp_body = $reply) =~ s/^.*?\n\n//s;
+    $resp_body =~ s/^\s+|\s+$//g;
+
+    if ($status !~ /^2/) {
+        my $detail = '';
+        if ($resp_body) {
+            my $parsed = eval { decode_json($resp_body) };
+            $detail = ": $parsed->{detail}"
+                if ref($parsed) eq 'HASH' && defined $parsed->{detail};
+        }
+        failed("API error $status$detail");
+        return undef;
+    }
+
+    return {} if !$resp_body;
+
+    my $parsed = eval { decode_json($resp_body) };
+    if (!defined $parsed) {
+        failed("unexpected API response: $resp_body");
+        return undef;
+    }
+    return $parsed;
 }
 
 ######################################################################
