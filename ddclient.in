@@ -7221,7 +7221,7 @@ Example \${program}.conf file entry:
   server=spaceship.dev,                \\
   login=myapikey,                      \\
   password='myapisecret',              \\
-  zone=example.com,                    \\
+  zone=example.com                    \\
   myhost.example.com
 
 EoEXAMPLE
