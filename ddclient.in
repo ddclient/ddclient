@@ -1248,7 +1248,7 @@ our %protocols = (
         'examples'   => \&nic_simplycom_examples,
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
-            'server' => setv(T_FQDNP, 0, 'https://dyndns.simply.com', undef),
+            'server' => setv(T_FQDNP, 0, 'dyndns.simply.com', undef),
             'zone'   => setv(T_FQDN,  0, undef,                       undef),
         },
     ),
@@ -6792,6 +6792,7 @@ API information and user instructions available at: https://www.simply.com/docs/
 
 Configuration variables applicable to the 'simply.com' protocol are:
   protocol=simply.com
+  server=fqdn.of.service       ## can be omitted, defaults to dyndns.simply.com
   login=S124543                ## The Simply.com account that the domain belongs to
   password=apikey              ## The API key for your Simply.com account
   zone=example.com             ## The domain you want to update the record on, optional
@@ -6800,7 +6801,7 @@ Configuration variables applicable to the 'simply.com' protocol are:
 Example ${program}.conf file entries:
   ## single host update
   protocol=simply.com,      \\
-  login=S123456,            \\
+  login=S124543,            \\
   password=APIKEY,          \\
   zone=example.com,         \\
   test.example.com
@@ -6808,6 +6809,9 @@ Example ${program}.conf file entries:
 EoEXAMPLE
 }
 
+######################################################################
+## nic_simplycom_update
+######################################################################
 sub nic_simplycom_update {
     my $self = shift;
     for my $h (@_) {
@@ -6844,7 +6848,7 @@ sub nic_simplycom_update {
                 if ($returned =~ /^good\b/) {
                     success("IPv$v address set to $ip");
                 } else {
-                    success("skipped: IPv$v address was already set to $ip");
+                    warning("nochg: No update required; unnecessary attempts to change the current address are considered abusive");
                 }
             } else {
                 $recap{$h}{"status-ipv$v"} = 'failed';

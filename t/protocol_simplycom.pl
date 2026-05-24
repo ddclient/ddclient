@@ -43,7 +43,7 @@ my @test_cases = (
                                    'mtime' => $ddclient::now},
         },
         wantlogs => [
-            {label => 'SUCCESS', ctx => ['test.example.com'], msg => qr/skipped.*already set to 192\.0\.2\.1/},
+            {label => 'WARNING', ctx => ['test.example.com'], msg => qr/^nochg: /},
         ],
     },
     {

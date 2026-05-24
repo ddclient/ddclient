@@ -306,7 +306,7 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ## Simply.com (https://simply.com)
 ##
 # protocol=simply.com,
-# login=<simplyaccount>,
+# login=<simplyaccount>,    # example: S123456
 # password=<apikey>,
 # zone=example.com,
 # test.example.com
