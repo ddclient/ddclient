@@ -217,7 +217,7 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 #
 # protocol=duckdns, \
 # password=my-auto-generated-password \
-# hostwithoutduckdnsorg
+# hostwithoutduckdnsorg,host2withoutduckdnsorg
 
 ##
 ## Freemyip (http://freemyip.com/)
