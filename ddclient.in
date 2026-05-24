@@ -4668,7 +4668,8 @@ sub nic_easydns_update {
         'NO_AUTH' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
         'ILLEGAL INPUT' => 'Client sent data that is not allowed in a dynamic DNS update.',
-        'TOOSOON' => 'Update frequency is too short.',
+        'TOOSOON' => 'Update frequency is too high.',
+        'TOO_FREQ' => 'Update frequency is too high.',
     );
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -4692,8 +4693,11 @@ sub nic_easydns_update {
                 failed("could not connect to " . opt('server', $h));
                 next;
             };
-            my $resultcode_re = join('|', map({quotemeta} 'NOERROR', keys(%errors)));
-            my ($status) = $body =~ qr/\b($resultcode_re)\b/;
+            # strip $body of HTML tags
+            $body =~ s|<.+?>||g;
+            my $resultcode_re = join('|', map({quotemeta} 'NOERROR', 'OK', keys(%errors)));
+            my $status = '';
+            ($status) = $body =~ qr/\b($resultcode_re)\b/;
             # 'good' is the only status value that ddclient considers to be successful.  All other
             # values are considered to be failures and will result in frequent retries (every
             # min-error-interval, which defaults to 5m).
