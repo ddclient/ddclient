@@ -52,7 +52,7 @@ my @test_cases = (
             is($body->{items}[0]{type},    'A',         'PUT type is A');
             is($body->{items}[0]{name},    'host',      'PUT name is subdomain');
             is($body->{items}[0]{address}, '192.0.2.1', 'PUT address is correct');
-            is($body->{items}[0]{ttl},     1800,        'PUT ttl defaults to 1800');
+            is($body->{items}[0]{ttl},     300,         'PUT ttl defaults to 300');
         },
     },
     {
