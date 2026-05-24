@@ -6,6 +6,7 @@ EXTRA_DIST = \
 	ChangeLog.md \
 	README.cisco \
 	README.md \
+	docs/protocol-dnspod.md \
 	autogen \
 	sample-ddclient-wrapper.sh \
 	sample-etc_cron.d_ddclient \
@@ -74,6 +75,7 @@ handwritten_tests = \
 	t/protocol_cloudflare.pl \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
+	t/protocol_dnspod.pl \
 	t/protocol_dyndns2.pl \
 	t/protocol_hetzner.pl \
 	t/protocol_ns1.pl \
