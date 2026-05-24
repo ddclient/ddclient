@@ -1021,6 +1021,15 @@ our %protocols = (
             'server' => setv(T_FQDNP,  0, 'cp.dnsmadeeasy.com', undef),
         },
     ),
+    'dnspod' => ddclient::Protocol->new(
+        'update'   => \&nic_dnspod_update,
+        'examples' => \&nic_dnspod_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'api.dnspod.com', undef),
+            'zone'   => setv(T_FQDN,  0, undef,             undef),
+        },
+    ),
     'dondominio' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dondominio_update,
         'examples'   => \&nic_dondominio_examples,
@@ -2253,7 +2262,7 @@ sub init_config {
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
-                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
+                          qw(1984 cloudflare digitalocean directnic dnsexit2 dnspod gandi godaddy hetzner
                              ionos nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
@@ -7581,6 +7590,41 @@ sub nic_dnsmadeeasy_update {
 }
 
 ######################################################################
+## nic_dnspod_examples
+######################################################################
+sub nic_dnspod_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'dnspod'
+
+The 'dnspod' protocol is used by DNSPod (www.dnspod.com), a DNS service
+operated by Tencent Cloud.
+
+Before configuring, create an API token in the DNSPod console at
+console.dnspod.com/account/token.  Each hostname must already have an A
+(IPv4) or AAAA (IPv6) record in DNSPod — this protocol updates existing
+records, it does not create them.
+
+Configuration variables applicable to the 'dnspod' protocol are:
+  protocol=dnspod              ##
+  server=fqdn.of.service       ## can be omitted, defaults to api.dnspod.com
+                               ## use dnsapi.cn for the domestic (China) instance
+  zone=dns.zone                ## optional; root DNS zone.  Inferred from hostname if omitted.
+  login=service-login          ## DNSPod API token ID
+  password=service-password    ## DNSPod API token value
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=dnspod                                              \\
+  login=123456                                                 \\
+  password=myapitoken                                          \\
+  zone=example.com                                             \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
 ## nic_simplycom_examples
 ######################################################################
 sub nic_simplycom_examples {
@@ -7610,6 +7654,112 @@ Example ${program}.conf file entries:
   test.example.com
 
 EoEXAMPLE
+}
+
+######################################################################
+## nic_dnspod_update
+######################################################################
+sub nic_dnspod_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my ($sub_domain, $domain);
+        if (opt('zone', $h)) {
+            $domain = opt('zone', $h);
+            $sub_domain = $h;
+            if ($sub_domain !~ s/(?:^|\.)\Q$domain\E$//) {
+                failed("hostname '$h' does not end with zone '$domain'");
+                next;
+            }
+            $sub_domain ||= '@';
+        } else {
+            ($sub_domain, $domain) = split(/\./, $h, 2);
+            if (!defined $domain) {
+                failed("cannot infer zone from '$h': no dot in hostname; use zone=");
+                next;
+            }
+        }
+        my $server      = opt('server', $h);
+        my $login_token = opt('login', $h) . ',' . opt('password', $h);
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            my $rrtype = $ipv eq '4' ? 'A' : 'AAAA';
+            info("setting IPv$ipv address to $ip");
+            my $list_reply = geturl(
+                proxy   => opt('proxy'),
+                url     => "$server/Record.List",
+                method  => 'POST',
+                headers => "Content-Type: application/x-www-form-urlencoded\n",
+                data    => encode_www_form_urlencoded({
+                    login_token => $login_token,
+                    format      => 'json',
+                    domain      => $domain,
+                    sub_domain  => $sub_domain,
+                    record_type => $rrtype,
+                }),
+            );
+            next if !header_ok($list_reply);
+            (my $list_body = $list_reply) =~ s/^.*?\n\n//s;
+            my $list_resp = eval { decode_json($list_body) };
+            if (ref($list_resp) ne 'HASH') {
+                $recap{$h}{"status-ipv$ipv"} = 'bad';
+                failed("unexpected Record.List response: $list_body");
+                next;
+            }
+            if (($list_resp->{status}{code} // '') ne '1') {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                failed("Record.List: " . ($list_resp->{status}{message} // 'unknown error'));
+                next;
+            }
+            my $records = $list_resp->{records};
+            if (ref($records) ne 'ARRAY' || !@$records) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                failed("no $rrtype record found for $sub_domain.$domain");
+                next;
+            }
+            warning("multiple $rrtype records found for $sub_domain.$domain; using the first one")
+                if @$records > 1;
+            my $record_id = $records->[0]{id};
+            my $line      = $records->[0]{line} // 'Default';
+            if (!defined($record_id)) {
+                $recap{$h}{"status-ipv$ipv"} = 'bad';
+                failed("no record ID in Record.List response");
+                next;
+            }
+            my $ddns_reply = geturl(
+                proxy   => opt('proxy'),
+                url     => "$server/Record.Ddns",
+                method  => 'POST',
+                headers => "Content-Type: application/x-www-form-urlencoded\n",
+                data    => encode_www_form_urlencoded({
+                    login_token => $login_token,
+                    format      => 'json',
+                    domain      => $domain,
+                    record_id   => $record_id,
+                    sub_domain  => $sub_domain,
+                    record_line => $line,
+                    value       => $ip,
+                }),
+            );
+            next if !header_ok($ddns_reply);
+            (my $ddns_body = $ddns_reply) =~ s/^.*?\n\n//s;
+            my $ddns_resp = eval { decode_json($ddns_body) };
+            if (ref($ddns_resp) ne 'HASH') {
+                $recap{$h}{"status-ipv$ipv"} = 'bad';
+                failed("unexpected Record.Ddns response: $ddns_body");
+                next;
+            }
+            if (($ddns_resp->{status}{code} // '') ne '1') {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                failed("Record.Ddns: " . ($ddns_resp->{status}{message} // 'unknown error'));
+                next;
+            }
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'}   = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
+    }
 }
 
 ######################################################################

@@ -404,6 +404,15 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # subdomain-1.domain.com,subdomain-2.domain.com
 
 ##
+## DNSPod (https://www.dnspod.com/)
+##
+# protocol=dnspod,                          \
+# login=123456,                             \ # DNSPod API token ID
+# password=myapitoken,                      \ # DNSPod API token value
+# zone=example.com,                         \
+# myhost.example.com
+
+##
 ## domeneshop (www.domeneshop.no)
 ##
 # protocol=domeneshop
