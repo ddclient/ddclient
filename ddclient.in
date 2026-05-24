@@ -6216,7 +6216,9 @@ sub nic_cloudflare_update {
                                headers => $headers
                               );
             next if !header_ok($reply);
-            # Strip header to extract the reply and process the JSON object if there is a match, reset the $response otherwise.
+            # Conditional match required: ${^MATCH} is not reset on failure and would
+            # retain the value from the previous successful match, causing stale JSON
+            # to be decoded instead of reaching the 'invalid json or result' path.
             my $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
             unless ($response && $response->{result}) {
                 failed("invalid json or result");
