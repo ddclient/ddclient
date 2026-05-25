@@ -34,6 +34,7 @@ use Data::Dumper;
 use File::Basename;
 use File::Path qw(make_path);
 use File::Temp;
+use Digest::MD5 qw(md5);
 use Getopt::Long;
 use Sys::Hostname;
 
@@ -928,6 +929,14 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'login' => undef,
             'server' => setv(T_FQDNP, 0, 'api.1984.is', undef),
+        },
+    ),
+    'asuscomm' => ddclient::Protocol->new(
+        'update'   => \&nic_asuscomm_update,
+        'examples' => \&nic_asuscomm_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'ns1.asuscomm.com', undef),
         },
     ),
     'changeip' => ddclient::LegacyProtocol->new(
@@ -5475,6 +5484,116 @@ sub nic_1984_update {
             success("skipped: IP was already set to $response->{ip}");
         } else {
             success("updated successfully to $response->{ip}");
+        }
+    }
+}
+
+######################################################################
+## nic_asuscomm_examples
+######################################################################
+sub nic_asuscomm_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'asuscomm'
+
+The 'asuscomm' protocol updates ASUS DDNS hostnames under asuscomm.com
+(and asuscomm.cn for mainland China).
+
+The hostname must be registered first via the router's web interface
+(WAN → DDNS) before ddclient can update it.
+
+Configuration variables applicable to the 'asuscomm' protocol are:
+  protocol=asuscomm            ##
+  server=ns1.asuscomm.com      ## can be omitted; use ns1.asuscomm.cn for China
+  login=001122AABBCC           ## router MAC address — hex digits only, no colons, uppercase
+  password=12345670            ## WPS PIN (secret_code from the router label)
+  myhost.asuscomm.com          ## full hostname registered with ASUS DDNS
+
+Example ${program}.conf file entries:
+  ## ASUS router DDNS (asuscomm.com)
+  ## MAC and WPS PIN are printed on the label on the bottom of the router.
+  protocol=asuscomm,                                        \\
+  login=001122AABBCC,                                       \\
+  password=12345670                                         \\
+  myhost.asuscomm.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_asuscomm_update
+##
+## ASUS DDNS update protocol.  Authentication uses HTTP Basic Auth where
+## the username is the router MAC address and the password is an
+## HMAC-MD5 digest computed from the stripped hostname and IP using the
+## WPS PIN as the key.  Response codes are returned in the HTTP body.
+##
+## Reference: asuswrt-merlin.ng inadyn plugin (plugins/asuscomm.c)
+######################################################################
+sub _asuscomm_hmac_md5 {
+    my ($data, $key) = @_;
+    my $bs   = 64;
+    $key     = md5($key) if length($key) > $bs;
+    $key    .= "\x00" x ($bs - length($key));
+    my $ipad = $key ^ ("\x36" x $bs);
+    my $opad = $key ^ ("\x5c" x $bs);
+    return uc(unpack('H*', md5($opad . md5($ipad . $data))));
+}
+
+sub nic_asuscomm_update {
+    my $self = shift;
+    for my $domain (@_) {
+        local $_l = pushlogctx($domain);
+
+        my $ip = delete $config{$domain}{'wantipv4'};
+        if (!defined $ip) {
+            failed("asuscomm protocol only supports IPv4");
+            $recap{$domain}{'status-ipv4'} = 'failed';
+            next;
+        }
+
+        my $login  = uc(opt('login',    $domain));
+        my $pin    =    opt('password', $domain);
+        my $server =    opt('server',   $domain);
+
+        # Password sent to server: HMAC-MD5(stripped_fqdn + stripped_ip, wps_pin)
+        # "stripped" means all non-alphanumeric characters removed.
+        (my $stripped_host = $domain) =~ s/[^a-zA-Z0-9]//g;
+        (my $stripped_ip   = $ip)     =~ s/[^a-zA-Z0-9]//g;
+        my $hmac = _asuscomm_hmac_md5($stripped_host . $stripped_ip, $pin);
+
+        info("updating $domain to $ip");
+        $recap{$domain}{'status-ipv4'} = 'failed';
+
+        my $reply = geturl(
+            proxy    => opt('proxy'),
+            url      => "http://$server/ddns/update.jsp?hostname=$domain&myip=$ip",
+            login    => $login,
+            password => $hmac,
+        );
+        next if !header_ok($reply);
+
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my ($code) = $body =~ /^(\d+)/;
+        $code //= 0;
+
+        if ($code == 200 || $code == 230) {
+            $recap{$domain}{'ipv4'}        = $ip;
+            $recap{$domain}{'mtime'}       = $now;
+            $recap{$domain}{'status-ipv4'} = 'good';
+            success("IPv4 address set to $ip");
+        } elsif ($code == 220) {
+            $recap{$domain}{'ipv4'}        = $ip;
+            $recap{$domain}{'mtime'}       = $now;
+            $recap{$domain}{'status-ipv4'} = 'good';
+            success("IPv4 address unchanged at $ip");
+        } elsif ($code == 203 || $code == 233) {
+            failed("hostname $domain is already registered to a different MAC address");
+        } elsif ($code == 297 || $code == 298) {
+            failed("invalid hostname: $domain");
+        } elsif ($code == 299) {
+            failed("invalid IP address: $ip");
+        } else {
+            failed("unexpected server response: $body");
         }
     }
 }
