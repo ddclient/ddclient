@@ -41,6 +41,9 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#850](https://github.com/ddclient/ddclient/pull/850)
   * Added `DynV6` (https://dynv6.com) as a supported `dyndns2` provider.
     Authenticate with your zone's HTTP token; no username required (`login=none`).
+  * Added `dynu` protocol for Dynu Systems (https://www.dynu.com/), with
+    dual-stack IPv4+IPv6 support and optional `zone=` for custom domain updates.
+    [#904](https://github.com/ddclient/ddclient/pull/904)
   * Added `deSEC` (https://desec.io) and `DDNSS.de` (https://ddnss.de) as
     supported `dyndns2` providers, with dedicated `desec-ipv4`/`desec-ipv6`
     web IP check services.

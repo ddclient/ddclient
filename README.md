@@ -31,6 +31,7 @@ Dynamic DNS services currently supported include:
   * [DslReports](https://www.dslreports.com)
   * [Duck DNS](https://duckdns.org)
   * [Dynadot](https://www.dynadot.com)
+  * [Dynu](https://www.dynu.com)
   * [DynDNS.com](https://account.dyn.com)
   * [DynV6](https://dynv6.com)
   * [EasyDNS](https://www.easydns.com)

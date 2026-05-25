@@ -290,6 +290,7 @@ our %recapvars = (
 ## strategies for obtaining an ip address.
 our %builtinweb = (
     'dyndns' => {'url' => 'http://checkip.dyndns.org/', 'skip' => 'Current IP Address:'},
+    'dynu' => {'url' => 'https://checkip.dynu.com/'},
     'freedns' => {'url' => 'https://freedns.afraid.org/dynamic/check.php'},
     'he' => {
         url => 'https://checkip.dns.he.net/',
@@ -1082,6 +1083,15 @@ our %protocols = (
             %{$recapvars{'dyndns-common'}},
         },
         'force_update_if_changed' => [qw(wildcard mx backupmx)],
+    ),
+    'dynu' => ddclient::Protocol->new(
+        'update'   => \&nic_dynu_update,
+        'examples' => \&nic_dynu_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'api.dynu.com', undef),
+            'zone'   => setv(T_STRING, 0, undef,          undef),
+        },
     ),
     'easydns' => ddclient::Protocol->new(
         'update'     => \&nic_easydns_update,
@@ -4207,6 +4217,144 @@ sub nic_dyndns2_update {
         warning("unexpected extra lines after per-host update status lines:\n" .
                 join("\n", @reply[@hosts..$#reply]))
             if (@reply > @hosts);
+    }
+}
+
+######################################################################
+## nic_dynu_examples
+######################################################################
+sub nic_dynu_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'dynu'
+
+The 'dynu' protocol is used by the dynamic DNS service offered by
+Dynu Systems, Inc. (www.dynu.com).
+API documentation: https://www.dynu.com/DynamicDNS/IP-Update-Protocol
+
+The password must be the plain text, MD5, or SHA-256 hash of your
+Dynu account password.
+
+Configuration variables applicable to the 'dynu' protocol are:
+  protocol=dynu             ##
+  server=api.dynu.com       ## defaults to api.dynu.com
+  login=your-login          ## Dynu account username
+  password=your-password    ## Dynu account password (or MD5/SHA-256 hash)
+  zone=your-root-domain     ## root domain registered with Dynu; required
+                            ## when updating a subdomain (e.g. zone=example.com
+                            ## to update host.example.com)
+  fully.qualified.host      ## the hostname to update
+
+Example ${program}.conf file entries:
+  ## Dynu free hostname (e.g. myhome.dynu.net) — IPv4 only
+  protocol=dynu                    \\
+  login=myusername                 \\
+  password=mypassword              \\
+  myhome.dynu.net
+
+  ## Dynu free hostname — dual-stack IPv4 and IPv6
+  usev4=webv4
+  usev6=ifv6, ifv6=eth0
+
+  protocol=dynu                    \\
+  login=myusername                 \\
+  password=mypassword              \\
+  myhome.dynu.net
+
+  ## Custom domain — update a subdomain (zone required)
+  usev4=webv4
+  usev6=ifv6, ifv6=eth0
+
+  protocol=dynu                    \\
+  login=myusername                 \\
+  password=mypassword              \\
+  zone=example.com                 \\
+  host.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dynu_update
+##
+## based on https://www.dynu.com/DynamicDNS/IP-Update-Protocol
+######################################################################
+sub nic_dynu_update {
+    my $self = shift;
+    my %errors = (
+        'badauth'     => 'Bad authorization (username or password)',
+        'notfqdn'     => 'A Fully-Qualified Domain Name was not provided',
+        'nohost'      => 'The hostname specified does not exist',
+        '!donator'    => 'Feature restricted to members',
+        'numhost'     => 'Too many hostnames specified',
+        'abuse'       => 'Update blocked due to abusive behaviour',
+        'servererror' => 'Server error; retry later',
+        'dnserr'      => 'DNS error encountered; retry later',
+        '911'         => 'Server maintenance; retry in 10 minutes',
+        'nochg'       => 'IP address is current; no update required',
+    );
+    for my $group (group_hosts_by(\@_, qw(login password server zone wantipv4 wantipv6))) {
+        my @hosts = @{$group->{hosts}};
+        my %gcfg  = %{$group->{cfg}};
+        my $ipv4  = $gcfg{'wantipv4'};
+        my $ipv6  = $gcfg{'wantipv6'};
+        delete $config{$_}{'wantipv4'} for @hosts;
+        delete $config{$_}{'wantipv6'} for @hosts;
+        for my $h (@hosts) {
+            local $_l = pushlogctx($h);
+            info("setting IPv4 address to $ipv4") if $ipv4;
+            info("setting IPv6 address to $ipv6") if $ipv6;
+            # Derive hostname and alias from zone.
+            # Dynu requires hostname=zone&alias=subdomain for custom domains
+            # (e.g. zone=example.com, alias=host for host.example.com).
+            # Without zone, the full FQDN is used as hostname, which works
+            # for free Dynu subdomains (e.g. myhome.dynu.net).
+            my $zone = $gcfg{'zone'};
+            my ($hostname, $alias);
+            if (defined $zone) {
+                my $stripped = $h;
+                unless ($stripped =~ s/(?:^|\.)\Q$zone\E$//) {
+                    failed("hostname does not end with the zone: $zone");
+                    next;
+                }
+                $hostname = $zone;
+                $alias    = $stripped;
+            } else {
+                $hostname = $h;
+                $alias    = undef;
+            }
+            my $url = "$gcfg{'server'}/nic/update?hostname=$hostname";
+            $url .= "&alias=$alias" if defined $alias && $alias ne '';
+            $url .= "&myip=$ipv4"   if $ipv4;
+            $url .= "&myip=no"      if !$ipv4 && $ipv6;  # prevent server auto-detecting v4
+            $url .= "&myipv6=$ipv6" if $ipv6;
+            my $reply = geturl(
+                proxy    => opt('proxy'),
+                url      => $url,
+                login    => $gcfg{'login'},
+                password => $gcfg{'password'},
+            );
+            next if !header_ok($reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my ($status) = split(/\s/, $body);
+            $status //= 'unknown';
+            if ($status eq 'nochg') {
+                warning("$status: $errors{$status}");
+                $status = 'good';
+            }
+            $recap{$h}{'status-ipv4'} = $status if $ipv4;
+            $recap{$h}{'status-ipv6'} = $status if $ipv6;
+            if ($status ne 'good') {
+                failed(exists($errors{$status})
+                    ? "$status: $errors{$status}"
+                    : "unknown error: $status");
+                next;
+            }
+            $recap{$h}{'ipv4'}  = $ipv4 if $ipv4;
+            $recap{$h}{'ipv6'}  = $ipv6 if $ipv6;
+            $recap{$h}{'mtime'} = $now;
+            success("IPv4 address set to $ipv4") if $ipv4;
+            success("IPv6 address set to $ipv6") if $ipv6;
+        }
     }
 }
 

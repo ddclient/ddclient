@@ -77,6 +77,7 @@ handwritten_tests = \
 	t/protocol_dnsexit2.pl \
 	t/protocol_dynadot.pl \
 	t/protocol_dyndns2.pl \
+	t/protocol_dynu.pl \
 	t/protocol_hetzner.pl \
 	t/protocol_ionos.pl \
 	t/protocol_ns1.pl \

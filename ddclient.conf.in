@@ -494,6 +494,14 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # 12345678
 
 ##
+## Dynu (https://www.dynu.com/)
+##
+# protocol=dynu                                                \
+# login=myusername                                             \
+# password=mypassword                                          \
+# myhome.dynu.net
+
+##
 ## Spaceship (https://www.spaceship.com/)
 ##
 # protocol=spaceship,                       \
