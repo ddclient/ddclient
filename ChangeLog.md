@@ -13,6 +13,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#888](https://github.com/ddclient/ddclient/pull/888)
   * Added `simply.com` (https://www.simply.com).
     [#850](https://github.com/ddclient/ddclient/pull/850)
+  * Added `spaceship` protocol for Spaceship (https://www.spaceship.com/).
+    [#896](https://github.com/ddclient/ddclient/pull/896)
 
 ## 2026-05-16 v4.0.1-rc.1
 
