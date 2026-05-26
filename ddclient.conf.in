@@ -445,3 +445,13 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # zone=dns.zone                             \
 # password=hetzner-cloud-api-key            \
 # myhost.example.org
+
+##
+## Spaceship (https://www.spaceship.com/)
+##
+# protocol=spaceship,                       \
+# server=spaceship.dev,                     \
+# login=myapikey,                           \
+# password='myapisecret',                   \
+# zone=example.com,                         \
+# myhost.example.com

@@ -75,6 +75,7 @@ handwritten_tests = \
 	t/protocol_dnsexit2.pl \
 	t/protocol_dyndns2.pl \
 	t/protocol_simplycom.pl \
+	t/protocol_spaceship.pl \
 	t/read_recap.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
