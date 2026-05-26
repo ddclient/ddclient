@@ -178,22 +178,19 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ## CloudFlare (www.cloudflare.com)
 ##
 ## API Token authentication (recommended)
-# use=web, web=https://1.1.1.1/cdn-cgi/trace, web-skip='ip='
 # protocol=cloudflare,                  \
-# zone=domain.tld,                      \
-# ttl=1,                                \
-# login=token,                          \ # Use 'token' for API token auth
+# zone=domain.tld,                      \ # Cloudflare DNS zone
+# ttl=300,                              \ # Optional
 # password='your-api-token',            \ # API token with Zone:DNS:Edit and Zone:Zone:Read permissions
-# zone-id=your-zone-id                  \ # Optional zone ID from dashboard
-# domain.tld
+# domain.tld,sub.domain.tld
 #
-## Global API Key authentication
+## Global API Key authentication (legacy)
 # protocol=cloudflare,                  \
-# zone=domain.tld,                      \
-# ttl=1,                                \
-# login=your-login-email,               \
+# zone=domain.tld,                      \ # Cloudflare DNS zone
+# ttl=300,                              \ # Optional
+# login=your-login-email,               \ # Cloudflare DNS zone
 # password=your-global-key              \
-# domain.tld
+# domain.tld,sub.domain.tld
 
 ##
 ## Gandi (gandi.net)
