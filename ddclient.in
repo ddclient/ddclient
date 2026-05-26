@@ -941,6 +941,7 @@ our %protocols = (
         'examples'   => \&nic_cloudflare_examples,
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
+            'comment'      => setv(T_STRING, 0, undef,                          undef),
             'login'        => setv(T_LOGIN,  0, 'token',                        undef),
             'min-interval' => setv(T_DELAY,  0, interval('5m'),                 0),
             'server'       => setv(T_FQDNP,  0, 'api.cloudflare.com/client/v4', undef),
@@ -6024,7 +6025,9 @@ sub nic_cloudflare_update {
                 debug("DNS '$type' record ID: $dns_rec_id");
                 # Set domain
                 $url = "https://" . opt('server', $domain) . "/zones/$zone_id/dns_records/$dns_rec_id";
-                my $data = "{\"content\":\"$ip\"}";
+                my %patch = (content => $ip);
+                $patch{comment} = opt('comment', $domain) if defined(opt('comment', $domain));
+                my $data = encode_json(\%patch);
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
                                 headers => $headers,
