@@ -5885,11 +5885,22 @@ o 'cloudflare'
 
 The 'cloudflare' protocol is used by DNS service offered by www.cloudflare.com.
 
-Configuration variables applicable to the 'cloudflare' protocol are:
+The protocol can be configured in two ways, either using API Token authentication
+(recommended) or using Global API Key authentication (legacy). Depending on the
+chosen authentication method, the configuration variables applicable to the
+'cloudflare' protocol are:
+
+  API Token authentication (recommended):
   protocol=cloudflare          ##
   server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
-  login=service-login          ## login email when using a global API key
-  password=service-password    ## Global API key, or an API token. If using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
+  password=your-api-token      ## API token with Zone:DNS:Edit and Zone:Zone:Read permissions for the zone
+  fully.qualified.host         ## the host registered with the service.
+
+  Global API Key authentication (legacy)
+  protocol=cloudflare          ##
+  server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
+  login=service-login          ## Cloudflare login email
+  password=your-global-key     ## Global API key
   fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
