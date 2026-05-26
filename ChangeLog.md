@@ -3,7 +3,9 @@
 This document describes notable changes. For details, see the [source code
 repository history](https://github.com/ddclient/ddclient/commits/main).
 
-## v4.0.1-rc.2 (unreleased work-in-progress)
+## v4.1.0-rc.2 (unreleased work-in-progress)
+
+## 2026-05-26 v4.1.0-rc.1
 
 ### New feature
 
@@ -13,8 +15,6 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#888](https://github.com/ddclient/ddclient/pull/888)
   * Added `simply.com` (https://www.simply.com).
     [#850](https://github.com/ddclient/ddclient/pull/850)
-
-## 2026-05-16 v4.0.1-rc.1
 
 ### Provider updates
 
