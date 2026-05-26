@@ -22,6 +22,7 @@
 #ssl=yes
 
 daemon=300                      # check every 300 seconds
+jitter=60                       # apply up to 60 seconds of delay to the daemon interval
 syslog=yes                      # log update msgs to syslog
 mail=root                       # mail all msgs to root
 mail-failure=root               # mail failed update msgs to root
@@ -176,12 +177,20 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 ##
 ## CloudFlare (www.cloudflare.com)
 ##
-# protocol=cloudflare,        \
-# zone=domain.tld,            \
-# ttl=1,                      \
-# login=your-login-email,     \ # Only needed if you are using your global API key. If you are using an API token, set it to "token" (without double quotes).
-# password=APIKey             \ # This is either your global API key, or an API token. If you are using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
-# domain.tld,my.domain.tld
+## API Token authentication (recommended)
+# protocol=cloudflare,                  \
+# zone=domain.tld,                      \ # Cloudflare DNS zone
+# ttl=300,                              \ # Optional
+# password='your-api-token',            \ # API token with Zone:DNS:Edit and Zone:Zone:Read permissions
+# domain.tld,sub.domain.tld
+#
+## Global API Key authentication (legacy)
+# protocol=cloudflare,                  \
+# zone=domain.tld,                      \ # Cloudflare DNS zone
+# ttl=300,                              \ # Optional
+# login=your-login-email,               \ # Cloudflare DNS zone
+# password=your-global-key              \
+# domain.tld,sub.domain.tld
 
 ##
 ## Gandi (gandi.net)
@@ -217,7 +226,7 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 #
 # protocol=duckdns, \
 # password=my-auto-generated-password \
-# hostwithoutduckdnsorg
+# hostwithoutduckdnsorg,host2withoutduckdnsorg
 
 ##
 ## Freemyip (http://freemyip.com/)
@@ -291,6 +300,15 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # protocol=ovh,
 # login=example.com-dynhostuser,
 # password=your_password
+# test.example.com
+
+##
+## Simply.com (https://simply.com)
+##
+# protocol=simply.com,
+# login=<simplyaccount>,    # example: S123456
+# password=<apikey>,
+# zone=example.com,
 # test.example.com
 
 ##

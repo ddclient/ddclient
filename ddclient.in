@@ -200,6 +200,7 @@ my $result;
 my $saved_recap;
 my %saved_opt;
 my $daemon;
+my $jitter;
 # Control how many times warning message logged for invalid IP addresses
 my (%warned_ipv4, %warned_ipv6);
 
@@ -704,6 +705,9 @@ sub setv {
 our %cfgvars = (
     'global-defaults' => {
         'daemon'              => setv(T_DELAY, 0, $daemon_default,      interval('60s')),
+        'jitter'              => setv(T_DELAY, 0, sub {
+            opt('daemon') ? int(opt('daemon') * 0.2) : undef
+        }, undef),
         'foreground'          => setv(T_BOOL,  0, 0,                    undef),
         'file'                => setv(T_FILE,  0, "$etc/$program.conf", undef),
         'cache'               => setv(T_FILE,  0, "$cachedir/$program.cache", undef),
@@ -1240,6 +1244,15 @@ our %protocols = (
             'server'         => setv(T_FQDNP,  0, 'api.porkbun.com', undef),
         },
     ),
+    'simply.com' => ddclient::Protocol->new(
+        'update'     => \&nic_simplycom_update,
+        'examples'   => \&nic_simplycom_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'dyndns.simply.com', undef),
+            'zone'   => setv(T_FQDN,  0, undef,                       undef),
+        },
+    ),
     'sitelutions' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
@@ -1372,6 +1385,7 @@ my @opt = (
     "usage: ${program} [options]",
     "options are:",
     ["daemon",            "=s", "--daemon=<delay>       : run as a daemon, specify <delay> as an interval"],
+    ["jitter",            "=s", "--jitter=<jitter>      : add random jitter up to <jitter> to the daemon interval, specify <jitter> as an interval"],
     ["foreground",        "!",  "--foreground           : do not fork"],
     ["proxy",             "=s", "--proxy=<host>         : use <host> as the HTTP proxy"],
     ["server",            "=s", "--server=<host>        : update DNS information on <host>"],
@@ -1512,6 +1526,15 @@ sub main {
         update_nics();
 
         if ($daemon) {
+            # Jitter spreads the API calls across clients and reduces overloading
+            # the upstream DNS provider when many clients are running with the same
+            # daemon interval.
+            # For example, for a jitter of 60 seconds and a daemon interval of 5
+            # minutes, a jitter of [0, 60s) would be applied to the daemon interval
+            # and the next update would occur in [300s, 360s).
+            $daemon += int(rand($jitter))
+                if ($jitter = opt('jitter')) && ($jitter // 0) != 'inf';
+
             debug("sleep %s", $daemon);
             sendmail();
 
@@ -4646,7 +4669,8 @@ sub nic_easydns_update {
         'NO_AUTH' => 'Authentication failed. This happens if the username/password OR host or domain are wrong.',
         'NOSERVICE' => 'Dynamic DNS is not turned on for this domain.',
         'ILLEGAL INPUT' => 'Client sent data that is not allowed in a dynamic DNS update.',
-        'TOOSOON' => 'Update frequency is too short.',
+        'TOOSOON' => 'Update frequency is too high.',
+        'TOO_FREQ' => 'Update frequency is too high.',
     );
     for my $h (@_) {
         local $_l = pushlogctx($h);
@@ -4670,8 +4694,12 @@ sub nic_easydns_update {
                 failed("could not connect to " . opt('server', $h));
                 next;
             };
-            my $resultcode_re = join('|', map({quotemeta} 'NOERROR', keys(%errors)));
-            my ($status) = $body =~ qr/\b($resultcode_re)\b/;
+            # strip $body of HTML tags (replace with whitespace so tokens don't get concatenated)
+            $body =~ s/<[^>]*>/ /g;
+            $body =~ s/\s+/ /g;
+            my $resultcode_re = join('|', map({quotemeta} 'NOERROR', 'OK', keys(%errors)));
+            my $status = '';
+            ($status) = $body =~ qr/\b($resultcode_re)\b/;
             # 'good' is the only status value that ddclient considers to be successful.  All other
             # values are considered to be failures and will result in frequent retries (every
             # min-error-interval, which defaults to 5m).
@@ -5872,11 +5900,22 @@ o 'cloudflare'
 
 The 'cloudflare' protocol is used by DNS service offered by www.cloudflare.com.
 
-Configuration variables applicable to the 'cloudflare' protocol are:
+The protocol can be configured in two ways, either using API Token authentication
+(recommended) or using Global API Key authentication (legacy). Depending on the
+chosen authentication method, the configuration variables applicable to the
+'cloudflare' protocol are:
+
+  API Token authentication (recommended):
   protocol=cloudflare          ##
   server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
-  login=service-login          ## login email when using a global API key
-  password=service-password    ## Global API key, or an API token. If using an API token, it must have the permissions "Zone - DNS - Edit" and "Zone - Zone - Read". The Zone resources must be "Include - All zones".
+  password=your-api-token      ## API token with Zone:DNS:Edit and Zone:Zone:Read permissions for the zone
+  fully.qualified.host         ## the host registered with the service.
+
+  Global API Key authentication (legacy)
+  protocol=cloudflare          ##
+  server=fqdn.of.service       ## defaults to api.cloudflare.com/client/v4
+  login=service-login          ## Cloudflare login email
+  password=your-global-key     ## Global API key
   fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
@@ -6460,16 +6499,21 @@ dynamic DNS service offered by www.duckdns.org.
 Check https://www.duckdns.org/install.jsp?tab=linux-cron for API
 
 Configuration variables applicable to the 'duckdns' protocol are:
-  protocol=duckdns               ##
+  protocol=duckdns             ##
   server=www.fqdn.of.service   ## defaults to www.duckdns.org
   password=service-password    ## password (token) registered with the service
-  non-fully.qualified.host         ## the host registered with the service.
+  non-fully.qualified.host     ## the host registered with the service.
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=duckdns,        \\
-  password=your_password,  \\
+  password=your_password   \\
   myhost
+
+  ## multiple host update
+  protocol=duckdns,        \\
+  password=your_password   \\
+  myhost,myhost2
 
 EoEXAMPLE
 }
@@ -6738,6 +6782,88 @@ sub nic_dnsmadeeasy_update {
         $recap{$h}{'mtime'} = $now;
         $recap{$h}{'status'} = 'good';
         success("IP address set to $ip");
+    }
+}
+
+######################################################################
+## nic_simplycom_examples
+######################################################################
+sub nic_simplycom_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+
+o 'simply.com'
+
+The 'simply.com' protocol is used by DNS services offered by www.simply.com.
+
+API information and user instructions available at: https://www.simply.com/docs/api/
+
+Configuration variables applicable to the 'simply.com' protocol are:
+  protocol=simply.com
+  server=fqdn.of.service       ## can be omitted, defaults to dyndns.simply.com
+  login=S124543                ## The Simply.com account that the domain belongs to
+  password=apikey              ## The API key for your Simply.com account
+  zone=example.com             ## The domain you want to update the record on, optional
+  fully.qualified.host         ## the hostname you want to update
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=simply.com,      \\
+  login=S124543,            \\
+  password=APIKEY,          \\
+  zone=example.com,         \\
+  test.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_simplycom_update
+######################################################################
+sub nic_simplycom_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        for my $entry ([$ipv4, '4'], [$ipv6, '6']) {
+            my ($ip, $v) = @$entry;
+            next if !$ip;
+            info("setting IPv$v address to $ip");
+
+            my $url = opt('server', $h) . '/nic/update'
+                . '?hostname=' . $h
+                . '&myip=' . $ip;
+            $url .= '&domain=' . opt('zone', $h) if opt('zone', $h);
+
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url => $url,
+                login => opt('login', $h),
+                password => opt('password', $h),
+            );
+            if (!header_ok($reply)) {
+                $recap{$h}{"status-ipv$v"} = 'failed';
+                next;
+            }
+
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            my ($returned) = grep { /^(?:good|nochg)\b/ } split(/\n/, $body);
+            if ($returned) {
+                $recap{$h}{"ipv$v"} = $ip;
+                $recap{$h}{'mtime'} = $now;
+                $recap{$h}{"status-ipv$v"} = 'good';
+                if ($returned =~ /^good\b/) {
+                    success("IPv$v address set to $ip");
+                } else {
+                    warning("nochg: No update required; unnecessary attempts to change the current address are considered abusive");
+                }
+            } else {
+                $recap{$h}{"status-ipv$v"} = 'failed';
+                $body =~ s/\s+\z//;
+                failed("server said: $body");
+            }
+        }
     }
 }
 

@@ -49,6 +49,7 @@ Dynamic DNS services currently supported include:
   * [OVH](https://www.ovhcloud.com)
   * [Porkbun](https://porkbun.com)
   * [regfish.de](https://www.regfish.de/domains/dyndns)
+  * [Simply.com](https://www.simply.com)
   * [Sitelutions](https://www.sitelutions.com)
   * [Yandex](https://dns.yandex.com)
   * [Zoneedit](https://www.zoneedit.com)

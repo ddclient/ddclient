@@ -69,10 +69,12 @@ handwritten_tests = \
 	t/is-and-extract-ipv6.pl \
 	t/is-and-extract-ipv6-global.pl \
 	t/logmsg.pl \
+	t/jitter.pl \
 	t/parse_assignments.pl \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
 	t/protocol_dyndns2.pl \
+	t/protocol_simplycom.pl \
 	t/read_recap.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
