@@ -65,11 +65,11 @@ handwritten_tests = \
 	t/group_hosts_by.pl \
 	t/header_ok.pl \
 	t/interval_expired.pl \
-	t/jitter.pl \
 	t/is-and-extract-ipv4.pl \
 	t/is-and-extract-ipv6.pl \
 	t/is-and-extract-ipv6-global.pl \
 	t/logmsg.pl \
+	t/jitter.pl \
 	t/parse_assignments.pl \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
