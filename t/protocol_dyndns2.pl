@@ -79,7 +79,7 @@ my @test_cases = (
             'good 192.0.2.1',
             'good',
         ],
-        wantquery => 'hostname=h1,h2&myip=192.0.2.1',
+        wantquery => 'hostname=h1%2Ch2&myip=192.0.2.1',
         wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
             h2 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
@@ -101,7 +101,7 @@ my @test_cases = (
             'nochg',
             'dnserr',
         ],
-        wantquery => 'hostname=h1,h2,h3&myip=192.0.2.1',
+        wantquery => 'hostname=h1%2Ch2%2Ch3&myip=192.0.2.1',
         wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
             h2 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
@@ -118,7 +118,7 @@ my @test_cases = (
         desc => 'IPv6, single host, good',
         cfg => {h1 => {wantipv6 => '2001:db8::1'}},
         resp => ['good'],
-        wantquery => 'hostname=h1&myip=2001:db8::1',
+        wantquery => 'hostname=h1&myip=2001%3Adb8%3A%3A1',
         wantrecap => {
             h1 => {'status-ipv6' => 'good', 'ipv6' => '2001:db8::1', 'mtime' => $ddclient::now},
         },
@@ -130,7 +130,7 @@ my @test_cases = (
         desc => 'IPv4 and IPv6, single host, good',
         cfg => {h1 => {wantipv4 => '192.0.2.1', wantipv6 => '2001:db8::1'}},
         resp => ['good'],
-        wantquery => 'hostname=h1&myip=192.0.2.1,2001:db8::1',
+        wantquery => 'hostname=h1&myip=192.0.2.1%2C2001%3Adb8%3A%3A1',
         wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1',
                    'status-ipv6' => 'good', 'ipv6' => '2001:db8::1',
@@ -152,7 +152,7 @@ my @test_cases = (
             'good',
             'WAT',
         ],
-        wantquery => 'hostname=h1,h2&myip=192.0.2.1',
+        wantquery => 'hostname=h1%2Ch2&myip=192.0.2.1',
         wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
             h2 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
@@ -170,7 +170,7 @@ my @test_cases = (
             h2 => {wantipv4 => '192.0.2.1'},
         },
         resp => ['abuse'],
-        wantquery => 'hostname=h1,h2&myip=192.0.2.1',
+        wantquery => 'hostname=h1%2Ch2&myip=192.0.2.1',
         wantrecap => {
             h1 => {'status-ipv4' => 'abuse'},
             h2 => {'status-ipv4' => 'abuse'},
@@ -187,7 +187,7 @@ my @test_cases = (
             h2 => {wantipv4 => '192.0.2.1'},
         },
         resp => ['good'],
-        wantquery => 'hostname=h1,h2&myip=192.0.2.1',
+        wantquery => 'hostname=h1%2Ch2&myip=192.0.2.1',
         wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
             h2 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
@@ -209,7 +209,7 @@ my @test_cases = (
             'good',
             'nochg',
         ],
-        wantquery => 'hostname=h1,h2,h3&myip=192.0.2.1',
+        wantquery => 'hostname=h1%2Ch2%2Ch3&myip=192.0.2.1',
         wantrecap => {
             h1 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
             h2 => {'status-ipv4' => 'good', 'ipv4' => '192.0.2.1', 'mtime' => $ddclient::now},
@@ -249,7 +249,9 @@ for my $tc (@test_cases) {
     is(scalar(@requests), 1, "$tc->{desc}: single update request");
     my $req = shift(@requests);
     is($req->uri()->path(), '/nic/update', "$tc->{desc}: request path");
-    is($req->uri()->query(), $tc->{wantquery}, "$tc->{desc}: request query");
+    is_deeply([sort split(/&/, $req->uri()->query() // '')],
+            [sort split(/&/, $tc->{wantquery})],
+            "$tc->{desc}: request query");
     is_deeply(\%ddclient::recap, $tc->{wantrecap}, "$tc->{desc}: recap")
         or diag(ddclient::repr(Values => [\%ddclient::recap, $tc->{wantrecap}],
                                Names => ['*got', '*want']));
