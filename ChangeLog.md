@@ -7,16 +7,17 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### New feature
 
-* Add a jitter to the daemon interval when in daemon mode to spread the web service
-  API calls across clients and reduce load on upstream DNS providers when many
-  clients are running with the same daemon interval.
+  * Add a jitter to the daemon interval when in daemon mode to spread the web service
+    API calls across clients and reduce load on upstream DNS providers when many
+    clients are running with the same daemon interval.
+    [#888](https://github.com/ddclient/ddclient/pull/888)
+  * Added `simply.com` (https://www.simply.com).
+    [#850](https://github.com/ddclient/ddclient/pull/850)
 
 ## 2026-05-16 v4.0.1-rc.1
 
 ### Provider updates
 
-  * Added `simply.com` (https://www.simply.com).
-    [#850](https://github.com/ddclient/ddclient/pull/850)
   * `hetzner`: Update API endpoint and implementation to align with provider recommendation.
     [852](https://github.com/ddclient/ddclient/pull/852)
     [876](https://github.com/ddclient/ddclient/pull/876)
