@@ -4693,8 +4693,9 @@ sub nic_easydns_update {
                 failed("could not connect to " . opt('server', $h));
                 next;
             };
-            # strip $body of HTML tags
-            $body =~ s|<.+?>||g;
+            # strip $body of HTML tags (replace with whitespace so tokens don't get concatenated)
+            $body =~ s/<[^>]*>/ /g;
+            $body =~ s/\s+/ /g;
             my $resultcode_re = join('|', map({quotemeta} 'NOERROR', 'OK', keys(%errors)));
             my $status = '';
             ($status) = $body =~ qr/\b($resultcode_re)\b/;
