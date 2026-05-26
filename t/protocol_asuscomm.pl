@@ -3,6 +3,7 @@ BEGIN { SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); } }
 BEGIN { eval { require 'ddclient'; } or BAIL_OUT($@); }
 use ddclient::t::HTTPD;
 use ddclient::t::Logger;
+use MIME::Base64 qw(decode_base64);
 
 httpd_required();
 
@@ -21,8 +22,11 @@ httpd()->run(sub {
         return [400, ['Content-Type' => 'text/plain'], ['unexpected request: ' . $uri]];
     }
 
-    # Reject anything with wrong MAC (simulate auth check)
-    if ($auth !~ /AABBCCDDEEFF/) {
+    # Decode Basic Auth and check MAC (username)
+    my ($auth_user) = do {
+        $auth =~ /^Basic\s+(\S+)$/ ? (split(/:/, decode_base64($1), 2))[0] : ();
+    };
+    unless (defined($auth_user) && $auth_user eq 'AABBCCDDEEFF') {
         return [401, ['Content-Type' => 'text/plain'], []];
     }
 
@@ -52,12 +56,12 @@ my $hostname = httpd()->endpoint();
 my @test_cases = (
     {
         desc => 'IPv4 update success (200)',
-        cfg  => {h1 => {
+        cfg  => {
             server   => $server,
             login    => 'AABBCCDDEEFF',
             password => '12345670',
             wantipv4 => '1.2.3.4',
-        }, 'h1' => 'myhost.asuscomm.com'},
+        },
         host    => 'myhost.asuscomm.com',
         wantrecap => {
             'myhost.asuscomm.com' => {'status-ipv4' => 'good', 'ipv4' => '1.2.3.4', mtime => $ddclient::now},
@@ -148,10 +152,8 @@ my @test_cases = (
     },
 );
 
-plan(tests => scalar(@test_cases));
-
 for my $tc (@test_cases) {
-    run_logger_test($tc->{desc}, sub {
+    subtest($tc->{desc} => sub {
         local %ddclient::config;
         local %ddclient::recap;
         my $host = $tc->{host};
@@ -159,7 +161,36 @@ for my $tc (@test_cases) {
             %{$tc->{cfg}},
             wantipv4 => $tc->{cfg}{wantipv4} // '1.2.3.4',
         };
-        ddclient::nic_asuscomm_update(undef, $host);
-        return \%ddclient::recap;
-    }, $tc->{wantrecap}, $tc->{wantlogs});
+
+        my $l = ddclient::t::Logger->new($ddclient::_l, qr/^(?:WARNING|FATAL|SUCCESS|FAILED)$/);
+        {
+            local $ddclient::_l = $l;
+            ddclient::nic_asuscomm_update(undef, $host);
+        }
+
+        is_deeply(\%ddclient::recap, $tc->{wantrecap}, 'recap matches')
+            or diag(ddclient::repr(Values => [\%ddclient::recap, $tc->{wantrecap}],
+                                   Names  => ['*got', '*want']));
+
+        subtest('logs' => sub {
+            my @got  = @{$l->{logs}};
+            my @want = @{$tc->{wantlogs} // []};
+            for my $i (0..$#want) {
+                last if $i >= @got;
+                subtest("log $i" => sub {
+                    is($got[$i]{label}, $want[$i]{label}, 'label');
+                    is_deeply($got[$i]{ctx}, $want[$i]{ctx}, 'context');
+                    like($got[$i]{msg}, $want[$i]{msg}, 'message');
+                });
+            }
+            my @unexpected = @got[@want..$#got];
+            ok(@unexpected == 0, 'no unexpected logs')
+                or diag(ddclient::repr(\@unexpected, Names => ['*unexpected']));
+            my @missing = @want[@got..$#want];
+            ok(@missing == 0, 'no missing logs')
+                or diag(ddclient::repr(\@missing, Names => ['*missing']));
+        });
+    });
 }
+
+done_testing();

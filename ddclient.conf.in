@@ -455,6 +455,17 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+##
+## ASUS DDNS (https://www.asuscomm.com/)
+##
+## MAC address and WPS PIN are printed on the label on the bottom of the router.
+## Register the hostname first via the router's web interface (WAN → DDNS).
+# protocol=asuscomm,                       \
+# login=001122AABBCC,                      \ # router MAC address, no colons, uppercase
+# password=12345670                        \ # WPS PIN (secret_code from router label)
+# myhost.asuscomm.com
+
+##
 ## Spaceship (https://www.spaceship.com/)
 ##
 # protocol=spaceship,                       \
