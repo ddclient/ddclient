@@ -439,6 +439,13 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.org
 
 ##
+## IONOS (https://ionos.com)
+##
+# protocol=ionos,               \
+# password=prefix.secret,       \
+# myhost.example.com
+
+##
 ## Hetzner
 ##
 # protocol=hetzner                          \
