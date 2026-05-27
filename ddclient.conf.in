@@ -290,6 +290,13 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## DDNSS.de (https://ddnss.de) - key-based authentication
+##
+# protocol=ddnss,
+# password=your-api-key,
+# myhost.ddnss.de
+
+##
 ## MyOnlinePortal (http://myonlineportal.net)
 ##
 # # ipv6=yes # optional
