@@ -557,3 +557,13 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # login=my-updatedip-login
 # password=my-updatedip-password
 # subdomain.updatedip.com
+
+##
+## LuaDNS (https://luadns.com) - programmable DNS with DDNS support
+## Use your account email as login and your API key as password.
+##
+# protocol=dyndns2,                         \
+# server=app.luadns.com,                    \
+# login=your-luadns-email,                  \
+# password=your-luadns-api-key              \
+# yourhostname.example.com

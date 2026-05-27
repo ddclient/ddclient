@@ -61,6 +61,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#882](https://github.com/ddclient/ddclient/pull/882)
   * Added `ddnss` protocol for DDNSS.de (https://ddnss.de) key-based
     authentication, complementing existing dyndns2 username/password support.
+  * Added `LuaDNS` (https://luadns.com) as a supported `dyndns2` provider
+    via `app.luadns.com`. Use your account email as login and API key as password.
 
 ### Improvements
 

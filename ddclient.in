@@ -4129,6 +4129,14 @@ Example ${program}.conf file entries:
   login=your-joker-ddns-login,                              \\
   password=your-joker-ddns-password                         \\
   myhost.example.com
+
+  ## LuaDNS (https://luadns.com) - programmable DNS with DDNS support
+  ## Use your account email as login and your API key as password.
+  protocol=dyndns2,                                         \\
+  server=app.luadns.com,                                    \\
+  login=your-luadns-email,                                  \\
+  password=your-luadns-api-key                              \\
+  yourhostname.example.com
 EoEXAMPLE
 }
 
