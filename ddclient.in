@@ -307,6 +307,8 @@ our %builtinweb = (
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
     'desec-ipv4' => {'url' => 'https://checkipv4.dedyn.io/'},
     'desec-ipv6' => {'url' => 'https://checkipv6.dedyn.io/'},
+    'joker-ipv4' => {'url' => 'https://ipv4.svc.joker.com/nic/checkip'},
+    'joker-ipv6' => {'url' => 'https://ipv6.svc.joker.com/nic/checkip'},
     'nsupdate.info-ipv4' => {'url' => 'https://ipv4.nsupdate.info/myip'},
     'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'updatedip' => {'url' => 'https://checkip.updatedip.com'},
@@ -4088,6 +4090,36 @@ Example ${program}.conf file entries:
   login=none,                                               \\
   password=your-dynv6-http-token                            \\
   yourhostname.dynv6.net
+
+  ## Joker.com (https://joker.com) - domain registrar with dynamic DNS support
+  ## Uses dyndns2-compatible /nic/update endpoint with HTTP Basic Auth.
+  ## The login and password are the DDNS credentials from Joker.com's DNS
+  ## management interface, not your Joker.com account credentials.
+  ## Use 'webv4=joker-ipv4' and 'webv6=joker-ipv6' to detect your IP via
+  ## Joker's dedicated IPv4/IPv6 checkip services.
+  ##
+  ## IPv4 only:
+  protocol=dyndns2,                                         \\
+  usev4=web, webv4=joker-ipv4,                              \\
+  server=svc.joker.com,                                     \\
+  login=your-joker-ddns-login,                              \\
+  password=your-joker-ddns-password                         \\
+  myhost.example.com
+  ##
+  ## Dual-stack IPv4 + IPv6 (two stanzas):
+  protocol=dyndns2,                                         \\
+  usev4=web, webv4=joker-ipv4, usev6=disabled,              \\
+  server=svc.joker.com,                                     \\
+  login=your-joker-ddns-login,                              \\
+  password=your-joker-ddns-password                         \\
+  myhost.example.com
+  ##
+  protocol=dyndns2,                                         \\
+  usev4=disabled, usev6=web, webv6=joker-ipv6,              \\
+  server=svc.joker.com,                                     \\
+  login=your-joker-ddns-login,                              \\
+  password=your-joker-ddns-password                         \\
+  myhost.example.com
 EoEXAMPLE
 }
 
