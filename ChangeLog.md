@@ -20,6 +20,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#888](https://github.com/ddclient/ddclient/pull/888)
   * Added `simply.com` (https://www.simply.com).
     [#850](https://github.com/ddclient/ddclient/pull/850)
+  * Added `ns1` protocol for NS1 / IBM NS1 Connect (https://ns1.com/).
+    [#907](https://github.com/ddclient/ddclient/pull/907)
   * Added `spaceship` protocol for Spaceship (https://www.spaceship.com/).
     [#896](https://github.com/ddclient/ddclient/pull/896)
 
