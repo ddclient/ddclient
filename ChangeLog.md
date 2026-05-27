@@ -5,6 +5,10 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-rc.2 (unreleased work-in-progress)
 
+### New features
+
+  * Added `glesys` protocol for GleSYS (https://glesys.com).
+
 ### Provider updates
 
   * `sitelutions`: Update default server to `api2.sitelutions.com` (APIv2); add optional

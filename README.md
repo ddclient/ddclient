@@ -40,6 +40,7 @@ Dynamic DNS services currently supported include:
   * [Freedns](https://freedns.afraid.org)
   * [Freemyip](https://freemyip.com)
   * [Gandi](https://gandi.net)
+  * [GleSYS](https://glesys.com)
   * [GoDaddy](https://www.godaddy.com)
   * [Hetzner](https://hetzner.com)
   * [Hurricane Electric](https://dns.he.net)
