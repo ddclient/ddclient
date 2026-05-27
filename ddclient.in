@@ -4012,6 +4012,14 @@ Example ${program}.conf file entries:
   login=your-ddnss-username,                                \\
   password=your-ddnss-password                              \\
   myhost.ddnss.de
+
+  ## DynV6 (https://dynv6.com) - free IPv6-focused dynamic DNS
+  ## Authenticate with your zone's HTTP token; no username required (login=none).
+  protocol=dyndns2,                                         \\
+  server=dynv6.com,                                         \\
+  login=none,                                               \\
+  password=your-dynv6-http-token                            \\
+  yourhostname.dynv6.net
 EoEXAMPLE
 }
 
