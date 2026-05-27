@@ -67,6 +67,7 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     dual-stack configuration examples.
   * Added `ns1` protocol for NS1 / IBM NS1 Connect (https://ns1.com/).
     [#907](https://github.com/ddclient/ddclient/pull/907)
+  * Added `namesilo` protocol for NameSilo (https://www.namesilo.com/).
   * Added `spaceship` protocol for Spaceship (https://www.spaceship.com/).
     [#896](https://github.com/ddclient/ddclient/pull/896)
   * Added `updatedip` built-in web IP check service for UpdatedIP (https://www.updatedip.com).
