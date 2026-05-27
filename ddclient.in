@@ -4063,6 +4063,15 @@ Example ${program}.conf file entries:
   password=my-dyndns.org-password                           \\
   my-toplevel-domain.com,my-other-domain.com
 
+  ## All-inkl.com (https://all-inkl.com) - hosted DNS with DDNS support
+  ## Create DDNS credentials in KAS under Tools → DDNS Settings.
+  ## Supports both IPv4 and IPv6 (enable Dual-Stack in KAS for IPv6).
+  protocol=dyndns2,                                         \\
+  server=dyndns.kasserver.com,                              \\
+  login=your-kas-ddns-login,                                \\
+  password=your-kas-ddns-password                           \\
+  yourhost.yourdomain.com
+
   ## deSEC (https://desec.io) - free, open-source, DNSSEC-enabled dynamic DNS
   ## The dynDNS update password is displayed after sign-up when a .dedyn.io
   ## domain is created. Alternatively, create an API token at

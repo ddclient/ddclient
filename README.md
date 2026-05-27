@@ -14,6 +14,7 @@ your dynamic DNS provider(s): <https://github.com/troglobit/inadyn> or
 Dynamic DNS services currently supported include:
 
   * [1984.is](https://www.1984.is/product/freedns)
+  * [All-inkl.com](https://all-inkl.com)
   * [ChangeIP](https://www.changeip.com)
   * [CloudFlare](https://www.cloudflare.com)
   * [ClouDNS](https://www.cloudns.net)
