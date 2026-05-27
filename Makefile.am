@@ -76,6 +76,7 @@ handwritten_tests = \
 	t/protocol_cloudflare.pl \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
+	t/protocol_dreamhost.pl \
 	t/protocol_dynadot.pl \
 	t/protocol_dyndns2.pl \
 	t/protocol_dynu.pl \
