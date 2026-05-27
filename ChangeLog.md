@@ -5,6 +5,13 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-rc.2 (unreleased work-in-progress)
 
+### Bug fixes
+
+  * `hetzner`: Fix apex-domain updates creating spurious `hostname.zone` DNS records;
+    hostnames equal to the zone are now correctly sent as `@`. Also remove the hardcoded
+    `https://` scheme from URL construction so the `server` option can override it.
+    [#899](https://github.com/ddclient/ddclient/pull/899)
+
 ### New feature
 
   * Add a jitter to the daemon interval when in daemon mode to spread the web service
