@@ -506,6 +506,15 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.org
 
 ##
+## HostTech (https://www.hosttech.eu)
+## Use your HostTech API token as password.
+##
+# protocol=hosttech,                        \
+# password=your-api-token,                  \
+# zone=example.com,                         \
+# myhost.example.com
+
+##
 ## NS1 / IBM NS1 Connect (https://ns1.com/)
 ##
 # protocol=ns1                                                 \
