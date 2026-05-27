@@ -5978,7 +5978,7 @@ sub nic_cloudflare_update {
             info('getting Cloudflare Zone ID');
 
             # Get zone ID
-            my $url = "https://" . opt('server', $domain) . "/zones/?";
+            my $url = opt('server', $domain) . "/zones/?";
             $url .= "name=" . opt('zone', $domain);
 
             my $reply = geturl(proxy => opt('proxy'),
@@ -5986,9 +5986,8 @@ sub nic_cloudflare_update {
                                headers => $headers
                               );
             next if !header_ok($reply);
-            # Strip header
-            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-            my $response = eval {decode_json(${^MATCH})};
+            # Strip header to extract the reply and process the JSON object if there is a match, reset the $response otherwise.
+            my $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
             unless ($response && $response->{result}) {
                 failed("invalid json or result");
                 next;
@@ -6013,7 +6012,7 @@ sub nic_cloudflare_update {
                 $recap{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = "https://" . opt('server', $domain) . "/zones/$zone_id/dns_records?";
+                $url = opt('server', $domain) . "/zones/$zone_id/dns_records?";
                 $url .= "type=$type&name=$domain";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
@@ -6021,8 +6020,7 @@ sub nic_cloudflare_update {
                                );
                 next if !header_ok($reply);
                 # Strip header
-                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-                $response = eval {decode_json(${^MATCH})};
+                $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
                 unless ($response && $response->{result}) {
                     failed("invalid json or result");
                     next;
@@ -6035,7 +6033,7 @@ sub nic_cloudflare_update {
                 }
                 debug("DNS '$type' record ID: $dns_rec_id");
                 # Set domain
-                $url = "https://" . opt('server', $domain) . "/zones/$zone_id/dns_records/$dns_rec_id";
+                $url = opt('server', $domain) . "/zones/$zone_id/dns_records/$dns_rec_id";
                 my $data = "{\"content\":\"$ip\"}";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
@@ -6045,8 +6043,7 @@ sub nic_cloudflare_update {
                                );
                 next if !header_ok($reply);
                 # Strip header
-                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-                $response = eval {decode_json(${^MATCH})};
+                $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
                 if ($response && $response->{result}) {
                     success("IPv$ipv address set to $ip");
                     $recap{$domain}{"ipv$ipv"} = $ip;
