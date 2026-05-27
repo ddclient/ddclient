@@ -304,6 +304,8 @@ our %builtinweb = (
     'myonlineportal' => {'url' => 'https://myonlineportal.net/checkip'},
     'noip-ipv4' => {'url' => 'http://ip1.dynupdate.no-ip.com/'},
     'noip-ipv6' => {'url' => 'http://ip1.dynupdate6.no-ip.com/'},
+    'desec-ipv4' => {'url' => 'https://checkipv4.dedyn.io/'},
+    'desec-ipv6' => {'url' => 'https://checkipv6.dedyn.io/'},
     'nsupdate.info-ipv4' => {'url' => 'https://ipv4.nsupdate.info/myip'},
     'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
@@ -3981,6 +3983,35 @@ Example ${program}.conf file entries:
   login=my-dyndns.org-login,                                \\
   password=my-dyndns.org-password                           \\
   my-toplevel-domain.com,my-other-domain.com
+
+  ## deSEC (https://desec.io) - free, open-source, DNSSEC-enabled dynamic DNS
+  ## The dynDNS update password is displayed after sign-up when a .dedyn.io
+  ## domain is created. Alternatively, create an API token at
+  ## https://desec.io/tokens. There is no login; users are identified by the
+  ## update password (API token) alone.
+  ## Use 'webv4=desec-ipv4' and/or 'webv6=desec-ipv6' to detect your IP via
+  ## deSEC's own check services.
+  ##
+  ## NOTE: deSEC intentionally treats an empty 'myip' parameter as a request
+  ## to delete the A or AAAA record. The original DynDNS2 spec leaves this
+  ## behavior undefined (https://help.dyn.com/perform-update.html), but deSEC
+  ## uses it as a deliberate deletion signal. ddclient will skip the update
+  ## entirely if IP detection fails, so this should not be triggered under
+  ## normal operation.
+  protocol=dyndns2,                                         \\
+  server=update.dedyn.io,                                   \\
+  password=your-desec-update-password                       \\
+  yourdomain.dedyn.io
+
+  ## DDNSS.de (https://ddnss.de) - free dynamic DNS
+  ## Uses HTTP Basic Auth with the standard dyndns2 /nic/update endpoint.
+  ## For dual-stack, repeat the stanza twice: once with usev4=webv4,usev6=disabled
+  ## and once with usev4=disabled,usev6=webv6.
+  protocol=dyndns2,                                         \\
+  server=ddnss.de,                                          \\
+  login=your-ddnss-username,                                \\
+  password=your-ddnss-password                              \\
+  myhost.ddnss.de
 EoEXAMPLE
 }
 
