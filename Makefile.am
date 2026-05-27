@@ -71,6 +71,7 @@ handwritten_tests = \
 	t/logmsg.pl \
 	t/jitter.pl \
 	t/parse_assignments.pl \
+	t/protocol_asuscomm.pl \
 	t/protocol_cloudflare.pl \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \
