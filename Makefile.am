@@ -31,6 +31,7 @@ $(subst_files): Makefile
 			-e 's|@confdir[@]|$(confdir)|g' \
 			-e 's|@runstatedir[@]|$(runstatedir)|g' \
 			-e 's|@CURL[@]|$(CURL)|g' \
+			-e 's|@ENABLE_MIGRATION_HINTS[@]|$(ENABLE_MIGRATION_HINTS)|g' \
 			"$${in}" >'$@'.tmp && \
 		{ ! test -x "$${in}" || chmod +x '$@'.tmp; }
 	mv '$@'.tmp '$@'

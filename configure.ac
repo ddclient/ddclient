@@ -48,6 +48,13 @@ AC_PROG_MKDIR_P
 AC_PATH_PROG([FIND], [find])
 AS_IF([test -z "${FIND}"], [AC_MSG_ERROR(['find' utility not found])])
 
+AC_ARG_ENABLE([migration-hints],
+  [AS_HELP_STRING([--enable-migration-hints],
+    [enable hints about old 3.x config file location @<:@default: disabled@:>@])],
+  [enable_migration_hints=$enableval],
+  [enable_migration_hints=no])
+AC_SUBST([ENABLE_MIGRATION_HINTS], [$enable_migration_hints])
+
 AC_ARG_WITH([curl],
   [AS_HELP_STRING([[--with-curl[=CURL]]], [use CURL as absolute path to curl executable])],
   [],

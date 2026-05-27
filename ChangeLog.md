@@ -52,6 +52,15 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
   * Added `updatedip` built-in web IP check service for UpdatedIP (https://www.updatedip.com).
     [#868](https://github.com/ddclient/ddclient/pull/868)
 
+### Improvements
+
+  * Warn on startup when no hosts are configured, with a hint about the old 3.x
+    config file location (`${sysconfdir}/ddclient.conf`) when a file is found
+    there but the new location (`${sysconfdir}/ddclient/ddclient.conf`) is empty.
+    Packagers that handle config migration through other means can suppress the
+    hint by passing `--disable-migration-hints` to `./configure`.
+    [#903](https://github.com/ddclient/ddclient/pull/903)
+
 ## 2026-05-16 v4.0.1-rc.1
 
 ### Provider updates
