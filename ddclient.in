@@ -6098,6 +6098,7 @@ sub nic_hetzner_update {
 
         my $zone = opt('zone', $domain);
         (my $hostname = $domain) =~ s/\Q.$zone\E$//;
+        $hostname = '@' if $hostname eq $domain;
         my $ipv4 = delete $config{$domain}{'wantipv4'};
         my $ipv6 = delete $config{$domain}{'wantipv6'};
 
@@ -6112,7 +6113,8 @@ sub nic_hetzner_update {
             $recap{$domain}{"status-ipv$ipv"} = 'failed';
 
             # Get DNS 'A' or 'AAAA' record ID
-            my $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets/$hostname/$type";
+            my $server = opt('server', $domain);
+            my $url = "$server/zones/$zone/rrsets/$hostname/$type";
             my $reply = geturl(proxy => opt('proxy'),
                             url => $url,
                             headers => $headers
@@ -6143,12 +6145,12 @@ sub nic_hetzner_update {
             if ($response)
             {
                 debug("DNS '$type' record ID: $response->{rrset}->{id}");
-                $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets/$hostname/$type/actions/set_records";
+                $url = "$server/zones/$zone/rrsets/$hostname/$type/actions/set_records";
                 $http_method = "POST";
                 $data = "{\"records\": [{\"value\": \"$ip\"}]}";
             } else {
                 debug("creating DNS '$type'");
-                $url = "https://" . opt('server', $domain) . "/zones/$zone/rrsets";
+                $url = "$server/zones/$zone/rrsets";
                 $http_method = "POST";
                 $data = "{\"name\":\"$hostname\",\"type\":\"$type\",\"ttl\":" . opt('ttl', $domain) . ",\"records\":[{\"value\":\"$ip\"}]}";
             }
@@ -6171,7 +6173,7 @@ sub nic_hetzner_update {
             my $action_id = $response->{action}->{id};
 
             # Get action status
-            $url = "https://" . opt('server', $domain) . "/actions/$action_id";
+            $url = "$server/actions/$action_id";
             my $max_tries = 5;
 
             for (my $try_number = 1; $try_number <= $max_tries; $try_number++) {
