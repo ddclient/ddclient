@@ -131,7 +131,16 @@ operating system. See the image to the right for a list of distributions with a 
      sudo make install
      ```
 
-  3. Edit `/etc/ddclient/ddclient.conf`.
+  3. Copy the sample config and edit it for your setup:
+
+     ```shell
+     sudo cp /etc/ddclient/ddclient.conf.sample /etc/ddclient/ddclient.conf
+     sudo $EDITOR /etc/ddclient/ddclient.conf
+     ```
+
+     `make install` no longer overwrites an existing `ddclient.conf`, so upgrades
+     are safe.  The sample at `ddclient.conf.sample` is always refreshed on every
+     install so you can diff it against your live config to see what's new.
 
 #### systemd
 

@@ -1,0 +1,457 @@
+######################################################################
+##
+## Define default global variables with lines like:
+##      var=value [, var=value]*
+## These values will be used for each following host unless overridden
+## with a local variable definition.
+##
+## Define local variables for one or more hosts with:
+##      var=value [, var=value]* host.and.domain[,host2.and.domain...]
+##
+## Lines can be continued on the following line by ending the line
+## with a \
+##
+##
+## Warning: not all supported routers or dynamic DNS services
+##          are mentioned here.
+##
+######################################################################
+
+## Use encryption (TLS) when the scheme (either "http://" or "https://") is
+## missing from a URL.  Defaults to "yes".
+#ssl=yes
+
+daemon=300                      # check every 300 seconds
+jitter=60                       # apply up to 60 seconds of delay to the daemon interval
+syslog=yes                      # log update msgs to syslog
+mail=root                       # mail all msgs to root
+mail-failure=root               # mail failed update msgs to root
+# mail-from=root                # set the email "From:" header to "root".  If
+                                # unset (the default) or empty, the from address
+                                # depends on your system's default behavior.
+pid=/usr/local/var/run/ddclient.pid  # record PID in file.
+# postscript=script             # run script after updating.  The new IP is
+                                # added as argument.
+#
+#use=watchguard-soho,        fw=192.168.111.1:80        # via Watchguard's SOHO FW
+#use=netopia-r910,           fw=192.168.111.1:80        # via Netopia R910 FW
+#use=smc-barricade,          fw=192.168.123.254:80      # via SMC's Barricade FW
+#use=netgear-rt3xx,          fw=192.168.0.1:80          # via Netgear's internet FW
+#use=linksys,                fw=192.168.1.1:80          # via Linksys's internet FW
+#use=maxgate-ugate3x00,      fw=192.168.0.1:80          # via MaxGate's UGATE-3x00  FW
+#use=elsa-lancom-dsl10,      fw=10.0.0.254:80           # via ELSA LanCom DSL/10 DSL Router
+#use=elsa-lancom-dsl10-ch01, fw=10.0.0.254:80           # via ELSA LanCom DSL/10 DSL Router
+#use=elsa-lancom-dsl10-ch02, fw=10.0.0.254:80           # via ELSA LanCom DSL/10 DSL Router
+#use=alcatel-stp,            fw=10.0.0.138:80           # via Alcatel Speed Touch Pro
+#use=xsense-aero,            fw=192.168.1.1:80          # via Xsense Aero Router
+#use=allnet-1298,            fw=192.168.1.1:80          # via AllNet 1298 DSL Router
+#use=3com-oc-remote812,      fw=192.168.0.254:80        # via 3com OfficeConnect Remote 812
+#use=e-tech,                 fw=192.168.1.1:80          # via E-tech Router
+#use=cayman-3220h,           fw=192.168.0.1:1080        # via Cayman 3220-H DSL Router
+#
+#fw-login=admin,             fw-password=XXXXXX         # FW login and password
+#
+## To obtain an IP address from FW status page (using fw-login, fw-password)
+#use=fw, fw=192.168.1.254/status.htm, fw-skip='IP Address' # found after IP Address
+#
+## To obtain an IP address via UPnP from router
+## Requires miniupnpc to be installed on the system.
+#use=cmd, cmd=external-ip
+#
+## To obtain an IP address from Web status page (using the proxy if defined)
+## by default, checkip.dyndns.org is used if you use the dyndns protocol.
+## Using use=web is enough to get it working.
+## WARNING: set deamon at least to 600 seconds if you use checkip or you could
+## get banned from their service.
+#use=web, web=checkip.dyndns.org/, web-skip='IP Address' # found after IP Address
+#
+#use=ip,                     ip=127.0.0.1       # via static IP's
+#use=if,                     if=eth0            # via interfaces
+#use=web                                        # via web
+#
+#protocol=dyndns2                               # default protocol
+#proxy=fasthttp.sympatico.ca:80                 # default proxy
+#server=members.dyndns.org                      # default server
+#server=members.dyndns.org:8245                 # default server (bypassing proxies)
+
+#login=your-login                               # default login
+#password=test                                  # default password
+#mx=mx.for.your.host                            # default MX
+#backupmx=yes|no                                # host is primary MX?
+#wildcard=yes|no                                # add wildcard CNAME?
+
+##
+## dyndns.org dynamic addresses
+##
+## (supports variables: wildcard,mx,backupmx)
+##
+# server=members.dyndns.org,            \
+# protocol=dyndns2                      \
+# your-dynamic-host.dyndns.org
+
+##
+## ZoneEdit (zoneedit.com)
+##
+# server=dynamic.zoneedit.com,          \
+# protocol=zoneedit1,                   \
+# login=your-zoneedit-login,            \
+# password=your-zoneedit-password       \
+# your.any.domain,your-2nd.any.dom
+
+##
+## EasyDNS (easydns.com)
+##
+# server=members.easydns.com,           \
+# protocol=easydns,                     \
+# login=your-easydns-login,             \
+# password=your-easydns-password        \
+# your.any.domain,your-2nd.any.domain
+
+##
+## dslreports.com dynamic-host monitoring
+##
+# server=members.dslreports.com         \
+# protocol=dslreports1,                 \
+# login=dslreports-login,               \
+# password=dslreports-password          \
+# dslreports-unique-id
+
+##
+## OrgDNS.org account-configuration
+##
+# use=web, web=members.orgdns.org/nic/ip
+# protocol=dyndns2
+# server=www.orgdns.org                 \
+# login=yourLoginName                   \
+# password=yourPassword                 \
+# yourSubdomain.orgdns.org
+
+##
+## NameCheap (namecheap.com)
+##
+# protocol=namecheap,                     \
+# server=dynamicdns.park-your-domain.com, \
+# login=example.com,                      \
+# password=example.com-password           \
+# subdomain.example.com
+
+##
+## NearlyFreeSpeech.NET (nearlyfreespeech.net)
+##
+# protocol=nfsn,                        \
+# zone=example.com,                     \
+# login=member-login,                   \
+# password=api-key                      \
+# example.com,subdomain.example.com
+
+##
+## Loopia (loopia.se)
+##
+# use=web, web=loopia
+# protocol=dyndns2
+# server=dns.loopia.se
+# script=/XDynDNSServer/XDynDNS.php
+# login=my-loopia.se-login
+# password=my-loopia.se-password
+# my.domain.tld,other.domain.tld
+
+##
+## NoIP (noip.com)
+##
+# protocol=noip,                        \
+# ssl=yes,                              \
+# server=dynupdate.no-ip.com,           \
+# login=your-noip-login,                \
+# password=your-noip-password           \
+# your-host.domain.com, your-2nd-host.domain.com
+
+##
+## ChangeIP (changeip.com)
+##
+## single host update
+# protocol=changeip,                   \
+# login=my-my-changeip.com-login,      \
+# password=my-changeip.com-password    \
+# myhost.changeip.org
+
+##
+## CloudFlare (www.cloudflare.com)
+##
+## API Token authentication (recommended)
+# protocol=cloudflare,                  \
+# zone=domain.tld,                      \ # Cloudflare DNS zone
+# ttl=300,                              \ # Optional
+# password='your-api-token',            \ # API token with Zone:DNS:Edit and Zone:Zone:Read permissions
+# domain.tld,sub.domain.tld
+#
+## Global API Key authentication (legacy)
+# protocol=cloudflare,                  \
+# zone=domain.tld,                      \ # Cloudflare DNS zone
+# ttl=300,                              \ # Optional
+# login=your-login-email,               \ # Cloudflare DNS zone
+# password=your-global-key              \
+# domain.tld,sub.domain.tld
+
+##
+## Gandi (gandi.net)
+##
+## Single host update
+# protocol=gandi
+# zone=example.com
+# password=my-gandi-access-token
+# use-personal-access-token=yes
+# ttl=10800 # optional
+# myhost.example.com
+
+##
+## GoDaddy (godaddy.com)
+##
+# protocol=godaddy,                    \
+# password=my-godaddy-api-key,         \
+# password=my-godaddy-secret,          \
+# ttl=600                              \
+# zone=example.com,                    \
+# myhost.example.com,nexthost.example.com
+
+##
+## Hurricane Electric (dns.he.net)
+##
+# protocol=he.net,                      \
+# password=my-genereated-password       \
+# myhost.example.com
+
+##
+## Duckdns (http://www.duckdns.org/)
+##
+#
+# protocol=duckdns, \
+# password=my-auto-generated-password \
+# hostwithoutduckdnsorg,host2withoutduckdnsorg
+
+##
+## Freemyip (http://freemyip.com/)
+##
+#
+# protocol=freemyip,
+# password=my-token
+# myhost
+
+##
+## DDNS.FM (https://ddns.fm/)
+##
+#
+# protocol=ddns.fm,
+# password=my-token
+# myhost.example.com
+
+##
+## MyOnlinePortal (http://myonlineportal.net)
+##
+# # ipv6=yes # optional
+# use=web, web=myonlineportal.net/checkip
+# # use=if, if=eth0     # alternative to use=web
+# # if-skip=Scope:Link  # alternative to use=web
+# protocol=dyndns2
+# ssl=yes
+# login=your-myonlineportal-username
+# password=your-myonlineportal-password
+# domain.myonlineportal.net
+
+##
+## nsupdate.info IPV4(https://www.nsupdate.info)
+##
+# use=web, web=http://ipv4.nsupdate.info/myip
+# protocol=dyndns2
+# server=ipv4.nsupdate.info
+# login=domain.nsupdate.info
+# password='123'
+# domain.nsupdate.info
+
+##
+## nsupdate.info IPV6 (https://www.nsupdate.info)
+## ddclient releases <= 3.8.1 do not support IPv6
+##
+# usev6=if, if=eth0
+# protocol=dyndns2
+# server=ipv6.nsupdate.info
+# login=domain.nsupdate.info
+# password='123'
+# domain.nsupdate.info
+
+##
+## Yandex.Mail for Domain (domain.yandex.com)
+##
+# protocol=yandex,                      \
+# login=domain.tld,                     \
+# password=yandex-pdd-token             \
+# my.domain.tld,other.domain.tld        \
+
+##
+## DNS Made Easy (https://dnsmadeeasy.com)
+##
+# protocol=dnsmadeeasy,
+# login=your-account-email-address
+# password=your-generated-password
+# your-numeric-record-id-1,your-numeric-record-id-2,...
+
+##
+## OVH DynHost (https://ovh.com)
+##
+# protocol=ovh,
+# login=example.com-dynhostuser,
+# password=your_password
+# test.example.com
+
+##
+## Simply.com (https://simply.com)
+##
+# protocol=simply.com,
+# login=<simplyaccount>,    # example: S123456
+# password=<apikey>,
+# zone=example.com,
+# test.example.com
+
+##
+## Porkbun (https://porkbun.com/)
+##
+# protocol=porkbun
+# apikey=APIKey
+# secretapikey=SecretAPIKey
+# root-domain=example.com
+# host.example.com,host2.sub.example.com
+# example.com,sub.example.com
+
+##
+## ClouDNS (https://www.cloudns.net)
+##
+# protocol=cloudns, \
+# dynurl=https://ipv4.cloudns.net/api/dynamicURL/?q=Njc1OTE2OjY3Njk0NDM6YTk2, \
+# myhost.example.com
+
+##
+## dinahosting (https://dinahosting.com)
+##
+# protocol=dinahosting, \
+# login=myusername,     \
+# password=mypassword   \
+# myhost.mydomain.com
+
+##
+## dnsexit (www.dnsexit.com)
+##
+# protocol=dnsexit,                                            \
+# login=myusername,                                            \
+# password=mypassword,                                         \
+# subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## dnsexit2 (API method www.dnsexit.com)
+##
+# protocol=dnsexit2
+# password=MyAPIKey
+# subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## domeneshop (www.domeneshop.no)
+##
+# protocol=domeneshop
+# login=<token>
+# password=<secret>
+# subdomain-1.domain.com,subdomain-2.domain.com
+
+##
+## Njal.la (http://njal.la/)
+##
+# protocol=njalla,
+# password=mypassword
+# quietreply=no|yes
+# my-domain.com
+
+##
+## regfish.de (www.regfish.de/)
+##
+# protocol=regfishde,
+# password=mypassword
+# my-domain.com
+
+##
+## Enom (www.enom.com)
+##
+# protocol=enom,
+# login=domain.name,
+# password=domain-password
+# my-domain.com
+
+##
+## DigitalOcean (www.digitalocean.com)
+##
+# protocol=digitalocean, \
+# zone=example.com,      \
+# password=api-token     \
+# example.com,sub.example.com
+
+##
+## Directnic (directnic.com)
+##
+# protocol=directnic,
+# urlv4=https://directnic.com/dns/gateway/ipv4_token/
+# urlv6=https://directnic.com/dns/gateway/ipv6_token/
+# my-domain.com
+
+##
+## Infomaniak (www.infomaniak.com)
+##
+# protocol=infomaniak,
+# login=ddns_username,
+# password=ddns_password
+# example.com
+#
+# N.B. the infomaniak protocol is obsolete. Please use dyndns2 instead:
+#
+# protocol=dyndns2,
+# use=web, web=infomaniak.com/ip.php/
+# login=ddns_username,
+# password=ddns_password
+# redirect=2
+# example.com
+
+##
+## Email Only
+##
+# protocol=emailonly
+# host.example.com
+
+##
+## dnsHome.de
+##
+# protocol=dyndns2           \
+# server=www.dnshome.de      \
+# login=subdomain.domain.tld \
+# password=your_password     \
+# subdomain.domain.tld
+
+##
+## INWX
+##
+# protocol=inwx                             \
+# login=my-inwx-DynDNS-account-username     \
+# password=my-inwx-DynDNS-account-password  \
+# myhost.example.org
+
+##
+## Hetzner
+##
+# protocol=hetzner                          \
+# zone=dns.zone                             \
+# password=hetzner-cloud-api-key            \
+# myhost.example.org
+
+##
+## Spaceship (https://www.spaceship.com/)
+##
+# protocol=spaceship,                       \
+# server=spaceship.dev,                     \
+# login=myapikey,                           \
+# password='myapisecret',                   \
+# zone=example.com,                         \
+# myhost.example.com
