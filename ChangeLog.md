@@ -20,6 +20,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#888](https://github.com/ddclient/ddclient/pull/888)
   * Added `simply.com` (https://www.simply.com).
     [#850](https://github.com/ddclient/ddclient/pull/850)
+  * Added `DynV6` (https://dynv6.com) as a supported `dyndns2` provider.
+    Authenticate with your zone's HTTP token; no username required (`login=none`).
   * Added `deSEC` (https://desec.io) and `DDNSS.de` (https://ddnss.de) as
     supported `dyndns2` providers, with dedicated `desec-ipv4`/`desec-ipv6`
     web IP check services.

@@ -455,6 +455,16 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## DynV6 (https://dynv6.com) - free IPv6-focused dynamic DNS
+## Authenticate with your zone's HTTP token; no username required.
+##
+# protocol=dyndns2,                         \
+# server=dynv6.com,                         \
+# login=none,                               \
+# password=your-dynv6-http-token            \
+# yourhostname.dynv6.net
+
+##
 ## Spaceship (https://www.spaceship.com/)
 ##
 # protocol=spaceship,                       \
