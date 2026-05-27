@@ -1216,6 +1216,18 @@ our %protocols = (
             'server'       => setv(T_FQDNP, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     ),
+    'namecom' => ddclient::Protocol->new(
+        'update'   => \&nic_namecom_update,
+        'examples' => \&nic_namecom_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'    => undef,
+            'password' => undef,
+            'zone'     => setv(T_FQDN,   1, undef,           undef),
+            'ttl'      => setv(T_NUMBER, 0, 300,              undef),
+            'server'   => setv(T_FQDNP,  0, 'api.name.com',  undef),
+        },
+    ),
     'nfsn' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
@@ -2254,7 +2266,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             ionos nfsn njalla ns1 porkbun spaceship yandex));
+                             ionos namecom nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -5143,6 +5155,178 @@ sub nic_namecheap_update {
             failed("invalid reply: $reply");
         }
     }
+}
+
+######################################################################
+
+######################################################################
+## nic_namecom_examples
+######################################################################
+sub nic_namecom_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'namecom'
+
+The 'namecom' protocol is used by the DNS service offered by www.name.com.
+
+Before configuring, create an API token in your Name.com account settings
+under Account > API Tokens.
+
+Configuration variables applicable to the 'namecom' protocol are:
+  protocol=namecom             ##
+  server=fqdn.of.service       ## can be omitted, defaults to api.name.com
+  zone=dns.zone                ## the registered domain (required)
+  login=service-login          ## Name.com account username
+  password=service-password    ## Name.com API token (not account password)
+  ttl=seconds                  ## optional; DNS TTL, default 300
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=namecom                                             \\
+  login=your-name-com-username                                 \\
+  password=your-api-token                                      \\
+  zone=example.com                                             \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_namecom_update
+######################################################################
+sub nic_namecom_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $zone = opt('zone', $h);
+
+        (my $subdomain = $h) =~ s/\Q.$zone\E$//;
+        if ($subdomain eq $h && $h ne $zone) {
+            failed("hostname '$h' does not end with zone '$zone'");
+            next;
+        }
+        $subdomain = '' if $h eq $zone;
+
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            my $rrtype = $ipv eq '4' ? 'A' : 'AAAA';
+            info("setting IPv$ipv address to $ip");
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            my $list_resp = _namecom_call(
+                server   => opt('server', $h),
+                method   => 'GET',
+                path     => "/v4/domains/$zone/records",
+                login    => opt('login', $h),
+                password => opt('password', $h),
+            );
+            if (!defined $list_resp) {
+                next;
+            }
+
+            my ($existing) = grep {
+                my $fqdn = $_->{fqdn} // '';
+                $fqdn eq "$h." && ($_->{type} // '') eq $rrtype;
+            } @{$list_resp->{records} // []};
+
+            my $ttl  = opt('ttl', $h) + 0;
+            my $body = encode_json({
+                host   => $subdomain,
+                type   => $rrtype,
+                answer => $ip,
+                ttl    => $ttl,
+            });
+
+            my ($method, $path);
+            if ($existing) {
+                my $id = $existing->{id};
+                debug("updating existing record id $id");
+                $method = 'PUT';
+                $path   = "/v4/domains/$zone/records/$id";
+            } else {
+                debug("creating new $rrtype record");
+                $method = 'POST';
+                $path   = "/v4/domains/$zone/records";
+            }
+
+            my $update_resp = _namecom_call(
+                server   => opt('server', $h),
+                method   => $method,
+                path     => $path,
+                login    => opt('login', $h),
+                password => opt('password', $h),
+                body     => $body,
+            );
+            if (!defined $update_resp) {
+                next;
+            }
+
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
+    }
+}
+
+######################################################################
+## _namecom_call: make an authenticated Name.com API call
+######################################################################
+sub _namecom_call {
+    my (%args) = @_;
+    my $server   = delete $args{server};
+    my $method   = delete $args{method};
+    my $path     = delete $args{path};
+    my $login    = delete $args{login};
+    my $password = delete $args{password};
+    my $body     = delete $args{body} // '';
+
+    my $url   = "$server$path";
+    my $reply = geturl(
+        proxy    => opt('proxy'),
+        url      => $url,
+        method   => $method,
+        login    => $login,
+        password => $password,
+        headers  => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
+        ($body ? (data => $body) : ()),
+    );
+
+    if (!$reply) {
+        failed("could not connect to $server");
+        return undef;
+    }
+
+    my ($status) = ($reply =~ m{^HTTP/\S+\s+(\d+)}i);
+    if (!defined $status) {
+        failed("unexpected HTTP response from $server");
+        return undef;
+    }
+    (my $resp_body = $reply) =~ s/^.*?\n\n//s;
+    $resp_body =~ s/^\s+|\s+$//g;
+
+    if ($status >= 400) {
+        my $detail = '';
+        if ($resp_body) {
+            my $parsed = eval { decode_json($resp_body) };
+            $detail = ": $parsed->{message}"
+                if ref($parsed) eq 'HASH' && defined $parsed->{message};
+        }
+        failed("API error $status$detail");
+        return undef;
+    }
+
+    return {} if !$resp_body;
+
+    my $parsed = eval { decode_json($resp_body) };
+    if (!defined $parsed) {
+        failed("unexpected API response: $resp_body");
+        return undef;
+    }
+    return $parsed;
 }
 
 ######################################################################
