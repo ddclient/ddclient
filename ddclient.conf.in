@@ -561,6 +561,25 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # yourhost.yourdomain.com
 
 ##
+## LuaDNS (https://luadns.com) - programmable DNS with DDNS support
+## Use your account email as login and your API key as password.
+##
+# protocol=dyndns2,                         \
+# server=app.luadns.com,                    \
+# login=your-luadns-email,                  \
+# password=your-luadns-api-key              \
+# yourhostname.example.com
+
+##
+## Netlify DNS (https://docs.netlify.com/domains-https/netlify-dns/)
+## Use your Netlify personal access token as password.
+##
+# protocol=netlify,                        \
+# password=your-netlify-access-token,      \
+# zone=example.com,                        \
+# myhost.example.com
+
+##
 ## NIC.RU (https://www.nic.ru) - Russian .ru domain registry
 ## Use your NIC.RU account login and password from the DNS hosting panel.
 ##
@@ -578,16 +597,6 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # login=my-updatedip-login
 # password=my-updatedip-password
 # subdomain.updatedip.com
-
-##
-## LuaDNS (https://luadns.com) - programmable DNS with DDNS support
-## Use your account email as login and your API key as password.
-##
-# protocol=dyndns2,                         \
-# server=app.luadns.com,                    \
-# login=your-luadns-email,                  \
-# password=your-luadns-api-key              \
-# yourhostname.example.com
 
 ##
 ## WebSupport (https://www.websupport.sk)

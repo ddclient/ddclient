@@ -1216,6 +1216,16 @@ our %protocols = (
             'server'       => setv(T_FQDNP, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     ),
+    'netlify' => ddclient::Protocol->new(
+        'update'   => \&nic_netlify_update,
+        'examples' => \&nic_netlify_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'password' => undef,
+            'zone'     => undef,
+            'server'   => setv(T_FQDNP, 0, 'api.netlify.com/api/v1', undef),
+        },
+    ),
     'nfsn' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
@@ -2254,7 +2264,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             ionos nfsn njalla ns1 porkbun spaceship yandex));
+                             ionos netlify nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -5141,6 +5151,150 @@ sub nic_namecheap_update {
         } else {
             $recap{$h}{'status'} = 'failed';
             failed("invalid reply: $reply");
+        }
+    }
+}
+
+######################################################################
+
+######################################################################
+## nic_netlify_examples
+######################################################################
+sub nic_netlify_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'netlify'
+
+The 'netlify' protocol is used by the DNS service offered by Netlify
+(https://docs.netlify.com/domains-https/netlify-dns/).
+
+Configuration variables applicable to the 'netlify' protocol are:
+  protocol=netlify             ##
+  server=fqdn.of.service       ## can be omitted, defaults to api.netlify.com/api/v1
+  zone=dns.zone                ## the DNS zone to update
+  password=service-password    ## Netlify personal access token
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  protocol=netlify                                             \\
+  zone=example.com                                             \\
+  password=my-netlify-personal-access-token                    \\
+  myhost.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_netlify_update
+######################################################################
+sub nic_netlify_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+
+        my $zone     = opt('zone', $h);
+        my $password = opt('password', $h);
+        my $headers  = [
+            "Authorization: Bearer $password",
+            "Content-Type: application/json",
+        ];
+        (my $hostname = $h) =~ s/\Q.$zone\E$//;
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        # Find the zone ID
+        info("looking up Netlify DNS zone '%s'", $zone);
+        $recap{$h}{'status-ipv4'} = 'failed' if $ipv4;
+        $recap{$h}{'status-ipv6'} = 'failed' if $ipv6;
+
+        my $url = opt('server', $h) . "/dns_zones";
+        my $reply = geturl(
+            proxy   => opt('proxy'),
+            url     => $url,
+            headers => $headers,
+        );
+        next if !header_ok($reply);
+        (my $body = $reply) =~ s/^.*?\r?\n\r?\n//s;
+        my $zones = eval { decode_json($body) };
+        if (ref($zones) ne 'ARRAY') {
+            failed("invalid JSON response from dns_zones: %s", $body);
+            next;
+        }
+        my ($zone_obj) = grep { $_->{name} eq $zone } @{$zones};
+        unless ($zone_obj && $zone_obj->{id}) {
+            failed("zone '%s' not found in Netlify DNS", $zone);
+            next;
+        }
+        my $zone_id = $zone_obj->{id};
+        info("Netlify DNS zone ID: %s", $zone_id);
+
+        # IPv4 and IPv6 handling are similar enough to do in a loop...
+        for my $ip ($ipv4, $ipv6) {
+            next if !$ip;
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+
+            info("setting IPv%s address to %s", $ipv, $ip);
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            # List existing records to find a matching record to delete
+            $url   = opt('server', $h) . "/dns_zones/$zone_id/dns_records";
+            $reply = geturl(
+                proxy   => opt('proxy'),
+                url     => $url,
+                headers => $headers,
+            );
+            next if !header_ok($reply);
+            ($body = $reply) =~ s/^.*?\r?\n\r?\n//s;
+            my $records = eval { decode_json($body) };
+            if (ref($records) ne 'ARRAY') {
+                failed("invalid JSON response from dns_records: %s", $body);
+                next;
+            }
+
+            # Delete any existing record of the same type and hostname
+            for my $rec (@{$records}) {
+                next unless defined $rec->{type} && $rec->{type} eq $type;
+                next unless defined $rec->{hostname} && $rec->{hostname} eq $h;
+                my $rec_id = $rec->{id};
+                debug("deleting existing '%s' record id %s", $type, $rec_id);
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                my $del_url = opt('server', $h) . "/dns_zones/$zone_id/dns_records/$rec_id";
+                my $del_reply = geturl(
+                    proxy   => opt('proxy'),
+                    url     => $del_url,
+                    headers => $headers,
+                    method  => 'DELETE',
+                );
+                next if !header_ok($del_reply);
+            }
+
+            # Create the new record
+            my $data = encode_json({
+                type     => $type,
+                hostname => $h,
+                value    => $ip,
+                ttl      => 1,
+            });
+            $url   = opt('server', $h) . "/dns_zones/$zone_id/dns_records";
+            $reply = geturl(
+                proxy   => opt('proxy'),
+                url     => $url,
+                headers => $headers,
+                method  => 'POST',
+                data    => $data,
+            );
+            next if !header_ok($reply);
+            ($body = $reply) =~ s/^.*?\r?\n\r?\n//s;
+            my $result = eval { decode_json($body) };
+            if (ref($result) ne 'HASH' || !$result->{id}) {
+                failed("unexpected response creating DNS record: %s", $body);
+                next;
+            }
+
+            success("IPv%s address set to %s", $ipv, $ip);
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
         }
     }
 }
