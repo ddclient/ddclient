@@ -54,6 +54,7 @@ Dynamic DNS services currently supported include:
   * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
   * [NameCheap](https://www.namecheap.com)
   * [NearlyFreeSpeech.net](https://www.nearlyfreespeech.net/services/dns)
+  * [Netcup](https://www.netcup.de)
   * [NIC.RU](https://www.nic.ru)
   * [Njalla](https://njal.la/docs/ddns)
   * [Noip](https://www.noip.com)

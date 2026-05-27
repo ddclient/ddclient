@@ -514,6 +514,16 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## Netcup (https://www.netcup.de)
+##
+# protocol=netcup                                              \
+# login=12345                                                  \
+# password='my-api-password'                                   \
+# apikey=my-api-key                                            \
+# zone=example.com                                             \
+# myhost.example.com
+
+##
 ## DynV6 (https://dynv6.com) - free IPv6-focused dynamic DNS
 ## Authenticate with your zone's HTTP token; no username required.
 ##
