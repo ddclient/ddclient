@@ -45,6 +45,7 @@ Dynamic DNS services currently supported include:
   * [NearlyFreeSpeech.net](https://www.nearlyfreespeech.net/services/dns)
   * [Njalla](https://njal.la/docs/ddns)
   * [Noip](https://www.noip.com)
+  * [NS1 / IBM NS1 Connect](https://ns1.com)
   * nsupdate - see nsupdate(1) and ddns-confgen(8)
   * [OVH](https://www.ovhcloud.com)
   * [Porkbun](https://porkbun.com)

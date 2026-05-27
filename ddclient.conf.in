@@ -447,6 +447,14 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.org
 
 ##
+## NS1 / IBM NS1 Connect (https://ns1.com/)
+##
+# protocol=ns1                                                 \
+# login=myapikey                                               \
+# zone=example.com                                             \
+# myhost.example.com
+
+##
 ## Spaceship (https://www.spaceship.com/)
 ##
 # protocol=spaceship,                       \
