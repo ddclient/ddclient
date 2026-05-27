@@ -30,6 +30,7 @@ Dynamic DNS services currently supported include:
   * [Domeneshop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
   * [DslReports](https://www.dslreports.com)
   * [Duck DNS](https://duckdns.org)
+  * [Dynadot](https://www.dynadot.com)
   * [DynDNS.com](https://account.dyn.com)
   * [DynV6](https://dynv6.com)
   * [EasyDNS](https://www.easydns.com)
