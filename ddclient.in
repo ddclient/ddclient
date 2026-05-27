@@ -2250,6 +2250,11 @@ sub process_args {
 sub test_possible_ip {
     local $opt{'debug'} = 0;
 
+    printf "NOTE: --query surveys ALL available IP detection methods regardless\n";
+    printf "of your configuration.  Only your configured use=/usev4=/usev6=\n";
+    printf "settings are used during normal operation.  Warnings about\n";
+    printf "unreachable services below are expected on single-stack hosts.\n";
+    printf "\n";
     printf "----- Test_possible_ip with 'get_ip' -----\n";
     if (defined(opt('ip'))) {
         local $opt{'use'} = 'ip';
@@ -2384,6 +2389,12 @@ sub test_possible_ip {
         printf("usev6=cmdv6, cmdv6=%s address is %s\n",
                opt('cmdv6'), get_ipv6(strategy_inputs('usev6')) // 'NOT FOUND');
     }
+
+    my @configured;
+    push @configured, 'use=' . opt('use') if defined(opt('use'));
+    push @configured, 'usev4=' . (opt('usev4') // '(unset)');
+    push @configured, 'usev6=' . (opt('usev6') // '(unset)');
+    printf "\nConfigured IP detection: %s\n", join(' ', @configured);
 
     exit 0 unless opt('debug');
 }

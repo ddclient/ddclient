@@ -18,6 +18,13 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     `https://` scheme from URL construction so the `server` option can override it.
     [#899](https://github.com/ddclient/ddclient/pull/899)
 
+### Improvements
+
+  * `--query`: Add a banner explaining that the output is a diagnostic survey
+    of all available IP detection methods, not a reflection of the configured
+    update behavior. Also print the configured `use=`/`usev4=`/`usev6=`
+    values at the end so users can confirm their settings at a glance.
+
 ### New feature
 
   * Add a jitter to the daemon interval when in daemon mode to spread the web service
