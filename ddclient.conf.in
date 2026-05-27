@@ -578,3 +578,72 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # login=your-luadns-email,                  \
 # password=your-luadns-api-key              \
 # yourhostname.example.com
+
+##
+## PowerDNS via PowerDNS-Admin (https://github.com/PowerDNS-Admin/PowerDNS-Admin)
+## Self-hosted PowerDNS with dyndns2-compatible /nic/update endpoint.
+## Replace 'your.powerdns-admin.example.com' with your PowerDNS-Admin hostname.
+##
+# protocol=dyndns2,                         \
+# server=your.powerdns-admin.example.com,   \
+# login=your-powerdns-admin-username,       \
+# password=your-powerdns-admin-password     \
+# yourhostname.example.com
+
+##
+## RFC 2136 DNS UPDATE (protocol=nsupdate) - self-hosted DNS servers
+## Generate a TSIG key with: ddns-confgen -q -k keyname
+## See nsupdate(1) and ddns-confgen(8) for details.
+##
+## PowerDNS Authoritative Server (https://doc.powerdns.com/authoritative/dnsupdate.html)
+##
+# protocol=nsupdate,                        \
+# server=ns1.example.com,                   \
+# password=/etc/ddclient/dyn.example.com.key, \
+# zone=dyn.example.com,                    \
+# ttl=3600                                 \
+# yourhostname.dyn.example.com
+
+##
+## ISC BIND (https://www.isc.org/bind/)
+## Configure allow-update or update-policy in named.conf for the zone.
+##
+# protocol=nsupdate,                        \
+# server=ns1.example.com,                   \
+# password=/etc/ddclient/dyn.example.com.key, \
+# zone=dyn.example.com,                    \
+# ttl=3600                                 \
+# yourhostname.dyn.example.com
+
+##
+## Knot DNS (https://www.knot-dns.cz/)
+## Configure update-in and a TSIG key in knot.conf.
+##
+# protocol=nsupdate,                        \
+# server=ns1.example.com,                   \
+# password=/etc/ddclient/dyn.example.com.key, \
+# zone=dyn.example.com,                    \
+# ttl=3600                                 \
+# yourhostname.dyn.example.com
+
+##
+## Technitium DNS Server (https://technitium.com/dns/)
+## Configure a Dynamic Updates RFC 2136 security policy in the Technitium web UI.
+##
+# protocol=nsupdate,                        \
+# server=your.technitium.host,              \
+# password=/etc/ddclient/dyn.example.com.key, \
+# zone=dyn.example.com,                    \
+# ttl=3600                                 \
+# yourhostname.dyn.example.com
+
+##
+## DynV6 (https://dynv6.com) via RFC 2136
+## Obtain your TSIG key from DynV6 zone settings.
+##
+# protocol=nsupdate,                        \
+# server=ns1.dynv6.com,                     \
+# password=/etc/ddclient/dynv6.key,         \
+# zone=your-zone.dynv6.net,                \
+# ttl=600                                  \
+# myhost.your-zone.dynv6.net

@@ -4146,6 +4146,15 @@ Example ${program}.conf file entries:
   login=your-luadns-email,                                  \\
   password=your-luadns-api-key                              \\
   yourhostname.example.com
+
+  ## PowerDNS via PowerDNS-Admin (https://github.com/PowerDNS-Admin/PowerDNS-Admin)
+  ## Self-hosted PowerDNS with dyndns2-compatible /nic/update endpoint.
+  ## Replace 'your.powerdns-admin.example.com' with your PowerDNS-Admin hostname.
+  protocol=dyndns2,                                         \\
+  server=your.powerdns-admin.example.com,                   \\
+  login=your-powerdns-admin-username,                       \\
+  password=your-powerdns-admin-password                     \\
+  yourhostname.example.com
 EoEXAMPLE
 }
 
@@ -6295,6 +6304,51 @@ Example ${program}.conf file entries:
   zone=dyn.example.com \\
   ttl=3600 \\
   myhost.dyn.example.com
+
+  ## PowerDNS Authoritative Server (https://doc.powerdns.com/authoritative/dnsupdate.html)
+  ## Requires RFC 2136 DNS UPDATE enabled and a TSIG key (see ddns-confgen(8)).
+  protocol=nsupdate \\
+  server=ns1.example.com \\
+  password=/etc/${program}/dyn.example.com.key \\
+  zone=dyn.example.com \\
+  ttl=3600 \\
+  myhost.dyn.example.com
+
+  ## ISC BIND (https://www.isc.org/bind/)
+  ## Configure allow-update or update-policy in named.conf for the zone.
+  protocol=nsupdate \\
+  server=ns1.example.com \\
+  password=/etc/${program}/dyn.example.com.key \\
+  zone=dyn.example.com \\
+  ttl=3600 \\
+  myhost.dyn.example.com
+
+  ## Knot DNS (https://www.knot-dns.cz/)
+  ## Configure update-in and a TSIG key in knot.conf.
+  protocol=nsupdate \\
+  server=ns1.example.com \\
+  password=/etc/${program}/dyn.example.com.key \\
+  zone=dyn.example.com \\
+  ttl=3600 \\
+  myhost.dyn.example.com
+
+  ## Technitium DNS Server (https://technitium.com/dns/)
+  ## Configure a Dynamic Updates RFC 2136 security policy in the Technitium web UI.
+  protocol=nsupdate \\
+  server=your.technitium.host \\
+  password=/etc/${program}/dyn.example.com.key \\
+  zone=dyn.example.com \\
+  ttl=3600 \\
+  myhost.dyn.example.com
+
+  ## DynV6 (https://dynv6.com) via RFC 2136
+  ## Obtain your TSIG key from DynV6 zone settings.
+  protocol=nsupdate \\
+  server=ns1.dynv6.com \\
+  password=/etc/${program}/dynv6.key \\
+  zone=your-zone.dynv6.net \\
+  ttl=600 \\
+  myhost.your-zone.dynv6.net
 
 EoEXAMPLE
 }
