@@ -18,6 +18,8 @@ Dynamic DNS services currently supported include:
   * [CloudFlare](https://www.cloudflare.com)
   * [ClouDNS](https://www.cloudns.net)
   * [DDNS.fm](https://www.ddns.fm/)
+  * [DDNSS.de](https://ddnss.de)
+  * [deSEC](https://desec.io)
   * [DigitalOcean](https://www.digitalocean.com/)
   * [dinahosting](https://dinahosting.com)
   * [Directnic](https://directnic.com)
