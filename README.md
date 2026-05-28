@@ -134,6 +134,40 @@ start the first time by hand
 
     systemctl start ddclient.service
 
+### Upgrading from 3.x
+
+#### Config file location changed
+
+ddclient 4.x changed the default config file location from
+`${sysconfdir}/ddclient.conf` (e.g. `/etc/ddclient.conf`) to
+`${sysconfdir}/ddclient/ddclient.conf` (e.g. `/etc/ddclient/ddclient.conf`).
+
+If you are upgrading from 3.x and compiled from source, move your config:
+
+```shell
+sudo mkdir -p /etc/ddclient
+sudo mv /etc/ddclient.conf /etc/ddclient/ddclient.conf
+sudo chmod 600 /etc/ddclient/ddclient.conf
+```
+
+Alternatively, pass `--with-confdir='${sysconfdir}'` to `./configure` to
+keep the old location:
+
+```shell
+./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --with-confdir='${sysconfdir}'
+```
+
+If ddclient starts but does nothing (just sleeps), run
+`ddclient --verbose --debug` and check that `=== config ====` is not empty.
+An empty config section means the config file is not being found.
+
+See the [ChangeLog](ChangeLog.md) for the full list of breaking changes
+between 3.x and 4.x.
+
 ## Known issues
 This is a list for quick referencing of known issues. For further details check out the linked issues and the changelog.
 

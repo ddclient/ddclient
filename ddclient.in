@@ -1555,6 +1555,7 @@ sub main {
         %opt    = %saved_opt;
         read_config(opt('file'), \%config, \%globals);
         init_config();
+        warn_if_no_hosts();
         read_recap(opt('cache'));
         print_info() if opt('debug') && opt('verbose');
         $daemon = opt('daemon');
@@ -1589,7 +1590,6 @@ sub main {
             $result     = 0;
 
         } elsif (!scalar(%config)) {
-            warning("no hosts to update.") if !opt('quiet');
             $result = 1;
 
         } else {
@@ -1893,6 +1893,29 @@ sub parse_assignment {
     warning("assignment to '%s' ended with an unterminated quote (%s)", $name, $quote) if $quote;
     return ($name, $value, $rest);
 }
+######################################################################
+## warn_if_no_hosts()
+## Warns when no hosts are configured, with a hint about the old 3.x
+## config path if a file is found there.
+######################################################################
+sub warn_if_no_hosts {
+    return if %config;
+    warning("no hosts configured in %s", opt('file'));
+    # The 3.x migration hint is opt-in at build time: pass
+    # --enable-migration-hints to ./configure when building from
+    # source for a manual installation.
+    return unless '@ENABLE_MIGRATION_HINTS@' eq 'yes';
+    # If confdir has a parent (e.g. /etc/ddclient -> /etc), check whether
+    # the old 3.x config file exists one level up.
+    (my $sysconfdir = $etc) =~ s{/[^/]+$}{};
+    my $old_conf = "$sysconfdir/$program.conf";
+    if ($old_conf ne opt('file') && -f $old_conf) {
+        warning("found a config file at the old 3.x location: %s", $old_conf);
+        warning("move it to %s, or re-run ./configure with", opt('file'));
+        warning("  --with-confdir='\${sysconfdir}'  to retain the old location");
+    }
+}
+
 ######################################################################
 ## read_config
 ######################################################################
