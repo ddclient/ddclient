@@ -5,6 +5,12 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-rc.2 (unreleased work-in-progress)
 
+### Provider updates
+
+  * `sitelutions`: Update default server to `api2.sitelutions.com` (APIv2); add optional
+    `ttl` configuration variable.
+    [#865](https://github.com/ddclient/ddclient/pull/865)
+
 ### Bug fixes
 
   * `hetzner`: Fix apex-domain updates creating spurious `hostname.zone` DNS records;

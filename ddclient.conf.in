@@ -472,6 +472,14 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # yourhostname.dynv6.net
 
 ##
+## Sitelutions (https://sitelutions.com)
+##
+# protocol=sitelutions,    \
+# login=me@example.com,    \
+# password=my-password     \
+# 12345678
+
+##
 ## Spaceship (https://www.spaceship.com/)
 ##
 # protocol=spaceship,                       \

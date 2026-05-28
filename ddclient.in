@@ -1282,8 +1282,9 @@ our %protocols = (
         'examples'   => \&nic_sitelutions_examples,
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
-            'server'       => setv(T_FQDNP, 0, 'www.sitelutions.com', undef),
-            'min-interval' => setv(T_DELAY, 0, interval('5m'), interval('5m')),
+            'server'       => setv(T_FQDNP,  0, 'api2.sitelutions.com', undef),
+            'ttl'          => setv(T_NUMBER, 0, undef,                   undef),
+            'min-interval' => setv(T_DELAY,  0, interval('5m'),          interval('5m')),
         },
     ),
     'yandex' => ddclient::LegacyProtocol->new(
@@ -5207,25 +5208,23 @@ sub nic_njalla_update {
 sub nic_sitelutions_examples {
     my $self = shift;
     return <<"EoEXAMPLE";
-
 o 'sitelutions'
 
-The 'sitelutions' protocol is used by DNS services offered by www.sitelutions.com.
+The 'sitelutions' protocol is used by DNS services offered by api2.sitelutions.com.
 
 Configuration variables applicable to the 'sitelutions' protocol are:
   protocol=sitelutions         ##
-  server=fqdn.of.service       ## defaults to sitelutions.com
-  login=service-login          ## login name and password  registered with the service
-  password=service-password    ##
-  A_record_id                  ## Id of the A record for the host registered with the service.
+  server=fqdn.of.service       ## can be omitted, defaults to api2.sitelutions.com
+  login=service-login          ## account email address
+  password=service-password    ## account password
+  ttl=300                      ## record TTL in seconds (optional)
+  A_record_id                  ## numeric ID of the A record to update
 
 Example ${program}.conf file entries:
-  ## single host update
-  protocol=sitelutions,                                         \\
-  login=my-sitelutions.com-login,                               \\
-  password=my-sitelutions.com-password                          \\
-  my-sitelutions.com-id_of_A_record
-
+  protocol=sitelutions,        \\
+  login=me\@example.com,       \\
+  password=my-password         \\
+  12345678
 EoEXAMPLE
 }
 ######################################################################
@@ -5233,15 +5232,13 @@ EoEXAMPLE
 ##
 ## written by Mike W. Smith
 ##
-## based on https://www.sitelutions.com/help/dynamic_dns_clients#updatespec
-## needs this url to update:
-## https://www.sitelutions.com/dnsup?id=990331&user=myemail@mydomain.com&pass=SecretPass&ip=192.168.10.4
-## domain=domain.com&password=domain_password&ip=your_ip
+## based on https://sitelutions.com/index.php?rp=/knowledgebase/4/Setting-up-Dynamic-DNS.html
+## update URL format:
+## https://api2.sitelutions.com/dnsup?id=RECORD_ID&user=EMAIL&pass=PASSWORD&ip=IP[&ttl=TTL]
 ##
 ######################################################################
 sub nic_sitelutions_update {
     my $self = shift;
-    ## update each configured host
     for my $h (@_) {
         local $_l = pushlogctx($h);
         my $ip = delete $config{$h}{'wantip'};
@@ -5254,6 +5251,7 @@ sub nic_sitelutions_update {
         $url .= '&pass=' . opt('password', $h);
         $url .= "&ip=";
         $url .= $ip if $ip;
+        $url .= '&ttl=' . opt('ttl', $h) if defined(opt('ttl', $h));
 
         my $reply = geturl(proxy => opt('proxy'), url => $url);
         next if !header_ok($reply);
