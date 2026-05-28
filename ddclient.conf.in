@@ -561,6 +561,16 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # yourhost.yourdomain.com
 
 ##
+## NIC.RU (https://www.nic.ru) - Russian .ru domain registry
+## Use your NIC.RU account login and password from the DNS hosting panel.
+##
+# protocol=dyndns2,                         \
+# server=api.nic.ru,                        \
+# login=your-nicru-login,                   \
+# password=your-nicru-password              \
+# yourhostname.example.ru
+
+##
 ## UpdatedIP (updatedip.com)
 ##
 # protocol=dyndns2

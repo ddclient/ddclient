@@ -39,6 +39,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
   * Documented `ISC BIND` (https://www.isc.org/bind/), `Knot DNS` (https://www.knot-dns.cz/),
     and `Technitium DNS Server` (https://technitium.com/dns/) as supported via
     `protocol=nsupdate` (RFC 2136 DNS UPDATE).
+  * Added `NIC.RU` (https://www.nic.ru) as a supported `dyndns2` provider
+    via `api.nic.ru` for Russian .ru domain dynamic DNS.
   * Add a jitter to the daemon interval when in daemon mode to spread the web service
     API calls across clients and reduce load on upstream DNS providers when many
     clients are running with the same daemon interval.
