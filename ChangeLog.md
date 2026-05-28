@@ -36,6 +36,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#907](https://github.com/ddclient/ddclient/pull/907)
   * Added `spaceship` protocol for Spaceship (https://www.spaceship.com/).
     [#896](https://github.com/ddclient/ddclient/pull/896)
+  * Added `updatedip` built-in web IP check service for UpdatedIP (https://www.updatedip.com).
+    [#868](https://github.com/ddclient/ddclient/pull/868)
 
 ## 2026-05-16 v4.0.1-rc.1
 

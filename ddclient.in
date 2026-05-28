@@ -308,6 +308,7 @@ our %builtinweb = (
     'desec-ipv6' => {'url' => 'https://checkipv6.dedyn.io/'},
     'nsupdate.info-ipv4' => {'url' => 'https://ipv4.nsupdate.info/myip'},
     'nsupdate.info-ipv6' => {'url' => 'https://ipv6.nsupdate.info/myip'},
+    'updatedip' => {'url' => 'https://checkip.updatedip.com'},
     'zoneedit' => {'url' => 'https://dynamic.zoneedit.com/checkip.html'},
 );
 
