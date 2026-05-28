@@ -67,6 +67,7 @@ Dynamic DNS services currently supported include:
   * [Sitelutions](https://www.sitelutions.com)
   * [Technitium DNS Server](https://technitium.com/dns/) (via RFC 2136 `protocol=nsupdate`)
   * [UpdatedIP](https://www.updatedip.com)
+  * [WebSupport](https://www.websupport.sk)
   * [Yandex](https://dns.yandex.com)
   * [Zoneedit](https://www.zoneedit.com)
 

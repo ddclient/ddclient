@@ -56,6 +56,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
   * Added `dynu` protocol for Dynu Systems (https://www.dynu.com/), with
     dual-stack IPv4+IPv6 support and optional `zone=` for custom domain updates.
     [#904](https://github.com/ddclient/ddclient/pull/904)
+  * Added `WebSupport` (https://www.websupport.sk) as a supported `dyndns2`
+    provider via `dyndns.websupport.sk`.
   * Added `deSEC` (https://desec.io) and `DDNSS.de` (https://ddnss.de) as
     supported `dyndns2` providers, with dedicated `desec-ipv4`/`desec-ipv6`
     web IP check services.

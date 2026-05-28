@@ -4155,6 +4155,15 @@ Example ${program}.conf file entries:
   password=your-nicru-password                              \\
   yourhostname.example.ru
 
+  ## WebSupport (https://www.websupport.sk) - Slovak domain registrar with DDNS support
+  ## Generate a DynDNS API key in Admin > Security and Login > API Authentication.
+  ## Use the generated identifier as login and the secret as password.
+  protocol=dyndns2,                                         \\
+  server=dyndns.websupport.sk,                              \\
+  login=your-websupport-api-identifier,                     \\
+  password=your-websupport-api-secret                       \\
+  yourhostname.yourdomain.sk
+
   ## PowerDNS via PowerDNS-Admin (https://github.com/PowerDNS-Admin/PowerDNS-Admin)
   ## Self-hosted PowerDNS with dyndns2-compatible /nic/update endpoint.
   ## Replace 'your.powerdns-admin.example.com' with your PowerDNS-Admin hostname.
