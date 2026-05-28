@@ -488,3 +488,12 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # password='myapisecret',                   \
 # zone=example.com,                         \
 # myhost.example.com
+
+##
+## UpdatedIP (updatedip.com)
+##
+# protocol=dyndns2
+# server=updatedip.com
+# login=my-updatedip-login
+# password=my-updatedip-password
+# subdomain.updatedip.com
