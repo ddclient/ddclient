@@ -972,6 +972,15 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'https://api.ddns.fm', undef),
         },
     ),
+    'ddnss' => ddclient::Protocol->new(
+        'update'   => \&nic_ddnss_update,
+        'examples' => \&nic_ddnss_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'  => undef,
+            'server' => setv(T_FQDNP, 0, 'ddnss.de', undef),
+        },
+    ),
     'digitalocean' => ddclient::Protocol->new(
         'update' => \&nic_digitalocean_update,
         'examples' => \&nic_digitalocean_examples,
@@ -7304,6 +7313,63 @@ sub nic_ddnsfm_update {
             next if !header_ok($reply);
             $recap{$h}{"ipv$ipv"} = $ip;
             $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
+    }
+}
+
+######################################################################
+## nic_ddnss_examples
+######################################################################
+sub nic_ddnss_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'ddnss'
+
+The 'ddnss' protocol is used by the free dynamic DNS service at ddnss.de
+using key-based authentication.
+
+Configuration variables applicable to the 'ddnss' protocol are:
+  protocol=ddnss               ##
+  server=fqdn.of.service       ## can be omitted, defaults to ddnss.de
+  password=your-api-key        ## API key from ddnss.de account settings
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=ddnss,                        \\
+  password=your-api-key                  \\
+  myhost.ddnss.de
+EoEXAMPLE
+}
+
+######################################################################
+## nic_ddnss_update
+######################################################################
+sub nic_ddnss_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+            my $param = $ipv eq '4' ? "ip=$ip" : "ip6=$ip";
+            info("setting IPv$ipv address to $ip");
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url   => opt('server', $h) . "/upd.php?key=" . opt('password', $h) . "&host=$h&$param",
+            );
+            next if !header_ok($reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s or do {
+                failed("invalid response from server");
+                next;
+            };
+            if ($body !~ /\bgood\b/i) {
+                failed("server said: $body");
+                next;
+            }
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
             $recap{$h}{"status-ipv$ipv"} = 'good';
             success("IPv$ipv address set to $ip");
         }

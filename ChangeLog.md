@@ -59,6 +59,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#868](https://github.com/ddclient/ddclient/pull/868)
   * Added `dynadot` protocol for Dynadot (https://www.dynadot.com/).
     [#882](https://github.com/ddclient/ddclient/pull/882)
+  * Added `ddnss` protocol for DDNSS.de (https://ddnss.de) key-based
+    authentication, complementing existing dyndns2 username/password support.
 
 ### Improvements
 
