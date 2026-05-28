@@ -48,6 +48,9 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     supported `dyndns2` providers, with dedicated `desec-ipv4`/`desec-ipv6`
     web IP check services.
     [#906](https://github.com/ddclient/ddclient/pull/906)
+  * Added `Joker.com` (https://joker.com) as a supported `dyndns2` provider,
+    with dedicated `joker-ipv4`/`joker-ipv6` web IP check services and
+    dual-stack configuration examples.
   * Added `ns1` protocol for NS1 / IBM NS1 Connect (https://ns1.com/).
     [#907](https://github.com/ddclient/ddclient/pull/907)
   * Added `spaceship` protocol for Spaceship (https://www.spaceship.com/).

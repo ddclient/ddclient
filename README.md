@@ -45,6 +45,7 @@ Dynamic DNS services currently supported include:
   * [Infomaniak](https://faq.infomaniak.com/2376)
   * [INWX](https://www.inwx.com/)
   * [IONOS](https://ionos.com)
+  * [Joker.com](https://joker.com)
   * [Loopia](https://www.loopia.se)
   * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
   * [NameCheap](https://www.namecheap.com)

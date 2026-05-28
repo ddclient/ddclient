@@ -221,6 +221,37 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## Joker.com (https://joker.com)
+##
+## Use DDNS credentials from Joker.com's DNS management interface
+## (not your Joker.com account login).
+##
+## IPv4 only:
+# protocol=dyndns2,                        \
+# usev4=web, webv4=joker-ipv4,             \
+# server=svc.joker.com,                    \
+# login=your-joker-ddns-login,             \
+# password=your-joker-ddns-password        \
+# myhost.example.com
+#
+## Dual-stack IPv4 + IPv6 (two stanzas):
+# protocol=dyndns2,                        \
+# usev4=web, webv4=joker-ipv4,             \
+# usev6=disabled,                          \
+# server=svc.joker.com,                    \
+# login=your-joker-ddns-login,             \
+# password=your-joker-ddns-password        \
+# myhost.example.com
+#
+# protocol=dyndns2,                        \
+# usev4=disabled,                          \
+# usev6=web, webv6=joker-ipv6,             \
+# server=svc.joker.com,                    \
+# login=your-joker-ddns-login,             \
+# password=your-joker-ddns-password        \
+# myhost.example.com
+
+##
 ## Duckdns (http://www.duckdns.org/)
 ##
 #
