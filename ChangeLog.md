@@ -33,6 +33,12 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### New feature
 
+  * Added `PowerDNS` as a supported provider for self-hosted deployments:
+    via [PowerDNS-Admin](https://github.com/PowerDNS-Admin/PowerDNS-Admin) using `protocol=dyndns2`,
+    or via PowerDNS Authoritative Server RFC 2136 DNS UPDATE using `protocol=nsupdate`.
+  * Documented `ISC BIND` (https://www.isc.org/bind/), `Knot DNS` (https://www.knot-dns.cz/),
+    and `Technitium DNS Server` (https://technitium.com/dns/) as supported via
+    `protocol=nsupdate` (RFC 2136 DNS UPDATE).
   * Add a jitter to the daemon interval when in daemon mode to spread the web service
     API calls across clients and reduce load on upstream DNS providers when many
     clients are running with the same daemon interval.
@@ -42,8 +48,9 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
   * Added `All-inkl.com` (https://all-inkl.com) as a supported `dyndns2`
     provider via `dyndns.kasserver.com`. DDNS credentials are created in the
     KAS control panel under Tools → DDNS Settings.
-  * Added `DynV6` (https://dynv6.com) as a supported `dyndns2` provider.
-    Authenticate with your zone's HTTP token; no username required (`login=none`).
+  * Added `DynV6` (https://dynv6.com) as a supported provider:
+    via `protocol=dyndns2` (HTTP token authentication, `login=none`),
+    and via `protocol=nsupdate` (RFC 2136) at `ns1.dynv6.com` using a zone TSIG key.
   * Added `dynu` protocol for Dynu Systems (https://www.dynu.com/), with
     dual-stack IPv4+IPv6 support and optional `zone=` for custom domain updates.
     [#904](https://github.com/ddclient/ddclient/pull/904)
