@@ -389,3 +389,43 @@ git log --graph --oneline --decorate origin/main..
 # Push to ddclient main
 git push origin main
 ```
+
+### Running integration tests on a pull request
+
+Integration tests require secrets that are not available to workflows triggered
+from forks (see [When integration tests run](#when-integration-tests-run)).
+To run them against a pull request, a maintainer must approve the CI run
+manually.
+
+Before approving, review the pull request code and satisfy yourself that it
+does not attempt to read, log, or exfiltrate the credentials it will receive.
+Pay particular attention to any changes in `t/integration/`.
+
+To approve the run:
+
+  1. Open the pull request on GitHub.
+  2. Navigate to the **Checks** tab.
+  3. Find the `integration-tests` job, which will be in a **Waiting** state.
+  4. Click **Review deployments**, select the `integration-tests` environment,
+     and click **Approve and deploy**.
+
+The job will then run with access to the repository secrets. Results appear
+in the Checks tab like any other CI job.
+
+### Adding integration test credentials
+
+When merging a pull request that adds a new protocol, add the corresponding
+credentials to the repository before merging:
+
+  1. Obtain working credentials from the contributor, or provision a project
+     test account at the provider.
+  2. In the `ddclient/ddclient` repository, go to **Settings → Secrets and
+     variables → Actions** and add each secret following the naming convention
+     `DDCLIENT_TEST_<PROTOCOL>_<VAR>` (e.g. `DDCLIENT_TEST_NAMESILO_KEY`).
+  3. Verify that the nightly integration test job picks up and runs the new
+     protocol's tests.
+
+Credentials should use a dedicated test account, not a personal or production
+account. The test account requires only the minimum permissions needed to
+create and delete DNS records in the test zone.
+```
