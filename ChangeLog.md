@@ -180,6 +180,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     option.  [#752](https://github.com/ddclient/ddclient/pull/752)
   * `dnsexit2`: Multiple hosts are updated in a single API call when possible.
     [#684](https://github.com/ddclient/ddclient/pull/684)
+  * `ionos`: Add IONOS Zones support for A- and AAAA-records.
+    [#863](https://github.com/ddclient/ddclient/pull/863)
 
 ### Bug fixes
 

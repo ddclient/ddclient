@@ -1364,6 +1364,16 @@ our %protocols = (
             'max-interval' => setv(T_DELAY, 0, 'inf', 0),
         },
     ),
+    'ionos' => ddclient::Protocol->new(
+        'update'   => \&nic_ionos_update,
+        'examples' => \&nic_ionos_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'  => undef,
+            'server' => setv(T_FQDNP,  0, 'api.hosting.ionos.com', undef),
+            'ttl'    => setv(T_NUMBER, 0, 300,                      300),
+        },
+    ),
 );
 $cfgvars{'merged'} = {
     map({ %{$protocols{$_}{'cfgvars'}} } keys(%protocols)),
@@ -2186,7 +2196,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             nfsn njalla ns1 porkbun spaceship yandex));
+                             ionos nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -8281,6 +8291,137 @@ Example ${program}.conf file entries:
   host.example.com
 EoEXAMPLE
 }
+
+######################################################################
+## nic_ionos_update
+######################################################################
+sub nic_ionos_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        next unless $ipv4 || $ipv6;
+
+        my $headers =
+            "Content-Type: application/json\n" .
+            "accept: application/json\n" .
+            "X-API-Key: " . opt('password', $h) . "\n";
+
+        ## Step 1: Get zone list and find the zone for this host.
+        my $reply = geturl(
+            proxy   => opt('proxy'),
+            url     => opt('server', $h) . "/dns/v1/zones",
+            headers => $headers,
+        );
+        next unless header_ok($reply);
+        (my $body = $reply) =~ s/^.*?\n\n//s;
+        my $zones = eval { decode_json($body) };
+        if ($@ || ref($zones) ne 'ARRAY') {
+            failed("failed to parse IONOS zone list");
+            next;
+        }
+        my ($zone) = grep { $h =~ /(?:^|\.)\Q$_->{name}\E$/ } @$zones;
+        unless ($zone) {
+            failed("no IONOS zone found for $h");
+            next;
+        }
+        my $zone_id = $zone->{id};
+
+        ## Step 2: Get existing records for this host.
+        $reply = geturl(
+            proxy   => opt('proxy'),
+            url     => opt('server', $h)
+                     . "/dns/v1/zones/$zone_id?suffix=$h&recordType=A%2CAAAA",
+            headers => $headers,
+        );
+        next unless header_ok($reply);
+        ($body = $reply) =~ s/^.*?\n\n//s;
+        my $zone_data = eval { decode_json($body) };
+        if ($@ || ref($zone_data) ne 'HASH') {
+            failed("failed to parse IONOS zone records");
+            next;
+        }
+        my $records = $zone_data->{records} // [];
+
+        ## Step 3: Update A and AAAA records.
+        for my $ip ($ipv4, $ipv6) {
+            next unless defined($ip);
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = $ipv eq '6' ? 'AAAA' : 'A';
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            my ($rec) = grep {
+                $_->{type} eq $type &&
+                (lc($_->{name}) eq lc($h) || lc($_->{name}) eq lc("$h."))
+            } @$records;
+            my $ttl = opt('ttl', $h) // 300;
+
+            my ($method, $url, $data);
+            if ($rec) {
+                $method = 'PUT';
+                $url    = opt('server', $h) . "/dns/v1/zones/$zone_id/records/$rec->{id}";
+                $data   = encode_json({
+                    content  => $ip,
+                    ttl      => $ttl,
+                    prio     => 0,
+                    disabled => \0,
+                });
+            } else {
+                $method = 'POST';
+                $url    = opt('server', $h) . "/dns/v1/zones/$zone_id/records";
+                $data   = encode_json([{
+                    name     => $h,
+                    type     => $type,
+                    content  => $ip,
+                    ttl      => $ttl,
+                    prio     => 0,
+                    disabled => \0,
+                }]);
+            }
+
+            $reply = geturl(
+                method  => $method,
+                proxy   => opt('proxy'),
+                url     => $url,
+                headers => $headers,
+                data    => $data,
+            );
+            next unless header_ok($reply);
+
+            success("IPv$ipv address set to $ip");
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'}   = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+        }
+    }
+}
+
+######################################################################
+## nic_ionos_examples
+######################################################################
+sub nic_ionos_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'ionos'
+
+The 'ionos' protocol updates DNS records via the IONOS DNS REST API
+<https://developer.hosting.ionos.com/docs/dns>.
+
+Configuration variables applicable to the 'ionos' protocol are:
+  protocol=ionos             ##
+  password=prefix.secret     ## IONOS DNS API key (prefix.secret format)
+  server=fqdn.of.service     ## can be omitted, defaults to api.hosting.ionos.com
+  ttl=300                    ## record TTL in seconds (optional, default 300)
+  host.example.com           ## the host to update
+
+Example ${program}.conf file entries:
+  protocol=ionos,             \\
+  password=my-api-key-prefix.my-api-key-secret \\
+  host.example.com
+EoEXAMPLE
+}
+
 
 # Execute main() if this file is run as a script or run via PAR (https://metacpan.org/pod/PAR),
 # otherwise do nothing. This "modulino" pattern makes it possible to import this file as a module
