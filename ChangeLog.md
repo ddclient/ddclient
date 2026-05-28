@@ -39,6 +39,9 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#888](https://github.com/ddclient/ddclient/pull/888)
   * Added `simply.com` (https://www.simply.com).
     [#850](https://github.com/ddclient/ddclient/pull/850)
+  * Added `All-inkl.com` (https://all-inkl.com) as a supported `dyndns2`
+    provider via `dyndns.kasserver.com`. DDNS credentials are created in the
+    KAS control panel under Tools → DDNS Settings.
   * Added `DynV6` (https://dynv6.com) as a supported `dyndns2` provider.
     Authenticate with your zone's HTTP token; no username required (`login=none`).
   * Added `dynu` protocol for Dynu Systems (https://www.dynu.com/), with

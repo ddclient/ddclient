@@ -550,6 +550,17 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## All-inkl.com (https://all-inkl.com)
+## Create DDNS credentials in KAS under Tools → DDNS Settings.
+## Supports IPv4 and IPv6 (enable Dual-Stack in KAS for IPv6).
+##
+# protocol=dyndns2,                         \
+# server=dyndns.kasserver.com,               \
+# login=your-kas-ddns-login,                \
+# password=your-kas-ddns-password           \
+# yourhost.yourdomain.com
+
+##
 ## UpdatedIP (updatedip.com)
 ##
 # protocol=dyndns2
