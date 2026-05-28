@@ -72,6 +72,7 @@ handwritten_tests = \
 	t/logmsg.pl \
 	t/jitter.pl \
 	t/parse_assignments.pl \
+	t/protocol_1984.pl \
 	t/protocol_ddnss.pl \
 	t/protocol_cloudflare.pl \
 	t/protocol_directnic.pl \

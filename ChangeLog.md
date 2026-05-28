@@ -7,6 +7,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### Provider updates
 
+  * `1984`: Add IPv6 (AAAA record) support; migrate from legacy single-IP update
+    to dual-stack protocol handling.
   * `sitelutions`: Update default server to `api2.sitelutions.com` (APIv2); add optional
     `ttl` configuration variable.
     [#865](https://github.com/ddclient/ddclient/pull/865)
