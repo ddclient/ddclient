@@ -133,6 +133,89 @@ To add a new test script:
      eval { require Foo::Bar; } or plan(skip_all => $@);
      ```
 
+## Integration tests
+
+Integration tests verify that a protocol implementation works correctly against
+the real provider API. They complement the unit tests in `t/` by catching API
+drift, authentication changes, and documentation errors that mock tests cannot
+detect.
+
+### Requirement for new protocols
+
+A pull request that adds a new protocol must include an integration test. The
+test does not need to pass in CI before the pull request is reviewed, but the
+corresponding credentials must be added to the upstream repository's GitHub
+Actions secrets before the pull request is merged.
+
+The rationale: the developer already has a working provider account at the time
+they write the protocol. Capturing the credential at that point costs almost
+nothing; doing so later is easy to defer indefinitely.
+
+### Writing an integration test
+
+Integration tests live in `t/integration/`. They follow the same structure as
+unit tests, with the addition of a credential check at the top that skips the
+test when the required environment variables are not set:
+
+```perl
+use Test::More;
+SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); }
+eval { require 'ddclient'; } or BAIL_OUT($@);
+
+my $key  = $ENV{DDCLIENT_TEST_MYPROVIDER_KEY}
+    or plan(skip_all => 'DDCLIENT_TEST_MYPROVIDER_KEY not set');
+my $zone = $ENV{DDCLIENT_TEST_MYPROVIDER_ZONE}
+    or plan(skip_all => 'DDCLIENT_TEST_MYPROVIDER_ZONE not set');
+```
+
+The test should:
+
+  1. Update a known A or AAAA record in the test zone to a known IP address,
+     using ddclient's protocol implementation directly (not via the `ddclient`
+     binary).
+  2. Verify the update succeeded by querying the provider API or resolving the
+     record via DNS.
+  3. Restore the record to its original value, or delete it, after the test
+     completes — whether the test passed or failed.
+
+### Test zones
+
+Each provider's integration test operates against a subdomain of
+`ci.ddclient.net` whose NS records are delegated to that provider. For example,
+`namesilo.ci.ddclient.net` is delegated to NameSilo's nameservers. This means
+the project requires only one registered domain regardless of how many providers
+are under test.
+
+The zone to use is supplied through the `DDCLIENT_TEST_<PROTOCOL>_ZONE`
+environment variable so that contributors can substitute their own domain when
+developing locally.
+
+### Credential naming
+
+Credentials are passed through environment variables named
+`DDCLIENT_TEST_<PROTOCOL>_<VAR>`, where `<PROTOCOL>` is the protocol name in
+uppercase and `<VAR>` describes the credential. Examples:
+
+  * `DDCLIENT_TEST_NAMESILO_KEY` — NameSilo API key
+  * `DDCLIENT_TEST_NAMECOM_LOGIN` and `DDCLIENT_TEST_NAMECOM_PASSWORD`
+  * `DDCLIENT_TEST_NETCUP_LOGIN`, `DDCLIENT_TEST_NETCUP_APIKEY`,
+    `DDCLIENT_TEST_NETCUP_PASSWORD`
+
+### Credential management
+
+Credentials for the upstream test zones are stored as GitHub Actions secrets in
+the `ddclient/ddclient` repository. A maintainer adds the secrets before merging
+the pull request. Contributors developing a new protocol should use their own
+provider account and test domain when running integration tests locally.
+
+### When integration tests run
+
+Integration tests are excluded from the standard `make check` run. They run in a
+separate CI job on a nightly schedule and on any pull request that carries the
+`run-integration-tests` label. Tests for a given protocol are skipped
+automatically when the corresponding secrets are absent, so the CI job does not
+need to be updated when a new protocol is added.
+
 ## Compatibility
 
 We strive to find the right balance between features, code
