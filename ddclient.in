@@ -1042,6 +1042,18 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'www.duckdns.org', undef),
         },
     ),
+    'dynadot' => ddclient::Protocol->new(
+        'update'     => \&nic_dynadot_update,
+        'examples'   => \&nic_dynadot_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'          => undef,
+            'server'         => setv(T_FQDNP,  0, 'www.dynadot.com', undef),
+            'ttl'            => setv(T_NUMBER, 0, 300,               undef),
+            'zone'           => setv(T_FQDN,   0, undef,             undef),
+            'on-root-domain' => setv(T_BOOL,   0, 0,                 undef),
+        },
+    ),
     'dyndns1' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dyndns1_update,
         'examples'   => \&nic_dyndns1_examples,
@@ -6901,6 +6913,114 @@ sub nic_duckdns_update {
         }
         success("IPv4 address set to $ipv4") if $ipv4;
         success("IPv6 address set to $ipv6") if $ipv6;
+    }
+}
+
+######################################################################
+## nic_dynadot_examples
+######################################################################
+sub nic_dynadot_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'dynadot'
+
+The 'dynadot' protocol is used by the dynamic DNS service offered by
+Dynadot (https://www.dynadot.com/).
+
+Configuration variables applicable to the 'dynadot' protocol are:
+  protocol=dynadot             ##
+  server=www.fqdn.of.service   ## defaults to www.dynadot.com
+  password=ddns-password       ## DDNS password generated at Dynadot DNS Settings
+  zone=example.com             ## the registered domain at Dynadot
+  ttl=300                      ## record TTL in seconds (default 300)
+  on-root-domain=yes|no        ## also update root record when updating a subdomain
+  fully.qualified.host         ## host(s) to update.
+
+Example ${program}.conf file entries:
+  protocol=dynadot,                    \\
+  password=your_dynadot_ddns_password, \\
+  zone=example.com,                    \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dynadot_update
+## https://www.dynadot.com/set_ddns?containRoot=<bool>&domain=<domain>
+##     &subDomain=<sub>&ip=<ip>&pwd=<pwd>&ttl=<ttl>&type=A|AAAA
+######################################################################
+sub nic_dynadot_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my ($domain, $sub_domain);
+        if (opt('zone', $h)) {
+            $domain = opt('zone', $h);
+            $sub_domain = $h;
+            if ($sub_domain eq $domain) {
+                $sub_domain = '';
+            } elsif ($sub_domain !~ s/\.\Q$domain\E$//) {
+                failed("hostname does not end with the 'zone' value: $domain");
+                next;
+            }
+        } elsif ($h =~ /\./) {
+            ($sub_domain, $domain) = split(/\./, $h, 2);
+        } else {
+            $sub_domain = '';
+            $domain = $h;
+        }
+        my $is_root = ($sub_domain eq '');
+        # When updating a subdomain, containRoot defaults to false; the
+        # 'on-root-domain' option lets the user opt in to updating the
+        # root record at the same time. When updating the root itself,
+        # containRoot must be true.
+        my $contain_root = ($is_root || opt('on-root-domain', $h)) ? 'true' : 'false';
+        info("subdomain '$sub_domain', domain '$domain'") unless $is_root;
+        info("root domain '$domain'") if $is_root;
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        info("setting IPv4 address to $ipv4") if $ipv4;
+        info("setting IPv6 address to $ipv6") if $ipv6;
+        my $ttl = opt('ttl', $h);
+        my $pwd = opt('password', $h);
+        my @updates;
+        push(@updates, ['A',    $ipv4]) if $ipv4;
+        push(@updates, ['AAAA', $ipv6]) if $ipv6;
+        for my $u (@updates) {
+            my ($type, $ip) = @$u;
+            my $ipv = ($type eq 'A') ? '4' : '6';
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+            my %form = (
+                containRoot => $contain_root,
+                domain      => $domain,
+                ip          => $ip,
+                pwd         => $pwd,
+                ttl         => $ttl,
+                type        => $type,
+            );
+            $form{'subDomain'} = $sub_domain unless $is_root;
+            my $url = opt('server', $h) . '/set_ddns?'
+                . encode_www_form_urlencoded(\%form);
+            my $reply = geturl(proxy => opt('proxy'), url => $url);
+            next if !header_ok($reply);
+            (my $body = $reply) =~ s/^.*?\n\n//s;
+            chomp($body);
+            if ($body !~ /\bok\b/i) {
+                failed("server said: $body");
+                next;
+            }
+            if ($type eq 'A') {
+                $recap{$h}{'ipv4'} = $ip;
+                $recap{$h}{'status-ipv4'} = 'good';
+                success("IPv4 address set to $ip");
+            } else {
+                $recap{$h}{'ipv6'} = $ip;
+                $recap{$h}{'status-ipv6'} = 'good';
+                success("IPv6 address set to $ip");
+            }
+            $recap{$h}{'mtime'} = $now;
+        }
     }
 }
 

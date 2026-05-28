@@ -229,6 +229,20 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # hostwithoutduckdnsorg,host2withoutduckdnsorg
 
 ##
+## Dynadot (https://www.dynadot.com/)
+## Enable Dynamic DNS for the domain at Dynadot DNS Settings and generate
+## a DDNS password (separate from your account password). The password
+## belongs to the registered domain (zone) and covers its subdomains.
+##
+# protocol=dynadot,                       \
+# server=www.dynadot.com,                 \
+# password=my-dynadot-ddns-password,      \
+# zone=example.com,                       \
+# ttl=300,                                \
+# on-root-domain=no,                      \
+# myhost.example.com
+
+##
 ## Freemyip (http://freemyip.com/)
 ##
 #

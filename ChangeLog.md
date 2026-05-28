@@ -51,6 +51,8 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#896](https://github.com/ddclient/ddclient/pull/896)
   * Added `updatedip` built-in web IP check service for UpdatedIP (https://www.updatedip.com).
     [#868](https://github.com/ddclient/ddclient/pull/868)
+  * Added `dynadot` protocol for Dynadot (https://www.dynadot.com/).
+    [#882](https://github.com/ddclient/ddclient/pull/882)
 
 ### Improvements
 
