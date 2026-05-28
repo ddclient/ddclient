@@ -61,6 +61,7 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#882](https://github.com/ddclient/ddclient/pull/882)
   * Added `ddnss` protocol for DDNSS.de (https://ddnss.de) key-based
     authentication, complementing existing dyndns2 username/password support.
+  * Added `alicloud` protocol for Alibaba Cloud DNS / AliDNS (https://www.alibabacloud.com/product/dns).
 
 ### Improvements
 

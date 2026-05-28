@@ -193,6 +193,17 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # domain.tld,sub.domain.tld
 
 ##
+## Alibaba Cloud DNS / AliDNS (www.alibabacloud.com)
+## Create an AccessKey at ram.console.aliyun.com/manage/ak with DNS read/write permissions.
+## Existing A/AAAA records must already exist in the zone before updating.
+##
+# protocol=alicloud,                                          \
+# login=LTAI4GxxxxxxxxxxxxxxxxxxX,                           \
+# password=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,                  \
+# zone=example.com,                                          \
+# myhost.example.com
+
+##
 ## Gandi (gandi.net)
 ##
 ## Single host update

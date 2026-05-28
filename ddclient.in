@@ -934,6 +934,16 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'api.1984.is', undef),
         },
     ),
+    'alicloud' => ddclient::Protocol->new(
+        'update'   => \&nic_alicloud_update,
+        'examples' => \&nic_alicloud_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server' => setv(T_FQDNP, 0, 'alidns.aliyuncs.com', undef),
+            'zone'   => setv(T_FQDN,  0, undef,                  undef),
+            'ttl'    => setv(T_NUMBER,0, undef,                   undef),
+        },
+    ),
     'changeip' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
@@ -2253,8 +2263,8 @@ sub init_config {
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
-                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             ionos nfsn njalla ns1 porkbun spaceship yandex));
+                          qw(1984 alicloud cloudflare digitalocean directnic dnsexit2 gandi godaddy
+                             hetzner ionos nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -5729,6 +5739,195 @@ sub nic_1984_update {
             success("updated successfully to $response->{ip}");
         }
     }
+}
+
+######################################################################
+## nic_alicloud_examples
+######################################################################
+sub nic_alicloud_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'alicloud'
+
+The 'alicloud' protocol is used by Alibaba Cloud DNS (www.alibabacloud.com),
+also known as AliDNS or Aliyun DNS.
+
+Before configuring, create an AccessKey in the Alibaba Cloud RAM console
+(ram.console.aliyun.com/manage/ak) with DNS read and write permissions.
+Each hostname must already have an A (IPv4) or AAAA (IPv6) record in Alibaba
+Cloud DNS — this protocol updates existing records, it does not create them.
+
+Configuration variables applicable to the 'alicloud' protocol are:
+  protocol=alicloud            ##
+  server=fqdn.of.service       ## can be omitted, defaults to alidns.aliyuncs.com
+  zone=dns.zone                ## optional; root DNS zone.  Inferred from hostname if omitted.
+  login=service-login          ## Alibaba Cloud AccessKey ID
+  password=service-password    ## Alibaba Cloud AccessKey Secret
+  ttl=seconds                  ## optional; defaults to existing record TTL if omitted.
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=alicloud                                            \\
+  login=LTAI4GxxxxxxxxxxxxxxxxxxX                              \\
+  password=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx                    \\
+  zone=example.com                                            \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_alicloud_update
+######################################################################
+sub nic_alicloud_update {
+    my $self = shift;
+    eval { require Digest::SHA; }
+        or fatal("Error loading the Perl module Digest::SHA needed for alicloud update.");
+    eval { require MIME::Base64; }
+        or fatal("Error loading the Perl module MIME::Base64 needed for alicloud update.");
+
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my ($sub_domain, $domain);
+        if (opt('zone', $h)) {
+            $domain     = opt('zone', $h);
+            $sub_domain = $h;
+            if ($sub_domain !~ s/(?:^|\.)\Q$domain\E$//) {
+                failed("hostname '$h' does not end with zone '$domain'");
+                next;
+            }
+            $sub_domain ||= '@';
+        } else {
+            ($sub_domain, $domain) = split(/\./, $h, 2);
+            if (!defined $domain) {
+                failed("cannot infer zone from '$h': no dot in hostname; use zone=");
+                next;
+            }
+        }
+        my $server            = opt('server', $h);
+        my $access_key_id     = opt('login', $h);
+        my $access_key_secret = opt('password', $h);
+        my $ttl               = opt('ttl', $h);
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            my $rrtype = $ipv eq '4' ? 'A' : 'AAAA';
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+            info("setting IPv$ipv address to $ip");
+
+            my $list_resp = _alicloud_call(
+                server            => $server,
+                access_key_id     => $access_key_id,
+                access_key_secret => $access_key_secret,
+                Action            => 'DescribeDomainRecords',
+                DomainName        => $domain,
+                RRKeyWord         => $sub_domain,
+                TypeKeyWord       => $rrtype,
+            );
+            if (!defined $list_resp) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                next;
+            }
+            my $records = $list_resp->{DomainRecords}{Record};
+            if (ref($records) ne 'ARRAY' || !@$records) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                failed("no $rrtype record found for $sub_domain.$domain");
+                next;
+            }
+            my @matching = grep { $_->{RR} eq $sub_domain } @$records;
+            if (!@matching) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                failed("no $rrtype record found for $sub_domain.$domain");
+                next;
+            }
+            warning("multiple $rrtype records found for $sub_domain.$domain; using the first one")
+                if @matching > 1;
+            my $record_id = $matching[0]{RecordId};
+            my $line      = $matching[0]{Line} // 'default';
+            if (!defined $record_id) {
+                failed("no RecordId in DescribeDomainRecords response");
+                next;
+            }
+
+            my %update_args = (
+                server            => $server,
+                access_key_id     => $access_key_id,
+                access_key_secret => $access_key_secret,
+                Action            => 'UpdateDomainRecord',
+                Line              => $line,
+                RecordId          => $record_id,
+                RR                => $sub_domain,
+                Type              => $rrtype,
+                Value             => $ip,
+            );
+            $update_args{TTL} = $ttl if defined $ttl;
+            my $update_resp = _alicloud_call(%update_args);
+            if (!defined $update_resp) {
+                $recap{$h}{"status-ipv$ipv"} = 'failed';
+                next;
+            }
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
+    }
+}
+
+######################################################################
+## _alicloud_call: make an authenticated Alibaba Cloud DNS API call
+######################################################################
+sub _alicloud_call {
+    my (%args) = @_;
+    my $server            = delete $args{server};
+    my $access_key_id     = delete $args{access_key_id};
+    my $access_key_secret = delete $args{access_key_secret};
+
+    my @t         = gmtime();
+    my $timestamp = sprintf('%04d-%02d-%02dT%02d:%02d:%02dZ',
+        $t[5] + 1900, $t[4] + 1, $t[3], $t[2], $t[1], $t[0]);
+
+    my %params = (
+        %args,
+        AccessKeyId      => $access_key_id,
+        Format           => 'json',
+        SignatureMethod  => 'HMAC-SHA1',
+        SignatureNonce   => sprintf('%d%06d', time(), int(rand(1_000_000))),
+        SignatureVersion => '1.0',
+        Timestamp        => $timestamp,
+        Version          => '2015-01-09',
+    );
+
+    my $canonical = join('&',
+        map { _alicloud_encode($_) . '=' . _alicloud_encode($params{$_}) }
+        sort keys %params
+    );
+    my $string_to_sign = 'GET&' . _alicloud_encode('/') . '&' . _alicloud_encode($canonical);
+    my $sig = MIME::Base64::encode_base64(
+        Digest::SHA::hmac_sha1($string_to_sign, $access_key_secret . '&'), '');
+
+    my $url   = "$server/?" . $canonical . '&Signature=' . _alicloud_encode($sig);
+    my $reply = geturl(proxy => opt('proxy'), url => $url);
+    return undef if !header_ok($reply);
+    (my $body = $reply) =~ s/^.*?\n\n//s;
+    my $resp = eval { decode_json($body) };
+    if (ref($resp) ne 'HASH') {
+        failed("unexpected API response: $body");
+        return undef;
+    }
+    if (defined $resp->{Code}) {
+        failed("API error ($resp->{Code}): " . ($resp->{Message} // 'unknown'));
+        return undef;
+    }
+    return $resp;
+}
+
+######################################################################
+## _alicloud_encode: percent-encode per RFC 3986 for Alibaba Cloud signing
+######################################################################
+sub _alicloud_encode {
+    my ($str) = @_;
+    $str =~ s/([^A-Za-z0-9\-_.~])/sprintf('%%%02X', ord($1))/ge;
+    return $str;
 }
 
 ######################################################################
