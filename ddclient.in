@@ -6129,6 +6129,78 @@ EoINSTR4
 ######################################################################
 
 ######################################################################
+## _cloudflare_decode_punycode_label
+##
+## Decodes a single punycode-encoded DNS label (RFC 3492) to a Unicode
+## string. Input is the label with the 'xn--' prefix already stripped.
+## Used to normalise IDN zone names before comparing with Cloudflare's
+## API, which always returns zone names in Unicode form.
+######################################################################
+sub _cloudflare_decode_punycode_label {
+    my ($encoded) = @_;
+    my ($BASE, $TMIN, $TMAX, $SKEW, $DAMP, $IBIAS, $IN)
+        = (36, 1, 26, 38, 700, 72, 128);
+
+    my $adapt = sub {
+        my ($delta, $npts, $first) = @_;
+        $delta = $first ? int($delta / $DAMP) : ($delta >> 1);
+        $delta += int($delta / $npts);
+        my $k = 0;
+        while ($delta > int(($BASE - $TMIN) * $TMAX / 2)) {
+            $delta = int($delta / ($BASE - $TMIN));
+            $k += $BASE;
+        }
+        return $k + int(($BASE - $TMIN + 1) * $delta / ($delta + $SKEW));
+    };
+    my $dv = sub {
+        my $c = ord(lc($_[0]));
+        return $c - 97 if $c >= 97 && $c <= 122;   # a-z → 0-25
+        return $c - 22 if $c >= 48 && $c <= 57;    # 0-9 → 26-35
+        die "invalid punycode digit: '$_[0]'";
+    };
+
+    my $delim = rindex($encoded, '-');
+    my @out   = map { ord($_) } split(//, $delim >= 0 ? substr($encoded, 0, $delim) : '');
+    my @chars = split(//, $delim >= 0 ? substr($encoded, $delim + 1) : $encoded);
+
+    my ($n, $i, $bias) = ($IN, 0, $IBIAS);
+    my $pos = 0;
+    while ($pos < @chars) {
+        my $oldi = $i;
+        my $w    = 1;
+        for (my $k = $BASE; ; $k += $BASE) {
+            die "truncated punycode sequence" if $pos >= @chars;
+            my $d = $dv->($chars[$pos++]);
+            $i += $d * $w;
+            my $t = $k <= $bias ? $TMIN : $k >= $bias + $TMAX ? $TMAX : $k - $bias;
+            last if $d < $t;
+            $w *= ($BASE - $t);
+        }
+        my $npts = @out + 1;
+        $bias = $adapt->($i - $oldi, $npts, $oldi == 0);
+        $n   += int($i / $npts);
+        $i   %= $npts;
+        splice @out, $i, 0, $n;
+        $i++;
+    }
+    return join '', map { chr($_) } @out;
+}
+
+######################################################################
+## _cloudflare_zone_to_unicode
+##
+## Converts a DNS zone name from punycode (ACE) to Unicode, label by
+## label. Labels not starting with 'xn--' are passed through unchanged.
+######################################################################
+sub _cloudflare_zone_to_unicode {
+    my ($zone) = @_;
+    return $zone unless $zone =~ /(?:^|\.)xn--/i;
+    return join '.', map {
+        /^xn--(.+)$/i ? (eval { _cloudflare_decode_punycode_label($1) } // $_) : $_
+    } split(/\./, $zone);
+}
+
+######################################################################
 ## nic_cloudflare_examples
 ##
 ## written by Ian Pye
@@ -6207,8 +6279,10 @@ sub nic_cloudflare_update {
 
             info('getting Cloudflare Zone ID');
 
+            my $server = opt('server', $domain);
+
             # Get zone ID
-            my $url = opt('server', $domain) . "/zones/?";
+            my $url = "${server}/zones/?";
             $url .= "name=" . opt('zone', $domain);
 
             my $reply = geturl(proxy => opt('proxy'),
@@ -6225,8 +6299,12 @@ sub nic_cloudflare_update {
                 next;
             }
 
-            # Pull the ID out of the json, messy
-            my ($zone_id) = map {$_->{name} eq opt('zone', $domain) ? $_->{id} : ()} @{$response->{result}};
+            # Pull the ID out of the json, messy.
+            # Cloudflare always returns zone names in Unicode; normalise the
+            # configured zone (which may be in punycode for IDN domains) before
+            # comparing so that e.g. xn--mnchen-3ya.de matches münchen.de.
+            my $zone_unicode = _cloudflare_zone_to_unicode(opt('zone', $domain));
+            my ($zone_id) = map {$_->{name} eq $zone_unicode ? $_->{id} : ()} @{$response->{result}};
             unless ($zone_id) {
                 failed("no zone ID found for zone " . opt('zone', $domain));
                 next;
@@ -6244,7 +6322,7 @@ sub nic_cloudflare_update {
                 $recap{$domain}{"status-ipv$ipv"} = 'failed';
 
                 # Get DNS 'A' or 'AAAA' record ID
-                $url = opt('server', $domain) . "/zones/$zone_id/dns_records?";
+                $url = "${server}/zones/$zone_id/dns_records?";
                 $url .= "type=$type&name=$domain";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,
@@ -6265,7 +6343,7 @@ sub nic_cloudflare_update {
                 }
                 debug("DNS '$type' record ID: $dns_rec_id");
                 # Set domain
-                $url = opt('server', $domain) . "/zones/$zone_id/dns_records/$dns_rec_id";
+                $url = "${server}/zones/$zone_id/dns_records/$dns_rec_id";
                 my $data = "{\"content\":\"$ip\"}";
                 $reply = geturl(proxy => opt('proxy'),
                                 url => $url,

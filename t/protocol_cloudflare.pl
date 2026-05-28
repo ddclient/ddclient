@@ -419,6 +419,75 @@ my @test_cases = (
             is(scalar(@reqs), 1, 'only one request made');
         },
     },
+
+    # IDN / internationalised domain name tests.
+    # Cloudflare always returns zone names in Unicode; the user may configure
+    # the zone in punycode (ACE) form.  Both must match correctly.
+    {
+        desc => 'IDN zone: punycode config matches unicode API response',
+        cfg => {
+            # münchen.de in punycode is xn--mnchen-3ya.de
+            'host.xn--mnchen-3ya.de' => {
+                login    => 'token',
+                password => 'mytoken',
+                zone     => 'xn--mnchen-3ya.de',
+                server   => $ep,
+                wantipv4 => '192.0.2.1',
+            },
+        },
+        responses => [
+            zone_resp("m\x{fc}nchen.de", 'zone-idn'),
+            rec_resp('host.xn--mnchen-3ya.de', 'rec-idn'),
+            patch_resp('rec-idn'),
+        ],
+        wantrecap => {
+            'host.xn--mnchen-3ya.de' => {
+                'status-ipv4' => 'good',
+                'ipv4'        => '192.0.2.1',
+                'mtime'       => $ddclient::now,
+            },
+        },
+        wantlogs => [
+            {label => 'SUCCESS', ctx => ['host.xn--mnchen-3ya.de'], msg => qr/IPv4/},
+        ],
+        check_reqs => sub {
+            my @reqs = @_;
+            is(scalar(@reqs), 3, 'three requests made for IDN zone');
+            like($reqs[0]->uri->as_string, qr|/zones/\?name=xn--mnchen-3ya\.de|,
+                 'zone lookup uses punycode form from config');
+        },
+    },
+    {
+        desc => 'IDN zone: unicode config matches unicode API response',
+        cfg => {
+            "host.m\x{fc}nchen.de" => {
+                login    => 'token',
+                password => 'mytoken',
+                zone     => "m\x{fc}nchen.de",
+                server   => $ep,
+                wantipv4 => '192.0.2.1',
+            },
+        },
+        responses => [
+            zone_resp("m\x{fc}nchen.de", 'zone-idn2'),
+            rec_resp("host.m\x{fc}nchen.de", 'rec-idn2'),
+            patch_resp('rec-idn2'),
+        ],
+        wantrecap => {
+            "host.m\x{fc}nchen.de" => {
+                'status-ipv4' => 'good',
+                'ipv4'        => '192.0.2.1',
+                'mtime'       => $ddclient::now,
+            },
+        },
+        wantlogs => [
+            {label => 'SUCCESS', ctx => ["host.m\x{fc}nchen.de"], msg => qr/IPv4/},
+        ],
+        check_reqs => sub {
+            my @reqs = @_;
+            is(scalar(@reqs), 3, 'three requests made for unicode IDN zone');
+        },
+    },
 );
 
 for my $tc (@test_cases) {
