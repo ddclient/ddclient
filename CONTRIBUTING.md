@@ -210,11 +210,25 @@ provider account and test domain when running integration tests locally.
 
 ### When integration tests run
 
-Integration tests are excluded from the standard `make check` run. They run in a
-separate CI job on a nightly schedule and on any pull request that carries the
-`run-integration-tests` label. Tests for a given protocol are skipped
-automatically when the corresponding secrets are absent, so the CI job does not
-need to be updated when a new protocol is added.
+Integration tests are excluded from the standard `make check` run. They run in
+two situations:
+
+  * **Nightly**, against the `main` branch.
+  * **On a pull request**, when a maintainer approves the run. Because this
+    repository is public, GitHub does not expose secrets to workflows triggered
+    by pull requests from forks. The integration test job uses the
+    `pull_request_target` event and a [GitHub Environment][gh-env] configured to
+    require maintainer approval. A maintainer approves the run after reviewing
+    the pull request code, satisfying themselves that it will not misuse the
+    credentials. The workflow definition always comes from `main`, not from the
+    pull request branch, so a contributor cannot modify the CI to exfiltrate
+    secrets.
+
+Tests for a given protocol are skipped automatically when the corresponding
+secrets are absent, so the CI job does not need to be updated when a new
+protocol is added.
+
+[gh-env]: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
 
 ## Compatibility
 
