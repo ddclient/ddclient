@@ -17,6 +17,12 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     hostnames equal to the zone are now correctly sent as `@`. Also remove the hardcoded
     `https://` scheme from URL construction so the `server` option can override it.
     [#899](https://github.com/ddclient/ddclient/pull/899)
+  * `cloudflare`: Fix zone ID lookup failure for internationalized domain names (IDN)
+    by normalizing both the configured zone and the Cloudflare API response to
+    Unicode before comparison. Harden the punycode decoder to reject malformed
+    labels so that mis-normalized zones fail explicitly rather than silently
+    producing an incorrect zone name.
+    [#905](https://github.com/ddclient/ddclient/pull/905)
 
 ### Improvements
 
