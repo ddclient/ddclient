@@ -7,6 +7,13 @@ EXTRA_DIST = \
 	README.cisco \
 	README.md \
 	autogen \
+	docs/Packaging.md \
+	packaging/debian/changelog \
+	packaging/debian/control \
+	packaging/debian/copyright \
+	packaging/debian/ddclient.service \
+	packaging/debian/rules \
+	packaging/rpm/ddclient.spec \
 	sample-ddclient-wrapper.sh \
 	sample-etc_cron.d_ddclient \
 	sample-etc_dhclient-exit-hooks \

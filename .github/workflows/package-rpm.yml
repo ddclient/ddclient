@@ -1,0 +1,213 @@
+name: Package RPM
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-fedora:
+    name: Build RPM (Fedora ${{ matrix.fedora_version }})
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:${{ matrix.fedora_version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora_version:
+          - 42
+          - 43
+          - 44
+          - rawhide
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: |
+          dnf --refresh install -y \
+              automake \
+              curl \
+              findutils \
+              make \
+              rpm-build \
+              systemd-rpm-macros \
+              perl-interpreter \
+              perl-Data-Dumper \
+              perl-File-Path \
+              perl-Getopt-Long \
+              perl-Socket \
+              perl-Sys-Hostname \
+              perl-version \
+              ;
+
+      - name: Build distribution tarball from source
+        run: |
+          ./autogen
+          ./configure
+          make dist
+
+      - name: Build RPMs
+        id: build
+        run: |
+          TARBALL=$(ls ddclient-*.tar.gz)
+          UPSTREAM="${TARBALL#ddclient-}"
+          UPSTREAM="${UPSTREAM%.tar.gz}"
+
+          # Translate semver suffix to RPM Version+Release.
+          # '-' suffix (pre-release) sorts before final:  Release 0.1.<label>
+          # '+' suffix (post-release) sorts after final:  Release 1.<label>
+          # No suffix is a final release:                 Release 1
+          case "$UPSTREAM" in
+            *-*)
+              RPM_VERSION="${UPSTREAM%%-*}"
+              LABEL="${UPSTREAM#*-}"
+              RPM_RELEASE="0.1.${LABEL}%{?dist}" ;;
+            *+*)
+              RPM_VERSION="${UPSTREAM%%+*}"
+              LABEL="${UPSTREAM#*+}"
+              RPM_RELEASE="1.${LABEL}%{?dist}" ;;
+            *)
+              RPM_VERSION="$UPSTREAM"
+              RPM_RELEASE="1%{?dist}" ;;
+          esac
+
+          TOPDIR="$(pwd)/rpmbuild"
+          mkdir -p "$TOPDIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          cp ddclient-*.tar.gz "$TOPDIR/SOURCES/"
+          cp packaging/rpm/ddclient.spec "$TOPDIR/SPECS/"
+          rpmbuild \
+            --define "_topdir $TOPDIR" \
+            --define "upstream_version ${UPSTREAM}" \
+            --define "rpm_version ${RPM_VERSION}" \
+            --define "rpm_release ${RPM_RELEASE}" \
+            -ba "$TOPDIR/SPECS/ddclient.spec"
+
+          echo "upstream=${UPSTREAM}" >> "$GITHUB_OUTPUT"
+
+      - name: Collect RPMs
+        run: |
+          mkdir -p artifacts
+          find rpmbuild/RPMS rpmbuild/SRPMS -name '*.rpm' -exec cp {} artifacts/ \;
+          ls -lh artifacts/
+
+      - name: Upload RPM artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ddclient-rpm-${{ steps.build.outputs.upstream }}-fc${{ matrix.fedora_version }}
+          path: artifacts/*.rpm
+
+      - name: Attach RPMs to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*.rpm
+
+  build-epel:
+    name: Build RPM (EPEL ${{ matrix.epel_version }})
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:${{ matrix.epel_version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        epel_version:
+          - 8
+          - 9
+          - 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Enable EPEL and CRB repositories
+        run: |
+          dnf --refresh install -y 'dnf-command(config-manager)' epel-release
+          if [ "${{ matrix.epel_version }}" = "8" ]; then
+            dnf config-manager --set-enabled powertools
+          else
+            dnf config-manager --set-enabled crb
+          fi
+
+      - name: Install build dependencies
+        # --skip-broken works around packages bundled differently across
+        # EPEL versions (e.g. perl-Sys-Hostname is part of perl-core on el8/el9)
+        run: |
+          dnf --refresh install --skip-broken -y \
+              automake \
+              curl \
+              findutils \
+              make \
+              perl-core \
+              rpm-build \
+              systemd-rpm-macros \
+              perl-interpreter \
+              perl-Data-Dumper \
+              perl-File-Path \
+              perl-Getopt-Long \
+              perl-Socket \
+              perl-Sys-Hostname \
+              perl-version \
+              ;
+
+      - name: Build distribution tarball from source
+        run: |
+          ./autogen
+          ./configure
+          make dist
+
+      - name: Build RPMs
+        id: build
+        run: |
+          TARBALL=$(ls ddclient-*.tar.gz)
+          UPSTREAM="${TARBALL#ddclient-}"
+          UPSTREAM="${UPSTREAM%.tar.gz}"
+
+          case "$UPSTREAM" in
+            *-*)
+              RPM_VERSION="${UPSTREAM%%-*}"
+              LABEL="${UPSTREAM#*-}"
+              RPM_RELEASE="0.1.${LABEL}%{?dist}" ;;
+            *+*)
+              RPM_VERSION="${UPSTREAM%%+*}"
+              LABEL="${UPSTREAM#*+}"
+              RPM_RELEASE="1.${LABEL}%{?dist}" ;;
+            *)
+              RPM_VERSION="$UPSTREAM"
+              RPM_RELEASE="1%{?dist}" ;;
+          esac
+
+          TOPDIR="$(pwd)/rpmbuild"
+          mkdir -p "$TOPDIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          cp ddclient-*.tar.gz "$TOPDIR/SOURCES/"
+          cp packaging/rpm/ddclient.spec "$TOPDIR/SPECS/"
+          rpmbuild \
+            --define "_topdir $TOPDIR" \
+            --define "upstream_version ${UPSTREAM}" \
+            --define "rpm_version ${RPM_VERSION}" \
+            --define "rpm_release ${RPM_RELEASE}" \
+            -ba "$TOPDIR/SPECS/ddclient.spec"
+
+          echo "upstream=${UPSTREAM}" >> "$GITHUB_OUTPUT"
+
+      - name: Collect RPMs
+        run: |
+          mkdir -p artifacts
+          find rpmbuild/RPMS rpmbuild/SRPMS -name '*.rpm' -exec cp {} artifacts/ \;
+          ls -lh artifacts/
+
+      - name: Upload RPM artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ddclient-rpm-${{ steps.build.outputs.upstream }}-epel${{ matrix.epel_version }}
+          path: artifacts/*.rpm
+
+      - name: Attach RPMs to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*.rpm
