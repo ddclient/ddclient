@@ -1216,6 +1216,19 @@ our %protocols = (
             'server'       => setv(T_FQDNP, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     ),
+    'netcup' => ddclient::Protocol->new(
+        'update'   => \&nic_netcup_update,
+        'examples' => \&nic_netcup_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'    => undef,   ## customer number
+            'password' => undef,   ## API password
+            'apikey'   => undef,   ## API key
+            'zone'     => undef,
+            'ttl'      => setv(T_NUMBER, 0, 3600,            undef),
+            'server'   => setv(T_FQDNP, 0, 'ccp.netcup.net', undef),
+        },
+    ),
     'nfsn' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
@@ -2254,7 +2267,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             ionos nfsn njalla ns1 porkbun spaceship yandex));
+                             ionos netcup nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -6275,6 +6288,222 @@ sub _ns1_call {
         return undef;
     }
     return $parsed;
+}
+
+######################################################################
+## nic_netcup_examples
+######################################################################
+sub nic_netcup_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'netcup'
+
+The 'netcup' protocol is used by the Netcup DNS service (www.netcup.de).
+
+Before configuring, generate an API key and API password in the Netcup Customer
+Control Panel (CCP) under Master Data > API.
+
+Configuration variables applicable to the 'netcup' protocol are:
+  protocol=netcup              ##
+  server=fqdn.of.service       ## can be omitted, defaults to ccp.netcup.net
+  zone=dns.zone                ## the DNS zone to update
+  login=customer-number        ## Netcup customer number
+  password=api-password        ## Netcup API password
+  apikey=api-key               ## Netcup API key
+  ttl=seconds                  ## optional; DNS record TTL in seconds.  Defaults to 3600.
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=netcup                                              \\
+  login=12345                                                  \\
+  password='my-api-password'                                   \\
+  apikey=my-api-key                                            \\
+  zone=example.com                                             \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_netcup_update
+######################################################################
+sub nic_netcup_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+
+        my $zone = opt('zone', $h);
+        if (!$zone) {
+            failed("zone is required for netcup");
+            next;
+        }
+
+        (my $hostname = $h) =~ s/\Q.$zone\E$//;
+        if ($hostname eq $h) {
+            if ($h eq $zone) {
+                $hostname = '@';
+            } else {
+                failed("hostname '$h' does not end with zone '$zone'");
+                next;
+            }
+        }
+
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        for my $ipv ('4', '6') {
+            next if ($ipv eq '4' && !$ipv4);
+            next if ($ipv eq '6' && !$ipv6);
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+        }
+
+        # Determine which IPs we are actually updating
+        my @updates;
+        push @updates, ['4', 'A',    $ipv4] if $ipv4;
+        push @updates, ['6', 'AAAA', $ipv6] if $ipv6;
+        next unless @updates;
+
+        # Step 1: Login (one session for all updates on this host)
+        my $session_id = _netcup_login($h, $zone);
+        next unless defined $session_id;
+
+        # Step 2: For each IP version, get records, update, done
+        for my $upd (@updates) {
+            my ($ipv, $rrtype, $ip) = @$upd;
+            info("setting IPv$ipv address to $ip");
+
+            # Get current DNS records for the zone
+            my $records_resp = _netcup_call($h, $zone, $session_id, 'infoDnsRecords', {
+                domainname => $zone,
+            });
+            if (!defined $records_resp) {
+                # status already 'failed' from _netcup_call
+                next;
+            }
+
+            my @records = @{$records_resp->{dnsrecords} // []};
+
+            # Find the matching record
+            my ($existing) = grep {
+                ($_->{hostname} // '') eq $hostname && ($_->{type} // '') eq $rrtype
+            } @records;
+
+            # Build the updated record
+            my %rec = (
+                hostname     => $hostname,
+                type         => $rrtype,
+                destination  => $ip,
+                deleterecord => JSON::PP::false(),
+                state        => 'yes',
+            );
+            $rec{id} = $existing->{id} if $existing;
+
+            my $update_resp = _netcup_call($h, $zone, $session_id, 'updateDnsRecords', {
+                domainname    => $zone,
+                dnsrecordset  => { dnsrecords => [\%rec] },
+            });
+            if (!defined $update_resp) {
+                next;
+            }
+
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
+
+        # Step 4: Logout
+        _netcup_call($h, $zone, $session_id, 'logout', {});
+    }
+}
+
+######################################################################
+## _netcup_login: authenticate and return a session ID
+######################################################################
+sub _netcup_login {
+    my ($h, $zone) = @_;
+    my $resp = _netcup_call($h, $zone, undef, 'login', {});
+    return undef unless defined $resp;
+    my $session_id = $resp->{apisessionid};
+    if (!$session_id) {
+        failed("netcup login did not return apisessionid");
+        return undef;
+    }
+    return $session_id;
+}
+
+######################################################################
+## _netcup_call: make a single Netcup JSON-RPC API call
+######################################################################
+sub _netcup_call {
+    my ($h, $zone, $session_id, $action, $extra_params) = @_;
+
+    my $url = opt('server', $h) . "/run/webservice/servers/endpoint.php";
+
+    my %params = (
+        customernumber => opt('login', $h),
+        apikey         => opt('apikey', $h),
+        %{$extra_params // {}},
+    );
+    if ($action ne 'login') {
+        $params{apisessionid} = $session_id;
+    } else {
+        $params{apipassword} = opt('password', $h);
+    }
+
+    my $body = encode_json({
+        action => $action,
+        param  => \%params,
+    });
+
+    my $reply = geturl(
+        proxy   => opt('proxy'),
+        url     => $url,
+        method  => 'POST',
+        headers => [
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
+        data    => $body,
+    );
+
+    if (!$reply) {
+        failed("could not connect to " . opt('server', $h));
+        return undef;
+    }
+
+    my ($status) = ($reply =~ m{^HTTP/\S+\s+(\d+)}i);
+    if (!defined $status) {
+        failed("unexpected HTTP response from " . opt('server', $h));
+        return undef;
+    }
+
+    (my $resp_body = $reply) =~ s/^.*?\n\n//s;
+    $resp_body =~ s/^\s+|\s+$//g;
+
+    if ($status !~ /^2/) {
+        failed("API HTTP error $status");
+        return undef;
+    }
+
+    if ($action eq 'logout') {
+        # Ignore logout response body
+        return {};
+    }
+
+    my $parsed = eval { decode_json($resp_body) };
+    if (!defined $parsed) {
+        failed("unexpected API response: $resp_body");
+        return undef;
+    }
+
+    if (($parsed->{status} // '') ne 'success') {
+        my $msg = $parsed->{longmessage} // $parsed->{shortmessage} // 'unknown error';
+        failed("API error: $msg");
+        return undef;
+    }
+
+    return $parsed->{responsedata} // {};
 }
 
 ######################################################################

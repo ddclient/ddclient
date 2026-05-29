@@ -77,6 +77,7 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     authentication, complementing existing dyndns2 username/password support.
   * Added `LuaDNS` (https://luadns.com) as a supported `dyndns2` provider
     via `app.luadns.com`. Use your account email as login and API key as password.
+  * Added `netcup` protocol for Netcup (https://www.netcup.de).
 
 ### Improvements
 
