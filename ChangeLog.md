@@ -5,6 +5,11 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ## v4.0.1-rc.2 (unreleased work-in-progress)
 
+### New features
+
+  * Added `celeros` protocol for Celeros (https://www.celeros.de). Supports updating
+    IPv4 and IPv6 in a single request.
+
 ### Provider updates
 
   * `sitelutions`: Update default server to `api2.sitelutions.com` (APIv2); add optional

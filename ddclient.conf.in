@@ -166,6 +166,14 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # your-host.domain.com, your-2nd-host.domain.com
 
 ##
+## Celeros (https://www.celeros.de)
+## Use the API key from your celeros.de account.
+##
+# protocol=celeros,                         \
+# password=your-celeros-api-key,            \
+# myhost.example.com
+
+##
 ## ChangeIP (changeip.com)
 ##
 ## single host update
