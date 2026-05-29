@@ -85,6 +85,7 @@ handwritten_tests = \
 	t/protocol_simplycom.pl \
 	t/protocol_spaceship.pl \
 	t/read_recap.pl \
+	t/run_once.pl \
 	t/skip.pl \
 	t/ssl-validate.pl \
 	t/update_nics.pl \

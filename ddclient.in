@@ -715,6 +715,7 @@ our %cfgvars = (
             opt('daemon') ? int(opt('daemon') * 0.2) : undef
         }, undef),
         'foreground'          => setv(T_BOOL,  0, 0,                    undef),
+        'run-once'            => setv(T_BOOL,  0, 0,                    undef),
         'file'                => setv(T_FILE,  0, "$etc/$program.conf", undef),
         'cache'               => setv(T_FILE,  0, "$cachedir/$program.cache", undef),
         'pid'                 => setv(T_FILE,  0, undef,                undef),
@@ -1456,6 +1457,7 @@ my @opt = (
     ["daemon",            "=s", "--daemon=<delay>       : run as a daemon, specify <delay> as an interval"],
     ["jitter",            "=s", "--jitter=<jitter>      : add random jitter up to <jitter> to the daemon interval, specify <jitter> as an interval"],
     ["foreground",        "!",  "--foreground           : do not fork"],
+    ["run-once",          "!",  "--run-once             : update once and exit, overriding any daemon interval set in the config file"],
     ["proxy",             "=s", "--proxy=<host>         : use <host> as the HTTP proxy"],
     ["server",            "=s", "--server=<host>        : update DNS information on <host>"],
     ["protocol",          "=s", "--protocol=<type>      : update protocol used"],
@@ -1563,8 +1565,8 @@ sub main {
     $SIG{'HUP'}  = sub { $caught_hup  = 1; };
     $SIG{'TERM'} = sub { $caught_term = 1; };
     $SIG{'INT'}  = sub { $caught_int  = 1; };
-    # don't fork() if foreground
-    if (opt('foreground')) {
+    # don't fork() if foreground or run-once
+    if (opt('foreground') || opt('run-once')) {
         ;
     } elsif (opt('daemon')) {
         $SIG{'CHLD'} = 'IGNORE';
@@ -1592,6 +1594,7 @@ sub main {
         read_recap(opt('cache'));
         print_info() if opt('debug') && opt('verbose');
         $daemon = opt('daemon');
+        $daemon = undef if opt('run-once');
 
         update_nics();
 
@@ -7129,21 +7132,16 @@ dynamic DNS service offered by www.duckdns.org.
 Check https://www.duckdns.org/install.jsp?tab=linux-cron for API
 
 Configuration variables applicable to the 'duckdns' protocol are:
-  protocol=duckdns             ##
+  protocol=duckdns               ##
   server=www.fqdn.of.service   ## defaults to www.duckdns.org
   password=service-password    ## password (token) registered with the service
-  non-fully.qualified.host     ## the host registered with the service.
+  non-fully.qualified.host         ## the host registered with the service.
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=duckdns,        \\
-  password=your_password   \\
+  password=your_password,  \\
   myhost
-
-  ## multiple host update
-  protocol=duckdns,        \\
-  password=your_password   \\
-  myhost,myhost2
 
 EoEXAMPLE
 }
