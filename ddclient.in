@@ -5085,16 +5085,29 @@ The 'namecheap' protocol is used by DNS service offered by www.namecheap.com.
 Configuration variables applicable to the 'namecheap' protocol are:
   protocol=namecheap           ##
   server=fqdn.of.service       ## defaults to dynamicdns.park-your-domain.com
-  login=service-login          ## the domain of the dynamic DNS record you want to update
+  login=service-login          ## the root domain of the dynamic DNS record you want to update; NOT your namecheap.com login
   password=service-password    ## Generated password for your dynamic DNS record
   hostname                     ## the subdomain to update, use @ for base domain name, * for catch all
 
-Example ${program}.conf file entries:
-  ## single host update
+Example ${program}.conf single domain file entries:
+  ## single host & domain update; can use unqualified entries
   protocol=namecheap                                          \\
   login=example.com                                           \\
   password=example.com-generated-password                     \\
   @
+
+Example ${program}.conf multiple domain file entries:
+  ## updating multiple domains requires FQDNs
+  ## first domain update
+  protocol=namecheap                                          \\
+  login=example1.com                                          \\
+  password=example1.com-generated-password                    \\
+  @.example1.com, foo.example1.com
+  ## second domain update
+  protocol=namecheap                                          \\
+  login=example2.com                                          \\
+  password=example2.com-generated-password                    \\
+  @.example2.com, bar.example2.com
 
 EoEXAMPLE
 }
