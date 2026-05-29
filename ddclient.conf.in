@@ -550,6 +550,15 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## Bunny.net DNS (https://bunny.net/dns/)
+## Use your Bunny.net account API key as password.
+##
+# protocol=bunny,                          \
+# password=your-bunny-api-key,             \
+# zone=example.com,                        \
+# myhost.example.com
+
+##
 ## All-inkl.com (https://all-inkl.com)
 ## Create DDNS credentials in KAS under Tools → DDNS Settings.
 ## Supports IPv4 and IPv6 (enable Dual-Stack in KAS for IPv6).
