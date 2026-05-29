@@ -5,7 +5,10 @@ eval { require 'ddclient'; } or BAIL_OUT($@);
 # Fake curl.  Use the printf utility, which can process escapes.  This allows Perl to drive the fake
 # curl with plain ASCII and get arbitrary bytes back, avoiding problems caused by any encoding that
 # might be done by Perl (e.g., "use open ':encoding(UTF-8)';").
-my @fakecurl = ('sh', '-c', 'printf %b "$1"', '--');
+#
+# Use $0 rather than $1 to avoid relying on -- being treated as argv[0],
+# which some sh variants do not handle correctly.
+my @fakecurl = ('sh', '-c', 'printf %b "$0"');
 
 my @test_cases = (
     {
