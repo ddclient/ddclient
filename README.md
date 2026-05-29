@@ -53,6 +53,7 @@ Dynamic DNS services currently supported include:
   * [LuaDNS](https://luadns.com)
   * [Mythic Beasts](https://www.mythic-beasts.com/support/api/dnsv2/dynamic-dns)
   * [NameCheap](https://www.namecheap.com)
+  * [NameSilo](https://www.namesilo.com)
   * [NearlyFreeSpeech.net](https://www.nearlyfreespeech.net/services/dns)
   * [NIC.RU](https://www.nic.ru)
   * [Njalla](https://njal.la/docs/ddns)
