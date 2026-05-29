@@ -133,6 +133,147 @@ To add a new test script:
      eval { require Foo::Bar; } or plan(skip_all => $@);
      ```
 
+## Integration tests
+
+Integration tests verify that a protocol implementation works correctly against
+the real provider API. They complement the unit tests in `t/` by catching API
+drift, authentication changes, and documentation errors that mock tests cannot
+detect.
+
+### Requirement for new protocols
+
+A pull request that adds a new protocol must include an integration test. The
+test does not need to pass in CI before the pull request is reviewed, but the
+corresponding project test account must be provisioned and its credentials added
+to the upstream repository's GitHub Actions secrets before the pull request is
+merged.
+
+The contributor's responsibility is to write the integration test and document
+which credentials it requires (see [Credential naming](#credential-naming)). A
+maintainer provisions the project test account at the provider and stores the
+credentials as GitHub Actions secrets.
+
+### Writing an integration test
+
+Integration tests live in `t/integration/`. They follow the same structure as
+unit tests, with the addition of a credential check at the top that skips the
+test when the required environment variables are not set:
+
+```perl
+use Test::More;
+SKIP: { eval { require Test::Warnings; 1; } or skip($@, 1); }
+eval { require 'ddclient'; } or BAIL_OUT($@);
+
+my $key  = $ENV{DDCLIENT_TEST_MYPROVIDER_KEY}
+    or plan(skip_all => 'DDCLIENT_TEST_MYPROVIDER_KEY not set');
+my $zone = $ENV{DDCLIENT_TEST_MYPROVIDER_ZONE}
+    or plan(skip_all => 'DDCLIENT_TEST_MYPROVIDER_ZONE not set');
+```
+
+The test should:
+
+  1. Update a known A or AAAA record in the test zone to a known IP address,
+     using ddclient's protocol implementation directly (not via the `ddclient`
+     binary).
+  2. Verify the update succeeded by querying the provider API or resolving the
+     record via DNS.
+  3. Restore the record to its original value, or delete it, after the test
+     completes — whether the test passed or failed.
+
+### Test zones
+
+Each provider's integration test operates against a subdomain of
+`ci.ddclient.net` whose NS records are delegated to that provider. For example,
+`namesilo.ci.ddclient.net` is delegated to NameSilo's nameservers. This means
+the project requires only one registered domain regardless of how many providers
+are under test.
+
+The zone to use is supplied through the `DDCLIENT_TEST_<PROTOCOL>_ZONE`
+environment variable so that contributors can substitute their own domain when
+developing locally.
+
+### Credential naming
+
+Credentials are passed through environment variables named
+`DDCLIENT_TEST_<PROTOCOL>_<VAR>`, where `<PROTOCOL>` is the protocol name in
+uppercase and `<VAR>` describes the credential. Examples:
+
+  * `DDCLIENT_TEST_NAMESILO_KEY` — NameSilo API key
+  * `DDCLIENT_TEST_NAMECOM_LOGIN` and `DDCLIENT_TEST_NAMECOM_PASSWORD`
+  * `DDCLIENT_TEST_NETCUP_LOGIN`, `DDCLIENT_TEST_NETCUP_APIKEY`,
+    `DDCLIENT_TEST_NETCUP_PASSWORD`
+
+### Credential management
+
+Credentials for the upstream test zones are stored as GitHub Actions secrets in
+the `ddclient/ddclient` repository. A maintainer provisions the project test
+account and adds the secrets before merging the pull request (see
+[Integration test accounts](#integration-test-accounts)).
+
+Contributors developing a new protocol should use their own provider account and
+test domain when running integration tests locally.
+
+### Integration test accounts
+
+The upstream CI runs all integration tests under project-owned accounts, not
+accounts belonging to individual contributors. This ensures that a maintainer
+can always access the account to rotate credentials, investigate failures, or
+decommission the account if a provider removes support.
+
+**Standard account details:**
+
+  * Email: `ddclient-ci@ddclient.net`
+  * Username: `ddclient-ci` (where the provider requires a username separate
+    from the email address)
+
+The `ddclient-ci@ddclient.net` inbox must be independently accessible to at
+least two maintainers. This prevents a single point of failure if one maintainer
+is unavailable.
+
+**Provisioning a new account:**
+
+  1. Create an account at the provider using `ddclient-ci@ddclient.net` and the
+     username `ddclient-ci` where applicable.
+  2. Record the account password in the project's shared credential store,
+     accessible to all active maintainers.
+  3. Create an API key or token scoped to the minimum permissions required:
+     create and delete DNS records in the test zone. Do not reuse credentials
+     across providers.
+  4. Delegate the provider's test subdomain of `ci.ddclient.net` to the
+     provider's nameservers (e.g. `namesilo.ci.ddclient.net` → NameSilo NS
+     records).
+
+**Provider partnerships:**
+
+Some providers require a credit card even for free-tier accounts. Maintainers
+are encouraged to contact the provider's developer relations or partnership team
+to request a sponsored test account in exchange for ddclient listing their
+service as a supported provider. Most providers find this a low-cost, mutually
+beneficial arrangement. If a provider declines, a maintainer may use a personal
+payment method and seek reimbursement from the project.
+
+### When integration tests run
+
+Integration tests are excluded from the standard `make check` run. They run in
+two situations:
+
+  * **Nightly**, against the `main` branch.
+  * **On a pull request**, when a maintainer approves the run. Because this
+    repository is public, GitHub does not expose secrets to workflows triggered
+    by pull requests from forks. The integration test job uses the
+    `pull_request_target` event and a [GitHub Environment][gh-env] configured to
+    require maintainer approval. A maintainer approves the run after reviewing
+    the pull request code, satisfying themselves that it will not misuse the
+    credentials. The workflow definition always comes from `main`, not from the
+    pull request branch, so a contributor cannot modify the CI to exfiltrate
+    secrets.
+
+Tests for a given protocol are skipped automatically when the corresponding
+secrets are absent, so the CI job does not need to be updated when a new
+protocol is added.
+
+[gh-env]: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+
 ## Compatibility
 
 We strive to find the right balance between features, code
@@ -292,3 +433,41 @@ git log --graph --oneline --decorate origin/main..
 # Push to ddclient main
 git push origin main
 ```
+
+### Running integration tests on a pull request
+
+Integration tests require secrets that are not available to workflows triggered
+from forks (see [When integration tests run](#when-integration-tests-run)).
+To run them against a pull request, a maintainer must approve the CI run
+manually.
+
+Before approving, review the pull request code and satisfy yourself that it
+does not attempt to read, log, or exfiltrate the credentials it will receive.
+Pay particular attention to any changes in `t/integration/`.
+
+To approve the run:
+
+  1. Open the pull request on GitHub.
+  2. Navigate to the **Checks** tab.
+  3. Find the `integration-tests` job, which will be in a **Waiting** state.
+  4. Click **Review deployments**, select the `integration-tests` environment,
+     and click **Approve and deploy**.
+
+The job will then run with access to the repository secrets. Results appear
+in the Checks tab like any other CI job.
+
+### Adding integration test credentials
+
+When merging a pull request that adds a new protocol, provision the project test
+account and store its credentials before merging:
+
+  1. Provision a project test account at the provider following the process in
+     [Integration test accounts](#integration-test-accounts).
+  2. In the `ddclient/ddclient` repository, go to **Settings → Secrets and
+     variables → Actions** and add each secret following the naming convention
+     `DDCLIENT_TEST_<PROTOCOL>_<VAR>` (e.g. `DDCLIENT_TEST_NAMESILO_KEY`).
+  3. Approve and run the integration test job against the pull request (see
+     [Running integration tests on a pull request](#running-integration-tests-on-a-pull-request))
+     to confirm the credentials work before merging.
+  4. Verify that the nightly integration test job picks up and runs the new
+     protocol's tests after the pull request is merged.
