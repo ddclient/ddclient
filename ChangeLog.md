@@ -69,6 +69,7 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
     [#907](https://github.com/ddclient/ddclient/pull/907)
   * Added `spaceship` protocol for Spaceship (https://www.spaceship.com/).
     [#896](https://github.com/ddclient/ddclient/pull/896)
+  * Added `dreamhost` protocol for DreamHost (https://www.dreamhost.com).
   * Added `updatedip` built-in web IP check service for UpdatedIP (https://www.updatedip.com).
     [#868](https://github.com/ddclient/ddclient/pull/868)
   * Added `dynadot` protocol for Dynadot (https://www.dynadot.com/).

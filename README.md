@@ -29,6 +29,7 @@ Dynamic DNS services currently supported include:
   * [DNSExit](https://dnsexit.com/dns/dns-api)
   * [dnsHome.de](https://www.dnshome.de)
   * [Domeneshop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)
+  * [DreamHost](https://www.dreamhost.com)
   * [DslReports](https://www.dslreports.com)
   * [Duck DNS](https://duckdns.org)
   * [Dynadot](https://www.dynadot.com)
