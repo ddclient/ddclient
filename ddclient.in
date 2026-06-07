@@ -1223,6 +1223,7 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'password' => undef,
             'zone'     => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,                         undef),
             'server'   => setv(T_FQDNP, 0, 'api.netlify.com/api/v1', undef),
         },
     ),
