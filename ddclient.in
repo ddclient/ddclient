@@ -940,6 +940,7 @@ our %protocols = (
         'cfgvars'  => {
             %{$cfgvars{'protocol-common-defaults'}},
             'login'  => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
             'server' => setv(T_FQDNP, 0, 'kc.celeros.de', undef),
         },
     ),
