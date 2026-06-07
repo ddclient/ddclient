@@ -1035,6 +1035,7 @@ our %protocols = (
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
             'password' => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,                   undef),
             'server'   => setv(T_FQDNP, 0, 'api.dreamhost.com', undef),
         },
     ),
