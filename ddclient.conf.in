@@ -524,20 +524,29 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # yourhostname.dynv6.net
 
 ##
-## Sitelutions (https://sitelutions.com)
-##
-# protocol=sitelutions,    \
-# login=me@example.com,    \
-# password=my-password     \
-# 12345678
-
-##
 ## Dynu (https://www.dynu.com/)
 ##
 # protocol=dynu                                                \
 # login=myusername                                             \
 # password=mypassword                                          \
 # myhome.dynu.net
+
+##
+## Name.com (https://www.name.com/)
+##
+# protocol=namecom,                         \
+# login=your-name-com-username,             \
+# password=your-api-token,                  \
+# zone=example.com,                         \
+# myhost.example.com
+
+##
+## Sitelutions (https://sitelutions.com)
+##
+# protocol=sitelutions,    \
+# login=me@example.com,    \
+# password=my-password     \
+# 12345678
 
 ##
 ## Spaceship (https://www.spaceship.com/)
