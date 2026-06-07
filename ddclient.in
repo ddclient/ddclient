@@ -1029,6 +1029,16 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'dondns.dondominio.com', undef),
         },
     ),
+    'dreamhost' => ddclient::Protocol->new(
+        'update'   => \&nic_dreamhost_update,
+        'examples' => \&nic_dreamhost_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'password' => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,                   undef),
+            'server'   => setv(T_FQDNP, 0, 'api.dreamhost.com', undef),
+        },
+    ),
     'dslreports1' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_dslreports1_update,
         'examples'   => \&nic_dslreports1_examples,
@@ -2253,7 +2263,7 @@ sub init_config {
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
-                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
+                          qw(1984 cloudflare digitalocean directnic dnsexit2 dreamhost gandi godaddy hetzner
                              ionos nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
@@ -4854,6 +4864,116 @@ sub nic_domeneshop_update {
     }
 }
 
+
+######################################################################
+## nic_dreamhost_examples
+######################################################################
+sub nic_dreamhost_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'dreamhost'
+
+The 'dreamhost' protocol is used by the DNS service offered by www.dreamhost.com.
+
+Configuration variables applicable to the 'dreamhost' protocol are:
+  protocol=dreamhost           ##
+  server=fqdn.of.service       ## defaults to api.dreamhost.com
+  password=service-password    ## DreamHost API key
+
+Example ${program}.conf file entries:
+  protocol=dreamhost                        \\
+  password=my-dreamhost-api-key             \\
+  my.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_dreamhost_update
+######################################################################
+sub nic_dreamhost_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        for my $ip ($ipv4, $ipv6) {
+            next if !$ip;
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+
+            info("setting IPv$ipv address to $ip");
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            my $uid = sprintf('%08x%08x', int(rand(0xffffffff)), int(rand(0xffffffff)));
+            my $key = opt('password', $h);
+            my $base = opt('server', $h);
+
+            # Step 1: list existing records
+            my $url = "$base/?key=$key&unique_id=${uid}a&cmd=dns-list_records&format=json";
+            my $reply = geturl(proxy => opt('proxy'), url => $url);
+            next if !header_ok($reply);
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval { decode_json(${^MATCH}) };
+            if (!$response || ($response->{result} // '') ne 'success') {
+                my $err = ($response && $response->{data}) ? $response->{data} : 'unknown error';
+                failed("dns-list_records failed: $err");
+                next;
+            }
+
+            # Step 2: find existing record for this host+type
+            my $old_ip;
+            for my $rec (@{$response->{data} // []}) {
+                next unless (($rec->{record} // '') eq $h) && (($rec->{type} // '') eq $type);
+                $old_ip = $rec->{value};
+                last;
+            }
+
+            if (defined $old_ip && $old_ip eq $ip) {
+                success("IPv$ipv address was already set to $ip");
+                $recap{$h}{"ipv$ipv"} = $ip;
+                $recap{$h}{'mtime'} = $now;
+                $recap{$h}{"status-ipv$ipv"} = 'good';
+                next;
+            }
+
+            # Step 3: remove old record if present
+            if (defined $old_ip) {
+                my $uid2 = sprintf('%08x%08x', int(rand(0xffffffff)), int(rand(0xffffffff)));
+                $url = "$base/?key=$key&unique_id=${uid2}&cmd=dns-remove_record&format=json"
+                     . "&record=$h&type=$type&value=$old_ip";
+                $reply = geturl(proxy => opt('proxy'), url => $url);
+                next if !header_ok($reply);
+                $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+                $response = eval { decode_json(${^MATCH}) };
+                if (!$response || ($response->{result} // '') ne 'success') {
+                    my $err = ($response && $response->{data}) ? $response->{data} : 'unknown error';
+                    failed("dns-remove_record failed: $err");
+                    next;
+                }
+            }
+
+            # Step 4: add new record
+            my $uid3 = sprintf('%08x%08x', int(rand(0xffffffff)), int(rand(0xffffffff)));
+            $url = "$base/?key=$key&unique_id=${uid3}&cmd=dns-add_record&format=json"
+                 . "&record=$h&type=$type&value=$ip";
+            $reply = geturl(proxy => opt('proxy'), url => $url);
+            next if !header_ok($reply);
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            $response = eval { decode_json(${^MATCH}) };
+            if (!$response || ($response->{result} // '') ne 'success') {
+                my $err = ($response && $response->{data}) ? $response->{data} : 'unknown error';
+                failed("dns-add_record failed: $err");
+                next;
+            }
+
+            success("IPv$ipv address set to $ip");
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+        }
+    }
+}
 
 ######################################################################
 ## nic_zoneedit1_examples
