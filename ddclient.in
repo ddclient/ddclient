@@ -1226,6 +1226,7 @@ our %protocols = (
             'apikey'   => undef,   ## API key
             'zone'     => undef,
             'ttl'      => setv(T_NUMBER, 0, 3600,            undef),
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
             'server'   => setv(T_FQDNP, 0, 'ccp.netcup.net', undef),
         },
     ),
