@@ -1163,6 +1163,7 @@ our %protocols = (
             %{$cfgvars{'protocol-common-defaults'}},
             'login'    => undef,
             'password' => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
             'server'   => setv(T_FQDNP, 0, 'api.glesys.com', undef),
             'zone'     => setv(T_FQDN,  1, undef,            undef),
         },
