@@ -204,6 +204,16 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # myhost.example.com
 
 ##
+## GleSYS (glesys.com)
+## Use your GleSYS account ID as login and your API key as password.
+##
+# protocol=glesys,                        \
+# login='CLxxxxx',                        \
+# password='your-api-key',               \
+# zone=example.com,                       \
+# myhost.example.com
+
+##
 ## GoDaddy (godaddy.com)
 ##
 # protocol=godaddy,                    \

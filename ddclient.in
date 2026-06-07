@@ -1156,6 +1156,18 @@ our %protocols = (
             'zone'                      => setv(T_FQDN,   1, undef,           undef),
         }
     ),
+    'glesys' => ddclient::Protocol->new(
+        'update'   => \&nic_glesys_update,
+        'examples' => \&nic_glesys_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'    => undef,
+            'password' => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
+            'server'   => setv(T_FQDNP, 0, 'api.glesys.com', undef),
+            'zone'     => setv(T_FQDN,  1, undef,            undef),
+        },
+    ),
     'godaddy' => ddclient::Protocol->new(
         'update'     => \&nic_godaddy_update,
         'examples'   => \&nic_godaddy_examples,
@@ -2253,7 +2265,7 @@ sub init_config {
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
-                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
+                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi glesys godaddy hetzner
                              ionos nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
@@ -5843,6 +5855,121 @@ sub nic_changeip_update {
             warning("SENT:    %s", $url) unless opt('verbose');
             warning("REPLIED: %s", $reply);
             failed("invalid reply");
+        }
+    }
+}
+
+######################################################################
+## nic_glesys_examples
+######################################################################
+sub nic_glesys_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'glesys'
+
+The 'glesys' protocol is used by the DNS service offered by https://glesys.com.
+
+Configuration variables applicable to the 'glesys' protocol are:
+  protocol=glesys              ##
+  server=fqdn.of.service       ## can be omitted, defaults to api.glesys.com
+  login=CLxxxxx                ## GleSYS account ID (e.g. CL12345)
+  password=your-api-key        ## GleSYS API key
+  zone=dns.zone                ## the DNS zone to update
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  protocol=glesys,                        \\
+  login=CL12345,                          \\
+  password=my-glesys-api-key,             \\
+  zone=example.com,                       \\
+  myhost.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_glesys_update
+######################################################################
+sub nic_glesys_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+
+        my $zone = opt('zone', $h);
+        (my $hostname = $h) =~ s/\.\Q$zone\E$//;
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        for my $ip ($ipv4, $ipv6) {
+            next if !$ip;
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = ($ip eq ($ipv6 // '')) ? 'AAAA' : 'A';
+
+            info("setting IPv$ipv address to $ip");
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            # Step 1: list records for the zone to find the record ID
+            my $list_url = opt('server', $h) . "/domain/listrecords/";
+            my $list_reply = geturl(
+                proxy    => opt('proxy'),
+                url      => $list_url,
+                login    => opt('login', $h),
+                password => opt('password', $h),
+                headers  => ['Accept: application/json'],
+                method   => 'POST',
+                data     => "domainname=$zone",
+            );
+            next if !header_ok($list_reply);
+            (my $list_body = $list_reply) =~ s/^.*?\r?\n\r?\n//s;
+            my $list_response = eval { decode_json($list_body) };
+            if (ref($list_response) ne 'HASH' || ref($list_response->{response}) ne 'HASH') {
+                failed("unexpected response from listrecords: $list_body");
+                next;
+            }
+            my $records = $list_response->{response}{records};
+            if (ref($records) ne 'ARRAY') {
+                failed("no records array in listrecords response");
+                next;
+            }
+
+            # Find the record matching our hostname and type
+            my ($record) = grep {
+                ($_->{host} // '') eq $hostname && ($_->{type} // '') eq $type
+            } @$records;
+            unless ($record && defined $record->{recordid}) {
+                failed("no $type record found for $hostname in zone $zone");
+                next;
+            }
+            my $record_id = $record->{recordid};
+            debug("DNS '$type' record ID: $record_id");
+
+            # Step 2: update the record
+            my $update_url = opt('server', $h) . "/domain/updaterecord/";
+            my $update_reply = geturl(
+                proxy    => opt('proxy'),
+                url      => $update_url,
+                login    => opt('login', $h),
+                password => opt('password', $h),
+                headers  => ['Accept: application/json'],
+                method   => 'POST',
+                data     => "recordid=$record_id&data=$ip",
+            );
+            next if !header_ok($update_reply);
+            (my $update_body = $update_reply) =~ s/^.*?\r?\n\r?\n//s;
+            my $update_response = eval { decode_json($update_body) };
+            if (ref($update_response) ne 'HASH' || ref($update_response->{response}) ne 'HASH') {
+                failed("unexpected response from updaterecord: $update_body");
+                next;
+            }
+            my $status_code = $update_response->{response}{status}{code} // '';
+            if ($status_code ne '200') {
+                my $status_text = $update_response->{response}{status}{text} // 'unknown error';
+                failed("updaterecord failed: $status_text");
+                next;
+            }
+            success("IPv$ipv address set to $ip");
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'}   = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
         }
     }
 }
