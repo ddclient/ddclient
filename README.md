@@ -63,6 +63,7 @@ Dynamic DNS services currently supported include:
   * [Porkbun](https://porkbun.com)
   * [PowerDNS](https://www.powerdns.com) (via [PowerDNS-Admin](https://github.com/PowerDNS-Admin/PowerDNS-Admin) with `protocol=dyndns2`, or via RFC 2136 DNS UPDATE with `protocol=nsupdate`)
   * [regfish.de](https://www.regfish.de/domains/dyndns)
+  * [Scaleway](https://www.scaleway.com/en/dns/)
   * [Simply.com](https://www.simply.com)
   * [Sitelutions](https://www.sitelutions.com)
   * [Technitium DNS Server](https://technitium.com/dns/) (via RFC 2136 `protocol=nsupdate`)

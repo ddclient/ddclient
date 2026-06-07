@@ -1311,6 +1311,18 @@ our %protocols = (
             'server'   => setv(T_FQDNP,  0, 'spaceship.dev', undef),
         },
     ),
+    'scaleway' => ddclient::Protocol->new(
+        'update'   => \&nic_scaleway_update,
+        'examples' => \&nic_scaleway_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'password' => undef,
+            'zone'     => setv(T_FQDN,  1, undef,                          undef),
+            'ttl'      => setv(T_NUMBER, 0, 300,                            undef),
+            'ssl'      => setv(T_BOOL,   0, 1,                                 undef),
+            'server'   => setv(T_FQDNP,  0, 'api.scaleway.com/domain/v2beta1', undef),
+        },
+    ),
     'sitelutions' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_sitelutions_update,
         'examples'   => \&nic_sitelutions_examples,
@@ -2254,7 +2266,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             ionos nfsn njalla ns1 porkbun spaceship yandex));
+                             ionos nfsn njalla ns1 porkbun scaleway spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -7966,6 +7978,111 @@ sub nic_cloudns_update {
         $recap{$_}{'mtime'} = $now for @hosts;
         $recap{$_}{'status'} = 'good' for @hosts;
         success("IP address set to $ip");
+    }
+}
+
+######################################################################
+## nic_scaleway_examples
+######################################################################
+sub nic_scaleway_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'scaleway'
+
+The 'scaleway' protocol is used by the DNS service offered by www.scaleway.com.
+
+Configuration variables applicable to the 'scaleway' protocol are:
+  protocol=scaleway            ##
+  server=fqdn.of.service       ## can be omitted, defaults to api.scaleway.com/domain/v2beta1
+  zone=dns.zone                ## the DNS zone to update (required)
+  password=service-password    ## Scaleway API secret key
+  ttl=seconds                  ## optional; DNS record TTL in seconds.  Defaults to 300.
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=scaleway                                            \\
+  password=my-scaleway-api-secret-key                          \\
+  zone=example.com                                             \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_scaleway_update
+######################################################################
+sub nic_scaleway_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+
+        my $zone = opt('zone', $h);
+        (my $subdomain = $h) =~ s/(?:^|\.)\Q$zone\E$//;
+        $subdomain ||= '@';
+
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            my $rrtype = $ipv eq '4' ? 'A' : 'AAAA';
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+            info("setting IPv$ipv address to $ip");
+
+            my $url = opt('server', $h) . "/dns-zones/$zone/records";
+            my $data = encode_json({
+                return_all_records => JSON::PP::false(),
+                changes => [{
+                    set => {
+                        name    => $subdomain,
+                        type    => $rrtype,
+                        records => [{
+                            name => $subdomain,
+                            data => $ip,
+                            type => $rrtype,
+                            ttl  => opt('ttl', $h) + 0,
+                        }],
+                    },
+                }],
+            });
+            my $reply = geturl(
+                proxy   => opt('proxy'),
+                url     => $url,
+                method  => 'PATCH',
+                headers => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                    'X-Auth-Token: ' . opt('password', $h),
+                ],
+                data    => $data,
+            );
+
+            if (!$reply) {
+                failed("could not connect to " . opt('server', $h));
+                next;
+            }
+
+            my ($status) = ($reply =~ m{^HTTP/\S+\s+(\d+)}i);
+            if (!defined $status) {
+                failed("unexpected HTTP response from " . opt('server', $h));
+                next;
+            }
+
+            if ($status !~ /^2/) {
+                (my $resp_body = $reply) =~ s/^.*?\n\n//s;
+                $resp_body =~ s/^\s+|\s+$//g;
+                my $detail = '';
+                if ($resp_body) {
+                    my $parsed = eval { decode_json($resp_body) };
+                    $detail = ": $parsed->{message}"
+                        if ref($parsed) eq 'HASH' && defined $parsed->{message};
+                }
+                failed("API error $status$detail");
+                next;
+            }
+
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
+        }
     }
 }
 

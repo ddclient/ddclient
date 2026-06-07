@@ -82,6 +82,7 @@ handwritten_tests = \
 	t/protocol_hetzner.pl \
 	t/protocol_ionos.pl \
 	t/protocol_ns1.pl \
+	t/protocol_scaleway.pl \
 	t/protocol_simplycom.pl \
 	t/protocol_spaceship.pl \
 	t/read_recap.pl \
