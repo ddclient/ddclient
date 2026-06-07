@@ -1216,6 +1216,18 @@ our %protocols = (
             'server'       => setv(T_FQDNP, 0, 'dynamicdns.park-your-domain.com', undef),
         },
     ),
+    'namesilo' => ddclient::Protocol->new(
+        'update'   => \&nic_namesilo_update,
+        'examples' => \&nic_namesilo_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'password' => undef,
+            'zone'     => setv(T_FQDN,   1, undef,              undef),
+            'ttl'      => setv(T_NUMBER, 0, 3600,               undef),
+            'ssl'      => setv(T_BOOL,   0, 1,                  undef),
+            'server'   => setv(T_FQDNP,  0, 'www.namesilo.com', undef),
+        },
+    ),
     'nfsn' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_nfsn_update,
         'examples'   => \&nic_nfsn_examples,
@@ -2254,7 +2266,7 @@ sub init_config {
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
                           qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
-                             ionos nfsn njalla ns1 porkbun spaceship yandex));
+                             ionos namesilo nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
 
@@ -5141,6 +5153,126 @@ sub nic_namecheap_update {
         } else {
             $recap{$h}{'status'} = 'failed';
             failed("invalid reply: $reply");
+        }
+    }
+}
+
+######################################################################
+
+######################################################################
+## nic_namesilo_examples
+######################################################################
+sub nic_namesilo_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'namesilo'
+
+The 'namesilo' protocol is used by the NameSilo DNS service (www.namesilo.com).
+
+Before configuring, create an API key in the NameSilo account settings under
+API Manager and grant DNS read and write access.
+
+Configuration variables applicable to the 'namesilo' protocol are:
+  protocol=namesilo            ##
+  server=fqdn.of.service       ## can be omitted, defaults to www.namesilo.com
+  zone=dns.zone                ## the registered domain (required)
+  password=service-password    ## NameSilo API key
+  ttl=seconds                  ## optional; DNS TTL in seconds.  Defaults to 3600.
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  protocol=namesilo                                            \\
+  zone=example.com                                             \\
+  password=your-namesilo-api-key                               \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_namesilo_update
+######################################################################
+sub nic_namesilo_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $zone = opt('zone', $h);
+        if ($h !~ /(?:^|\.)\Q$zone\E$/) {
+            failed("hostname '$h' does not end with zone '$zone'");
+            next;
+        }
+        (my $subdomain = $h) =~ s/(?:^|\.)\Q$zone\E$//;
+        $subdomain ||= '@';
+
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$h}{"wantipv$ipv"} or next;
+            my $rrtype = $ipv eq '4' ? 'A' : 'AAAA';
+            info("setting IPv$ipv address to $ip");
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            my $key    = opt('password', $h);
+            my $server = opt('server', $h);
+            my $ttl    = opt('ttl', $h);
+
+            # Step 1: list existing records
+            my $list_url = "$server/api/dnsListRecords?version=1&type=json&key=$key&domain=$zone";
+            my $list_reply = geturl(proxy => opt('proxy'), url => $list_url);
+            next if !header_ok($list_reply);
+            $list_reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $list_resp = eval { decode_json(${^MATCH}) };
+            unless ($list_resp && $list_resp->{reply}) {
+                failed("invalid JSON response from dnsListRecords");
+                next;
+            }
+            my $reply_obj = $list_resp->{reply};
+            if ($reply_obj->{code} != 300) {
+                failed("dnsListRecords failed: %s", $reply_obj->{detail});
+                next;
+            }
+
+            # Find existing record matching type and FQDN
+            my $records = $reply_obj->{resource_record} // [];
+            $records = [$records] if ref($records) eq 'HASH';  # single record returned as hash
+            my ($existing) = grep {
+                $_->{type} eq $rrtype && $_->{host} eq $h
+            } @$records;
+
+            my $api_reply;
+            if ($existing) {
+                # Step 2a: update existing record
+                my $rrid = $existing->{record_id};
+                debug("found existing $rrtype record ID $rrid; updating");
+                my $upd_url = "$server/api/dnsUpdateRecord?version=1&type=json"
+                    . "&key=$key&domain=$zone&rrid=$rrid"
+                    . "&rrhost=$subdomain&rrvalue=$ip&rrttl=$ttl";
+                $api_reply = geturl(proxy => opt('proxy'), url => $upd_url);
+                next if !header_ok($api_reply);
+            } else {
+                # Step 2b: add new record
+                debug("no existing $rrtype record; adding new record");
+                my $add_url = "$server/api/dnsAddRecord?version=1&type=json"
+                    . "&key=$key&domain=$zone&rrtype=$rrtype"
+                    . "&rrhost=$subdomain&rrvalue=$ip&rrttl=$ttl";
+                $api_reply = geturl(proxy => opt('proxy'), url => $add_url);
+                next if !header_ok($api_reply);
+            }
+
+            $api_reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $api_resp = eval { decode_json(${^MATCH}) };
+            unless ($api_resp && $api_resp->{reply}) {
+                failed("invalid JSON response from NameSilo API");
+                next;
+            }
+            my $api_reply_obj = $api_resp->{reply};
+            if ($api_reply_obj->{code} != 300) {
+                failed("NameSilo API error: %s", $api_reply_obj->{detail});
+                next;
+            }
+
+            $recap{$h}{"ipv$ipv"}        = $ip;
+            $recap{$h}{'mtime'}          = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv$ipv address set to $ip");
         }
     }
 }
