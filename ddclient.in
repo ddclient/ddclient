@@ -1319,6 +1319,7 @@ our %protocols = (
             'password' => undef,
             'zone'     => setv(T_FQDN,  1, undef,                          undef),
             'ttl'      => setv(T_NUMBER, 0, 300,                            undef),
+            'ssl'      => setv(T_BOOL,   0, 1,                                 undef),
             'server'   => setv(T_FQDNP,  0, 'api.scaleway.com/domain/v2beta1', undef),
         },
     ),
