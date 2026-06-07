@@ -939,6 +939,7 @@ our %protocols = (
         'examples' => \&nic_bunny_examples,
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
             'password' => undef,
             'zone'     => undef,
             'server'   => setv(T_FQDNP, 0, 'api.bunny.net', undef),
