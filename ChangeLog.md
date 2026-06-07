@@ -33,6 +33,7 @@ repository history](https://github.com/ddclient/ddclient/commits/main).
 
 ### New feature
 
+  * Added `bunny` protocol for Bunny.net DNS (https://bunny.net/dns/).
   * Added `PowerDNS` as a supported provider for self-hosted deployments:
     via [PowerDNS-Admin](https://github.com/PowerDNS-Admin/PowerDNS-Admin) using `protocol=dyndns2`,
     or via PowerDNS Authoritative Server RFC 2136 DNS UPDATE using `protocol=nsupdate`.

@@ -934,6 +934,17 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'api.1984.is', undef),
         },
     ),
+    'bunny' => ddclient::Protocol->new(
+        'update'   => \&nic_bunny_update,
+        'examples' => \&nic_bunny_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
+            'password' => undef,
+            'zone'     => undef,
+            'server'   => setv(T_FQDNP, 0, 'api.bunny.net', undef),
+        },
+    ),
     'changeip' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
@@ -2253,7 +2264,7 @@ sub init_config {
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
-                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
+                          qw(1984 bunny cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
                              ionos nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
@@ -5770,6 +5781,155 @@ sub nic_1984_update {
             success("skipped: IP was already set to $response->{ip}");
         } else {
             success("updated successfully to $response->{ip}");
+        }
+    }
+}
+
+######################################################################
+## nic_bunny_examples
+######################################################################
+sub nic_bunny_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'bunny'
+
+The 'bunny' protocol is used by DNS service offered by bunny.net.
+
+Configuration variables applicable to the 'bunny' protocol are:
+  protocol=bunny               ##
+  server=fqdn.of.service       ## defaults to api.bunny.net
+  zone=dns.zone                ## the DNS zone to update
+  password=service-password    ## Bunny.net account API key
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=bunny,                          \\
+  zone=example.com,                        \\
+  password=your-bunny-api-key              \\
+  myhost.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_bunny_update
+######################################################################
+sub nic_bunny_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+
+        my $zone = opt('zone', $h);
+        (my $hostname = $h) =~ s/\Q.$zone\E$//;
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+
+        my @headers = (
+            "AccessKey: " . opt('password', $h),
+            "Content-Type: application/json",
+            "Accept: application/json",
+        );
+
+        # Look up zone ID by domain name
+        info("looking up Bunny.net zone ID for %s", $zone);
+        my $list_url = opt('server', $h) . "/dnszone?search=" . $zone;
+        my $list_reply = geturl(
+            proxy   => opt('proxy'),
+            url     => $list_url,
+            headers => \@headers,
+        );
+        next if !header_ok($list_reply);
+        (my $list_body = $list_reply) =~ s/^.*?\n\n//s;
+        my $list_response = eval { decode_json($list_body) };
+        unless (ref($list_response) eq 'HASH' && ref($list_response->{Items}) eq 'ARRAY') {
+            failed("invalid or unexpected response when listing DNS zones");
+            next;
+        }
+        my ($zone_obj) = grep { $_->{Domain} eq $zone } @{$list_response->{Items}};
+        unless ($zone_obj && defined $zone_obj->{Id}) {
+            failed("zone '%s' not found in Bunny.net account", $zone);
+            next;
+        }
+        my $zone_id = $zone_obj->{Id};
+        info("zone ID is %s", $zone_id);
+
+        # Fetch zone details to get records
+        my $zone_url = opt('server', $h) . "/dnszone/$zone_id";
+        my $zone_reply = geturl(
+            proxy   => opt('proxy'),
+            url     => $zone_url,
+            headers => \@headers,
+        );
+        next if !header_ok($zone_reply);
+        (my $zone_body = $zone_reply) =~ s/^.*?\n\n//s;
+        my $zone_detail = eval { decode_json($zone_body) };
+        unless (ref($zone_detail) eq 'HASH' && ref($zone_detail->{Records}) eq 'ARRAY') {
+            failed("invalid or unexpected response when fetching zone detail");
+            next;
+        }
+
+        # IPv4 and IPv6 updates
+        for my $ip ($ipv4, $ipv6) {
+            next unless $ip;
+            my $ipv  = ($ip eq ($ipv6 // '')) ? '6' : '4';
+            my $type = $ipv eq '6' ? 'AAAA' : 'A';
+            my $type_num = $ipv eq '6' ? 1 : 0;
+
+            info("setting IPv%s address to %s", $ipv, $ip);
+            $recap{$h}{"status-ipv$ipv"} = 'failed';
+
+            # Find existing record matching hostname and type
+            my ($record) = grep {
+                defined($_->{Type}) && $_->{Type} == $type_num
+                    && defined($_->{Name}) && $_->{Name} eq $hostname
+            } @{$zone_detail->{Records}};
+
+            if ($record && defined $record->{Value} && $record->{Value} eq $ip) {
+                $recap{$h}{"ipv$ipv"} = $ip;
+                $recap{$h}{'mtime'} = $now;
+                $recap{$h}{"status-ipv$ipv"} = 'good';
+                success("skipped: IPv%s address was already set to %s", $ipv, $ip);
+                next;
+            }
+
+            my ($method, $record_url, $data);
+            if ($record && defined $record->{Id}) {
+                # Update existing record
+                debug("updating existing DNS '%s' record id %s", $type, $record->{Id});
+                $record_url = opt('server', $h) . "/dnszone/$zone_id/records/$record->{Id}";
+                $method = 'POST';
+                $data = encode_json({
+                    Type  => $type_num,
+                    Name  => $hostname,
+                    Value => $ip,
+                    Ttl   => $record->{Ttl} // 300,
+                    Id    => $record->{Id},
+                });
+            } else {
+                # Create new record
+                debug("creating new DNS '%s' record for %s", $type, $hostname);
+                $record_url = opt('server', $h) . "/dnszone/$zone_id/records";
+                $method = 'PUT';
+                $data = encode_json({
+                    Type  => $type_num,
+                    Name  => $hostname,
+                    Value => $ip,
+                    Ttl   => 300,
+                });
+            }
+
+            my $reply = geturl(
+                proxy   => opt('proxy'),
+                url     => $record_url,
+                headers => \@headers,
+                method  => $method,
+                data    => $data,
+            );
+            next if !header_ok($reply);
+            $recap{$h}{"ipv$ipv"} = $ip;
+            $recap{$h}{'mtime'} = $now;
+            $recap{$h}{"status-ipv$ipv"} = 'good';
+            success("IPv%s address set to %s", $ipv, $ip);
         }
     }
 }
