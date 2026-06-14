@@ -8428,7 +8428,7 @@ sub nic_dinahosting_update {
         my $url = 'https://' . opt('server', $h) . opt('script', $h);
         $url .= "?hostname=$hostname";
         $url .= "&domain=$domain";
-        $url .= "&command=Domain_Zone_UpdateType" . is_ipv6($ip) ? 'AAAA' : 'A';
+        $url .= "&command=Domain_Zone_UpdateType" . (is_ipv6($ip) ? 'AAAA' : 'A');
         $url .= "&ip=$ip";
         my $reply = geturl(
             proxy => opt('proxy'),
