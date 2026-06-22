@@ -18,7 +18,8 @@ CLEANFILES =
 
 subst_files = ddclient ddclient.conf
 EXTRA_DIST += $(subst_files:=.in)
-CLEANFILES += $(subst_files)
+CLEANFILES += $(subst_files) ddclient.conf.sample
+EXTRA_DIST += ddclient.conf.sample
 
 $(subst_files): Makefile
 	rm -f '$@' '$@'.tmp
@@ -39,9 +40,13 @@ $(subst_files): Makefile
 ddclient: $(srcdir)/ddclient.in
 ddclient.conf: $(srcdir)/ddclient.conf.in
 
+ddclient.conf.sample: ddclient.conf
+	cp '$<' '$@'
+
 bin_SCRIPTS = ddclient
 
-conf_DATA = ddclient.conf
+sampledir = $(confdir)
+sample_DATA = ddclient.conf.sample
 
 install-data-local:
 	$(MKDIR_P) '$(DESTDIR)$(localstatedir)'/cache/ddclient
