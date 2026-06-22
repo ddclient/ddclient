@@ -1,0 +1,5 @@
+ddclient (0.0.0-1) unstable; urgency=low
+
+  * Placeholder changelog entry — replaced by the packaging workflow.
+
+ -- ddclient packaging <ddclient@ddclient.net>  Sun, 17 May 2026 00:00:00 +0000

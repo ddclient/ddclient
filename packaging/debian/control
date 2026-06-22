@@ -1,0 +1,33 @@
+Source: ddclient
+Section: net
+Priority: optional
+Maintainer: ddclient developers <ddclient@ddclient.net>
+Build-Depends:
+ debhelper-compat (= 13),
+ automake,
+ build-essential,
+ curl,
+ libhttp-daemon-perl (>= 6.12),
+ libhttp-daemon-ssl-perl,
+ libhttp-message-perl,
+ libplack-perl,
+ libtest-mockmodule-perl,
+ libtest-tcp-perl,
+ libtest-warnings-perl,
+ liburi-perl,
+ make,
+ perl,
+Standards-Version: 4.7.0
+Homepage: https://github.com/ddclient/ddclient
+Rules-Requires-Root: no
+
+Package: ddclient
+Architecture: all
+Depends:
+ ${misc:Depends},
+ curl,
+ perl,
+Description: Dynamic DNS update client
+ ddclient is a Perl client used to update dynamic DNS entries for accounts
+ on many dynamic DNS services. It supports multiple protocols and can detect
+ your IP address from a variety of sources.
