@@ -73,6 +73,7 @@ handwritten_tests = \
 	t/jitter.pl \
 	t/parse_assignments.pl \
 	t/protocol_ddnss.pl \
+	t/protocol_celeros.pl \
 	t/protocol_cloudflare.pl \
 	t/protocol_directnic.pl \
 	t/protocol_dnsexit2.pl \

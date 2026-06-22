@@ -934,6 +934,16 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'api.1984.is', undef),
         },
     ),
+    'celeros' => ddclient::Protocol->new(
+        'update'   => \&nic_celeros_update,
+        'examples' => \&nic_celeros_examples,
+        'cfgvars'  => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'login'  => undef,
+            'ssl'      => setv(T_BOOL,  0, 1,               undef),
+            'server' => setv(T_FQDNP, 0, 'kc.celeros.de', undef),
+        },
+    ),
     'changeip' => ddclient::LegacyProtocol->new(
         'update'     => \&nic_changeip_update,
         'examples'   => \&nic_changeip_examples,
@@ -7691,6 +7701,80 @@ sub nic_ddnss_update {
             $recap{$h}{"status-ipv$ipv"} = 'good';
             success("IPv$ipv address set to $ip");
         }
+    }
+}
+
+######################################################################
+## nic_celeros_examples
+######################################################################
+sub nic_celeros_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'celeros'
+
+The 'celeros' protocol is used by the dynamic DNS service offered by celeros.de.
+API endpoint: https://kc.celeros.de/dyndns
+
+Configuration variables applicable to the 'celeros' protocol are:
+  protocol=celeros              ##
+  password=your-api-key        ## API key from your celeros.de account
+  fully.qualified.host         ## the host registered with the service.
+
+Example \${program}.conf file entries:
+  ## IPv4 update
+  protocol=celeros,            \\
+  password=your-api-key,       \\
+  myhost.example.com
+
+  ## dual-stack update (IPv4 and IPv6 in one request)
+  protocol=celeros,            \\
+  password=your-api-key,       \\
+  myhost.example.com
+
+EoEXAMPLE
+}
+
+######################################################################
+## nic_celeros_update
+## https://kc.celeros.de/dyndns?domain=<domain>&ip=<ipaddr>&ip6=<ip6addr>&key=<pass>
+## Supports updating IPv4 and IPv6 in a single request.
+######################################################################
+sub nic_celeros_update {
+    my $self = shift;
+    for my $h (@_) {
+        local $_l = pushlogctx($h);
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        next unless $ipv4 || $ipv6;
+        info("setting IPv4 address to $ipv4") if $ipv4;
+        info("setting IPv6 address to $ipv6") if $ipv6;
+        my $params = "domain=$h&key=" . opt('password', $h);
+        $params .= "&ip=$ipv4"  if $ipv4;
+        $params .= "&ip6=$ipv6" if $ipv6;
+        my $reply = geturl(
+            proxy => opt('proxy'),
+            url   => opt('server', $h) . "/dyndns?$params",
+        );
+        next if !header_ok($reply);
+        (my $body = $reply) =~ s/^.*?\n\n//s or do {
+            failed("invalid response from server");
+            next;
+        };
+        if ($body !~ /\b(good|nochg)\b/i) {
+            failed("server said: $body");
+            next;
+        }
+        if ($ipv4) {
+            $recap{$h}{'ipv4'}        = $ipv4;
+            $recap{$h}{'status-ipv4'} = 'good';
+        }
+        if ($ipv6) {
+            $recap{$h}{'ipv6'}        = $ipv6;
+            $recap{$h}{'status-ipv6'} = 'good';
+        }
+        $recap{$h}{'mtime'} = $now;
+        success("IPv4 address set to $ipv4") if $ipv4;
+        success("IPv6 address set to $ipv6") if $ipv6;
     }
 }
 
