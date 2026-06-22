@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# handle --help as special case
+
+config_file="${SNAP_COMMON}/etc/ddclient/ddclient.conf"
+
+print_help() {
+  echo -e "${SNAP_NAME} uses config file as way to configuration."
+  echo -e "Edit ${config_file} with desired configuration."
+  echo -e "Once config is ready, enable service with:"
+  echo -e "\t$ snap start --enable ${SNAP_NAME}.daemon"
+}
+
+if [ "${1}" = "--help" ]; then
+  print_help
+else
+  mkdir -p -m 700 /tmp/cache
+  "${SNAP}"/usr/bin/ddclient \
+           -file "${config_file}" \
+           -cache /tmp/cache/ddclient.cache \
+           -pid /tmp/ddclient.pid \
+           --foreground
+           ${@}
+fi
