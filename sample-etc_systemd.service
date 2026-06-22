@@ -9,5 +9,31 @@ Environment=daemon_interval=5m
 ExecStart=/usr/bin/ddclient --daemon ${daemon_interval} --foreground
 Restart=on-failure
 
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~ @privileged @resources
+
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectProc=invisible
+ProtectClock=yes
+ProtectHostname=yes
+
+ProtectSystem=yes
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+MemoryDenyWriteExecute=true
+
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
 [Install]
 WantedBy=multi-user.target
