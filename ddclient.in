@@ -925,12 +925,12 @@ our %cfgvars = (
 }
 
 our %protocols = (
-    '1984' => ddclient::LegacyProtocol->new(
-        'update' => \&nic_1984_update,
+    '1984' => ddclient::Protocol->new(
+        'update'   => \&nic_1984_update,
         'examples' => \&nic_1984_examples,
         'cfgvars' => {
             %{$cfgvars{'protocol-common-defaults'}},
-            'login' => undef,
+            'login'  => undef,
             'server' => setv(T_FQDNP, 0, 'api.1984.is', undef),
         },
     ),
@@ -5723,17 +5723,20 @@ sub nic_1984_examples {
 o '1984'
 
 The '1984' protocol is used by DNS services offered by 1984.is.
+Both IPv4 (A) and IPv6 (AAAA) records are supported; the server detects
+the record type from the address format.
 
 Configuration variables applicable to the '1984' protocol are:
   protocol=1984                ##
-  password=api-key             ## your API key
+  server=fqdn.of.service       ## can be omitted, defaults to api.1984.is
+  password=api-key             ## your API key from 1984.is
   fully.qualified.host         ## the domain to update
 
 Example ${program}.conf file entries:
   ## single host update
   protocol=1984,                                                   \\
   password=my-1984-api-key,                                        \\
-  myhost
+  myhost.example.com
 
 EoEXAMPLE
 }
@@ -5741,49 +5744,44 @@ EoEXAMPLE
 ######################################################################
 ## nic_1984_update
 ## https://api.1984.is/1.0/freedns/?apikey=xxx&domain=mydomain&ip=myip
-## The response is a JSON document containing the following entries
-## - ok: true or false depending on if the request was successful or not,
-##       if the ip is the same as before this will be true,
-## - msg: successes or why it is not working,
-## - lookup: if domain or subdomain was not found lookup will contain a list of names tried
+## The response is a JSON document:
+##   ok:  true on success (including when IP was already set)
+##   msg: human-readable result; contains "unaltered" when no change was needed
 ######################################################################
 sub nic_1984_update {
     my $self = shift;
     for my $host (@_) {
         local $_l = pushlogctx($host);
-        my $ip = delete $config{$host}{'wantip'};
-        info("setting IP address to $ip");
-
-        my $url;
-        $url  = 'https://' . opt('server', $host) . '/1.0/freedns/';
-        $url .= '?apikey=' . opt('password', $host);
-        $url .= "&domain=$host";
-        $url .= "&ip=$ip";
-
-        my $reply = geturl(
-            proxy => opt('proxy'),
-            url => $url,
-        );
-        next if !header_ok($reply);
-
-        # Strip header
-        $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
-        my $response = eval { decode_json(${^MATCH}) };
-        if ($@) {
-            failed("JSON decoding failure");
-            next;
-        }
-        unless ($response->{ok}) {
-            failed("%s", $response->{msg});
-            next;
-        }
-
-        $recap{$host}{'status'} = 'good';
-        $recap{$host}{'ip'} = $ip;
-        if ($response->{msg} =~ /unaltered/) {
-            success("skipped: IP was already set to $response->{ip}");
-        } else {
-            success("updated successfully to $response->{ip}");
+        for my $ipv ('4', '6') {
+            my $ip = delete $config{$host}{"wantipv$ipv"} or next;
+            info("setting IPv$ipv address to $ip");
+            my $url = opt('server', $host) . '/1.0/freedns/';
+            $url .= '?apikey=' . opt('password', $host);
+            $url .= "&domain=$host";
+            $url .= "&ip=$ip";
+            my $reply = geturl(
+                proxy => opt('proxy'),
+                url   => $url,
+            );
+            next if !header_ok($reply);
+            $reply =~ qr/{(?:[^{}]*|(?R))*}/mp;
+            my $response = eval { decode_json(${^MATCH}) };
+            if ($@) {
+                failed("JSON decoding failure");
+                next;
+            }
+            unless ($response->{ok}) {
+                failed("%s", $response->{msg} // 'unknown error');
+                next;
+            }
+            $recap{$host}{"ipv$ipv"}        = $ip;
+            $recap{$host}{"status-ipv$ipv"} = 'good';
+            $recap{$host}{'mtime'}          = $now;
+            if ($response->{msg} =~ /unaltered/i) {
+                success("IPv$ipv address was already set to $ip");
+            } else {
+                success("IPv$ipv address set to $ip");
+            }
         }
     }
 }
