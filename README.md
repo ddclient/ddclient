@@ -42,6 +42,7 @@ Dynamic DNS services currently supported include:
   * [Gandi](https://gandi.net)
   * [GoDaddy](https://www.godaddy.com)
   * [Hetzner](https://hetzner.com)
+  * [HostTech](https://www.hosttech.eu)
   * [Hurricane Electric](https://dns.he.net)
   * [Infomaniak](https://faq.infomaniak.com/2376)
   * [ISC BIND](https://www.isc.org/bind/) (via RFC 2136 `protocol=nsupdate`)
