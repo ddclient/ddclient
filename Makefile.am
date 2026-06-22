@@ -7,6 +7,7 @@ EXTRA_DIST = \
 	README.cisco \
 	README.md \
 	autogen \
+	install.sh \
 	sample-ddclient-wrapper.sh \
 	sample-etc_cron.d_ddclient \
 	sample-etc_dhclient-exit-hooks \
