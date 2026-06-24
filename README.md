@@ -15,6 +15,7 @@ Dynamic DNS services currently supported include:
 
   * [1984.is](https://www.1984.is/product/freedns)
   * [All-inkl.com](https://all-inkl.com)
+  * [Arvan Cloud](https://www.arvancloud.ir)
   * [ChangeIP](https://www.changeip.com)
   * [CloudFlare](https://www.cloudflare.com)
   * [ClouDNS](https://www.cloudns.net)

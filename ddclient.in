@@ -942,6 +942,18 @@ our %protocols = (
             'server' => setv(T_FQDNP, 0, 'nic.changeip.com', undef),
         },
     ),
+    'arvancloud' => ddclient::Protocol->new(
+        'update'     => \&nic_arvancloud_update,
+        'examples'   => \&nic_arvancloud_examples,
+        'cfgvars' => {
+            %{$cfgvars{'protocol-common-defaults'}},
+            'server'       => setv(T_FQDNP,  0, 'napi.arvancloud.ir/cdn/4.0', undef),
+            'min-interval' => setv(T_DELAY,  0, interval('5m'),                 0),
+        },
+        'cfgdoc' => {
+            'password' => 'Arvan Cloud API JWT token',
+        },
+    ),
     'cloudflare' => ddclient::Protocol->new(
         'update'     => \&nic_cloudflare_update,
         'examples'   => \&nic_cloudflare_examples,
@@ -2267,7 +2279,7 @@ sub init_config {
     my @needs_sha1 = grep({ my $p = $_; grep($_ eq $p, @protos); } qw(freedns nfsn));
     load_sha1_support(join(', ', @needs_sha1)) if @needs_sha1;
     my @needs_json = grep({ my $p = $_; grep($_ eq $p, @protos); }
-                          qw(1984 cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
+                          qw(1984 arvancloud cloudflare digitalocean directnic dnsexit2 gandi godaddy hetzner
                              ionos netcup nfsn njalla ns1 porkbun spaceship yandex));
     load_json_support(join(', ', @needs_json)) if @needs_json;
 }
@@ -6903,6 +6915,165 @@ sub nic_cloudflare_update {
                     $recap{$domain}{"status-ipv$ipv"} = 'good';
                 } else {
                     failed("invalid json or result");
+                }
+            }
+        }
+    }
+}
+
+######################################################################
+## nic_arvancloud_examples
+######################################################################
+sub nic_arvancloud_examples {
+    my $self = shift;
+    return <<"EoEXAMPLE";
+o 'arvancloud'
+
+The 'arvancloud' protocol is used by DNS service offered by www.arvancloud.ir.
+
+Configuration variables applicable to the 'arvancloud' protocol are:
+  protocol=arvancloud          ##
+  server=fqdn.of.service       ## defaults to napi.arvancloud.ir/cdn/4.0
+  password=your-api-token      ## Arvan Cloud API JWT token
+  ttl=300                      ## optional, defaults to 300
+  fully.qualified.host         ## the host registered with the service.
+
+Example ${program}.conf file entries:
+  ## single host update
+  protocol=arvancloud,                                         \\
+  password=my-arvan-api-token,                                 \\
+  myhost.example.com
+
+  ## with custom TTL
+  protocol=arvancloud,                                         \\
+  password=my-arvan-api-token,                                 \\
+  ttl=600,                                                     \\
+  myhost.example.com
+EoEXAMPLE
+}
+
+######################################################################
+## nic_arvancloud_update
+######################################################################
+sub nic_arvancloud_update {
+    my $self = shift;
+    for my $group (group_hosts_by(\@_, qw(password))) {
+        my @hosts = @{$group->{hosts}};
+        my %groupcfg = %{$group->{cfg}};
+        my $headers = "Content-Type: application/json\n";
+        my $token = $groupcfg{'password'};
+        $headers .= "Authorization: Bearer $token\n";
+
+        for my $domain (@hosts) {
+            local $_l = pushlogctx($domain);
+            my $ipv4 = delete $config{$domain}{'wantipv4'};
+            my $ipv6 = delete $config{$domain}{'wantipv6'};
+
+            my $server = opt('server', $domain);
+            my $ttl = opt('ttl', $domain) // 300;
+
+            # IPv4 and IPv6 handling
+            for my $ip ($ipv4, $ipv6) {
+                next if (!$ip);
+                my $ipv = ($ip eq ($ipv6 // '')) ? '6' : '4';
+                my $type = ($ip eq ($ipv6 // '')) ? 'aaaa' : 'a';
+
+                info("setting IPv$ipv address to $ip");
+                $recap{$domain}{"status-ipv$ipv"} = 'failed';
+
+                # Extract subdomain name (just the host part before the domain)
+                my $subdomain = $domain;
+                if ($subdomain =~ /^(.+)\.[^.]+\.[^.]+$/) {
+                    $subdomain = $1;
+                } elsif ($subdomain =~ /^(.+)\.[^.]+$/) {
+                    $subdomain = $1;
+                }
+
+                # GET /domains/{domain}/dns-records?type={type}&search={subdomain}
+                my $url = "${server}/domains/" . uri_escape($domain)
+                        . "/dns-records?type=$type&search=" . uri_escape($subdomain);
+
+                my $reply = geturl(proxy => opt('proxy'),
+                                   url => $url,
+                                   headers => $headers
+                                  );
+                next if !header_ok($reply);
+                my $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
+                unless ($response && $response->{data}) {
+                    failed("invalid json or result");
+                    next;
+                }
+
+                # Find matching record by name
+                my ($rec) = map { $_->{name} eq $subdomain ? $_ : () } @{$response->{data}};
+                unless ($rec) {
+                    # No existing record found — create one (POST)
+                    debug("no existing '$type' record found, creating");
+                    my $body = encode_json({
+                        name  => $subdomain,
+                        type  => $type,
+                        value => [{ ip => $ip }],
+                        ttl   => $ttl,
+                        cloud => 0,
+                    });
+                    my $create_url = "${server}/domains/" . uri_escape($domain) . "/dns-records";
+                    $reply = geturl(proxy => opt('proxy'),
+                                    url => $create_url,
+                                    headers => $headers,
+                                    method => "POST",
+                                    data => $body
+                                   );
+                    next if !header_ok($reply);
+                    $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
+                    if ($response && $response->{data}) {
+                        success("IPv$ipv address set to $ip");
+                        $recap{$domain}{"ipv$ipv"} = $ip;
+                        $recap{$domain}{'mtime'} = $now;
+                        $recap{$domain}{"status-ipv$ipv"} = 'good';
+                    } else {
+                        failed("invalid json or result");
+                    }
+                } else {
+                    # Record found — check if value matches current IP
+                    my $current_ip = $rec->{value} && ref($rec->{value}) eq 'ARRAY'
+                                    && $rec->{value}[0] && $rec->{value}[0]->{ip}
+                                    ? $rec->{value}[0]->{ip} : undef;
+                    if ($current_ip && $current_ip eq $ip) {
+                        debug("IPv$ipv address already set to $ip, skipping");
+                        success("IPv$ipv address already set to $ip");
+                        $recap{$domain}{"ipv$ipv"} = $ip;
+                        $recap{$domain}{'mtime'} = $now;
+                        $recap{$domain}{"status-ipv$ipv"} = 'good';
+                        next;
+                    }
+
+                    # PUT /domains/{domain}/dns-records/{id}
+                    debug("updating existing '$type' record $rec->{id}");
+                    my $body = encode_json({
+                        name  => $subdomain,
+                        type  => $type,
+                        value => [{ ip => $ip }],
+                        ttl   => $ttl,
+                        cloud => 0,
+                    });
+                    my $update_url = "${server}/domains/" . uri_escape($domain)
+                                   . "/dns-records/" . $rec->{id};
+                    $reply = geturl(proxy => opt('proxy'),
+                                    url => $update_url,
+                                    headers => $headers,
+                                    method => "PUT",
+                                    data => $body
+                                   );
+                    next if !header_ok($reply);
+                    $response = ($reply =~ qr/{(?:[^{}]*|(?R))*}/mp) ? eval {decode_json(${^MATCH})} : undef;
+                    if ($response && $response->{data}) {
+                        success("IPv$ipv address set to $ip");
+                        $recap{$domain}{"ipv$ipv"} = $ip;
+                        $recap{$domain}{'mtime'} = $now;
+                        $recap{$domain}{"status-ipv$ipv"} = 'good';
+                    } else {
+                        failed("invalid json or result");
+                    }
                 }
             }
         }
