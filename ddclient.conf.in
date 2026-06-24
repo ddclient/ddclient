@@ -193,6 +193,14 @@ pid=@runstatedir@/ddclient.pid  # record PID in file.
 # domain.tld,sub.domain.tld
 
 ##
+## Arvan Cloud (www.arvancloud.ir)
+##
+# protocol=arvancloud,               \
+# password=your-arvan-api-token,     \
+# ttl=300,                           \
+# myhost.example.com
+
+##
 ## Gandi (gandi.net)
 ##
 ## Single host update
