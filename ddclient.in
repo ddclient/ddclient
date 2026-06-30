@@ -8422,7 +8422,12 @@ sub nic_dinahosting_update {
     my $self = shift;
     for my $h (@_) {
         local $_l = pushlogctx($h);
-        my $ip = delete $config{$h}{'wantip'};
+        my $ipv4 = delete $config{$h}{'wantipv4'};
+        my $ipv6 = delete $config{$h}{'wantipv6'};
+        my $ip = $ipv4 if $ipv4;
+        if ($ipv6) {
+            $ip = $ipv6
+        }
         info("setting IP address to $ip");
         my ($hostname, $domain) = split(/\./, $h, 2);
         my $url = 'https://' . opt('server', $h) . opt('script', $h);
